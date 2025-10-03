@@ -27,8 +27,11 @@ class StreamingMarkdownWidget extends StatelessWidget {
 
     final normalized = ConduitMarkdownPreprocessor.normalize(content);
     final markdownTheme = ConduitMarkdownConfig.resolve(context);
-    final markdownBody = MarkdownBody(
-      data: normalized,
+    final mermaidRegex = RegExp(r'```mermaid\s*([\s\S]*?)```', multiLine: true);
+    final matches = mermaidRegex.allMatches(normalized).toList();
+
+    Widget buildMarkdown(String data) => MarkdownBody(
+      data: data,
       styleSheet: markdownTheme.styleSheet,
       selectable: false,
       imageBuilder: markdownTheme.imageBuilder,
@@ -42,6 +45,40 @@ class StreamingMarkdownWidget extends StatelessWidget {
       },
     );
 
+    if (matches.isEmpty) {
+      return SelectionArea(
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            textSelectionTheme: TextSelectionThemeData(
+              cursorColor: context.conduitTheme.buttonPrimary,
+            ),
+          ),
+          child: buildMarkdown(normalized),
+        ),
+      );
+    }
+
+    final children = <Widget>[];
+    var currentIndex = 0;
+    for (final match in matches) {
+      final before = normalized.substring(currentIndex, match.start);
+      if (before.trim().isNotEmpty) {
+        children.add(buildMarkdown(before));
+      }
+
+      final code = match.group(1)?.trim() ?? '';
+      if (code.isNotEmpty) {
+        children.add(ConduitMarkdownConfig.buildMermaidBlock(context, code));
+      }
+
+      currentIndex = match.end;
+    }
+
+    final tail = normalized.substring(currentIndex);
+    if (tail.trim().isNotEmpty) {
+      children.add(buildMarkdown(tail));
+    }
+
     return SelectionArea(
       child: Theme(
         data: Theme.of(context).copyWith(
@@ -49,7 +86,10 @@ class StreamingMarkdownWidget extends StatelessWidget {
             cursorColor: context.conduitTheme.buttonPrimary,
           ),
         ),
-        child: markdownBody,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
       ),
     );
   }
