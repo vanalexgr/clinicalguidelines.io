@@ -768,6 +768,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     Widget buildDefault(BuildContext context) => StreamingMarkdownWidget(
       content: processedContent,
       isStreaming: widget.isStreaming,
+      onTapLink: (url, _) => _launchUri(url),
     );
 
     final responseBuilder = ref.watch(assistantResponseBuilderProvider);

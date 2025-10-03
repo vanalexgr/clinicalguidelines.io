@@ -1,613 +1,132 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:flutter_highlight/themes/atom-one-dark-reasonable.dart';
-import 'package:gpt_markdown/custom_widgets/markdown_config.dart'
-    show
-        CodeBlockBuilder,
-        GptMarkdownConfig,
-        ImageBuilder,
-        OrderedListBuilder,
-        TableBuilder,
-        UnOrderedListBuilder;
-import 'package:gpt_markdown/gpt_markdown.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-
-import 'package:conduit/l10n/app_localizations.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../theme/theme_extensions.dart';
-import '../../theme/color_tokens.dart';
-
-class MarkdownFeatureFlags {
-  const MarkdownFeatureFlags({
-    this.enableSyntaxHighlighting = false,
-    this.enableMermaid = false,
-  });
-
-  final bool enableSyntaxHighlighting;
-  final bool enableMermaid;
-
-  MarkdownFeatureFlags copyWith({
-    bool? enableSyntaxHighlighting,
-    bool? enableMermaid,
-  }) {
-    return MarkdownFeatureFlags(
-      enableSyntaxHighlighting:
-          enableSyntaxHighlighting ?? this.enableSyntaxHighlighting,
-      enableMermaid: enableMermaid ?? this.enableMermaid,
-    );
-  }
-}
 
 class ConduitMarkdownTheme {
   const ConduitMarkdownTheme({
-    required this.textStyle,
-    required this.themeData,
+    required this.styleSheet,
     required this.imageBuilder,
-    required this.codeBuilder,
-    required this.orderedListBuilder,
-    required this.unOrderedListBuilder,
-    required this.tableBuilder,
-    required this.checkboxTheme,
-    required this.radioTheme,
-    this.followLinkColor = true,
+    required this.linkColor,
+    required this.linkHoverColor,
   });
 
-  final TextStyle textStyle;
-  final GptMarkdownThemeData themeData;
-  final ImageBuilder imageBuilder;
-  final CodeBlockBuilder codeBuilder;
-  final OrderedListBuilder orderedListBuilder;
-  final UnOrderedListBuilder unOrderedListBuilder;
-  final TableBuilder tableBuilder;
-  final CheckboxThemeData checkboxTheme;
-  final RadioThemeData radioTheme;
-  final bool followLinkColor;
+  final MarkdownStyleSheet styleSheet;
+  final MarkdownImageBuilder imageBuilder;
+  final Color linkColor;
+  final Color linkHoverColor;
 }
 
 class ConduitMarkdownConfig {
-  static ConduitMarkdownTheme resolve(
-    BuildContext context, {
-    MarkdownFeatureFlags flags = const MarkdownFeatureFlags(),
-  }) {
+  static ConduitMarkdownTheme resolve(BuildContext context) {
     final theme = context.conduitTheme;
     final materialTheme = Theme.of(context);
 
-    final bodyStyle = AppTypography.bodyMediumStyle.copyWith(
+    final baseBody = AppTypography.bodyMediumStyle.copyWith(
       color: theme.textPrimary,
       height: 1.45,
     );
+    final secondaryBody = AppTypography.bodySmallStyle.copyWith(
+      color: theme.textSecondary,
+      height: 1.45,
+    );
 
-    final codeColor = theme.code?.color ?? theme.textSecondary;
+    final codeBackground = theme.surfaceContainer.withValues(alpha: 0.55);
+    final borderColor = theme.cardBorder.withValues(alpha: 0.25);
 
-    final markdownThemeData = GptMarkdownThemeData(
-      brightness: materialTheme.brightness,
+    final styleSheet = MarkdownStyleSheet(
+      a: baseBody.copyWith(
+        color: materialTheme.colorScheme.primary,
+        decoration: TextDecoration.underline,
+        decorationColor: materialTheme.colorScheme.primary,
+      ),
+      p: baseBody,
+      blockSpacing: Spacing.sm,
+      listIndent: Spacing.lg,
+      listBullet: baseBody.copyWith(color: theme.textSecondary),
+      listBulletPadding: const EdgeInsets.only(right: Spacing.xs),
+      checkbox: baseBody.copyWith(color: theme.textSecondary),
+      em: baseBody.copyWith(fontStyle: FontStyle.italic),
+      strong: baseBody.copyWith(fontWeight: FontWeight.w600),
+      del: baseBody.copyWith(decoration: TextDecoration.lineThrough),
       h1: AppTypography.headlineLargeStyle.copyWith(color: theme.textPrimary),
       h2: AppTypography.headlineMediumStyle.copyWith(color: theme.textPrimary),
       h3: AppTypography.headlineSmallStyle.copyWith(color: theme.textPrimary),
       h4: AppTypography.bodyLargeStyle.copyWith(color: theme.textPrimary),
-      h5: AppTypography.bodyMediumStyle.copyWith(
-        color: theme.textSecondary,
-        fontWeight: FontWeight.w600,
+      h5: baseBody.copyWith(fontWeight: FontWeight.w600),
+      h6: secondaryBody,
+      blockquote: baseBody.copyWith(color: theme.textSecondary),
+      blockquotePadding: const EdgeInsets.symmetric(
+        horizontal: Spacing.md,
+        vertical: Spacing.sm,
       ),
-      h6: AppTypography.bodySmallStyle.copyWith(color: theme.textSecondary),
-      hrLineColor: theme.dividerColor,
-      highlightColor: theme.surfaceContainer.withValues(alpha: 0.4),
-      linkColor: materialTheme.colorScheme.primary,
-      linkHoverColor: materialTheme.colorScheme.primary.withValues(alpha: 0.8),
-    );
-
-    final listMarkerStyle = AppTypography.bodyMediumStyle.copyWith(
-      color: theme.textSecondary,
-      fontWeight: FontWeight.w600,
-    );
-    final bulletColor = theme.textSecondary.withValues(alpha: 0.85);
-    const listIndicatorWidth = 28.0;
-
-    Widget orderedListBuilder(
-      BuildContext context,
-      String number,
-      Widget child,
-      GptMarkdownConfig listConfig,
-    ) {
-      return Padding(
-        padding: const EdgeInsetsDirectional.only(bottom: Spacing.xs),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          textDirection: listConfig.textDirection,
-          children: [
-            SizedBox(
-              width: listIndicatorWidth,
-              child: Align(
-                alignment: AlignmentDirectional.topEnd,
-                child: Text('$number.', style: listMarkerStyle),
-              ),
-            ),
-            const SizedBox(width: Spacing.sm),
-            Expanded(child: child),
-          ],
-        ),
-      );
-    }
-
-    Widget unOrderedListBuilder(
-      BuildContext context,
-      Widget child,
-      GptMarkdownConfig listConfig,
-    ) {
-      return Padding(
-        padding: const EdgeInsetsDirectional.only(bottom: Spacing.xs),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          textDirection: listConfig.textDirection,
-          children: [
-            Padding(
-              padding: const EdgeInsetsDirectional.only(top: Spacing.xs + 2),
-              child: Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: bulletColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.cardShadow.withValues(alpha: 0.18),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: Spacing.sm),
-            Expanded(child: child),
-          ],
-        ),
-      );
-    }
-
-    final tableHeaderStyle = AppTypography.bodySmallStyle.copyWith(
-      color: theme.textPrimary,
-      fontWeight: FontWeight.w600,
-    );
-    final tableCellStyle = AppTypography.bodySmallStyle.copyWith(
-      color: theme.textSecondary,
-    );
-    final tableBorderColor = theme.cardBorder.withValues(alpha: 0.6);
-    final headerBackground = theme.surfaceContainerHighest.withValues(
-      alpha: 0.7,
-    );
-    final stripeBackground = theme.surfaceContainer.withValues(alpha: 0.25);
-    final tableBackground = theme.surfaceBackground.withValues(alpha: 0.35);
-
-    Widget tableBuilder(
-      BuildContext context,
-      List<CustomTableRow> rows,
-      TextStyle textStyle,
-      GptMarkdownConfig tableConfig,
-    ) {
-      if (rows.isEmpty) {
-        return const SizedBox.shrink();
-      }
-
-      final columnCount = rows.fold<int>(
-        0,
-        (maxCount, row) => math.max(maxCount, row.fields.length),
-      );
-      if (columnCount == 0) {
-        return const SizedBox.shrink();
-      }
-
-      final columnWidths = <int, TableColumnWidth>{
-        for (var i = 0; i < columnCount; i++) i: const IntrinsicColumnWidth(),
-      };
-
-      final controller = ScrollController();
-
-      final tableRows = rows.asMap().entries.map((entry) {
-        final rowIndex = entry.key;
-        final row = entry.value;
-        final isHeader = row.isHeader;
-        final backgroundColor = isHeader
-            ? headerBackground
-            : rowIndex.isOdd
-            ? stripeBackground
-            : Colors.transparent;
-
-        return TableRow(
-          decoration: backgroundColor == Colors.transparent
-              ? null
-              : BoxDecoration(color: backgroundColor),
-          children: List.generate(columnCount, (columnIndex) {
-            if (columnIndex >= row.fields.length) {
-              return const SizedBox.shrink();
-            }
-
-            final field = row.fields[columnIndex];
-            final cellConfig = tableConfig.copyWith(
-              style: isHeader ? tableHeaderStyle : tableCellStyle,
-            );
-            Widget cell = MdWidget(
-              context,
-              field.data.trim(),
-              false,
-              config: cellConfig,
-            );
-            cell = Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: Spacing.sm,
-                vertical: Spacing.xs,
-              ),
-              child: cell,
-            );
-
-            Alignment alignment;
-            switch (field.alignment) {
-              case TextAlign.center:
-                alignment = Alignment.center;
-                break;
-              case TextAlign.right:
-                alignment = Alignment.centerRight;
-                break;
-              case TextAlign.left:
-              default:
-                alignment = Alignment.centerLeft;
-                break;
-            }
-
-            return Align(alignment: alignment, child: cell);
-          }),
-        );
-      }).toList();
-
-      final tableWidget = DecoratedBox(
-        decoration: BoxDecoration(
-          color: tableBackground,
-          borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-          border: Border.all(color: tableBorderColor, width: BorderWidth.small),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-          child: Table(
-            columnWidths: columnWidths,
-            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-            border: TableBorder.symmetric(
-              inside: BorderSide(
-                color: tableBorderColor,
-                width: BorderWidth.micro,
-              ),
-              outside: BorderSide.none,
-            ),
-            children: tableRows,
+      blockquoteDecoration: BoxDecoration(
+        color: theme.surfaceContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        border: Border(
+          left: BorderSide(
+            width: BorderWidth.standard,
+            color: materialTheme.colorScheme.primary.withValues(alpha: 0.35),
           ),
         ),
-      );
-
-      return Scrollbar(
-        controller: controller,
-        thumbVisibility: false,
-        child: SingleChildScrollView(
-          controller: controller,
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
-          child: tableWidget,
-        ),
-      );
-    }
-
-    final primaryColor = materialTheme.colorScheme.primary;
-    final overlayColor = primaryColor.withValues(alpha: 0.12);
-
-    Color? resolveOverlay(Set<WidgetState> states) =>
-        states.contains(WidgetState.pressed) ||
-            states.contains(WidgetState.focused) ||
-            states.contains(WidgetState.hovered)
-        ? overlayColor
-        : null;
-
-    final checkboxTheme = CheckboxThemeData(
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      visualDensity: VisualDensity.compact,
-      splashRadius: 18,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppBorderRadius.xs),
       ),
-      side: BorderSide(
-        color: theme.cardBorder.withValues(alpha: 0.6),
+      code: AppTypography.codeStyle.copyWith(
+        color: theme.codeText,
+        backgroundColor: codeBackground,
+      ),
+      codeblockPadding: const EdgeInsets.all(Spacing.sm),
+      codeblockDecoration: BoxDecoration(
+        color: codeBackground,
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        border: Border.all(color: borderColor, width: BorderWidth.micro),
+      ),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: theme.dividerColor, width: BorderWidth.small),
+        ),
+      ),
+      tableHead: secondaryBody.copyWith(fontWeight: FontWeight.w600),
+      tableBody: secondaryBody,
+      tableBorder: TableBorder.all(
+        color: borderColor,
         width: BorderWidth.micro,
       ),
-      fillColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) {
-          return theme.surfaceContainer.withValues(alpha: 0.4);
-        }
-        if (states.contains(WidgetState.selected)) {
-          return primaryColor;
-        }
-        return theme.surfaceBackground.withValues(alpha: 0.7);
-      }),
-      checkColor: WidgetStateProperty.all(theme.textInverse),
-      overlayColor: WidgetStateProperty.resolveWith(resolveOverlay),
-    );
-
-    final radioTheme = RadioThemeData(
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      visualDensity: VisualDensity.compact,
-      fillColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) {
-          return theme.surfaceContainer.withValues(alpha: 0.4);
-        }
-        if (states.contains(WidgetState.selected)) {
-          return primaryColor;
-        }
-        return theme.surfaceBackground.withValues(alpha: 0.7);
-      }),
-      overlayColor: WidgetStateProperty.resolveWith(resolveOverlay),
-      backgroundColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) {
-          return theme.surfaceBackground.withValues(alpha: 0.3);
-        }
-        return null;
-      }),
+      tableCellsPadding: const EdgeInsets.symmetric(
+        horizontal: Spacing.sm,
+        vertical: Spacing.xs,
+      ),
+      tableCellsDecoration: BoxDecoration(
+        color: theme.surfaceBackground.withValues(alpha: 0.35),
+      ),
+      tableHeadAlign: TextAlign.left,
+      tablePadding: const EdgeInsets.only(bottom: Spacing.xs),
     );
 
     return ConduitMarkdownTheme(
-      textStyle: bodyStyle,
-      themeData: markdownThemeData,
-      imageBuilder: (context, imageUrl) {
-        final uri = Uri.tryParse(imageUrl);
-        if (uri == null) {
-          return _buildImageError(context, context.conduitTheme);
-        }
-
-        final scheme = uri.scheme;
-
-        if (scheme == 'data') {
-          return buildBase64Image(imageUrl, context, context.conduitTheme);
-        }
-
-        if (scheme.isEmpty || scheme == 'http' || scheme == 'https') {
-          return buildNetworkImage(imageUrl, context, context.conduitTheme);
-        }
-
-        return const SizedBox.shrink();
-      },
-      codeBuilder: (context, name, code, closed) {
-        final conduitTheme = context.conduitTheme;
-        final language = name.trim().isEmpty ? null : name.trim();
-        final isMermaid =
-            flags.enableMermaid && (language?.toLowerCase() == 'mermaid');
-
-        if (isMermaid && !flags.enableMermaid) {
-          return CodeBlockWrapper(
-            code: code,
-            language: language,
-            theme: conduitTheme,
-            closed: closed,
-            child: _buildUnsupportedMermaidContainer(
-              conduitTheme: conduitTheme,
-              codeColor: codeColor,
-              code: code,
-            ),
-          );
-        }
-
-        final Widget content;
-        if (isMermaid) {
-          content = MermaidDiagram.isSupported
-              ? _buildMermaidContainer(
-                  context: context,
-                  conduitTheme: conduitTheme,
-                  materialTheme: materialTheme,
-                  code: code,
-                )
-              : _buildUnsupportedMermaidContainer(
-                  conduitTheme: conduitTheme,
-                  codeColor: codeColor,
-                  code: code,
-                );
-        } else {
-          content = _buildCodeContainer(
-            context: context,
-            conduitTheme: conduitTheme,
-            codeColor: codeColor,
-            code: code,
-            language: language,
-            enableHighlight: flags.enableSyntaxHighlighting,
-          );
-        }
-
-        return CodeBlockWrapper(
-          code: code,
-          language: language,
-          theme: conduitTheme,
-          closed: closed,
-          child: content,
-        );
-      },
-      orderedListBuilder: orderedListBuilder,
-      unOrderedListBuilder: unOrderedListBuilder,
-      tableBuilder: tableBuilder,
-      checkboxTheme: checkboxTheme,
-      radioTheme: radioTheme,
+      styleSheet: styleSheet,
+      imageBuilder: (uri, title, alt) => _buildImage(context, uri),
+      linkColor: materialTheme.colorScheme.primary,
+      linkHoverColor: materialTheme.colorScheme.primary.withValues(alpha: 0.8),
     );
   }
 
-  static Widget _buildCodeContainer({
-    required BuildContext context,
-    required ConduitThemeExtension conduitTheme,
-    required Color codeColor,
-    required String code,
-    required String? language,
-    required bool enableHighlight,
-  }) {
-    final textStyle = AppTypography.codeStyle.copyWith(
-      color: conduitTheme.codeText,
-      height: 1.55,
-      fontSize: 13,
-    );
-
-    final highlightLanguage = _normalizeLanguage(language);
-    final canHighlight = enableHighlight && highlightLanguage != null;
-
-    final Widget baseChild;
-    if (canHighlight) {
-      final highlightTheme = _transparentHighlightTheme(
-        atomOneDarkReasonableTheme,
-      );
-      baseChild = HighlightView(
-        code,
-        language: highlightLanguage,
-        theme: highlightTheme,
-        padding: EdgeInsets.zero,
-        textStyle: textStyle,
-      );
-    } else {
-      baseChild = SelectableText(
-        code,
-        maxLines: null,
-        textAlign: TextAlign.left,
-        textDirection: TextDirection.ltr,
-        textWidthBasis: TextWidthBasis.parent,
-        style: textStyle,
-      );
+  static Widget _buildImage(BuildContext context, Uri uri) {
+    final theme = context.conduitTheme;
+    if (uri.scheme == 'data') {
+      return _buildBase64Image(uri.toString(), context, theme);
     }
 
-    return baseChild;
-  }
-
-  static Widget _buildMermaidContainer({
-    required BuildContext context,
-    required ConduitThemeExtension conduitTheme,
-    required ThemeData materialTheme,
-    required String code,
-  }) {
-    final tokens = context.colorTokens;
-    return SizedBox(
-      height: 360,
-      width: double.infinity,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-        child: MermaidDiagram(
-          code: code,
-          brightness: materialTheme.brightness,
-          colorScheme: materialTheme.colorScheme,
-          tokens: tokens,
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildUnsupportedMermaidContainer({
-    required ConduitThemeExtension conduitTheme,
-    required Color codeColor,
-    required String code,
-  }) {
-    final textStyle = AppTypography.bodySmallStyle.copyWith(
-      color: conduitTheme.codeText.withValues(alpha: 0.7),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Mermaid preview is not available on this platform.',
-          style: textStyle,
-        ),
-        const SizedBox(height: Spacing.xs),
-        SelectableText(
-          code,
-          maxLines: null,
-          textAlign: TextAlign.left,
-          textDirection: TextDirection.ltr,
-          textWidthBasis: TextWidthBasis.parent,
-          style: AppTypography.codeStyle.copyWith(
-            color: conduitTheme.code?.color ?? codeColor,
-          ),
-        ),
-      ],
-    );
-  }
-
-  static Map<String, TextStyle> _transparentHighlightTheme(
-    Map<String, TextStyle> base,
-  ) {
-    final themed = Map<String, TextStyle>.from(base);
-    final root = base['root'];
-    themed['root'] = (root ?? const TextStyle()).copyWith(
-      backgroundColor: Colors.transparent,
-    );
-    return themed;
-  }
-
-  static String? _normalizeLanguage(String? lang) {
-    if (lang == null || lang.trim().isEmpty) {
-      return null;
+    if (uri.scheme.isEmpty || uri.scheme == 'http' || uri.scheme == 'https') {
+      return _buildNetworkImage(uri.toString(), context, theme);
     }
-    final value = lang.trim().toLowerCase();
-    switch (value) {
-      case 'js':
-      case 'javascript':
-        return 'javascript';
-      case 'ts':
-      case 'typescript':
-        return 'typescript';
-      case 'sh':
-      case 'zsh':
-      case 'bash':
-      case 'shell':
-        return 'bash';
-      case 'yml':
-        return 'yaml';
-      case 'py':
-      case 'python':
-        return 'python';
-      case 'rb':
-      case 'ruby':
-        return 'ruby';
-      case 'kt':
-      case 'kotlin':
-        return 'kotlin';
-      case 'java':
-        return 'java';
-      case 'c#':
-      case 'cs':
-      case 'csharp':
-        return 'cs';
-      case 'objc':
-      case 'objectivec':
-        return 'objectivec';
-      case 'swift':
-        return 'swift';
-      case 'go':
-      case 'golang':
-        return 'go';
-      case 'php':
-        return 'php';
-      case 'dart':
-        return 'dart';
-      case 'json':
-        return 'json';
-      case 'html':
-        return 'xml';
-      case 'md':
-      case 'markdown':
-        return 'markdown';
-      case 'sql':
-        return 'sql';
-      default:
-        return value;
-    }
+
+    return _buildImageError(context, theme);
   }
 
-  static Widget buildBase64Image(
+  static Widget _buildBase64Image(
     String dataUrl,
     BuildContext context,
     ConduitThemeExtension theme,
@@ -615,7 +134,7 @@ class ConduitMarkdownConfig {
     try {
       final commaIndex = dataUrl.indexOf(',');
       if (commaIndex == -1) {
-        throw Exception('Invalid data URL format');
+        throw const FormatException('Invalid data URL format');
       }
 
       final base64String = dataUrl.substring(commaIndex + 1);
@@ -623,7 +142,7 @@ class ConduitMarkdownConfig {
 
       return Container(
         margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 500),
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 480),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppBorderRadius.md),
           child: Image.memory(
@@ -635,19 +154,19 @@ class ConduitMarkdownConfig {
           ),
         ),
       );
-    } catch (e) {
+    } catch (_) {
       return _buildImageError(context, theme);
     }
   }
 
-  static Widget buildNetworkImage(
+  static Widget _buildNetworkImage(
     String url,
     BuildContext context,
     ConduitThemeExtension theme,
   ) {
     return CachedNetworkImage(
       imageUrl: url,
-      placeholder: (context, url) => Container(
+      placeholder: (context, _) => Container(
         height: 200,
         decoration: BoxDecoration(
           color: theme.surfaceBackground.withValues(alpha: 0.5),
@@ -669,332 +188,18 @@ class ConduitMarkdownConfig {
     ConduitThemeExtension theme,
   ) {
     return Container(
-      height: 100,
+      height: 120,
       decoration: BoxDecoration(
         color: theme.surfaceBackground.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(AppBorderRadius.md),
         border: Border.all(
-          color: theme.error.withValues(alpha: 0.3),
-          width: BorderWidth.thin,
+          color: theme.cardBorder.withValues(alpha: 0.4),
+          width: BorderWidth.micro,
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.broken_image_outlined, color: theme.error, size: 32),
-          const SizedBox(height: Spacing.xs),
-          Text(
-            AppLocalizations.of(context)!.failedToLoadImage(''),
-            style: TextStyle(color: theme.error, fontSize: 12),
-          ),
-        ],
+      child: Center(
+        child: Icon(Icons.broken_image_outlined, color: theme.iconSecondary),
       ),
     );
-  }
-}
-
-class CodeBlockWrapper extends StatefulWidget {
-  const CodeBlockWrapper({
-    super.key,
-    required this.child,
-    required this.code,
-    this.language,
-    required this.theme,
-    required this.closed,
-  });
-
-  final Widget child;
-  final String code;
-  final String? language;
-  final ConduitThemeExtension theme;
-  final bool closed;
-
-  @override
-  State<CodeBlockWrapper> createState() => _CodeBlockWrapperState();
-}
-
-class _CodeBlockWrapperState extends State<CodeBlockWrapper> {
-  bool _copied = false;
-  Timer? _resetTimer;
-
-  @override
-  void dispose() {
-    _resetTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _handleCopy() async {
-    if (!widget.closed || widget.code.trim().isEmpty) {
-      return;
-    }
-
-    await Clipboard.setData(ClipboardData(text: widget.code));
-    setState(() {
-      _copied = true;
-    });
-
-    _resetTimer?.cancel();
-    _resetTimer = Timer(const Duration(seconds: 2), () {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _copied = false;
-      });
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final conduitTheme = widget.theme;
-    final canCopy = widget.closed && widget.code.trim().isNotEmpty;
-    final icon = _copied
-        ? Icons.check
-        : canCopy
-        ? Icons.copy
-        : Icons.hourglass_empty;
-
-    final background = conduitTheme.codeBackground;
-    final borderColor = conduitTheme.codeBorder.withValues(alpha: 0.6);
-    final headerColor = conduitTheme.codeAccent.withValues(alpha: 0.85);
-
-    final languageLabel = (widget.language?.isNotEmpty ?? false)
-        ? widget.language!
-        : 'code';
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: Spacing.xs),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppBorderRadius.md),
-        boxShadow: ConduitShadows.medium(context),
-        border: Border.all(color: borderColor, width: BorderWidth.micro),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppBorderRadius.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              color: headerColor,
-              padding: const EdgeInsets.symmetric(
-                horizontal: Spacing.sm,
-                vertical: Spacing.xs,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    languageLabel,
-                    style: AppTypography.bodySmallStyle.copyWith(
-                      color: conduitTheme.codeText.withValues(alpha: 0.85),
-                      fontFamily: AppTypography.monospaceFontFamily,
-                    ),
-                  ),
-                  const Spacer(),
-                  Tooltip(
-                    message: canCopy
-                        ? (_copied
-                              ? 'Copied'
-                              : MaterialLocalizations.of(
-                                  context,
-                                ).copyButtonLabel)
-                        : 'Copy available after generation completes',
-                    child: IconButton(
-                      onPressed: canCopy ? _handleCopy : null,
-                      icon: Icon(icon, size: IconSize.sm),
-                      color: canCopy
-                          ? conduitTheme.codeText
-                          : conduitTheme.codeText.withValues(alpha: 0.5),
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.all(Spacing.xs),
-                      style: IconButton.styleFrom(
-                        backgroundColor: conduitTheme.codeText.withValues(
-                          alpha: canCopy ? 0.08 : 0.04,
-                        ),
-                        disabledBackgroundColor: conduitTheme.codeText
-                            .withValues(alpha: 0.03),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              color: background,
-              padding: const EdgeInsets.all(Spacing.sm),
-              child: DefaultTextStyle.merge(
-                style: AppTypography.codeStyle.copyWith(
-                  color: conduitTheme.codeText,
-                ),
-                child: widget.child,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class MermaidDiagram extends StatefulWidget {
-  const MermaidDiagram({
-    super.key,
-    required this.code,
-    required this.brightness,
-    required this.colorScheme,
-    required this.tokens,
-  });
-
-  final String code;
-  final Brightness brightness;
-  final ColorScheme colorScheme;
-  final AppColorTokens tokens;
-
-  static bool get isSupported => !kIsWeb;
-
-  static Future<String> _loadScript() {
-    return _scriptFuture ??= rootBundle.loadString('assets/mermaid.min.js');
-  }
-
-  static Future<String>? _scriptFuture;
-
-  @override
-  State<MermaidDiagram> createState() => _MermaidDiagramState();
-}
-
-class _MermaidDiagramState extends State<MermaidDiagram> {
-  WebViewController? _controller;
-  String? _script;
-  final Set<Factory<OneSequenceGestureRecognizer>> _gestureRecognizers =
-      <Factory<OneSequenceGestureRecognizer>>{
-        Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
-      };
-
-  @override
-  void initState() {
-    super.initState();
-    if (!MermaidDiagram.isSupported) {
-      return;
-    }
-    MermaidDiagram._loadScript().then((value) {
-      if (!mounted) {
-        return;
-      }
-      _script = value;
-      _controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(Colors.transparent);
-      _loadHtml();
-      setState(() {});
-    });
-  }
-
-  @override
-  void didUpdateWidget(MermaidDiagram oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_controller == null || _script == null) {
-      return;
-    }
-    final codeChanged = oldWidget.code != widget.code;
-    final themeChanged =
-        oldWidget.brightness != widget.brightness ||
-        oldWidget.colorScheme != widget.colorScheme ||
-        oldWidget.tokens != widget.tokens;
-    if (codeChanged || themeChanged) {
-      _loadHtml();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_controller == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return SizedBox.expand(
-      child: WebViewWidget(
-        controller: _controller!,
-        gestureRecognizers: _gestureRecognizers,
-      ),
-    );
-  }
-
-  void _loadHtml() {
-    if (_controller == null || _script == null) {
-      return;
-    }
-    _controller!.loadHtmlString(_buildHtml(widget.code, _script!));
-  }
-
-  String _buildHtml(String code, String script) {
-    final theme = widget.brightness == Brightness.dark ? 'dark' : 'default';
-    final encoded = jsonEncode(code);
-    final primary = _toHex(widget.tokens.brandTone60);
-    final secondary = _toHex(widget.tokens.accentTeal60);
-    final background = _toHex(widget.tokens.codeBackground);
-    final onBackground = _toHex(widget.tokens.codeText);
-    final lineColor = _toHex(widget.tokens.codeAccent);
-    final errorColor = _toHex(widget.tokens.statusError60);
-
-    return '''
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      html, body { margin: 0; padding: 0; background: transparent; }
-      body { color: $onBackground; font-family: -apple-system, sans-serif; }
-      #diagram { padding: 8px; overflow: auto; }
-      svg { height: auto; display: block; }
-    </style>
-    <script type="text/javascript">
-$script
-    </script>
-  </head>
-  <body>
-    <div id="diagram"></div>
-    <script type="text/javascript">
-      const graphDefinition = $encoded;
-      const themeConfig = {
-        startOnLoad: false,
-        theme: '$theme',
-        securityLevel: 'loose',
-        themeVariables: {
-          primaryColor: '$primary',
-          secondaryColor: '$secondary',
-          background: '$background',
-          textColor: '$onBackground',
-          lineColor: '$lineColor'
-        }
-      };
-
-      (async () => {
-        const target = document.getElementById('diagram');
-        try {
-          mermaid.initialize(themeConfig);
-          const { svg, bindFunctions } = await mermaid.render('graphDiv', graphDefinition);
-          target.innerHTML = svg;
-          if (typeof bindFunctions === 'function') {
-            bindFunctions(target);
-          }
-        } catch (error) {
-          target.innerHTML = '<pre style="color:$errorColor">' + String(error) + '</pre>';
-          console.error('Mermaid render failed', error);
-        }
-      })();
-    </script>
-  </body>
-</html>
-''';
-  }
-
-  String _toHex(Color color) {
-    final value = color.toARGB32();
-    return '#'
-            '${((value >> 16) & 0xFF).toRadixString(16).padLeft(2, '0')}'
-            '${((value >> 8) & 0xFF).toRadixString(16).padLeft(2, '0')}'
-            '${(value & 0xFF).toRadixString(16).padLeft(2, '0')}'
-        .toUpperCase();
   }
 }

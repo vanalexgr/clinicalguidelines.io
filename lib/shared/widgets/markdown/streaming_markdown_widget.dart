@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gpt_markdown/gpt_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../theme/theme_extensions.dart';
 import 'markdown_config.dart';
@@ -26,74 +26,30 @@ class StreamingMarkdownWidget extends StatelessWidget {
     }
 
     final normalized = ConduitMarkdownPreprocessor.normalize(content);
-
-    const featureFlags = MarkdownFeatureFlags(
-      enableSyntaxHighlighting: true,
-      enableMermaid: true,
+    final markdownTheme = ConduitMarkdownConfig.resolve(context);
+    final markdownBody = MarkdownBody(
+      data: normalized,
+      styleSheet: markdownTheme.styleSheet,
+      selectable: false,
+      imageBuilder: markdownTheme.imageBuilder,
+      onTapLink: (text, href, title) {
+        final target = href ?? '';
+        if (target.isEmpty) {
+          return;
+        }
+        final resolvedTitle = title.isNotEmpty ? title : text;
+        onTapLink?.call(target, resolvedTitle);
+      },
     );
 
-    final markdownTheme = ConduitMarkdownConfig.resolve(
-      context,
-      flags: featureFlags,
-    );
-    final textScaler = MediaQuery.maybeOf(context)?.textScaler;
-
-    final themedControls = Theme.of(context).copyWith(
-      checkboxTheme: markdownTheme.checkboxTheme,
-      radioTheme: markdownTheme.radioTheme,
-    );
-
-    return GptMarkdownTheme(
-      gptThemeData: markdownTheme.themeData,
+    return SelectionArea(
       child: Theme(
-        data: themedControls,
-        child: SelectionArea(
-          child: GptMarkdown(
-            normalized,
-            style: markdownTheme.textStyle,
-            followLinkColor: markdownTheme.followLinkColor,
-            textDirection: Directionality.of(context),
-            textScaler: textScaler,
-            onLinkTap: onTapLink,
-            codeBuilder: markdownTheme.codeBuilder,
-            imageBuilder: markdownTheme.imageBuilder,
-            orderedListBuilder: markdownTheme.orderedListBuilder,
-            unOrderedListBuilder: markdownTheme.unOrderedListBuilder,
-            tableBuilder: markdownTheme.tableBuilder,
-            useDollarSignsForLatex: true,
-            highlightBuilder: (highlightContext, inline, baseStyle) {
-              final softened = ConduitMarkdownPreprocessor.softenInlineCode(
-                inline,
-              );
-              final theme = highlightContext.conduitTheme;
-              final base = baseStyle;
-              final fontSize = (base.fontSize ?? 13).clamp(11, 15).toDouble();
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.xs,
-                  vertical: Spacing.xxs,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.surfaceBackground.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(AppBorderRadius.xs),
-                  border: Border.all(
-                    color: theme.cardBorder.withValues(alpha: 0.2),
-                    width: BorderWidth.micro,
-                  ),
-                ),
-                child: Text(
-                  softened,
-                  style: base.copyWith(
-                    fontFamily: AppTypography.monospaceFontFamily,
-                    fontSize: fontSize,
-                    height: 1.35,
-                    color: theme.code?.color ?? theme.textSecondary,
-                  ),
-                ),
-              );
-            },
+        data: Theme.of(context).copyWith(
+          textSelectionTheme: TextSelectionThemeData(
+            cursorColor: context.conduitTheme.buttonPrimary,
           ),
         ),
+        child: markdownBody,
       ),
     );
   }

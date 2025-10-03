@@ -30,7 +30,7 @@ dependencies:
   shared_preferences: ^2.3.2
   
   # UI Components - GPT Markdown  
-  gpt_markdown: ^1.1.4
+  flutter_markdown_plus: ^1.0.3
   cached_network_image: ^3.3.1
   flutter_highlight: ^0.7.0
   webview_flutter: ^4.7.0
