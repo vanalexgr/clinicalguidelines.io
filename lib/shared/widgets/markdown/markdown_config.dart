@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
@@ -9,7 +10,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/atom-one-dark-reasonable.dart';
 import 'package:gpt_markdown/custom_widgets/markdown_config.dart'
-    show CodeBlockBuilder, ImageBuilder;
+    show
+        CodeBlockBuilder,
+        GptMarkdownConfig,
+        ImageBuilder,
+        OrderedListBuilder,
+        TableBuilder,
+        UnOrderedListBuilder;
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -45,6 +52,11 @@ class ConduitMarkdownTheme {
     required this.themeData,
     required this.imageBuilder,
     required this.codeBuilder,
+    required this.orderedListBuilder,
+    required this.unOrderedListBuilder,
+    required this.tableBuilder,
+    required this.checkboxTheme,
+    required this.radioTheme,
     this.followLinkColor = true,
   });
 
@@ -52,6 +64,11 @@ class ConduitMarkdownTheme {
   final GptMarkdownThemeData themeData;
   final ImageBuilder imageBuilder;
   final CodeBlockBuilder codeBuilder;
+  final OrderedListBuilder orderedListBuilder;
+  final UnOrderedListBuilder unOrderedListBuilder;
+  final TableBuilder tableBuilder;
+  final CheckboxThemeData checkboxTheme;
+  final RadioThemeData radioTheme;
   final bool followLinkColor;
 }
 
@@ -85,6 +102,259 @@ class ConduitMarkdownConfig {
       highlightColor: theme.surfaceContainer.withValues(alpha: 0.4),
       linkColor: materialTheme.colorScheme.primary,
       linkHoverColor: materialTheme.colorScheme.primary.withValues(alpha: 0.8),
+    );
+
+    final listMarkerStyle = AppTypography.bodyMediumStyle.copyWith(
+      color: theme.textSecondary,
+      fontWeight: FontWeight.w600,
+    );
+    final bulletColor = theme.textSecondary.withValues(alpha: 0.85);
+    const listIndicatorWidth = 28.0;
+
+    Widget orderedListBuilder(
+      BuildContext context,
+      String number,
+      Widget child,
+      GptMarkdownConfig listConfig,
+    ) {
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(bottom: Spacing.xs),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          textDirection: listConfig.textDirection,
+          children: [
+            SizedBox(
+              width: listIndicatorWidth,
+              child: Align(
+                alignment: AlignmentDirectional.topEnd,
+                child: Text('$number.', style: listMarkerStyle),
+              ),
+            ),
+            const SizedBox(width: Spacing.sm),
+            Expanded(child: child),
+          ],
+        ),
+      );
+    }
+
+    Widget unOrderedListBuilder(
+      BuildContext context,
+      Widget child,
+      GptMarkdownConfig listConfig,
+    ) {
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(bottom: Spacing.xs),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          textDirection: listConfig.textDirection,
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.only(top: Spacing.xs + 2),
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: bulletColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.cardShadow.withValues(alpha: 0.18),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: Spacing.sm),
+            Expanded(child: child),
+          ],
+        ),
+      );
+    }
+
+    final tableHeaderStyle = AppTypography.bodySmallStyle.copyWith(
+      color: theme.textPrimary,
+      fontWeight: FontWeight.w600,
+    );
+    final tableCellStyle = AppTypography.bodySmallStyle.copyWith(
+      color: theme.textSecondary,
+    );
+    final tableBorderColor = theme.cardBorder.withValues(alpha: 0.6);
+    final headerBackground = theme.surfaceContainerHighest.withValues(
+      alpha: 0.7,
+    );
+    final stripeBackground = theme.surfaceContainer.withValues(alpha: 0.25);
+    final tableBackground = theme.surfaceBackground.withValues(alpha: 0.35);
+
+    Widget tableBuilder(
+      BuildContext context,
+      List<CustomTableRow> rows,
+      TextStyle textStyle,
+      GptMarkdownConfig tableConfig,
+    ) {
+      if (rows.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      final columnCount = rows.fold<int>(
+        0,
+        (maxCount, row) => math.max(maxCount, row.fields.length),
+      );
+      if (columnCount == 0) {
+        return const SizedBox.shrink();
+      }
+
+      final columnWidths = <int, TableColumnWidth>{
+        for (var i = 0; i < columnCount; i++) i: const IntrinsicColumnWidth(),
+      };
+
+      final controller = ScrollController();
+
+      final tableRows = rows.asMap().entries.map((entry) {
+        final rowIndex = entry.key;
+        final row = entry.value;
+        final isHeader = row.isHeader;
+        final backgroundColor = isHeader
+            ? headerBackground
+            : rowIndex.isOdd
+            ? stripeBackground
+            : Colors.transparent;
+
+        return TableRow(
+          decoration: backgroundColor == Colors.transparent
+              ? null
+              : BoxDecoration(color: backgroundColor),
+          children: List.generate(columnCount, (columnIndex) {
+            if (columnIndex >= row.fields.length) {
+              return const SizedBox.shrink();
+            }
+
+            final field = row.fields[columnIndex];
+            final cellConfig = tableConfig.copyWith(
+              style: isHeader ? tableHeaderStyle : tableCellStyle,
+            );
+            Widget cell = MdWidget(
+              context,
+              field.data.trim(),
+              false,
+              config: cellConfig,
+            );
+            cell = Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Spacing.sm,
+                vertical: Spacing.xs,
+              ),
+              child: cell,
+            );
+
+            Alignment alignment;
+            switch (field.alignment) {
+              case TextAlign.center:
+                alignment = Alignment.center;
+                break;
+              case TextAlign.right:
+                alignment = Alignment.centerRight;
+                break;
+              case TextAlign.left:
+              default:
+                alignment = Alignment.centerLeft;
+                break;
+            }
+
+            return Align(alignment: alignment, child: cell);
+          }),
+        );
+      }).toList();
+
+      final tableWidget = DecoratedBox(
+        decoration: BoxDecoration(
+          color: tableBackground,
+          borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+          border: Border.all(color: tableBorderColor, width: BorderWidth.small),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+          child: Table(
+            columnWidths: columnWidths,
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            border: TableBorder.symmetric(
+              inside: BorderSide(
+                color: tableBorderColor,
+                width: BorderWidth.micro,
+              ),
+              outside: BorderSide.none,
+            ),
+            children: tableRows,
+          ),
+        ),
+      );
+
+      return Scrollbar(
+        controller: controller,
+        thumbVisibility: false,
+        child: SingleChildScrollView(
+          controller: controller,
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
+          child: tableWidget,
+        ),
+      );
+    }
+
+    final primaryColor = materialTheme.colorScheme.primary;
+    final overlayColor = primaryColor.withValues(alpha: 0.12);
+
+    Color? resolveOverlay(Set<WidgetState> states) =>
+        states.contains(WidgetState.pressed) ||
+            states.contains(WidgetState.focused) ||
+            states.contains(WidgetState.hovered)
+        ? overlayColor
+        : null;
+
+    final checkboxTheme = CheckboxThemeData(
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+      splashRadius: 18,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppBorderRadius.xs),
+      ),
+      side: BorderSide(
+        color: theme.cardBorder.withValues(alpha: 0.6),
+        width: BorderWidth.micro,
+      ),
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return theme.surfaceContainer.withValues(alpha: 0.4);
+        }
+        if (states.contains(WidgetState.selected)) {
+          return primaryColor;
+        }
+        return theme.surfaceBackground.withValues(alpha: 0.7);
+      }),
+      checkColor: WidgetStateProperty.all(theme.textInverse),
+      overlayColor: WidgetStateProperty.resolveWith(resolveOverlay),
+    );
+
+    final radioTheme = RadioThemeData(
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return theme.surfaceContainer.withValues(alpha: 0.4);
+        }
+        if (states.contains(WidgetState.selected)) {
+          return primaryColor;
+        }
+        return theme.surfaceBackground.withValues(alpha: 0.7);
+      }),
+      overlayColor: WidgetStateProperty.resolveWith(resolveOverlay),
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return theme.surfaceBackground.withValues(alpha: 0.3);
+        }
+        return null;
+      }),
     );
 
     return ConduitMarkdownTheme(
@@ -161,6 +431,11 @@ class ConduitMarkdownConfig {
           child: content,
         );
       },
+      orderedListBuilder: orderedListBuilder,
+      unOrderedListBuilder: unOrderedListBuilder,
+      tableBuilder: tableBuilder,
+      checkboxTheme: checkboxTheme,
+      radioTheme: radioTheme,
     );
   }
 

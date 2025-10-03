@@ -38,50 +38,61 @@ class StreamingMarkdownWidget extends StatelessWidget {
     );
     final textScaler = MediaQuery.maybeOf(context)?.textScaler;
 
+    final themedControls = Theme.of(context).copyWith(
+      checkboxTheme: markdownTheme.checkboxTheme,
+      radioTheme: markdownTheme.radioTheme,
+    );
+
     return GptMarkdownTheme(
       gptThemeData: markdownTheme.themeData,
-      child: SelectionArea(
-        child: GptMarkdown(
-          normalized,
-          style: markdownTheme.textStyle,
-          followLinkColor: markdownTheme.followLinkColor,
-          textDirection: Directionality.of(context),
-          textScaler: textScaler,
-          onLinkTap: onTapLink,
-          codeBuilder: markdownTheme.codeBuilder,
-          imageBuilder: markdownTheme.imageBuilder,
-          useDollarSignsForLatex: true,
-          highlightBuilder: (highlightContext, inline, baseStyle) {
-            final softened = ConduitMarkdownPreprocessor.softenInlineCode(
-              inline,
-            );
-            final theme = highlightContext.conduitTheme;
-            final base = baseStyle;
-            final fontSize = (base.fontSize ?? 13).clamp(11, 15).toDouble();
-            return Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: Spacing.xs,
-                vertical: Spacing.xxs,
-              ),
-              decoration: BoxDecoration(
-                color: theme.surfaceBackground.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(AppBorderRadius.xs),
-                border: Border.all(
-                  color: theme.cardBorder.withValues(alpha: 0.2),
-                  width: BorderWidth.micro,
+      child: Theme(
+        data: themedControls,
+        child: SelectionArea(
+          child: GptMarkdown(
+            normalized,
+            style: markdownTheme.textStyle,
+            followLinkColor: markdownTheme.followLinkColor,
+            textDirection: Directionality.of(context),
+            textScaler: textScaler,
+            onLinkTap: onTapLink,
+            codeBuilder: markdownTheme.codeBuilder,
+            imageBuilder: markdownTheme.imageBuilder,
+            orderedListBuilder: markdownTheme.orderedListBuilder,
+            unOrderedListBuilder: markdownTheme.unOrderedListBuilder,
+            tableBuilder: markdownTheme.tableBuilder,
+            useDollarSignsForLatex: true,
+            highlightBuilder: (highlightContext, inline, baseStyle) {
+              final softened = ConduitMarkdownPreprocessor.softenInlineCode(
+                inline,
+              );
+              final theme = highlightContext.conduitTheme;
+              final base = baseStyle;
+              final fontSize = (base.fontSize ?? 13).clamp(11, 15).toDouble();
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.xs,
+                  vertical: Spacing.xxs,
                 ),
-              ),
-              child: Text(
-                softened,
-                style: base.copyWith(
-                  fontFamily: AppTypography.monospaceFontFamily,
-                  fontSize: fontSize,
-                  height: 1.35,
-                  color: theme.code?.color ?? theme.textSecondary,
+                decoration: BoxDecoration(
+                  color: theme.surfaceBackground.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(AppBorderRadius.xs),
+                  border: Border.all(
+                    color: theme.cardBorder.withValues(alpha: 0.2),
+                    width: BorderWidth.micro,
+                  ),
                 ),
-              ),
-            );
-          },
+                child: Text(
+                  softened,
+                  style: base.copyWith(
+                    fontFamily: AppTypography.monospaceFontFamily,
+                    fontSize: fontSize,
+                    height: 1.35,
+                    color: theme.code?.color ?? theme.textSecondary,
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
