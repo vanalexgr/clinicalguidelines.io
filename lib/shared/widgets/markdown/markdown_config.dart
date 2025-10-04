@@ -9,20 +9,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/a11y-dark.dart';
 import 'package:flutter_highlight/themes/a11y-light.dart';
-import 'package:markdown_widget/markdown_widget.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../theme/color_tokens.dart';
 import '../../theme/theme_extensions.dart';
 import 'code_block_header.dart';
-import 'markdown_latex.dart';
 
 typedef MarkdownLinkTapCallback = void Function(String url, String title);
 
 class ConduitMarkdown {
   const ConduitMarkdown._();
 
-  static MarkdownWidget build({
+  static Widget build({
     required BuildContext context,
     required String data,
     MarkdownLinkTapCallback? onTapLink,
@@ -30,49 +31,39 @@ class ConduitMarkdown {
     bool shrinkWrap = false,
     ScrollPhysics? physics,
   }) {
-    final components = prepare(context, onTapLink: onTapLink);
-    return MarkdownWidget(
+    return MarkdownBody(
       data: data,
       selectable: selectable,
-      config: components.config,
-      markdownGenerator: components.generator,
       shrinkWrap: shrinkWrap,
-      physics: physics,
-      padding: EdgeInsets.zero,
+      styleSheet: _buildStyleSheet(context),
+      builders: _buildCustomBuilders(context, onTapLink),
+      extensionSet: md.ExtensionSet.gitHubFlavored,
+      onTapLink: onTapLink != null
+          ? (text, href, title) => onTapLink(href ?? '', title)
+          : null,
+      syntaxHighlighter: _CodeSyntaxHighlighter(context),
+      inlineSyntaxes: _buildInlineSyntaxes(),
     );
   }
 
-  static MarkdownBlock buildBlock({
+  static Widget buildBlock({
     required BuildContext context,
     required String data,
     MarkdownLinkTapCallback? onTapLink,
     bool selectable = true,
   }) {
-    final components = prepare(context, onTapLink: onTapLink);
-    return MarkdownBlock(
+    return build(
+      context: context,
       data: data,
+      onTapLink: onTapLink,
       selectable: selectable,
-      config: components.config,
-      generator: components.generator,
+      shrinkWrap: true,
     );
   }
 
-  static ({MarkdownConfig config, MarkdownGenerator generator}) prepare(
-    BuildContext context, {
-    MarkdownLinkTapCallback? onTapLink,
-  }) {
-    final config = _buildConfig(context, onTapLink: onTapLink);
-    final generator = _buildGenerator(context);
-    return (config: config, generator: generator);
-  }
-
-  static MarkdownConfig _buildConfig(
-    BuildContext context, {
-    MarkdownLinkTapCallback? onTapLink,
-  }) {
+  static MarkdownStyleSheet _buildStyleSheet(BuildContext context) {
     final theme = context.conduitTheme;
     final material = Theme.of(context);
-    final isDark = material.brightness == Brightness.dark;
 
     final baseBody = AppTypography.bodyMediumStyle.copyWith(
       color: theme.textPrimary,
@@ -85,209 +76,89 @@ class ConduitMarkdown {
 
     final codeBackground = theme.surfaceContainer.withValues(alpha: 0.55);
     final borderColor = theme.cardBorder.withValues(alpha: 0.25);
-    final highlightTheme = _codeHighlightTheme(theme, isDark: isDark);
 
-    return MarkdownConfig(
-      configs: [
-        PConfig(textStyle: baseBody),
-        H1Config(
-          style: AppTypography.headlineLargeStyle.copyWith(
-            color: theme.textPrimary,
+    return MarkdownStyleSheet(
+      p: baseBody,
+      h1: AppTypography.headlineLargeStyle.copyWith(
+        color: theme.textPrimary,
+      ),
+      h2: AppTypography.headlineMediumStyle.copyWith(
+        color: theme.textPrimary,
+      ),
+      h3: AppTypography.headlineSmallStyle.copyWith(
+        color: theme.textPrimary,
+      ),
+      h4: AppTypography.bodyLargeStyle.copyWith(
+        color: theme.textPrimary,
+      ),
+      h5: baseBody.copyWith(fontWeight: FontWeight.w600),
+      h6: secondaryBody,
+      a: baseBody.copyWith(
+        color: material.colorScheme.primary,
+        decoration: TextDecoration.underline,
+        decorationColor: material.colorScheme.primary,
+      ),
+      code: AppTypography.codeStyle.copyWith(
+        color: theme.codeText,
+        backgroundColor: codeBackground,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: codeBackground,
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        border: Border.all(color: borderColor, width: BorderWidth.micro),
+      ),
+      codeblockPadding: const EdgeInsets.all(Spacing.sm),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: material.colorScheme.primary.withValues(alpha: 0.35),
+            width: BorderWidth.small,
           ),
         ),
-        H2Config(
-          style: AppTypography.headlineMediumStyle.copyWith(
-            color: theme.textPrimary,
+      ),
+      blockquotePadding: const EdgeInsets.symmetric(
+        horizontal: Spacing.md,
+        vertical: Spacing.sm,
+      ),
+      blockquote: secondaryBody,
+      listBullet: baseBody,
+      listIndent: Spacing.lg,
+      tableHead: secondaryBody.copyWith(fontWeight: FontWeight.w600),
+      tableBody: secondaryBody,
+      tableBorder: TableBorder.all(color: borderColor, width: BorderWidth.micro),
+      tableHeadAlign: TextAlign.start,
+      tableColumnWidth: const FlexColumnWidth(),
+      tableCellsPadding: const EdgeInsets.symmetric(
+        horizontal: Spacing.sm,
+        vertical: Spacing.xs,
+      ),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: theme.dividerColor,
+            width: BorderWidth.small,
           ),
         ),
-        H3Config(
-          style: AppTypography.headlineSmallStyle.copyWith(
-            color: theme.textPrimary,
-          ),
-        ),
-        H4Config(
-          style: AppTypography.bodyLargeStyle.copyWith(
-            color: theme.textPrimary,
-          ),
-        ),
-        H5Config(style: baseBody.copyWith(fontWeight: FontWeight.w600)),
-        H6Config(style: secondaryBody),
-        LinkConfig(
-          style: baseBody.copyWith(
-            color: material.colorScheme.primary,
-            decoration: TextDecoration.underline,
-            decorationColor: material.colorScheme.primary,
-          ),
-          onTap: (url) => onTapLink?.call(url, url),
-        ),
-        CodeConfig(
-          style: AppTypography.codeStyle.copyWith(
-            color: theme.codeText,
-            backgroundColor: codeBackground,
-          ),
-        ),
-        PreConfig(
-          textStyle: AppTypography.codeStyle.copyWith(color: theme.codeText),
-          styleNotMatched: AppTypography.codeStyle.copyWith(
-            color: theme.codeText,
-          ),
-          theme: highlightTheme,
-          builder: (code, language) {
-            final normalizedLanguage = language.trim().isEmpty
-                ? 'plaintext'
-                : language.trim();
-            final highlight = HighlightView(
-              code,
-              language: normalizedLanguage == 'plaintext'
-                  ? null
-                  : normalizedLanguage,
-              theme: highlightTheme,
-              textStyle: AppTypography.codeStyle.copyWith(
-                color: theme.codeText,
-              ),
-              padding: EdgeInsets.zero,
-            );
-            return _buildCodeWrapper(
-              context: context,
-              child: highlight,
-              backgroundColor: codeBackground,
-              borderColor: borderColor,
-              language: normalizedLanguage,
-              rawCode: code,
-            );
-          },
-        ),
-        BlockquoteConfig(
-          sideColor: material.colorScheme.primary.withValues(alpha: 0.35),
-          textColor: theme.textSecondary,
-          sideWith: BorderWidth.small,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.md,
-            vertical: Spacing.sm,
-          ),
-          margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
-        ),
-        ListConfig(marginLeft: Spacing.lg, marginBottom: Spacing.xs),
-        TableConfig(
-          border: TableBorder.all(color: borderColor, width: BorderWidth.micro),
-          headPadding: const EdgeInsets.symmetric(
-            horizontal: Spacing.sm,
-            vertical: Spacing.xs,
-          ),
-          bodyPadding: const EdgeInsets.symmetric(
-            horizontal: Spacing.sm,
-            vertical: Spacing.xs,
-          ),
-          headerStyle: secondaryBody.copyWith(fontWeight: FontWeight.w600),
-          bodyStyle: secondaryBody,
-          headerRowDecoration: BoxDecoration(
-            color: theme.surfaceBackground.withValues(alpha: 0.35),
-          ),
-          bodyRowDecoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.2),
-          ),
-        ),
-        HrConfig(color: theme.dividerColor, height: BorderWidth.small),
-        ImgConfig(
-          builder: (url, attributes) {
-            final uri = Uri.tryParse(url);
-            if (uri == null) {
-              return _buildImageError(context, theme);
-            }
-            return _buildImage(context, uri);
-          },
-        ),
-      ],
+      ),
     );
   }
 
-  static MarkdownGenerator _buildGenerator(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final latex = ConduitLatex();
-    return MarkdownGenerator(
-      inlineSyntaxList: latex.syntaxes(),
-      generators: [latex.generator(isDark: isDark)],
-      linesMargin: const EdgeInsets.symmetric(vertical: Spacing.xs),
-    );
-  }
-
-  static Map<String, TextStyle> _codeHighlightTheme(
-    ConduitThemeExtension theme, {
-    required bool isDark,
-  }) {
-    final baseTheme = isDark ? a11yDarkTheme : a11yLightTheme;
-    final codeStyle = AppTypography.codeStyle.copyWith(color: theme.codeText);
-
+  static Map<String, MarkdownElementBuilder> _buildCustomBuilders(
+    BuildContext context,
+    MarkdownLinkTapCallback? onTapLink,
+  ) {
     return {
-      for (final entry in baseTheme.entries)
-        entry.key: entry.value.copyWith(
-          color: entry.value.color ?? theme.codeText,
-          fontFamily: AppTypography.monospaceFontFamily,
-          fontSize: codeStyle.fontSize,
-          height: codeStyle.height,
-        ),
+      'code': _CodeBlockBuilder(context),
+      'img': _ImageBuilder(context),
+      'mermaid': _MermaidBuilder(context),
+      'latex': _LatexBuilder(context),
     };
   }
 
-  static Widget _buildCodeWrapper({
-    required BuildContext context,
-    required Widget child,
-    required Color backgroundColor,
-    required Color borderColor,
-    required String language,
-    required String rawCode,
-  }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : MediaQuery.sizeOf(context).width;
-
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: Spacing.xs),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-            border: Border.all(color: borderColor, width: BorderWidth.micro),
-          ),
-          child: ClipRect(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CodeBlockHeader(
-                  language: language,
-                  onCopy: () async {
-                    await Clipboard.setData(ClipboardData(text: rawCode));
-                    if (!context.mounted) {
-                      return;
-                    }
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Code copied to clipboard.'),
-                      ),
-                    );
-                  },
-                ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: IntrinsicWidth(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minWidth: width),
-                      child: Padding(
-                        padding: const EdgeInsets.all(Spacing.sm),
-                        child: child,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  static List<md.InlineSyntax> _buildInlineSyntaxes() {
+    return [
+      _LatexInlineSyntax(),
+    ];
   }
 
   static Widget buildMermaidBlock(BuildContext context, String code) {
@@ -310,8 +181,211 @@ class ConduitMarkdown {
     );
   }
 
-  static Widget _buildImage(BuildContext context, Uri uri) {
+  static Widget _buildMermaidContainer({
+    required BuildContext context,
+    required ConduitThemeExtension conduitTheme,
+    required ThemeData materialTheme,
+    required String code,
+  }) {
+    final tokens = context.colorTokens;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        border: Border.all(
+          color: conduitTheme.cardBorder.withValues(alpha: 0.4),
+          width: BorderWidth.micro,
+        ),
+      ),
+      height: 360,
+      width: double.infinity,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        child: MermaidDiagram(
+          code: code,
+          brightness: materialTheme.brightness,
+          colorScheme: materialTheme.colorScheme,
+          tokens: tokens,
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildUnsupportedMermaidContainer({
+    required BuildContext context,
+    required ConduitThemeExtension conduitTheme,
+    required String code,
+  }) {
+    final textStyle = AppTypography.bodySmallStyle.copyWith(
+      color: conduitTheme.codeText.withValues(alpha: 0.7),
+    );
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
+      padding: const EdgeInsets.all(Spacing.sm),
+      decoration: BoxDecoration(
+        color: conduitTheme.surfaceContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        border: Border.all(
+          color: conduitTheme.cardBorder.withValues(alpha: 0.4),
+          width: BorderWidth.micro,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Mermaid preview is not available on this platform.',
+            style: textStyle,
+          ),
+          const SizedBox(height: Spacing.xs),
+          SelectableText(
+            code,
+            maxLines: null,
+            textAlign: TextAlign.left,
+            textDirection: TextDirection.ltr,
+            textWidthBasis: TextWidthBasis.parent,
+            style: AppTypography.codeStyle.copyWith(color: conduitTheme.codeText),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Code syntax highlighting
+class _CodeSyntaxHighlighter extends SyntaxHighlighter {
+  _CodeSyntaxHighlighter(this.context);
+
+  final BuildContext context;
+
+  @override
+  TextSpan format(String source) {
     final theme = context.conduitTheme;
+
+    return TextSpan(
+      style: AppTypography.codeStyle.copyWith(color: theme.codeText),
+      children: [TextSpan(text: source)],
+    );
+  }
+}
+
+// Custom code block builder with header
+class _CodeBlockBuilder extends MarkdownElementBuilder {
+  _CodeBlockBuilder(this.context);
+
+  final BuildContext context;
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final theme = context.conduitTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final code = element.textContent;
+    final language = element.attributes['class']?.replaceFirst('language-', '') ?? 'plaintext';
+
+    final highlightTheme = _getCodeHighlightTheme(theme, isDark: isDark);
+    final normalizedLanguage = language.trim().isEmpty ? 'plaintext' : language.trim();
+
+    final highlight = HighlightView(
+      code,
+      language: normalizedLanguage == 'plaintext' ? null : normalizedLanguage,
+      theme: highlightTheme,
+      textStyle: AppTypography.codeStyle.copyWith(color: theme.codeText),
+      padding: EdgeInsets.zero,
+    );
+
+    final codeBackground = theme.surfaceContainer.withValues(alpha: 0.55);
+    final borderColor = theme.cardBorder.withValues(alpha: 0.25);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: Spacing.xs),
+          decoration: BoxDecoration(
+            color: codeBackground,
+            borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+            border: Border.all(color: borderColor, width: BorderWidth.micro),
+          ),
+          child: ClipRect(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CodeBlockHeader(
+                  language: normalizedLanguage,
+                  onCopy: () async {
+                    await Clipboard.setData(ClipboardData(text: code));
+                    if (!context.mounted) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Code copied to clipboard.'),
+                      ),
+                    );
+                  },
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: IntrinsicWidth(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: width),
+                      child: Padding(
+                        padding: const EdgeInsets.all(Spacing.sm),
+                        child: highlight,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Map<String, TextStyle> _getCodeHighlightTheme(
+    ConduitThemeExtension theme, {
+    required bool isDark,
+  }) {
+    final baseTheme = isDark ? a11yDarkTheme : a11yLightTheme;
+    final codeStyle = AppTypography.codeStyle.copyWith(color: theme.codeText);
+
+    return {
+      for (final entry in baseTheme.entries)
+        entry.key: entry.value.copyWith(
+          color: entry.value.color ?? theme.codeText,
+          fontFamily: AppTypography.monospaceFontFamily,
+          fontSize: codeStyle.fontSize,
+          height: codeStyle.height,
+        ),
+    };
+  }
+}
+
+// Custom image builder
+class _ImageBuilder extends MarkdownElementBuilder {
+  _ImageBuilder(this.context);
+
+  final BuildContext context;
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final theme = context.conduitTheme;
+    final url = element.attributes['src'] ?? '';
+    final uri = Uri.tryParse(url);
+
+    if (uri == null) {
+      return _buildImageError(context, theme);
+    }
+
     if (uri.scheme == 'data') {
       return _buildBase64Image(uri.toString(), context, theme);
     }
@@ -323,7 +397,7 @@ class ConduitMarkdown {
     return _buildImageError(context, theme);
   }
 
-  static Widget _buildBase64Image(
+  Widget _buildBase64Image(
     String dataUrl,
     BuildContext context,
     ConduitThemeExtension theme,
@@ -356,7 +430,7 @@ class ConduitMarkdown {
     }
   }
 
-  static Widget _buildNetworkImage(
+  Widget _buildNetworkImage(
     String url,
     BuildContext context,
     ConduitThemeExtension theme,
@@ -387,7 +461,7 @@ class ConduitMarkdown {
     );
   }
 
-  static Widget _buildImageError(
+  Widget _buildImageError(
     BuildContext context,
     ConduitThemeExtension theme,
   ) {
@@ -408,78 +482,95 @@ class ConduitMarkdown {
   }
 }
 
-Widget _buildMermaidContainer({
-  required BuildContext context,
-  required ConduitThemeExtension conduitTheme,
-  required ThemeData materialTheme,
-  required String code,
-}) {
-  final tokens = context.colorTokens;
-  return Container(
-    margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-      border: Border.all(
-        color: conduitTheme.cardBorder.withValues(alpha: 0.4),
-        width: BorderWidth.micro,
-      ),
-    ),
-    height: 360,
-    width: double.infinity,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-      child: MermaidDiagram(
-        code: code,
-        brightness: materialTheme.brightness,
-        colorScheme: materialTheme.colorScheme,
-        tokens: tokens,
-      ),
-    ),
-  );
+// Mermaid diagram builder
+class _MermaidBuilder extends MarkdownElementBuilder {
+  _MermaidBuilder(this.context);
+
+  final BuildContext context;
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final code = element.textContent;
+    return ConduitMarkdown.buildMermaidBlock(context, code);
+  }
 }
 
-Widget _buildUnsupportedMermaidContainer({
-  required BuildContext context,
-  required ConduitThemeExtension conduitTheme,
-  required String code,
-}) {
-  final textStyle = AppTypography.bodySmallStyle.copyWith(
-    color: conduitTheme.codeText.withValues(alpha: 0.7),
-  );
+// LaTeX builder
+class _LatexBuilder extends MarkdownElementBuilder {
+  _LatexBuilder(this.context);
 
-  return Container(
-    margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
-    padding: const EdgeInsets.all(Spacing.sm),
-    decoration: BoxDecoration(
-      color: conduitTheme.surfaceContainer.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-      border: Border.all(
-        color: conduitTheme.cardBorder.withValues(alpha: 0.4),
-        width: BorderWidth.micro,
-      ),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Mermaid preview is not available on this platform.',
-          style: textStyle,
-        ),
-        const SizedBox(height: Spacing.xs),
-        SelectableText(
-          code,
-          maxLines: null,
-          textAlign: TextAlign.left,
-          textDirection: TextDirection.ltr,
-          textWidthBasis: TextWidthBasis.parent,
-          style: AppTypography.codeStyle.copyWith(color: conduitTheme.codeText),
-        ),
-      ],
-    ),
-  );
+  final BuildContext context;
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final content = element.textContent.trim();
+    final isInline = element.attributes['isInline'] == 'true';
+
+    final baseStyle = (preferredStyle ?? AppTypography.bodyMediumStyle).copyWith(
+      color: isDark ? Colors.white : Colors.black,
+    );
+
+    if (content.isEmpty) {
+      return Text(element.textContent, style: baseStyle);
+    }
+
+    final mathWidget = Math.tex(
+      content,
+      mathStyle: MathStyle.text,
+      textStyle: baseStyle,
+      textScaleFactor: 1,
+      onErrorFallback: (error) {
+        return Text(content, style: baseStyle.copyWith(color: Colors.red));
+      },
+    );
+
+    if (isInline) {
+      return mathWidget;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
+      child: Center(child: mathWidget),
+    );
+  }
 }
 
+// LaTeX inline syntax
+class _LatexInlineSyntax extends md.InlineSyntax {
+  _LatexInlineSyntax()
+      : super(
+          r'(\$\$[\s\S]+?\$\$)|(\$[^\n]+?\$)|(\\\([\s\S]+?\\\))|(\\\[[\s\S]+?\\\])',
+        );
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    final raw = match.group(0) ?? '';
+    String content = raw;
+    bool isInline = true;
+
+    if (raw.startsWith(r'$$') && raw.endsWith(r'$$') && raw.length > 4) {
+      content = raw.substring(2, raw.length - 2);
+      isInline = false;
+    } else if (raw.startsWith(r'$') && raw.endsWith(r'$') && raw.length > 2) {
+      content = raw.substring(1, raw.length - 1);
+      isInline = true;
+    } else if (raw.startsWith(r'\(') && raw.endsWith(r'\)') && raw.length > 4) {
+      content = raw.substring(2, raw.length - 2);
+      isInline = true;
+    } else if (raw.startsWith(r'\[') && raw.endsWith(r'\]') && raw.length > 4) {
+      content = raw.substring(2, raw.length - 2);
+      isInline = false;
+    }
+
+    final element = md.Element.text('latex', content);
+    element.attributes['isInline'] = isInline.toString();
+    parser.addNode(element);
+    return true;
+  }
+}
+
+// Mermaid diagram WebView widget
 class MermaidDiagram extends StatefulWidget {
   const MermaidDiagram({
     super.key,

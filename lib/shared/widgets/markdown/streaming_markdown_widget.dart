@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:markdown_widget/markdown_widget.dart';
-
 import '../../theme/theme_extensions.dart';
 import 'markdown_config.dart';
 import 'markdown_preprocessor.dart';
@@ -27,17 +25,13 @@ class StreamingMarkdownWidget extends StatelessWidget {
     final normalized = ConduitMarkdownPreprocessor.normalize(content);
     final mermaidRegex = RegExp(r'```mermaid\s*([\s\S]*?)```', multiLine: true);
     final matches = mermaidRegex.allMatches(normalized).toList();
-    final renderComponents = ConduitMarkdown.prepare(
-      context,
-      onTapLink: onTapLink,
-    );
 
     Widget buildMarkdown(String data) {
-      return MarkdownBlock(
+      return ConduitMarkdown.buildBlock(
+        context: context,
         data: data,
+        onTapLink: onTapLink,
         selectable: false,
-        config: renderComponents.config,
-        generator: renderComponents.generator,
       );
     }
 
