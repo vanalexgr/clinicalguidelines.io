@@ -519,18 +519,25 @@ final attachmentUploadQueueProvider = Provider<AttachmentUploadQueue?>((ref) {
 // Auth providers
 // Auth token integration with API service - using unified auth system
 final apiTokenUpdaterProvider = Provider<void>((ref) {
-  // Listen to unified auth token changes and update API service
+  void syncToken(ApiService? api, String? token) {
+    if (api == null) return;
+    api.updateAuthToken(token != null && token.isNotEmpty ? token : null);
+    final length = token?.length ?? 0;
+    DebugLogger.auth(
+      'token-updated',
+      scope: 'auth/api',
+      data: {'length': length},
+    );
+  }
+
+  syncToken(ref.read(apiServiceProvider), ref.read(authTokenProvider3));
+
+  ref.listen<ApiService?>(apiServiceProvider, (previous, next) {
+    syncToken(next, ref.read(authTokenProvider3));
+  });
+
   ref.listen<String?>(authTokenProvider3, (previous, next) {
-    final api = ref.read(apiServiceProvider);
-    if (api != null) {
-      api.updateAuthToken(next);
-      final length = next?.length ?? 0;
-      DebugLogger.auth(
-        'token-updated',
-        scope: 'auth/api',
-        data: {'length': length},
-      );
-    }
+    syncToken(ref.read(apiServiceProvider), next);
   });
 });
 

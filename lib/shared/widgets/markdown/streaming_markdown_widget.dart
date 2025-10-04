@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../theme/theme_extensions.dart';
 import 'markdown_config.dart';
 import 'markdown_preprocessor.dart';
-
-typedef MarkdownLinkTapCallback = void Function(String url, String title);
 
 class StreamingMarkdownWidget extends StatelessWidget {
   const StreamingMarkdownWidget({
@@ -26,26 +23,20 @@ class StreamingMarkdownWidget extends StatelessWidget {
     }
 
     final normalized = ConduitMarkdownPreprocessor.normalize(content);
-    final markdownTheme = ConduitMarkdownConfig.resolve(context);
+    final markdownTheme = ConduitMarkdownConfig.resolve(
+      context,
+      onTapLink: onTapLink,
+    );
+    final generator = markdownTheme.createGenerator();
     final mermaidRegex = RegExp(r'```mermaid\s*([\s\S]*?)```', multiLine: true);
     final matches = mermaidRegex.allMatches(normalized).toList();
 
-    Widget buildMarkdown(String data) => MarkdownBody(
-      data: data,
-      styleSheet: markdownTheme.styleSheet,
-      selectable: false,
-      imageBuilder: markdownTheme.imageBuilder,
-      onTapLink: (text, href, title) {
-        final target = href ?? '';
-        if (target.isEmpty) {
-          return;
-        }
-        final resolvedTitle = title.isNotEmpty ? title : text;
-        onTapLink?.call(target, resolvedTitle);
-      },
-    );
+    List<Widget> buildMarkdownBlocks(String data) {
+      return generator.buildWidgets(data, config: markdownTheme.config);
+    }
 
     if (matches.isEmpty) {
+      final blocks = buildMarkdownBlocks(normalized);
       return SelectionArea(
         child: Theme(
           data: Theme.of(context).copyWith(
@@ -53,7 +44,10 @@ class StreamingMarkdownWidget extends StatelessWidget {
               cursorColor: context.conduitTheme.buttonPrimary,
             ),
           ),
-          child: buildMarkdown(normalized),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: blocks,
+          ),
         ),
       );
     }
@@ -63,7 +57,7 @@ class StreamingMarkdownWidget extends StatelessWidget {
     for (final match in matches) {
       final before = normalized.substring(currentIndex, match.start);
       if (before.trim().isNotEmpty) {
-        children.add(buildMarkdown(before));
+        children.addAll(buildMarkdownBlocks(before));
       }
 
       final code = match.group(1)?.trim() ?? '';
@@ -76,7 +70,7 @@ class StreamingMarkdownWidget extends StatelessWidget {
 
     final tail = normalized.substring(currentIndex);
     if (tail.trim().isNotEmpty) {
-      children.add(buildMarkdown(tail));
+      children.addAll(buildMarkdownBlocks(tail));
     }
 
     return SelectionArea(

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_state_manager.dart';
 import '../../../core/models/user.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/services/api_service.dart';
 
 /// Unified auth providers using the new auth state manager
 /// These replace the old auth providers for better efficiency
@@ -107,11 +108,24 @@ final authStatusProvider = Provider<AuthStatus>((ref) {
 
 /// Provider to watch for auth state changes and update API service
 final authApiIntegrationProvider = Provider<void>((ref) {
-  ref.listen(authTokenProvider3, (previous, next) {
-    final api = ref.read(apiServiceProvider);
-    if (api != null && next != null && next.isNotEmpty) {
-      api.updateAuthToken(next);
+  void syncToken(ApiService? api, String? token) {
+    if (api == null) return;
+    if (token == null || token.isEmpty) {
+      api.updateAuthToken(null);
+      return;
     }
+    api.updateAuthToken(token);
+  }
+
+  // Ensure the current ApiService instance immediately picks up the cached token.
+  syncToken(ref.read(apiServiceProvider), ref.read(authTokenProvider3));
+
+  ref.listen<ApiService?>(apiServiceProvider, (previous, next) {
+    syncToken(next, ref.read(authTokenProvider3));
+  });
+
+  ref.listen<String?>(authTokenProvider3, (previous, next) {
+    syncToken(ref.read(apiServiceProvider), next);
   });
 });
 

@@ -112,17 +112,14 @@ class ApiAuthInterceptor extends Interceptor {
     // Add custom headers from server config (with safety checks)
     if (customHeaders.isNotEmpty) {
       customHeaders.forEach((key, value) {
-        // Don't override critical headers that we manage
         final lowerKey = key.toLowerCase();
-        if (lowerKey != 'authorization' &&
-            lowerKey != 'content-type' &&
-            lowerKey != 'accept') {
-          options.headers[key] = value;
-        } else {
+        if (lowerKey == 'authorization') {
           DebugLogger.warning(
             'Skipping reserved header override attempt: $key',
           );
+          return;
         }
+        options.headers[key] = value;
       });
     }
 

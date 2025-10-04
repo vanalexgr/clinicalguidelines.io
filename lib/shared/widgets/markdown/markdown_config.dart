@@ -2,34 +2,57 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_highlight/themes/a11y-dark.dart';
+import 'package:flutter_highlight/themes/a11y-light.dart';
+import 'package:markdown/markdown.dart' as m;
+import 'package:markdown_widget/markdown_widget.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../../theme/theme_extensions.dart';
 import '../../theme/color_tokens.dart';
+import '../../theme/theme_extensions.dart';
+import 'markdown_latex.dart';
 
+/// Callback invoked when a markdown link is tapped.
+typedef MarkdownLinkTapCallback = void Function(String url, String title);
+
+/// Bundles markdown configuration and generator metadata for the app theme.
 class ConduitMarkdownTheme {
   const ConduitMarkdownTheme({
-    required this.styleSheet,
-    required this.imageBuilder,
-    required this.linkColor,
-    required this.linkHoverColor,
+    required this.config,
+    required this.inlineSyntaxes,
+    required this.blockSyntaxes,
+    required this.generators,
+    required this.linesMargin,
   });
 
-  final MarkdownStyleSheet styleSheet;
-  final MarkdownImageBuilder imageBuilder;
-  final Color linkColor;
-  final Color linkHoverColor;
+  final MarkdownConfig config;
+  final List<m.InlineSyntax> inlineSyntaxes;
+  final List<m.BlockSyntax> blockSyntaxes;
+  final List<SpanNodeGeneratorWithTag> generators;
+  final EdgeInsets linesMargin;
+
+  MarkdownGenerator createGenerator() {
+    return MarkdownGenerator(
+      inlineSyntaxList: inlineSyntaxes,
+      blockSyntaxList: blockSyntaxes,
+      linesMargin: linesMargin,
+      generators: generators,
+    );
+  }
 }
 
 class ConduitMarkdownConfig {
-  static ConduitMarkdownTheme resolve(BuildContext context) {
+  static ConduitMarkdownTheme resolve(
+    BuildContext context, {
+    MarkdownLinkTapCallback? onTapLink,
+  }) {
     final theme = context.conduitTheme;
     final materialTheme = Theme.of(context);
+    final isDark = materialTheme.brightness == Brightness.dark;
 
     final baseBody = AppTypography.bodyMediumStyle.copyWith(
       color: theme.textPrimary,
@@ -42,81 +65,151 @@ class ConduitMarkdownConfig {
 
     final codeBackground = theme.surfaceContainer.withValues(alpha: 0.55);
     final borderColor = theme.cardBorder.withValues(alpha: 0.25);
+    final latex = const ConduitLatex();
 
-    final styleSheet = MarkdownStyleSheet(
-      a: baseBody.copyWith(
-        color: materialTheme.colorScheme.primary,
-        decoration: TextDecoration.underline,
-        decorationColor: materialTheme.colorScheme.primary,
-      ),
-      p: baseBody,
-      blockSpacing: Spacing.sm,
-      listIndent: Spacing.lg,
-      listBullet: baseBody.copyWith(color: theme.textSecondary),
-      listBulletPadding: const EdgeInsets.only(right: Spacing.xs),
-      checkbox: baseBody.copyWith(color: theme.textSecondary),
-      em: baseBody.copyWith(fontStyle: FontStyle.italic),
-      strong: baseBody.copyWith(fontWeight: FontWeight.w600),
-      del: baseBody.copyWith(decoration: TextDecoration.lineThrough),
-      h1: AppTypography.headlineLargeStyle.copyWith(color: theme.textPrimary),
-      h2: AppTypography.headlineMediumStyle.copyWith(color: theme.textPrimary),
-      h3: AppTypography.headlineSmallStyle.copyWith(color: theme.textPrimary),
-      h4: AppTypography.bodyLargeStyle.copyWith(color: theme.textPrimary),
-      h5: baseBody.copyWith(fontWeight: FontWeight.w600),
-      h6: secondaryBody,
-      blockquote: baseBody.copyWith(color: theme.textSecondary),
-      blockquotePadding: const EdgeInsets.symmetric(
-        horizontal: Spacing.md,
-        vertical: Spacing.sm,
-      ),
-      blockquoteDecoration: BoxDecoration(
-        color: theme.surfaceContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-        border: Border(
-          left: BorderSide(
-            width: BorderWidth.standard,
-            color: materialTheme.colorScheme.primary.withValues(alpha: 0.35),
-          ),
-        ),
-      ),
-      code: AppTypography.codeStyle.copyWith(
-        color: theme.codeText,
-        backgroundColor: codeBackground,
-      ),
-      codeblockPadding: const EdgeInsets.all(Spacing.sm),
-      codeblockDecoration: BoxDecoration(
-        color: codeBackground,
-        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-        border: Border.all(color: borderColor, width: BorderWidth.micro),
-      ),
-      horizontalRuleDecoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: theme.dividerColor, width: BorderWidth.small),
-        ),
-      ),
-      tableHead: secondaryBody.copyWith(fontWeight: FontWeight.w600),
-      tableBody: secondaryBody,
-      tableBorder: TableBorder.all(
-        color: borderColor,
-        width: BorderWidth.micro,
-      ),
-      tableCellsPadding: const EdgeInsets.symmetric(
-        horizontal: Spacing.sm,
-        vertical: Spacing.xs,
-      ),
-      tableCellsDecoration: BoxDecoration(
-        color: theme.surfaceBackground.withValues(alpha: 0.35),
-      ),
-      tableHeadAlign: TextAlign.left,
-      tablePadding: const EdgeInsets.only(bottom: Spacing.xs),
-    );
+    final markdownConfig =
+        (isDark ? MarkdownConfig.darkConfig : MarkdownConfig.defaultConfig)
+            .copy(
+              configs: [
+                PConfig(textStyle: baseBody),
+                H1Config(
+                  style: AppTypography.headlineLargeStyle.copyWith(
+                    color: theme.textPrimary,
+                  ),
+                ),
+                H2Config(
+                  style: AppTypography.headlineMediumStyle.copyWith(
+                    color: theme.textPrimary,
+                  ),
+                ),
+                H3Config(
+                  style: AppTypography.headlineSmallStyle.copyWith(
+                    color: theme.textPrimary,
+                  ),
+                ),
+                H4Config(
+                  style: AppTypography.bodyLargeStyle.copyWith(
+                    color: theme.textPrimary,
+                  ),
+                ),
+                H5Config(style: baseBody.copyWith(fontWeight: FontWeight.w600)),
+                H6Config(style: secondaryBody),
+                LinkConfig(
+                  style: baseBody.copyWith(
+                    color: materialTheme.colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                    decorationColor: materialTheme.colorScheme.primary,
+                  ),
+                  onTap: (url) => onTapLink?.call(url, url),
+                ),
+                CodeConfig(
+                  style: AppTypography.codeStyle.copyWith(
+                    color: theme.codeText,
+                    backgroundColor: codeBackground,
+                  ),
+                ),
+                PreConfig(
+                  padding: const EdgeInsets.all(Spacing.sm),
+                  margin: const EdgeInsets.symmetric(vertical: Spacing.xs),
+                  decoration: BoxDecoration(
+                    color: codeBackground,
+                    borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+                    border: Border.all(
+                      color: borderColor,
+                      width: BorderWidth.micro,
+                    ),
+                  ),
+                  textStyle: AppTypography.codeStyle.copyWith(
+                    color: theme.codeText,
+                  ),
+                  styleNotMatched: AppTypography.codeStyle.copyWith(
+                    color: theme.codeText,
+                  ),
+                  theme: _codeHighlightTheme(theme, isDark: isDark),
+                  language: 'plaintext',
+                ),
+                BlockquoteConfig(
+                  sideColor: materialTheme.colorScheme.primary.withValues(
+                    alpha: 0.35,
+                  ),
+                  textColor: theme.textSecondary,
+                  sideWith: BorderWidth.micro,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Spacing.md,
+                    vertical: Spacing.sm,
+                  ),
+                  margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
+                ),
+                ListConfig(marginLeft: Spacing.lg, marginBottom: Spacing.xs),
+                TableConfig(
+                  border: TableBorder.all(
+                    color: borderColor,
+                    width: BorderWidth.micro,
+                  ),
+                  headPadding: const EdgeInsets.symmetric(
+                    horizontal: Spacing.sm,
+                    vertical: Spacing.xs,
+                  ),
+                  bodyPadding: const EdgeInsets.symmetric(
+                    horizontal: Spacing.sm,
+                    vertical: Spacing.xs,
+                  ),
+                  headerStyle: secondaryBody.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  bodyStyle: secondaryBody,
+                  headerRowDecoration: BoxDecoration(
+                    color: theme.surfaceBackground.withValues(alpha: 0.35),
+                  ),
+                  bodyRowDecoration: BoxDecoration(
+                    color: theme.surfaceContainer.withValues(alpha: 0.2),
+                  ),
+                ),
+                HrConfig(color: theme.dividerColor, height: BorderWidth.small),
+                ImgConfig(
+                  builder: (url, _) {
+                    return Builder(
+                      builder: (context) {
+                        final uri = Uri.tryParse(url);
+                        if (uri == null) {
+                          return _buildImageError(
+                            context,
+                            context.conduitTheme,
+                          );
+                        }
+                        return _buildImage(context, uri);
+                      },
+                    );
+                  },
+                ),
+              ],
+            );
 
     return ConduitMarkdownTheme(
-      styleSheet: styleSheet,
-      imageBuilder: (uri, title, alt) => _buildImage(context, uri),
-      linkColor: materialTheme.colorScheme.primary,
-      linkHoverColor: materialTheme.colorScheme.primary.withValues(alpha: 0.8),
+      config: markdownConfig,
+      inlineSyntaxes: [latex.syntax()],
+      blockSyntaxes: const [],
+      generators: [latex.generator(isDark: isDark)],
+      linesMargin: const EdgeInsets.only(bottom: Spacing.sm),
     );
+  }
+
+  static Map<String, TextStyle> _codeHighlightTheme(
+    ConduitThemeExtension theme, {
+    required bool isDark,
+  }) {
+    final baseTheme = isDark ? a11yDarkTheme : a11yLightTheme;
+    final codeStyle = AppTypography.codeStyle.copyWith(color: theme.codeText);
+
+    return {
+      for (final entry in baseTheme.entries)
+        entry.key: entry.value.copyWith(
+          color: entry.value.color ?? theme.codeText,
+          fontFamily: AppTypography.monospaceFontFamily,
+          fontSize: codeStyle.fontSize,
+          height: codeStyle.height,
+        ),
+    };
   }
 
   static Widget buildMermaidBlock(BuildContext context, String code) {
