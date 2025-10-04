@@ -6,9 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:flutter_highlight/themes/a11y-dark.dart';
-import 'package:flutter_highlight/themes/a11y-light.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -283,90 +280,53 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final code = element.textContent;
     final language = element.attributes['class']?.replaceFirst('language-', '') ?? 'plaintext';
-
-    final highlightTheme = _getCodeHighlightTheme(theme, isDark: isDark);
     final normalizedLanguage = language.trim().isEmpty ? 'plaintext' : language.trim();
 
-    final highlight = HighlightView(
-      code,
-      language: normalizedLanguage == 'plaintext' ? null : normalizedLanguage,
-      theme: highlightTheme,
-      textStyle: AppTypography.codeStyle.copyWith(color: theme.codeText),
-      padding: EdgeInsets.zero,
-    );
+    // Match GitHub/Atom theme colors for code block container
+    final codeBackground = isDark
+        ? const Color(0xFF282c34) // Atom One Dark background
+        : const Color(0xFFfafbfc); // GitHub light background
 
-    final codeBackground = theme.surfaceContainer.withValues(alpha: 0.55);
-    final borderColor = theme.cardBorder.withValues(alpha: 0.25);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : MediaQuery.sizeOf(context).width;
-
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: Spacing.xs),
-          decoration: BoxDecoration(
-            color: codeBackground,
-            borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-            border: Border.all(color: borderColor, width: BorderWidth.micro),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
+      decoration: BoxDecoration(
+        color: codeBackground,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CodeBlockHeader(
+            language: normalizedLanguage,
+            onCopy: () async {
+              await Clipboard.setData(ClipboardData(text: code));
+              if (!context.mounted) {
+                return;
+              }
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Code copied to clipboard.'),
+                ),
+              );
+            },
           ),
-          child: ClipRect(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CodeBlockHeader(
-                  language: normalizedLanguage,
-                  onCopy: () async {
-                    await Clipboard.setData(ClipboardData(text: code));
-                    if (!context.mounted) {
-                      return;
-                    }
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Code copied to clipboard.'),
-                      ),
-                    );
-                  },
-                ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: IntrinsicWidth(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minWidth: width),
-                      child: Padding(
-                        padding: const EdgeInsets.all(Spacing.sm),
-                        child: highlight,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.all(Spacing.md),
+            child: SelectableText(
+              code,
+              style: AppTypography.codeStyle.copyWith(
+                color: theme.codeText,
+                fontFamily: AppTypography.monospaceFontFamily,
+              ),
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
-  }
-
-  Map<String, TextStyle> _getCodeHighlightTheme(
-    ConduitThemeExtension theme, {
-    required bool isDark,
-  }) {
-    final baseTheme = isDark ? a11yDarkTheme : a11yLightTheme;
-    final codeStyle = AppTypography.codeStyle.copyWith(color: theme.codeText);
-
-    return {
-      for (final entry in baseTheme.entries)
-        entry.key: entry.value.copyWith(
-          color: entry.value.color ?? theme.codeText,
-          fontFamily: AppTypography.monospaceFontFamily,
-          fontSize: codeStyle.fontSize,
-          height: codeStyle.height,
-        ),
-    };
   }
 }
 

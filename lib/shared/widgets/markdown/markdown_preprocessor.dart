@@ -1,5 +1,5 @@
 /// Utility helpers for normalising markdown content before handing it to
-/// [GptMarkdown]. The goal is to keep streaming responsive while smoothing
+/// [ConduitMarkdown]. The goal is to keep streaming responsive while smoothing
 /// out troublesome edge-cases (e.g. nested fences inside lists).
 class ConduitMarkdownPreprocessor {
   const ConduitMarkdownPreprocessor._();
