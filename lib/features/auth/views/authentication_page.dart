@@ -160,13 +160,13 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
                 // Header with progress indicator
                 _buildHeader(),
 
-                const SizedBox(height: Spacing.extraLarge),
+                const SizedBox(height: Spacing.xl),
 
                 // Main content
                 Expanded(
                   child: SingleChildScrollView(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 500),
+                      constraints: const BoxConstraints(maxWidth: 480),
                       child: Form(
                         key: _formKey,
                         child: Column(
@@ -175,12 +175,12 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
                             // Server connection status
                             _buildServerStatus(),
 
-                            const SizedBox(height: Spacing.sectionGap),
+                            const SizedBox(height: Spacing.xl),
 
                             // Welcome section
                             _buildWelcomeSection(),
 
-                            const SizedBox(height: Spacing.sectionGap),
+                            const SizedBox(height: Spacing.xl),
 
                             // Authentication form
                             _buildAuthForm(),
@@ -214,8 +214,8 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         Row(
           children: [
             Container(
-              width: 32,
-              height: 6,
+              width: 24,
+              height: 4,
               decoration: BoxDecoration(
                 color: context.conduitTheme.buttonPrimary,
                 borderRadius: BorderRadius.circular(AppBorderRadius.round),
@@ -223,8 +223,8 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
             ),
             const SizedBox(width: Spacing.xs),
             Container(
-              width: 32,
-              height: 6,
+              width: 24,
+              height: 4,
               decoration: BoxDecoration(
                 color: context.conduitTheme.buttonPrimary,
                 borderRadius: BorderRadius.circular(AppBorderRadius.round),
@@ -251,43 +251,40 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
       } catch (_) {}
       return 'Server';
     }();
-    return ConduitCard(
-      isElevated: false,
-      padding: const EdgeInsets.all(Spacing.lg),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Spacing.md,
+        vertical: Spacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: context.conduitTheme.success.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
+        border: Border.all(
+          color: context.conduitTheme.success.withValues(alpha: 0.2),
+          width: BorderWidth.standard,
+        ),
+      ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: context.conduitTheme.successBackground,
-              borderRadius: BorderRadius.circular(AppBorderRadius.round),
-              border: Border.all(
-                color: context.conduitTheme.success.withValues(alpha: 0.3),
-                width: BorderWidth.standard,
-              ),
-            ),
-            child: Icon(
-              Platform.isIOS
-                  ? CupertinoIcons.checkmark_circle_fill
-                  : Icons.check_circle,
-              color: context.conduitTheme.success,
-              size: IconSize.medium,
-            ),
+          Icon(
+            Platform.isIOS
+                ? CupertinoIcons.checkmark_circle
+                : Icons.check_circle_outline,
+            color: context.conduitTheme.success,
+            size: IconSize.small,
           ),
-          const SizedBox(width: Spacing.md),
+          const SizedBox(width: Spacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   AppLocalizations.of(context)!.connectedToServer,
-                  style: context.conduitTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  style: context.conduitTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
                     color: context.conduitTheme.success,
                   ),
                 ),
-                const SizedBox(height: Spacing.xs),
                 Text(
                   hostText,
                   style: context.conduitTheme.bodySmall?.copyWith(
@@ -300,10 +297,6 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
           ),
         ],
       ),
-    ).animate().slideX(
-      begin: -0.05,
-      duration: AnimationDuration.messageSlide,
-      curve: Curves.easeOutCubic,
     );
   }
 
@@ -312,73 +305,60 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
       children: [
         BrandService.createBrandIcon(
           size: 48,
-          useGradient: true,
-          addShadow: true,
+          useGradient: false,
+          addShadow: false,
           context: context,
-        ).animate().scale(
-          duration: AnimationDuration.pageTransition,
-          curve: Curves.easeOutBack,
         ),
         const SizedBox(height: Spacing.lg),
         Text(
           AppLocalizations.of(context)!.signIn,
           textAlign: TextAlign.center,
           style: context.conduitTheme.headingLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            height: 1.2,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
           ),
-        ).animate().fadeIn(
-          duration: AnimationDuration.pageTransition,
-          delay: AnimationDuration.microInteraction,
         ),
         const SizedBox(height: Spacing.sm),
         Text(
           AppLocalizations.of(context)!.enterCredentials,
           textAlign: TextAlign.center,
-          style: context.conduitTheme.bodyLarge?.copyWith(
+          style: context.conduitTheme.bodyMedium?.copyWith(
             color: context.conduitTheme.textSecondary,
-            height: 1.5,
+            height: 1.4,
           ),
-        ).animate().fadeIn(
-          duration: AnimationDuration.pageTransition,
-          delay: AnimationDuration.fast,
         ),
       ],
     );
   }
 
   Widget _buildAuthForm() {
-    return ConduitCard(
-      isElevated: true,
-      padding: const EdgeInsets.all(Spacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Authentication mode toggle
-          _buildAuthModeToggle(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Authentication mode toggle
+        _buildAuthModeToggle(),
 
-          const SizedBox(height: Spacing.lg),
+        const SizedBox(height: Spacing.lg),
 
-          // Authentication form fields
-          _buildAuthFields(),
+        // Authentication form fields
+        _buildAuthFields(),
 
-          if (_loginError != null) ...[
-            const SizedBox(height: Spacing.md),
-            _buildErrorMessage(_loginError!),
-          ],
+        if (_loginError != null) ...[
+          const SizedBox(height: Spacing.md),
+          _buildErrorMessage(_loginError!),
         ],
-      ),
+      ],
     );
   }
 
   Widget _buildAuthModeToggle() {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: context.conduitTheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppBorderRadius.button),
+        color: context.conduitTheme.surfaceContainer.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
         border: Border.all(
-          color: context.conduitTheme.dividerColor,
+          color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
           width: BorderWidth.standard,
         ),
       ),
@@ -406,9 +386,6 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
           ),
         ],
       ),
-    ).animate().fadeIn(
-      duration: AnimationDuration.pageTransition,
-      delay: AnimationDuration.microInteraction,
     );
   }
 
@@ -425,13 +402,13 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         color: isSelected
             ? context.conduitTheme.buttonPrimary
             : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppBorderRadius.button - 2),
+        borderRadius: BorderRadius.circular(AppBorderRadius.small - 1),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(AppBorderRadius.button - 2),
+          borderRadius: BorderRadius.circular(AppBorderRadius.small - 1),
           child: Container(
             padding: const EdgeInsets.symmetric(
-              vertical: Spacing.md,
+              vertical: Spacing.sm,
               horizontal: Spacing.sm,
             ),
             child: Row(
@@ -444,10 +421,10 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
                       ? context.conduitTheme.buttonPrimaryText
                       : context.conduitTheme.iconSecondary,
                 ),
-                const SizedBox(width: Spacing.sm),
+                const SizedBox(width: Spacing.xs),
                 Text(
                   label,
-                  style: context.conduitTheme.bodyMedium?.copyWith(
+                  style: context.conduitTheme.bodySmall?.copyWith(
                     color: isSelected
                         ? context.conduitTheme.buttonPrimaryText
                         : context.conduitTheme.textSecondary,
@@ -590,25 +567,21 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   Widget _buildSignInButton() {
     return Padding(
       padding: const EdgeInsets.only(top: Spacing.lg),
-      child:
-          ConduitButton(
-            text: _isSigningIn
-                ? AppLocalizations.of(context)!.signingIn
-                : _useApiKey
-                ? AppLocalizations.of(context)!.signInWithApiKey
-                : AppLocalizations.of(context)!.signIn,
-            icon: _isSigningIn
-                ? null
-                : (Platform.isIOS
-                      ? CupertinoIcons.arrow_right
-                      : Icons.arrow_forward),
-            onPressed: _isSigningIn ? null : _signIn,
-            isLoading: _isSigningIn,
-            isFullWidth: true,
-          ).animate().fadeIn(
-            duration: AnimationDuration.pageTransition,
-            delay: AnimationDuration.fast,
-          ),
+      child: ConduitButton(
+        text: _isSigningIn
+            ? AppLocalizations.of(context)!.signingIn
+            : _useApiKey
+            ? AppLocalizations.of(context)!.signInWithApiKey
+            : AppLocalizations.of(context)!.signIn,
+        icon: _isSigningIn
+            ? null
+            : (Platform.isIOS
+                  ? CupertinoIcons.arrow_right
+                  : Icons.arrow_forward),
+        onPressed: _isSigningIn ? null : _signIn,
+        isLoading: _isSigningIn,
+        isFullWidth: true,
+      ),
     );
   }
 
@@ -619,10 +592,10 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
       child: Container(
         padding: const EdgeInsets.all(Spacing.md),
         decoration: BoxDecoration(
-          color: context.conduitTheme.errorBackground,
-          borderRadius: BorderRadius.circular(AppBorderRadius.button),
+          color: context.conduitTheme.error.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppBorderRadius.small),
           border: Border.all(
-            color: context.conduitTheme.error.withValues(alpha: 0.3),
+            color: context.conduitTheme.error.withValues(alpha: 0.2),
             width: BorderWidth.standard,
           ),
         ),
@@ -630,16 +603,16 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
           children: [
             Icon(
               Platform.isIOS
-                  ? CupertinoIcons.exclamationmark_circle_fill
+                  ? CupertinoIcons.exclamationmark_circle
                   : Icons.error_outline,
               color: context.conduitTheme.error,
-              size: IconSize.medium,
+              size: IconSize.small,
             ),
-            const SizedBox(width: Spacing.md),
+            const SizedBox(width: Spacing.sm),
             Expanded(
               child: Text(
                 message,
-                style: context.conduitTheme.bodyMedium?.copyWith(
+                style: context.conduitTheme.bodySmall?.copyWith(
                   color: context.conduitTheme.error,
                 ),
               ),
@@ -647,10 +620,6 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
           ],
         ),
       ),
-    ).animate().slideX(
-      begin: 0.05,
-      duration: AnimationDuration.messageSlide,
-      curve: Curves.easeOutCubic,
     );
   }
 }

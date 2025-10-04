@@ -62,9 +62,9 @@ class AppCustomizationPage extends ConsumerWidget {
               settings,
               activePalette,
             ),
-            const SizedBox(height: Spacing.sectionGap),
+            const SizedBox(height: Spacing.xl),
             _buildQuickPillsSection(context, ref, settings),
-            const SizedBox(height: Spacing.sectionGap),
+            const SizedBox(height: Spacing.xl),
             _buildChatSection(context, ref, settings),
           ],
         ),
@@ -170,7 +170,7 @@ class AppCustomizationPage extends ConsumerWidget {
     final theme = context.conduitTheme;
 
     return ConduitCard(
-      padding: const EdgeInsets.all(Spacing.cardPadding),
+      padding: const EdgeInsets.all(Spacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -192,24 +192,17 @@ class AppCustomizationPage extends ConsumerWidget {
                   children: [
                     Text(
                       AppLocalizations.of(context)!.darkMode,
-                      style:
-                          theme.bodyLarge?.copyWith(
-                            color: theme.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ) ??
-                          TextStyle(
-                            color: theme.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      style: theme.bodyMedium?.copyWith(
+                        color: theme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    const SizedBox(height: Spacing.textSpacing),
+                    const SizedBox(height: Spacing.xs),
                     Text(
                       themeDescription,
-                      style:
-                          theme.bodySmall?.copyWith(
-                            color: theme.textSecondary,
-                          ) ??
-                          TextStyle(color: theme.textSecondary),
+                      style: theme.bodySmall?.copyWith(
+                        color: theme.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -290,7 +283,7 @@ class AppCustomizationPage extends ConsumerWidget {
         ),
         const SizedBox(height: Spacing.sm),
         ConduitCard(
-          padding: const EdgeInsets.all(Spacing.cardPadding),
+          padding: const EdgeInsets.all(Spacing.md),
           child: Column(
             children: [
               for (final palette in palettes)
@@ -387,7 +380,7 @@ class AppCustomizationPage extends ConsumerWidget {
         ),
         const SizedBox(height: Spacing.sm),
         ConduitCard(
-          padding: const EdgeInsets.all(Spacing.cardPadding),
+          padding: const EdgeInsets.all(Spacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -406,11 +399,9 @@ class AppCustomizationPage extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       AppLocalizations.of(context)!.quickActionsDescription,
-                      style:
-                          theme.bodySmall?.copyWith(
-                            color: theme.textSecondary,
-                          ) ??
-                          TextStyle(color: theme.textSecondary),
+                      style: theme.bodySmall?.copyWith(
+                        color: theme.textSecondary,
+                      ),
                     ),
                   ),
                   TextButton(
@@ -514,18 +505,18 @@ class AppCustomizationPage extends ConsumerWidget {
     required Color color,
   }) {
     return Container(
-      width: 48,
-      height: 48,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: Alpha.highlight),
-        borderRadius: BorderRadius.circular(AppBorderRadius.medium),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
         border: Border.all(
           color: color.withValues(alpha: 0.2),
           width: BorderWidth.thin,
         ),
       ),
       alignment: Alignment.center,
-      child: Icon(icon, color: color, size: IconSize.large),
+      child: Icon(icon, color: color, size: IconSize.medium),
     );
   }
 
@@ -629,19 +620,12 @@ class _PaletteOption extends StatelessWidget {
                       Expanded(
                         child: Text(
                           palette.label,
-                          style:
-                              theme.bodyLarge?.copyWith(
-                                color: theme.textPrimary,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                              ) ??
-                              TextStyle(
-                                color: theme.textPrimary,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                              ),
+                          style: theme.bodyMedium?.copyWith(
+                            color: theme.textPrimary,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -725,10 +709,7 @@ class _CustomizationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.conduitTheme;
     return ConduitCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Spacing.listItemPadding,
-        vertical: Spacing.md,
-      ),
+      padding: const EdgeInsets.all(Spacing.md),
       onTap: onTap,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -741,31 +722,24 @@ class _CustomizationTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style:
-                      theme.bodyLarge?.copyWith(
-                        color: theme.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ) ??
-                      TextStyle(
-                        color: theme.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: theme.bodyMedium?.copyWith(
+                    color: theme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                const SizedBox(height: Spacing.textSpacing),
+                const SizedBox(height: Spacing.xs),
                 Text(
                   subtitle,
-                  style:
-                      theme.bodySmall?.copyWith(color: theme.textSecondary) ??
-                      TextStyle(color: theme.textSecondary),
+                  style: theme.bodySmall?.copyWith(color: theme.textSecondary),
                 ),
               ],
             ),
           ),
           if (trailing != null) ...[
-            const SizedBox(width: Spacing.md),
+            const SizedBox(width: Spacing.sm),
             trailing!,
           ] else if (showChevron && onTap != null) ...[
-            const SizedBox(width: Spacing.md),
+            const SizedBox(width: Spacing.sm),
             Icon(
               UiUtils.platformIcon(
                 ios: CupertinoIcons.chevron_right,

@@ -231,13 +231,13 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
                 // Header with progress indicator
                 _buildHeader(),
 
-                const SizedBox(height: Spacing.extraLarge),
+                const SizedBox(height: Spacing.xl),
 
                 // Main content
                 Expanded(
                   child: SingleChildScrollView(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 500),
+                      constraints: const BoxConstraints(maxWidth: 480),
                       child: Form(
                         key: _formKey,
                         child: Column(
@@ -246,17 +246,17 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
                             // Brand header
                             _buildBrandHeader(reviewerMode),
 
-                            const SizedBox(height: Spacing.sectionGap),
+                            const SizedBox(height: Spacing.xl),
 
                             // Welcome section
                             _buildWelcomeSection(),
 
-                            const SizedBox(height: Spacing.sectionGap),
+                            const SizedBox(height: Spacing.xl),
 
                             // Reviewer mode demo (if enabled)
                             if (reviewerMode) ...[
                               _buildReviewerModeSection(),
-                              const SizedBox(height: Spacing.sectionGap),
+                              const SizedBox(height: Spacing.xl),
                             ],
 
                             // Server connection form
@@ -286,8 +286,8 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         Row(
           children: [
             Container(
-              width: 32,
-              height: 6,
+              width: 24,
+              height: 4,
               decoration: BoxDecoration(
                 color: context.conduitTheme.buttonPrimary,
                 borderRadius: BorderRadius.circular(AppBorderRadius.round),
@@ -295,10 +295,10 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
             ),
             const SizedBox(width: Spacing.xs),
             Container(
-              width: 32,
-              height: 6,
+              width: 24,
+              height: 4,
               decoration: BoxDecoration(
-                color: context.conduitTheme.dividerColor,
+                color: context.conduitTheme.dividerColor.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(AppBorderRadius.round),
               ),
             ),
@@ -325,59 +325,31 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
           ),
         );
       },
-      child: Column(
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              // Glow effect
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      context.conduitTheme.buttonPrimary.withValues(
-                        alpha: 0.12,
-                      ),
-                      context.conduitTheme.buttonPrimary.withValues(
-                        alpha: 0.06,
-                      ),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.7, 1.0],
-                    radius: 0.8,
-                  ),
-                ),
-              ),
-              // Brand logo
-              BrandService.createBrandIcon(
-                size: 64,
-                useGradient: true,
-                addShadow: true,
-                context: context,
-              ),
-              // Reviewer mode badge
-              if (reviewerMode)
-                Positioned(
-                  bottom: 0,
-                  child: ConduitBadge(
-                    text: AppLocalizations.of(context)!.demoBadge,
-                    backgroundColor: context.conduitTheme.warning.withValues(
-                      alpha: 0.15,
-                    ),
-                    textColor: context.conduitTheme.warning,
-                    isCompact: true,
-                  ),
-                ),
-            ],
+          // Brand logo
+          BrandService.createBrandIcon(
+            size: 56,
+            useGradient: false,
+            addShadow: false,
+            context: context,
           ),
+          // Reviewer mode badge
+          if (reviewerMode)
+            Positioned(
+              bottom: -4,
+              child: ConduitBadge(
+                text: AppLocalizations.of(context)!.demoBadge,
+                backgroundColor: context.conduitTheme.warning.withValues(
+                  alpha: 0.15,
+                ),
+                textColor: context.conduitTheme.warning,
+                isCompact: true,
+              ),
+            ),
         ],
       ),
-    ).animate().scale(
-      duration: AnimationDuration.pageTransition,
-      curve: Curves.easeOutBack,
     );
   }
 
@@ -388,24 +360,18 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
           AppLocalizations.of(context)!.connectToServer,
           textAlign: TextAlign.center,
           style: context.conduitTheme.headingLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            height: 1.2,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
           ),
-        ).animate().fadeIn(
-          duration: AnimationDuration.pageTransition,
-          delay: AnimationDuration.microInteraction,
         ),
         const SizedBox(height: Spacing.sm),
         Text(
           AppLocalizations.of(context)!.enterServerAddress,
           textAlign: TextAlign.center,
-          style: context.conduitTheme.bodyLarge?.copyWith(
+          style: context.conduitTheme.bodyMedium?.copyWith(
             color: context.conduitTheme.textSecondary,
-            height: 1.5,
+            height: 1.4,
           ),
-        ).animate().fadeIn(
-          duration: AnimationDuration.pageTransition,
-          delay: AnimationDuration.fast,
         ),
       ],
     );
@@ -464,205 +430,192 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
   }
 
   Widget _buildServerForm() {
-    return ConduitCard(
-      isElevated: true,
-      padding: const EdgeInsets.all(Spacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AccessibleFormField(
-            label: AppLocalizations.of(context)!.serverUrl,
-            hint: AppLocalizations.of(context)!.serverUrlHint,
-            controller: _urlController,
-            validator: InputValidationService.combine([
-              InputValidationService.validateRequired,
-              (value) =>
-                  InputValidationService.validateUrl(value, required: true),
-            ]),
-            keyboardType: TextInputType.url,
-            semanticLabel: AppLocalizations.of(context)!.enterServerUrlSemantic,
-            onSubmitted: (_) => _connectToServer(),
-            prefixIcon: Icon(
-              Platform.isIOS ? CupertinoIcons.globe : Icons.public,
-              color: context.conduitTheme.iconSecondary,
-            ),
-            autofillHints: const [AutofillHints.url],
-            isRequired: true,
-          ).animate().slideX(
-            begin: -0.05,
-            duration: AnimationDuration.messageSlide,
-            delay: AnimationDuration.microInteraction,
-            curve: Curves.easeOutCubic,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AccessibleFormField(
+          label: AppLocalizations.of(context)!.serverUrl,
+          hint: AppLocalizations.of(context)!.serverUrlHint,
+          controller: _urlController,
+          validator: InputValidationService.combine([
+            InputValidationService.validateRequired,
+            (value) =>
+                InputValidationService.validateUrl(value, required: true),
+          ]),
+          keyboardType: TextInputType.url,
+          semanticLabel: AppLocalizations.of(context)!.enterServerUrlSemantic,
+          onSubmitted: (_) => _connectToServer(),
+          prefixIcon: Icon(
+            Platform.isIOS ? CupertinoIcons.globe : Icons.public,
+            color: context.conduitTheme.iconSecondary,
           ),
+          autofillHints: const [AutofillHints.url],
+          isRequired: true,
+        ),
 
-          if (_connectionError != null) ...[
-            const SizedBox(height: Spacing.md),
-            _buildErrorMessage(_connectionError!),
-          ],
-
-          const SizedBox(height: Spacing.lg),
-
-          // Advanced settings
-          _buildAdvancedSettings(),
+        if (_connectionError != null) ...[
+          const SizedBox(height: Spacing.md),
+          _buildErrorMessage(_connectionError!),
         ],
-      ),
+
+        const SizedBox(height: Spacing.lg),
+
+        // Advanced settings
+        _buildAdvancedSettings(),
+      ],
     );
   }
 
   Widget _buildAdvancedSettings() {
     return Column(
       children: [
-        ConduitCard(
-          isElevated: false,
-          padding: const EdgeInsets.all(Spacing.lg),
-          child: Column(
-            children: [
-              InkWell(
-                onTap: () => setState(
-                  () => _showAdvancedSettings = !_showAdvancedSettings,
+        InkWell(
+          onTap: () => setState(
+            () => _showAdvancedSettings = !_showAdvancedSettings,
+          ),
+          borderRadius: BorderRadius.circular(AppBorderRadius.button),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.md,
+              vertical: Spacing.sm,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Platform.isIOS ? CupertinoIcons.gear_alt : Icons.settings,
+                  color: context.conduitTheme.iconSecondary,
+                  size: IconSize.small,
                 ),
-                borderRadius: BorderRadius.circular(AppBorderRadius.button),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Platform.isIOS ? CupertinoIcons.gear : Icons.tune,
-                        color: context.conduitTheme.iconSecondary,
-                        size: IconSize.medium,
-                      ),
-                      const SizedBox(width: Spacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppLocalizations.of(context)!.advancedSettings,
-                              style: context.conduitTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (_customHeaders.isNotEmpty)
-                              Text(
-                                '${_customHeaders.length} custom header${_customHeaders.length != 1 ? 's' : ''}',
-                                style: context.conduitTheme.bodySmall?.copyWith(
-                                  color: context.conduitTheme.textSecondary,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      AnimatedRotation(
-                        duration: AnimationDuration.microInteraction,
-                        turns: _showAdvancedSettings ? 0.5 : 0,
-                        child: Icon(
-                          Platform.isIOS
-                              ? CupertinoIcons.chevron_down
-                              : Icons.expand_more,
-                          color: context.conduitTheme.iconSecondary,
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: Spacing.sm),
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context)!.advancedSettings,
+                    style: context.conduitTheme.bodySmall?.copyWith(
+                      color: context.conduitTheme.textSecondary,
+                    ),
                   ),
                 ),
-              ),
-              AnimatedSize(
-                duration: AnimationDuration.microInteraction,
-                curve: Curves.easeInOutCubic,
-                child: _showAdvancedSettings
-                    ? _buildAdvancedSettingsContent()
-                    : const SizedBox.shrink(),
-              ),
-            ],
+                if (_customHeaders.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: Spacing.sm),
+                    child: ConduitBadge(
+                      text: '${_customHeaders.length}',
+                      backgroundColor: context.conduitTheme.buttonPrimary
+                          .withValues(alpha: 0.1),
+                      textColor: context.conduitTheme.buttonPrimary,
+                      isCompact: true,
+                    ),
+                  ),
+                AnimatedRotation(
+                  duration: AnimationDuration.microInteraction,
+                  turns: _showAdvancedSettings ? 0.5 : 0,
+                  child: Icon(
+                    Platform.isIOS
+                        ? CupertinoIcons.chevron_down
+                        : Icons.expand_more,
+                    color: context.conduitTheme.iconSecondary,
+                    size: IconSize.small,
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+        AnimatedSize(
+          duration: AnimationDuration.microInteraction,
+          curve: Curves.easeInOutCubic,
+          child: _showAdvancedSettings
+              ? _buildAdvancedSettingsContent()
+              : const SizedBox.shrink(),
         ),
       ],
     );
   }
 
   Widget _buildAdvancedSettingsContent() {
-    return Column(
-      children: [
-        const SizedBox(height: Spacing.lg),
-        ConduitDivider(),
-        const SizedBox(height: Spacing.lg),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              AppLocalizations.of(context)!.customHeaders,
-              style: context.conduitTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (_customHeaders.isNotEmpty)
+    return Padding(
+      padding: const EdgeInsets.all(Spacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               Text(
-                '${_customHeaders.length}/10',
+                AppLocalizations.of(context)!.customHeaders,
                 style: context.conduitTheme.bodySmall?.copyWith(
-                  color: _customHeaders.length >= 10
-                      ? context.conduitTheme.error
-                      : context.conduitTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: Spacing.xs),
-        Text(
-          AppLocalizations.of(context)!.customHeadersDescription,
-          style: context.conduitTheme.bodySmall?.copyWith(
-            color: context.conduitTheme.textSecondary,
+              if (_customHeaders.isNotEmpty)
+                Text(
+                  '${_customHeaders.length}/10',
+                  style: context.conduitTheme.bodySmall?.copyWith(
+                    color: _customHeaders.length >= 10
+                        ? context.conduitTheme.error
+                        : context.conduitTheme.textSecondary,
+                  ),
+                ),
+            ],
           ),
-        ),
-        const SizedBox(height: Spacing.md),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              flex: 2,
-              child: AccessibleFormField(
-                label: AppLocalizations.of(context)!.headerName,
-                hint: 'X-Custom-Header',
-                controller: _headerKeyController,
-                validator: (value) => _validateHeaderKey(value ?? ''),
-                semanticLabel: 'Enter header name',
-                isCompact: true,
-                keyboardType: TextInputType.text,
+          const SizedBox(height: Spacing.xs),
+          Text(
+            AppLocalizations.of(context)!.customHeadersDescription,
+            style: context.conduitTheme.bodySmall?.copyWith(
+              color: context.conduitTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: Spacing.md),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                flex: 2,
+                child: AccessibleFormField(
+                  label: AppLocalizations.of(context)!.headerName,
+                  hint: 'X-Custom-Header',
+                  controller: _headerKeyController,
+                  validator: (value) => _validateHeaderKey(value ?? ''),
+                  semanticLabel: 'Enter header name',
+                  isCompact: true,
+                  keyboardType: TextInputType.text,
+                ),
               ),
-            ),
-            const SizedBox(width: Spacing.md),
-            Expanded(
-              flex: 3,
-              child: AccessibleFormField(
-                label: AppLocalizations.of(context)!.headerValue,
-                hint: AppLocalizations.of(context)!.headerValueHint,
-                controller: _headerValueController,
-                validator: (value) => _validateHeaderValue(value ?? ''),
-                semanticLabel: 'Enter header value',
-                isCompact: true,
-                keyboardType: TextInputType.text,
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                flex: 3,
+                child: AccessibleFormField(
+                  label: AppLocalizations.of(context)!.headerValue,
+                  hint: AppLocalizations.of(context)!.headerValueHint,
+                  controller: _headerValueController,
+                  validator: (value) => _validateHeaderValue(value ?? ''),
+                  semanticLabel: 'Enter header value',
+                  isCompact: true,
+                  keyboardType: TextInputType.text,
+                ),
               ),
-            ),
-            const SizedBox(width: Spacing.md),
-            ConduitIconButton(
-              icon: Platform.isIOS ? CupertinoIcons.plus : Icons.add,
-              onPressed: _customHeaders.length >= 10 ? null : _addCustomHeader,
-              tooltip: _customHeaders.length >= 10
-                  ? AppLocalizations.of(context)!.maximumHeadersReached
-                  : AppLocalizations.of(context)!.addHeader,
-              backgroundColor: _customHeaders.length >= 10
-                  ? context.conduitTheme.surfaceContainer
-                  : context.conduitTheme.buttonPrimary,
-              iconColor: _customHeaders.length >= 10
-                  ? context.conduitTheme.textDisabled
-                  : context.conduitTheme.buttonPrimaryText,
-            ),
+              const SizedBox(width: Spacing.sm),
+              ConduitIconButton(
+                icon: Platform.isIOS ? CupertinoIcons.plus : Icons.add,
+                onPressed: _customHeaders.length >= 10 ? null : _addCustomHeader,
+                tooltip: _customHeaders.length >= 10
+                    ? AppLocalizations.of(context)!.maximumHeadersReached
+                    : AppLocalizations.of(context)!.addHeader,
+                backgroundColor: _customHeaders.length >= 10
+                    ? context.conduitTheme.surfaceContainer
+                    : context.conduitTheme.buttonPrimary,
+                iconColor: _customHeaders.length >= 10
+                    ? context.conduitTheme.textDisabled
+                    : context.conduitTheme.buttonPrimaryText,
+              ),
+            ],
+          ),
+          if (_customHeaders.isNotEmpty) ...[
+            const SizedBox(height: Spacing.md),
+            _buildCustomHeadersList(),
           ],
-        ),
-        if (_customHeaders.isNotEmpty) ...[
-          const SizedBox(height: Spacing.lg),
-          _buildCustomHeadersList(),
         ],
-      ],
+      ),
     );
   }
 
@@ -670,33 +623,32 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
     return Column(
       children: _customHeaders.entries.map((entry) {
         return Container(
-          margin: const EdgeInsets.only(bottom: Spacing.sm),
-          padding: const EdgeInsets.all(Spacing.md),
+          margin: const EdgeInsets.only(bottom: Spacing.xs),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.md,
+            vertical: Spacing.sm,
+          ),
           decoration: BoxDecoration(
-            color: context.conduitTheme.surfaceContainer.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(AppBorderRadius.button),
+            color: context.conduitTheme.surfaceContainer.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
             border: Border.all(
-              color: context.conduitTheme.dividerColor,
+              color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
               width: BorderWidth.standard,
             ),
           ),
           child: Row(
             children: [
-              // Make the header badge flexible and truncate long text
               Flexible(
                 fit: FlexFit.loose,
-                child: ConduitBadge(
-                  text: entry.key,
-                  backgroundColor: context.conduitTheme.buttonPrimary
-                      .withValues(alpha: 0.1),
-                  textColor: context.conduitTheme.buttonPrimary,
-                  isCompact: true,
-                  maxLines: 1,
+                child: Text(
+                  entry.key,
+                  style: context.conduitTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
                   overflow: TextOverflow.ellipsis,
-                  softWrap: false,
                 ),
               ),
-              const SizedBox(width: Spacing.md),
+              const SizedBox(width: Spacing.sm),
               Expanded(
                 child: Text(
                   entry.value,
@@ -707,20 +659,18 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: Spacing.md),
+              const SizedBox(width: Spacing.sm),
               ConduitIconButton(
                 icon: Platform.isIOS ? CupertinoIcons.xmark : Icons.close,
                 onPressed: () => _removeCustomHeader(entry.key),
                 tooltip: AppLocalizations.of(context)!.removeHeader,
-                backgroundColor: context.conduitTheme.error.withValues(
-                  alpha: 0.1,
-                ),
-                iconColor: context.conduitTheme.error,
+                backgroundColor: Colors.transparent,
+                iconColor: context.conduitTheme.textSecondary,
                 isCompact: true,
               ),
             ],
           ),
-        ).animate().fadeIn(duration: AnimationDuration.microInteraction);
+        );
       }).toList(),
     );
   }
@@ -728,23 +678,19 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
   Widget _buildConnectButton() {
     return Padding(
       padding: const EdgeInsets.only(top: Spacing.lg),
-      child:
-          ConduitButton(
-            text: _isConnecting
-                ? AppLocalizations.of(context)!.connecting
-                : AppLocalizations.of(context)!.connectToServerButton,
-            icon: _isConnecting
-                ? null
-                : (Platform.isIOS
-                      ? CupertinoIcons.arrow_right
-                      : Icons.arrow_forward),
-            onPressed: _isConnecting ? null : _connectToServer,
-            isLoading: _isConnecting,
-            isFullWidth: true,
-          ).animate().fadeIn(
-            duration: AnimationDuration.pageTransition,
-            delay: AnimationDuration.fast,
-          ),
+      child: ConduitButton(
+        text: _isConnecting
+            ? AppLocalizations.of(context)!.connecting
+            : AppLocalizations.of(context)!.connectToServerButton,
+        icon: _isConnecting
+            ? null
+            : (Platform.isIOS
+                  ? CupertinoIcons.arrow_right
+                  : Icons.arrow_forward),
+        onPressed: _isConnecting ? null : _connectToServer,
+        isLoading: _isConnecting,
+        isFullWidth: true,
+      ),
     );
   }
 
@@ -752,42 +698,37 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
     return Semantics(
       liveRegion: true,
       label: message,
-      child:
-          Container(
-            padding: const EdgeInsets.all(Spacing.md),
-            decoration: BoxDecoration(
-              color: context.conduitTheme.errorBackground,
-              borderRadius: BorderRadius.circular(AppBorderRadius.button),
-              border: Border.all(
-                color: context.conduitTheme.error.withValues(alpha: 0.3),
-                width: BorderWidth.standard,
+      child: Container(
+        padding: const EdgeInsets.all(Spacing.md),
+        decoration: BoxDecoration(
+          color: context.conduitTheme.error.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppBorderRadius.small),
+          border: Border.all(
+            color: context.conduitTheme.error.withValues(alpha: 0.2),
+            width: BorderWidth.standard,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Platform.isIOS
+                  ? CupertinoIcons.exclamationmark_circle
+                  : Icons.error_outline,
+              color: context.conduitTheme.error,
+              size: IconSize.small,
+            ),
+            const SizedBox(width: Spacing.sm),
+            Expanded(
+              child: Text(
+                message,
+                style: context.conduitTheme.bodySmall?.copyWith(
+                  color: context.conduitTheme.error,
+                ),
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Platform.isIOS
-                      ? CupertinoIcons.exclamationmark_circle_fill
-                      : Icons.error_outline,
-                  color: context.conduitTheme.error,
-                  size: IconSize.medium,
-                ),
-                const SizedBox(width: Spacing.md),
-                Expanded(
-                  child: Text(
-                    message,
-                    style: context.conduitTheme.bodyMedium?.copyWith(
-                      color: context.conduitTheme.error,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ).animate().slideX(
-            begin: 0.05,
-            duration: AnimationDuration.messageSlide,
-            curve: Curves.easeOutCubic,
-          ),
+          ],
+        ),
+      ),
     );
   }
 

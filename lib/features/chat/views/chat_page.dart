@@ -1991,39 +1991,27 @@ class _ModelSelectorSheetState extends ConsumerState<_ModelSelectorSheet> {
     final iconUrl = resolveModelIconUrlForModel(api, model);
     return PressableScale(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppBorderRadius.md),
+      borderRadius: BorderRadius.circular(AppBorderRadius.small),
       child: Container(
-        margin: const EdgeInsets.only(bottom: Spacing.md),
+        margin: const EdgeInsets.only(bottom: Spacing.sm),
         decoration: BoxDecoration(
-          gradient: isSelected
-              ? LinearGradient(
-                  colors: [
-                    context.conduitTheme.buttonPrimary.withValues(alpha: 0.2),
-                    context.conduitTheme.buttonPrimary.withValues(alpha: 0.1),
-                  ],
-                )
-              : null,
           color: isSelected
-              ? null
+              ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.1)
               : context.conduitTheme.surfaceBackground.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
+          borderRadius: BorderRadius.circular(AppBorderRadius.small),
           border: Border.all(
             color: isSelected
-                ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.5)
-                : context.conduitTheme.dividerColor,
-            width: BorderWidth.regular,
+                ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.3)
+                : context.conduitTheme.dividerColor.withValues(alpha: 0.5),
+            width: BorderWidth.standard,
           ),
-          boxShadow: isSelected ? ConduitShadows.card(context) : null,
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.md,
-            vertical: Spacing.sm,
-          ),
+          padding: const EdgeInsets.all(Spacing.sm),
           child: Row(
             children: [
               ModelAvatar(size: 32, imageUrl: iconUrl, label: model.name),
-              const SizedBox(width: Spacing.md),
+              const SizedBox(width: Spacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2038,65 +2026,42 @@ class _ModelSelectorSheetState extends ConsumerState<_ModelSelectorSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: Spacing.xs),
-                    Row(
-                      children: [
-                        if (model.isMultimodal)
-                          _capabilityChip(
-                            icon: Platform.isIOS
-                                ? CupertinoIcons.photo
-                                : Icons.image,
-                            label: 'Multimodal',
-                          ),
-                        if (_modelSupportsReasoning(model))
-                          _capabilityChip(
-                            icon: Platform.isIOS
-                                ? CupertinoIcons.lightbulb
-                                : Icons.psychology_alt,
-                            label: 'Reasoning',
-                          ),
-                      ],
-                    ),
+                    if (model.isMultimodal || _modelSupportsReasoning(model)) ...[
+                      const SizedBox(height: Spacing.xs),
+                      Row(
+                        children: [
+                          if (model.isMultimodal)
+                            _capabilityChip(
+                              icon: Platform.isIOS
+                                  ? CupertinoIcons.photo
+                                  : Icons.image,
+                              label: 'Multimodal',
+                            ),
+                          if (_modelSupportsReasoning(model))
+                            _capabilityChip(
+                              icon: Platform.isIOS
+                                  ? CupertinoIcons.lightbulb
+                                  : Icons.psychology_alt,
+                              label: 'Reasoning',
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(width: Spacing.md),
-              AnimatedOpacity(
-                opacity: isSelected ? 1 : 0.6,
-                duration: AnimationDuration.fast,
-                child: Container(
-                  padding: const EdgeInsets.all(Spacing.xxs),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? context.conduitTheme.buttonPrimary
-                        : context.conduitTheme.surfaceBackground,
-                    borderRadius: BorderRadius.circular(AppBorderRadius.md),
-                    border: Border.all(
-                      color: isSelected
-                          ? context.conduitTheme.buttonPrimary.withValues(
-                              alpha: 0.6,
-                            )
-                          : context.conduitTheme.dividerColor,
-                    ),
-                  ),
-                  child: Icon(
-                    isSelected
-                        ? (Platform.isIOS
-                              ? CupertinoIcons.check_mark
-                              : Icons.check)
-                        : (Platform.isIOS ? CupertinoIcons.add : Icons.add),
-                    color: isSelected
-                        ? context.conduitTheme.textInverse
-                        : context.conduitTheme.iconSecondary,
-                    size: 14,
-                  ),
+              const SizedBox(width: Spacing.sm),
+              if (isSelected)
+                Icon(
+                  Platform.isIOS ? CupertinoIcons.check_mark : Icons.check,
+                  color: context.conduitTheme.buttonPrimary,
+                  size: IconSize.small,
                 ),
-              ),
             ],
           ),
         ),
       ),
-    ).animate().fadeIn(duration: AnimationDuration.microInteraction);
+    );
   }
 
   // Intentionally left blank placeholder for nested helper; moved to top-level below
