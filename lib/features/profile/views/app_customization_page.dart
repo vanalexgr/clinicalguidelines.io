@@ -460,11 +460,12 @@ class AppCustomizationPage extends ConsumerWidget {
     AppSettings settings,
   ) {
     final theme = context.conduitTheme;
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Chat',
+          l10n.chatSettings,
           style:
               theme.headingSmall?.copyWith(color: theme.textPrimary) ??
               TextStyle(color: theme.textPrimary, fontSize: 18),
@@ -476,9 +477,8 @@ class AppCustomizationPage extends ConsumerWidget {
             Platform.isIOS ? CupertinoIcons.paperplane : Icons.keyboard_return,
             color: theme.buttonPrimary,
           ),
-          title: 'Send on Enter',
-          subtitle:
-              'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available',
+          title: l10n.sendOnEnter,
+          subtitle: l10n.sendOnEnterDescription,
           trailing: Switch.adaptive(
             value: settings.sendOnEnter,
             onChanged: (value) =>

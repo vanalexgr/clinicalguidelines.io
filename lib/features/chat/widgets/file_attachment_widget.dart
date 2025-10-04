@@ -231,7 +231,7 @@ class MessageAttachmentPreview extends StatelessWidget {
                     ),
                     const SizedBox(width: Spacing.xs),
                     Text(
-                      'Attachment',
+                      AppLocalizations.of(context)!.attachmentLabel,
                       style: TextStyle(
                         color: context.conduitTheme.textPrimary.withValues(
                           alpha: 0.8,

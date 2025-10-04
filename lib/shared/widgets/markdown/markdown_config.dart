@@ -11,6 +11,8 @@ import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:webview_flutter/webview_flutter.dart';
 
+import 'package:conduit/l10n/app_localizations.dart';
+
 import '../../theme/color_tokens.dart';
 import '../../theme/theme_extensions.dart';
 import 'code_block_header.dart';
@@ -76,18 +78,10 @@ class ConduitMarkdown {
 
     return MarkdownStyleSheet(
       p: baseBody,
-      h1: AppTypography.headlineLargeStyle.copyWith(
-        color: theme.textPrimary,
-      ),
-      h2: AppTypography.headlineMediumStyle.copyWith(
-        color: theme.textPrimary,
-      ),
-      h3: AppTypography.headlineSmallStyle.copyWith(
-        color: theme.textPrimary,
-      ),
-      h4: AppTypography.bodyLargeStyle.copyWith(
-        color: theme.textPrimary,
-      ),
+      h1: AppTypography.headlineLargeStyle.copyWith(color: theme.textPrimary),
+      h2: AppTypography.headlineMediumStyle.copyWith(color: theme.textPrimary),
+      h3: AppTypography.headlineSmallStyle.copyWith(color: theme.textPrimary),
+      h4: AppTypography.bodyLargeStyle.copyWith(color: theme.textPrimary),
       h5: baseBody.copyWith(fontWeight: FontWeight.w600),
       h6: secondaryBody,
       a: baseBody.copyWith(
@@ -122,7 +116,10 @@ class ConduitMarkdown {
       listIndent: Spacing.lg,
       tableHead: secondaryBody.copyWith(fontWeight: FontWeight.w600),
       tableBody: secondaryBody,
-      tableBorder: TableBorder.all(color: borderColor, width: BorderWidth.micro),
+      tableBorder: TableBorder.all(
+        color: borderColor,
+        width: BorderWidth.micro,
+      ),
       tableHeadAlign: TextAlign.start,
       tableColumnWidth: const FlexColumnWidth(),
       tableCellsPadding: const EdgeInsets.symmetric(
@@ -131,10 +128,7 @@ class ConduitMarkdown {
       ),
       horizontalRuleDecoration: BoxDecoration(
         border: Border(
-          top: BorderSide(
-            color: theme.dividerColor,
-            width: BorderWidth.small,
-          ),
+          top: BorderSide(color: theme.dividerColor, width: BorderWidth.small),
         ),
       ),
     );
@@ -153,9 +147,7 @@ class ConduitMarkdown {
   }
 
   static List<md.InlineSyntax> _buildInlineSyntaxes() {
-    return [
-      _LatexInlineSyntax(),
-    ];
+    return [_LatexInlineSyntax()];
   }
 
   static Widget buildMermaidBlock(BuildContext context, String code) {
@@ -243,7 +235,9 @@ class ConduitMarkdown {
             textAlign: TextAlign.left,
             textDirection: TextDirection.ltr,
             textWidthBasis: TextWidthBasis.parent,
-            style: AppTypography.codeStyle.copyWith(color: conduitTheme.codeText),
+            style: AppTypography.codeStyle.copyWith(
+              color: conduitTheme.codeText,
+            ),
           ),
         ],
       ),
@@ -279,8 +273,12 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
     final theme = context.conduitTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final code = element.textContent;
-    final language = element.attributes['class']?.replaceFirst('language-', '') ?? 'plaintext';
-    final normalizedLanguage = language.trim().isEmpty ? 'plaintext' : language.trim();
+    final language =
+        element.attributes['class']?.replaceFirst('language-', '') ??
+        'plaintext';
+    final normalizedLanguage = language.trim().isEmpty
+        ? 'plaintext'
+        : language.trim();
 
     // Match GitHub/Atom theme colors for code block container
     final codeBackground = isDark
@@ -306,9 +304,12 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
                 return;
               }
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              final l10n = AppLocalizations.of(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Code copied to clipboard.'),
+                SnackBar(
+                  content: Text(
+                    l10n?.codeCopiedToClipboard ?? 'Code copied to clipboard.',
+                  ),
                 ),
               );
             },
@@ -365,7 +366,10 @@ class _ImageBuilder extends MarkdownElementBuilder {
     try {
       final commaIndex = dataUrl.indexOf(',');
       if (commaIndex == -1) {
-        throw const FormatException('Invalid data URL format');
+        throw FormatException(
+          AppLocalizations.of(context)?.invalidDataUrl ??
+              'Invalid data URL format',
+        );
       }
 
       final base64String = dataUrl.substring(commaIndex + 1);
@@ -421,10 +425,7 @@ class _ImageBuilder extends MarkdownElementBuilder {
     );
   }
 
-  Widget _buildImageError(
-    BuildContext context,
-    ConduitThemeExtension theme,
-  ) {
+  Widget _buildImageError(BuildContext context, ConduitThemeExtension theme) {
     return Container(
       height: 120,
       decoration: BoxDecoration(
@@ -467,9 +468,8 @@ class _LatexBuilder extends MarkdownElementBuilder {
     final content = element.textContent.trim();
     final isInline = element.attributes['isInline'] == 'true';
 
-    final baseStyle = (preferredStyle ?? AppTypography.bodyMediumStyle).copyWith(
-      color: isDark ? Colors.white : Colors.black,
-    );
+    final baseStyle = (preferredStyle ?? AppTypography.bodyMediumStyle)
+        .copyWith(color: isDark ? Colors.white : Colors.black);
 
     if (content.isEmpty) {
       return Text(element.textContent, style: baseStyle);
@@ -499,9 +499,9 @@ class _LatexBuilder extends MarkdownElementBuilder {
 // LaTeX inline syntax
 class _LatexInlineSyntax extends md.InlineSyntax {
   _LatexInlineSyntax()
-      : super(
-          r'(\$\$[\s\S]+?\$\$)|(\$[^\n]+?\$)|(\\\([\s\S]+?\\\))|(\\\[[\s\S]+?\\\])',
-        );
+    : super(
+        r'(\$\$[\s\S]+?\$\$)|(\$[^\n]+?\$)|(\\\([\s\S]+?\\\))|(\\\[[\s\S]+?\\\])',
+      );
 
   @override
   bool onMatch(md.InlineParser parser, Match match) {

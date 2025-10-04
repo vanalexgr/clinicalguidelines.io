@@ -804,6 +804,12 @@ abstract class AppLocalizations {
   /// **'Add attachment'**
   String get addAttachment;
 
+  /// Label shown beside attachment chips in messages.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment'**
+  String get attachmentLabel;
+
   /// Header for a tools/actions section.
   ///
   /// In en, this message translates to:
@@ -815,6 +821,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Voice input'**
   String get voiceInput;
+
+  /// Title for the voice input bottom sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice'**
+  String get voice;
+
+  /// Indicates the app is actively listening during voice input.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening…'**
+  String get voiceStatusListening;
+
+  /// Indicates the app is recording audio for speech recognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording…'**
+  String get voiceStatusRecording;
+
+  /// Toggle label for hold-to-talk mode in voice input.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to talk'**
+  String get voiceHoldToTalk;
+
+  /// Toggle label for automatically sending the final transcript.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-send'**
+  String get voiceAutoSend;
+
+  /// Label above the transcribed voice input text.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcript'**
+  String get voiceTranscript;
+
+  /// Placeholder prompting the user to start speaking.
+  ///
+  /// In en, this message translates to:
+  /// **'Speak now…'**
+  String get voicePromptSpeakNow;
+
+  /// Placeholder instructing the user to tap Start to begin recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Start to begin'**
+  String get voicePromptTapStart;
+
+  /// Button label to stop voice recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get voiceActionStop;
+
+  /// Button label to start voice recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get voiceActionStart;
 
   /// Accessibility label for the message input.
   ///
@@ -845,6 +911,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send'**
   String get send;
+
+  /// Snack bar message confirming code was copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Code copied to clipboard.'**
+  String get codeCopiedToClipboard;
 
   /// Semantic label for sending a message.
   ///
@@ -1583,6 +1655,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick up to two shortcuts to pin near the composer'**
   String get quickActionsDescription;
+
+  /// Section header for chat-related customization options.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get chatSettings;
+
+  /// Toggle title for sending messages when pressing Enter.
+  ///
+  /// In en, this message translates to:
+  /// **'Send on Enter'**
+  String get sendOnEnter;
+
+  /// Explanation of how the Send on Enter toggle behaves.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available'**
+  String get sendOnEnterDescription;
 
   /// Section header for visual and layout related settings.
   ///

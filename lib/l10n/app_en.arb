@@ -273,10 +273,52 @@
   ,
   "addAttachment": "Add attachment",
   "@addAttachment": {"description": "Button to add an attachment (file/photo)."},
+  "attachmentLabel": "Attachment",
+  "@attachmentLabel": {
+    "description": "Label shown beside attachment chips in messages."
+  },
   "tools": "Tools",
   "@tools": {"description": "Header for a tools/actions section."},
   "voiceInput": "Voice input",
   "@voiceInput": {"description": "Label for voice input feature."},
+  "voice": "Voice",
+  "@voice": {"description": "Title for the voice input bottom sheet."},
+  "voiceStatusListening": "Listening…",
+  "@voiceStatusListening": {
+    "description": "Indicates the app is actively listening during voice input."
+  },
+  "voiceStatusRecording": "Recording…",
+  "@voiceStatusRecording": {
+    "description": "Indicates the app is recording audio for speech recognition."
+  },
+  "voiceHoldToTalk": "Hold to talk",
+  "@voiceHoldToTalk": {
+    "description": "Toggle label for hold-to-talk mode in voice input."
+  },
+  "voiceAutoSend": "Auto-send",
+  "@voiceAutoSend": {
+    "description": "Toggle label for automatically sending the final transcript."
+  },
+  "voiceTranscript": "Transcript",
+  "@voiceTranscript": {
+    "description": "Label above the transcribed voice input text."
+  },
+  "voicePromptSpeakNow": "Speak now…",
+  "@voicePromptSpeakNow": {
+    "description": "Placeholder prompting the user to start speaking."
+  },
+  "voicePromptTapStart": "Tap Start to begin",
+  "@voicePromptTapStart": {
+    "description": "Placeholder instructing the user to tap Start to begin recording."
+  },
+  "voiceActionStop": "Stop",
+  "@voiceActionStop": {
+    "description": "Button label to stop voice recording."
+  },
+  "voiceActionStart": "Start",
+  "@voiceActionStart": {
+    "description": "Button label to start voice recording."
+  },
   "messageInputLabel": "Message input",
   "@messageInputLabel": {"description": "Accessibility label for the message input."},
   "messageInputHint": "Type your message",
@@ -287,6 +329,10 @@
   "@stopGenerating": {"description": "Action to stop the assistant's response generation."},
   "send": "Send",
   "@send": {"description": "Primary action to send a message."},
+  "codeCopiedToClipboard": "Code copied to clipboard.",
+  "@codeCopiedToClipboard": {
+    "description": "Snack bar message confirming code was copied."
+  },
   "sendMessage": "Send message",
   "@sendMessage": {"description": "Semantic label for sending a message."},
   "file": "File",
@@ -580,6 +626,14 @@
   "@appCustomizationSubtitle": {"description": "Subtitle shown under App Customization tile and page header."},
   "quickActionsDescription": "Pick up to two shortcuts to pin near the composer",
   "@quickActionsDescription": {"description": "Helper text explaining quick action pill selection in customization."},
+  "chatSettings": "Chat",
+  "@chatSettings": {"description": "Section header for chat-related customization options."},
+  "sendOnEnter": "Send on Enter",
+  "@sendOnEnter": {"description": "Toggle title for sending messages when pressing Enter."},
+  "sendOnEnterDescription": "Enter sends (soft keyboard). Cmd/Ctrl+Enter also available",
+  "@sendOnEnterDescription": {
+    "description": "Explanation of how the Send on Enter toggle behaves."
+  },
   "display": "Display",
   "@display": {"description": "Section header for visual and layout related settings."},
   "realtime": "Realtime",

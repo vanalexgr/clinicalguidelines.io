@@ -403,10 +403,43 @@ class AppLocalizationsIt extends AppLocalizations {
   String get addAttachment => 'Aggiungi allegato';
 
   @override
+  String get attachmentLabel => 'Allegato';
+
+  @override
   String get tools => 'Strumenti';
 
   @override
   String get voiceInput => 'Input vocale';
+
+  @override
+  String get voice => 'Voce';
+
+  @override
+  String get voiceStatusListening => 'In ascolto…';
+
+  @override
+  String get voiceStatusRecording => 'Registrazione…';
+
+  @override
+  String get voiceHoldToTalk => 'Tieni premuto per parlare';
+
+  @override
+  String get voiceAutoSend => 'Invio automatico';
+
+  @override
+  String get voiceTranscript => 'Trascrizione';
+
+  @override
+  String get voicePromptSpeakNow => 'Parla ora…';
+
+  @override
+  String get voicePromptTapStart => 'Tocca \"Avvia\" per iniziare';
+
+  @override
+  String get voiceActionStop => 'Stop';
+
+  @override
+  String get voiceActionStart => 'Avvia';
 
   @override
   String get messageInputLabel => 'Input messaggio';
@@ -422,6 +455,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get send => 'Invia';
+
+  @override
+  String get codeCopiedToClipboard => 'Codice copiato negli appunti.';
 
   @override
   String get sendMessage => 'Invia messaggio';
@@ -825,6 +861,16 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get quickActionsDescription =>
       'Scegli fino a due scorciatoie da fissare vicino al campo di input';
+
+  @override
+  String get chatSettings => 'Chat';
+
+  @override
+  String get sendOnEnter => 'Invia con Invio';
+
+  @override
+  String get sendOnEnterDescription =>
+      'Invio invia (tastiera software). Cmd/Ctrl+Invio disponibile';
 
   @override
   String get display => 'Schermo';

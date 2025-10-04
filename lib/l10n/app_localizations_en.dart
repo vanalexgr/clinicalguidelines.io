@@ -401,10 +401,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addAttachment => 'Add attachment';
 
   @override
+  String get attachmentLabel => 'Attachment';
+
+  @override
   String get tools => 'Tools';
 
   @override
   String get voiceInput => 'Voice input';
+
+  @override
+  String get voice => 'Voice';
+
+  @override
+  String get voiceStatusListening => 'Listening…';
+
+  @override
+  String get voiceStatusRecording => 'Recording…';
+
+  @override
+  String get voiceHoldToTalk => 'Hold to talk';
+
+  @override
+  String get voiceAutoSend => 'Auto-send';
+
+  @override
+  String get voiceTranscript => 'Transcript';
+
+  @override
+  String get voicePromptSpeakNow => 'Speak now…';
+
+  @override
+  String get voicePromptTapStart => 'Tap Start to begin';
+
+  @override
+  String get voiceActionStop => 'Stop';
+
+  @override
+  String get voiceActionStart => 'Start';
 
   @override
   String get messageInputLabel => 'Message input';
@@ -420,6 +453,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get send => 'Send';
+
+  @override
+  String get codeCopiedToClipboard => 'Code copied to clipboard.';
 
   @override
   String get sendMessage => 'Send message';
@@ -821,6 +857,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get quickActionsDescription =>
       'Pick up to two shortcuts to pin near the composer';
+
+  @override
+  String get chatSettings => 'Chat';
+
+  @override
+  String get sendOnEnter => 'Send on Enter';
+
+  @override
+  String get sendOnEnterDescription =>
+      'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available';
 
   @override
   String get display => 'Display';

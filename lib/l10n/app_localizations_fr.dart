@@ -411,10 +411,43 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addAttachment => 'Ajouter une pièce jointe';
 
   @override
+  String get attachmentLabel => 'Pièce jointe';
+
+  @override
   String get tools => 'Outils';
 
   @override
   String get voiceInput => 'Entrée vocale';
+
+  @override
+  String get voice => 'Voix';
+
+  @override
+  String get voiceStatusListening => 'Écoute…';
+
+  @override
+  String get voiceStatusRecording => 'Enregistrement…';
+
+  @override
+  String get voiceHoldToTalk => 'Maintenir pour parler';
+
+  @override
+  String get voiceAutoSend => 'Envoi automatique';
+
+  @override
+  String get voiceTranscript => 'Transcription';
+
+  @override
+  String get voicePromptSpeakNow => 'Parlez maintenant…';
+
+  @override
+  String get voicePromptTapStart => 'Appuyez sur \"Démarrer\" pour commencer';
+
+  @override
+  String get voiceActionStop => 'Arrêter';
+
+  @override
+  String get voiceActionStart => 'Démarrer';
 
   @override
   String get messageInputLabel => 'Saisie du message';
@@ -430,6 +463,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get send => 'Envoyer';
+
+  @override
+  String get codeCopiedToClipboard => 'Code copié dans le presse-papiers.';
 
   @override
   String get sendMessage => 'Envoyer le message';
@@ -836,6 +872,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get quickActionsDescription =>
       'Choisissez jusqu\'à deux raccourcis à épingler près du champ de saisie';
+
+  @override
+  String get chatSettings => 'Discussion';
+
+  @override
+  String get sendOnEnter => 'Envoyer avec Entrée';
+
+  @override
+  String get sendOnEnterDescription =>
+      'Entrée envoie (clavier logiciel). Cmd/Ctrl+Entrée aussi disponible';
 
   @override
   String get display => 'Affichage';

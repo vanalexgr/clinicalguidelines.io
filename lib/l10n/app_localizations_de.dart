@@ -406,10 +406,43 @@ class AppLocalizationsDe extends AppLocalizations {
   String get addAttachment => 'Anhang hinzufügen';
 
   @override
+  String get attachmentLabel => 'Anhang';
+
+  @override
   String get tools => 'Werkzeuge';
 
   @override
   String get voiceInput => 'Spracheingabe';
+
+  @override
+  String get voice => 'Sprache';
+
+  @override
+  String get voiceStatusListening => 'Hört zu…';
+
+  @override
+  String get voiceStatusRecording => 'Nimmt auf…';
+
+  @override
+  String get voiceHoldToTalk => 'Zum Sprechen halten';
+
+  @override
+  String get voiceAutoSend => 'Automatisch senden';
+
+  @override
+  String get voiceTranscript => 'Transkript';
+
+  @override
+  String get voicePromptSpeakNow => 'Jetzt sprechen…';
+
+  @override
+  String get voicePromptTapStart => 'Tippe auf \"Starten\", um zu beginnen';
+
+  @override
+  String get voiceActionStop => 'Stopp';
+
+  @override
+  String get voiceActionStart => 'Starten';
 
   @override
   String get messageInputLabel => 'Nachrichteneingabe';
@@ -425,6 +458,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get send => 'Senden';
+
+  @override
+  String get codeCopiedToClipboard => 'Code in die Zwischenablage kopiert.';
 
   @override
   String get sendMessage => 'Nachricht senden';
@@ -828,6 +864,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get quickActionsDescription =>
       'Wähle bis zu zwei Schnellzugriffe, die neben dem Eingabefeld angepinnt werden';
+
+  @override
+  String get chatSettings => 'Chat';
+
+  @override
+  String get sendOnEnter => 'Mit Enter senden';
+
+  @override
+  String get sendOnEnterDescription =>
+      'Enter sendet (Soft-Tastatur). Cmd/Ctrl+Enter ebenfalls verfügbar';
 
   @override
   String get display => 'Anzeige';

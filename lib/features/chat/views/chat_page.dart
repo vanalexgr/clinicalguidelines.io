@@ -1673,11 +1673,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final selectedMessages = _getSelectedMessages();
     if (selectedMessages.isEmpty) return;
 
+    final l10n = AppLocalizations.of(context)!;
     ThemedDialogs.confirm(
       context,
-      title: 'Delete Messages',
-      message: 'Delete ${selectedMessages.length} messages?',
-      confirmText: 'Delete',
+      title: l10n.deleteMessagesTitle,
+      message: l10n.deleteMessagesMessage(selectedMessages.length),
+      confirmText: l10n.delete,
+      cancelText: l10n.cancel,
       isDestructive: true,
     ).then((confirmed) async {
       if (confirmed == true) {
@@ -2285,6 +2287,7 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
         return Container(
           decoration: BoxDecoration(
             color: context.conduitTheme.surfaceBackground,
@@ -2306,7 +2309,7 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                 const SheetHandle(),
                 const SizedBox(height: Spacing.md),
                 Text(
-                  'Select Language',
+                  l10n.selectLanguage,
                   style: TextStyle(
                     fontSize: AppTypography.headlineSmall,
                     color: context.conduitTheme.textPrimary,
@@ -2395,6 +2398,12 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final isCompact = media.size.height < 680;
+    final l10n = AppLocalizations.of(context)!;
+    final statusText = _isListening
+        ? (_voiceService.hasLocalStt
+              ? l10n.voiceStatusListening
+              : l10n.voiceStatusRecording)
+        : l10n.voice;
     return Container(
       height: media.size.height * (isCompact ? 0.45 : 0.6),
       decoration: BoxDecoration(
@@ -2425,11 +2434,7 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _isListening
-                          ? (_voiceService.hasLocalStt
-                                ? 'Listening…'
-                                : 'Recording…')
-                          : 'Voice',
+                      statusText,
                       style: TextStyle(
                         fontSize: AppTypography.headlineMedium,
                         fontWeight: FontWeight.w600,
@@ -2532,7 +2537,7 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                           ),
                           const SizedBox(width: Spacing.xs),
                           Text(
-                            'Hold to talk',
+                            l10n.voiceHoldToTalk,
                             style: TextStyle(
                               color: context.conduitTheme.textSecondary,
                             ),
@@ -2555,7 +2560,7 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                           ),
                           const SizedBox(width: Spacing.xs),
                           Text(
-                            'Auto-send',
+                            l10n.voiceAutoSend,
                             style: TextStyle(
                               color: context.conduitTheme.textSecondary,
                             ),
@@ -2729,7 +2734,7 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                                   Row(
                                     children: [
                                       Text(
-                                        'Transcript',
+                                        l10n.voiceTranscript,
                                         style: TextStyle(
                                           fontSize: AppTypography.labelSmall,
                                           fontWeight: FontWeight.w600,
@@ -2762,9 +2767,9 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                                         _recognizedText.isEmpty
                                             ? (_isListening
                                                   ? (_voiceService.hasLocalStt
-                                                        ? 'Speak now…'
-                                                        : 'Recording…')
-                                                  : 'Tap Start to begin')
+                                                        ? l10n.voicePromptSpeakNow
+                                                        : l10n.voiceStatusRecording)
+                                                  : l10n.voicePromptTapStart)
                                             : _recognizedText,
                                         style: TextStyle(
                                           fontSize: isUltra
@@ -2825,7 +2830,9 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                         if (showStartStop) ...[
                           Expanded(
                             child: ConduitButton(
-                              text: _isListening ? 'Stop' : 'Start',
+                              text: _isListening
+                                  ? l10n.voiceActionStop
+                                  : l10n.voiceActionStart,
                               isSecondary: true,
                               isCompact: isCompact,
                               onPressed: _isListening
@@ -2839,7 +2846,7 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                         if (showSend) ...[
                           Expanded(
                             child: ConduitButton(
-                              text: 'Send',
+                              text: l10n.send,
                               isCompact: isCompact,
                               onPressed: _recognizedText.isNotEmpty
                                   ? _sendText

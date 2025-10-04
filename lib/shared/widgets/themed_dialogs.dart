@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import 'package:conduit/l10n/app_localizations.dart';
+
 import '../theme/theme_extensions.dart';
 
 /// Centralized helper for building themed dialogs consistently
@@ -31,11 +34,14 @@ class ThemedDialogs {
     BuildContext context, {
     required String title,
     required String message,
-    String confirmText = 'Confirm',
-    String cancelText = 'Cancel',
+    String? confirmText,
+    String? cancelText,
     bool isDestructive = false,
     bool barrierDismissible = true,
   }) async {
+    final l10n = AppLocalizations.of(context);
+    final effectiveConfirmText = confirmText ?? l10n?.confirm ?? 'Confirm';
+    final effectiveCancelText = cancelText ?? l10n?.cancel ?? 'Cancel';
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: barrierDismissible,
@@ -50,7 +56,7 @@ class ThemedDialogs {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
-              cancelText,
+              effectiveCancelText,
               style: TextStyle(color: ctx.conduitTheme.textSecondary),
             ),
           ),
@@ -62,7 +68,7 @@ class ThemedDialogs {
                   : ctx.conduitTheme.buttonPrimary,
             ),
             child: Text(
-              confirmText,
+              effectiveConfirmText,
               style: TextStyle(
                 color: isDestructive
                     ? ctx.conduitTheme.error
@@ -103,8 +109,8 @@ class ThemedDialogs {
     required String title,
     required String hintText,
     String? initialValue,
-    String confirmText = 'Save',
-    String cancelText = 'Cancel',
+    String? confirmText,
+    String? cancelText,
     bool barrierDismissible = true,
     TextInputType? keyboardType,
     TextCapitalization textCapitalization = TextCapitalization.sentences,
@@ -112,6 +118,9 @@ class ThemedDialogs {
   }) async {
     final theme = context.conduitTheme;
     final controller = TextEditingController(text: initialValue ?? '');
+    final l10n = AppLocalizations.of(context);
+    final effectiveConfirmText = confirmText ?? l10n?.save ?? 'Save';
+    final effectiveCancelText = cancelText ?? l10n?.cancel ?? 'Cancel';
 
     String? result = await showDialog<String>(
       context: context,
@@ -169,7 +178,7 @@ class ThemedDialogs {
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
               child: Text(
-                cancelText,
+                effectiveCancelText,
                 style: TextStyle(color: theme.textSecondary),
               ),
             ),
@@ -185,7 +194,7 @@ class ThemedDialogs {
                       ? () => Navigator.of(ctx).pop(trimmed)
                       : null,
                   child: Text(
-                    confirmText,
+                    effectiveConfirmText,
                     style: TextStyle(
                       color: enabled
                           ? theme.buttonPrimary
