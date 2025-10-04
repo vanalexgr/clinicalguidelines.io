@@ -48,7 +48,7 @@ class FileAttachmentWidget extends ConsumerWidget {
           ),
         ],
       ),
-    ).animate().fadeIn(duration: const Duration(milliseconds: 300));
+    );
   }
 }
 
@@ -60,14 +60,14 @@ class _FileAttachmentCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      width: 160,
-      padding: const EdgeInsets.all(Spacing.md),
+      width: 140,
+      padding: const EdgeInsets.all(Spacing.sm),
       decoration: BoxDecoration(
         color: context.conduitTheme.cardBackground,
-        borderRadius: BorderRadius.circular(AppBorderRadius.md),
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
         border: Border.all(
           color: _getBorderColor(fileState.status, context),
-          width: BorderWidth.regular,
+          width: BorderWidth.standard,
         ),
       ),
       child: Column(
@@ -77,18 +77,18 @@ class _FileAttachmentCard extends ConsumerWidget {
             children: [
               Text(
                 fileState.fileIcon,
-                style: const TextStyle(fontSize: AppTypography.headlineLarge),
+                style: const TextStyle(fontSize: 20),
               ),
               const Spacer(),
               _buildStatusIcon(context),
             ],
           ),
-          const SizedBox(height: Spacing.sm),
+          const SizedBox(height: Spacing.xs),
           Text(
             fileState.fileName,
             style: TextStyle(
               color: context.conduitTheme.textPrimary,
-              fontSize: AppTypography.labelLarge,
+              fontSize: AppTypography.labelMedium,
               fontWeight: FontWeight.w500,
             ),
             maxLines: 1,
@@ -99,11 +99,11 @@ class _FileAttachmentCard extends ConsumerWidget {
             fileState.formattedSize,
             style: TextStyle(
               color: context.conduitTheme.textSecondary.withValues(alpha: 0.6),
-              fontSize: AppTypography.labelMedium,
+              fontSize: AppTypography.labelSmall,
             ),
           ),
           if (fileState.status == FileUploadStatus.uploading) ...[
-            const SizedBox(height: Spacing.sm),
+            const SizedBox(height: Spacing.xs),
             _buildProgressBar(context),
           ],
           if (fileState.error != null) ...[
@@ -112,7 +112,7 @@ class _FileAttachmentCard extends ConsumerWidget {
               'Failed to upload',
               style: TextStyle(
                 color: context.conduitTheme.error,
-                fontSize: AppTypography.labelMedium,
+                fontSize: AppTypography.labelSmall,
               ),
             ),
           ],
@@ -201,25 +201,25 @@ class MessageAttachmentPreview extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: Spacing.sm),
       child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+        spacing: Spacing.xs,
+        runSpacing: Spacing.xs,
         children: fileIds
             .map(
               (fileId) => Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+                  horizontal: Spacing.sm,
+                  vertical: Spacing.xs,
                 ),
                 decoration: BoxDecoration(
                   color: context.conduitTheme.textPrimary.withValues(
-                    alpha: 0.1,
+                    alpha: 0.08,
                   ),
-                  borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
                   border: Border.all(
                     color: context.conduitTheme.textPrimary.withValues(
-                      alpha: 0.2,
+                      alpha: 0.15,
                     ),
-                    width: BorderWidth.regular,
+                    width: BorderWidth.thin,
                   ),
                 ),
                 child: Row(
@@ -227,7 +227,7 @@ class MessageAttachmentPreview extends StatelessWidget {
                   children: [
                     const Text(
                       '📎',
-                      style: TextStyle(fontSize: AppTypography.bodyLarge),
+                      style: TextStyle(fontSize: 14),
                     ),
                     const SizedBox(width: Spacing.xs),
                     Text(
@@ -236,7 +236,7 @@ class MessageAttachmentPreview extends StatelessWidget {
                         color: context.conduitTheme.textPrimary.withValues(
                           alpha: 0.8,
                         ),
-                        fontSize: AppTypography.labelLarge,
+                        fontSize: AppTypography.labelSmall,
                       ),
                     ),
                   ],
