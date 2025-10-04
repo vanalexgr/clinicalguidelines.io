@@ -117,19 +117,19 @@ class ConnectivityService {
   }
 
   Future<bool?> _probeActiveServer() async {
-    final healthUri = _resolveHealthUri();
-    if (healthUri == null) return null;
+    final baseUri = _resolveBaseUri();
+    if (baseUri == null) return null;
 
-    return _probeHealthEndpoint(healthUri, updateLatency: true);
+    return _probeBaseEndpoint(baseUri, updateLatency: true);
   }
 
   Future<bool?> _probeAnyKnownServer() async {
     try {
       final configs = await _ref.read(serverConfigsProvider.future);
       for (final config in configs) {
-        final uri = _buildHealthUri(config.url);
+        final uri = _buildBaseUri(config.url);
         if (uri == null) continue;
-        final result = await _probeHealthEndpoint(uri);
+        final result = await _probeBaseEndpoint(uri);
         if (result != null) {
           return result;
         }
@@ -138,7 +138,7 @@ class ConnectivityService {
     return null;
   }
 
-  Future<bool?> _probeHealthEndpoint(
+  Future<bool?> _probeBaseEndpoint(
     Uri uri, {
     bool updateLatency = false,
   }) async {
@@ -157,8 +157,7 @@ class ConnectivityService {
           )
           .timeout(const Duration(seconds: 4));
 
-      final isHealthy =
-          response.statusCode == 200 && _responseIndicatesHealth(response.data);
+      final isHealthy = response.statusCode == 200;
       if (isHealthy && updateLatency) {
         _lastLatencyMs = DateTime.now().difference(start).inMilliseconds;
       }
@@ -169,20 +168,20 @@ class ConnectivityService {
     }
   }
 
-  Uri? _resolveHealthUri() {
+  Uri? _resolveBaseUri() {
     final api = _ref.read(apiServiceProvider);
     if (api != null) {
-      return _buildHealthUri(api.baseUrl);
+      return _buildBaseUri(api.baseUrl);
     }
 
     final activeServer = _ref.read(activeServerProvider);
     return activeServer.maybeWhen(
-      data: (server) => server != null ? _buildHealthUri(server.url) : null,
+      data: (server) => server != null ? _buildBaseUri(server.url) : null,
       orElse: () => null,
     );
   }
 
-  Uri? _buildHealthUri(String baseUrl) {
+  Uri? _buildBaseUri(String baseUrl) {
     if (baseUrl.isEmpty) return null;
 
     Uri? parsed = Uri.tryParse(baseUrl.trim());
@@ -194,26 +193,54 @@ class ConnectivityService {
     }
     if (parsed == null) return null;
 
-    return parsed.resolve('health');
-  }
-
-  bool _responseIndicatesHealth(dynamic data) {
-    if (data is Map) {
-      final dynamic status = data['status'];
-      if (status is bool) return status;
-      if (status is num) return status != 0;
-    }
-    return true;
+    // Return the base URL directly instead of resolving to /health
+    return parsed;
   }
 }
 
 // Providers
 final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
-  // Use a lightweight Dio instance only for connectivity checks
-  final dio = Dio();
-  final service = ConnectivityService(dio, ref);
-  ref.onDispose(() => service.dispose());
-  return service;
+  // Create a Dio instance with custom headers from the active server config
+  final activeServer = ref.watch(activeServerProvider);
+
+  return activeServer.maybeWhen(
+    data: (server) {
+      if (server == null) {
+        // No server configured, use lightweight Dio
+        final dio = Dio();
+        final service = ConnectivityService(dio, ref);
+        ref.onDispose(() => service.dispose());
+        return service;
+      }
+
+      // Create Dio with custom headers from server config
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: server.url,
+          connectTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
+          followRedirects: true,
+          maxRedirects: 5,
+          validateStatus: (status) => status != null && status < 400,
+          // Add custom headers from server config
+          headers: server.customHeaders.isNotEmpty
+              ? Map<String, String>.from(server.customHeaders)
+              : null,
+        ),
+      );
+
+      final service = ConnectivityService(dio, ref);
+      ref.onDispose(() => service.dispose());
+      return service;
+    },
+    orElse: () {
+      // No server data available, use lightweight Dio
+      final dio = Dio();
+      final service = ConnectivityService(dio, ref);
+      ref.onDispose(() => service.dispose());
+      return service;
+    },
+  );
 });
 
 @Riverpod(keepAlive: true)
