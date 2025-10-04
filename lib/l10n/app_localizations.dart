@@ -1596,18 +1596,6 @@ abstract class AppLocalizations {
   /// **'Realtime'**
   String get realtime;
 
-  /// Toggle label to hide the provider prefix in model names (e.g., show gpt-4o instead of openai/gpt-4o).
-  ///
-  /// In en, this message translates to:
-  /// **'Hide provider in model names'**
-  String get hideProviderInModelNames;
-
-  /// Helper text for provider hiding toggle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show names like \"gpt-4o\" instead of \"openai/gpt-4o\".'**
-  String get hideProviderInModelNamesDescription;
-
   /// Title for selecting the networking transport used for realtime.
   ///
   /// In en, this message translates to:

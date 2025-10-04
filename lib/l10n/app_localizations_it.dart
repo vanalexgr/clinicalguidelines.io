@@ -833,14 +833,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get realtime => 'Tempo reale';
 
   @override
-  String get hideProviderInModelNames =>
-      'Nascondi provider nei nomi dei modelli';
-
-  @override
-  String get hideProviderInModelNamesDescription =>
-      'Mostra nomi come \"gpt-4o\" invece di \"openai/gpt-4o\".';
-
-  @override
   String get transportMode => 'Modalità di trasporto';
 
   @override

@@ -157,28 +157,6 @@ class AppCustomizationPage extends ConsumerWidget {
             }
           },
         ),
-        const SizedBox(height: Spacing.md),
-        _CustomizationTile(
-          leading: _buildIconBadge(
-            context,
-            Platform.isIOS ? CupertinoIcons.textformat : Icons.text_fields,
-            color: theme.buttonPrimary,
-          ),
-          title: AppLocalizations.of(context)!.hideProviderInModelNames,
-          subtitle: AppLocalizations.of(
-            context,
-          )!.hideProviderInModelNamesDescription,
-          trailing: Switch.adaptive(
-            value: settings.omitProviderInModelName,
-            onChanged: (v) => ref
-                .read(appSettingsProvider.notifier)
-                .setOmitProviderInModelName(v),
-          ),
-          showChevron: false,
-          onTap: () => ref
-              .read(appSettingsProvider.notifier)
-              .setOmitProviderInModelName(!settings.omitProviderInModelName),
-        ),
       ],
     );
   }

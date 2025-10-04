@@ -17,9 +17,6 @@ class SettingsService {
   static const String _largeTextKey = PreferenceKeys.largeText;
   static const String _darkModeKey = PreferenceKeys.darkMode;
   static const String _defaultModelKey = PreferenceKeys.defaultModel;
-  // Model name formatting
-  static const String _omitProviderInModelNameKey =
-      PreferenceKeys.omitProviderInModelName;
   // Voice input settings
   static const String _voiceLocaleKey = PreferenceKeys.voiceLocaleId;
   static const String _voiceHoldToTalkKey = PreferenceKeys.voiceHoldToTalk;
@@ -117,16 +114,6 @@ class SettingsService {
     return box.delete(_defaultModelKey);
   }
 
-  /// Whether to omit the provider prefix when displaying model names
-  static Future<bool> getOmitProviderInModelName() {
-    final value = _preferencesBox().get(_omitProviderInModelNameKey) as bool?;
-    return Future.value(value ?? true);
-  }
-
-  static Future<void> setOmitProviderInModelName(bool value) {
-    return _preferencesBox().put(_omitProviderInModelNameKey, value);
-  }
-
   /// Load all settings
   static Future<AppSettings> loadSettings() {
     final box = _preferencesBox();
@@ -140,8 +127,6 @@ class SettingsService {
         largeText: (box.get(_largeTextKey) as bool?) ?? false,
         darkMode: (box.get(_darkModeKey) as bool?) ?? true,
         defaultModel: box.get(_defaultModelKey) as String?,
-        omitProviderInModelName:
-            (box.get(_omitProviderInModelNameKey) as bool?) ?? true,
         voiceLocaleId: box.get(_voiceLocaleKey) as String?,
         voiceHoldToTalk: (box.get(_voiceHoldToTalkKey) as bool?) ?? false,
         voiceAutoSendFinal: (box.get(_voiceAutoSendKey) as bool?) ?? false,
@@ -165,7 +150,6 @@ class SettingsService {
       _highContrastKey: settings.highContrast,
       _largeTextKey: settings.largeText,
       _darkModeKey: settings.darkMode,
-      _omitProviderInModelNameKey: settings.omitProviderInModelName,
       _voiceHoldToTalkKey: settings.voiceHoldToTalk,
       _voiceAutoSendKey: settings.voiceAutoSendFinal,
       _socketTransportModeKey: settings.socketTransportMode,
@@ -305,7 +289,6 @@ class AppSettings {
   final bool largeText;
   final bool darkMode;
   final String? defaultModel;
-  final bool omitProviderInModelName;
   final String? voiceLocaleId;
   final bool voiceHoldToTalk;
   final bool voiceAutoSendFinal;
@@ -320,7 +303,6 @@ class AppSettings {
     this.largeText = false,
     this.darkMode = true,
     this.defaultModel,
-    this.omitProviderInModelName = true,
     this.voiceLocaleId,
     this.voiceHoldToTalk = false,
     this.voiceAutoSendFinal = false,
@@ -337,7 +319,6 @@ class AppSettings {
     bool? largeText,
     bool? darkMode,
     Object? defaultModel = const _DefaultValue(),
-    bool? omitProviderInModelName,
     Object? voiceLocaleId = const _DefaultValue(),
     bool? voiceHoldToTalk,
     bool? voiceAutoSendFinal,
@@ -355,8 +336,6 @@ class AppSettings {
       defaultModel: defaultModel is _DefaultValue
           ? this.defaultModel
           : defaultModel as String?,
-      omitProviderInModelName:
-          omitProviderInModelName ?? this.omitProviderInModelName,
       voiceLocaleId: voiceLocaleId is _DefaultValue
           ? this.voiceLocaleId
           : voiceLocaleId as String?,
@@ -379,7 +358,6 @@ class AppSettings {
         other.largeText == largeText &&
         other.darkMode == darkMode &&
         other.defaultModel == defaultModel &&
-        other.omitProviderInModelName == omitProviderInModelName &&
         other.voiceLocaleId == voiceLocaleId &&
         other.voiceHoldToTalk == voiceHoldToTalk &&
         other.voiceAutoSendFinal == voiceAutoSendFinal &&
@@ -398,7 +376,6 @@ class AppSettings {
       largeText,
       darkMode,
       defaultModel,
-      omitProviderInModelName,
       voiceLocaleId,
       voiceHoldToTalk,
       voiceAutoSendFinal,
@@ -473,11 +450,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
   Future<void> setDefaultModel(String? modelId) async {
     state = state.copyWith(defaultModel: modelId);
     await SettingsService.setDefaultModel(modelId);
-  }
-
-  Future<void> setOmitProviderInModelName(bool value) async {
-    state = state.copyWith(omitProviderInModelName: value);
-    await SettingsService.setOmitProviderInModelName(value);
   }
 
   Future<void> setVoiceLocaleId(String? localeId) async {

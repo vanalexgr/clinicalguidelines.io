@@ -8,7 +8,6 @@ final class PreferenceKeys {
   static const String largeText = 'large_text';
   static const String darkMode = 'dark_mode';
   static const String defaultModel = 'default_model';
-  static const String omitProviderInModelName = 'omit_provider_in_model_name';
   static const String voiceLocaleId = 'voice_locale_id';
   static const String voiceHoldToTalk = 'voice_hold_to_talk';
   static const String voiceAutoSendFinal = 'voice_auto_send_final';

@@ -72,20 +72,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   String? _cachedGreetingName;
   bool _greetingReady = false;
 
-  String _formatModelDisplayName(String name, {required bool omitProvider}) {
-    var display = name.trim();
-    if (omitProvider) {
-      // Prefer the segment after the last '/'
-      if (display.contains('/')) {
-        display = display.split('/').last.trim();
-      }
-      // If an org prefix like 'OpenAI: gpt-4o' exists, use the part after ':'
-      if (display.contains(':')) {
-        final parts = display.split(':');
-        display = parts.last.trim();
-      }
-    }
-    return display;
+  String _formatModelDisplayName(String name) {
+    return name.trim();
   }
 
   bool validateFileCount(int currentCount, int newCount, int maxCount) {
@@ -830,9 +818,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         Model? matchedModel;
         final rawModel = message.model;
         if (rawModel != null && rawModel.isNotEmpty) {
-          final omitProvider = ref
-              .watch(appSettingsProvider)
-              .omitProviderInModelName;
           final modelsAsync = ref.watch(modelsProvider);
           if (modelsAsync.hasValue) {
             final models = modelsAsync.value!;
@@ -842,23 +827,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 (m) => m.id == rawModel || m.name == rawModel,
               );
               matchedModel = match;
-              displayModelName = _formatModelDisplayName(
-                match.name,
-                omitProvider: omitProvider,
-              );
+              displayModelName = _formatModelDisplayName(match.name);
             } catch (_) {
               // As a fallback, format the raw value to be more readable
-              displayModelName = _formatModelDisplayName(
-                rawModel,
-                omitProvider: omitProvider,
-              );
+              displayModelName = _formatModelDisplayName(rawModel);
             }
           } else {
             // Models not loaded yet; format raw value for readability
-            displayModelName = _formatModelDisplayName(
-              rawModel,
-              omitProvider: omitProvider,
-            );
+            displayModelName = _formatModelDisplayName(rawModel);
           }
         }
 
@@ -1062,11 +1038,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // Watch reviewer mode and auto-select model if needed
     final isReviewerMode = ref.watch(reviewerModeProvider);
 
-    final omitProviderInModelName = ref.watch(
-      appSettingsProvider.select(
-        (settings) => settings.omitProviderInModelName,
-      ),
-    );
     final conversationId = ref.watch(
       activeConversationProvider.select((conv) => conv?.id),
     );
@@ -1091,10 +1062,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ? trimmedConversationTitle
         : null;
     final formattedModelName = selectedModel != null
-        ? _formatModelDisplayName(
-            selectedModel.name,
-            omitProvider: omitProviderInModelName,
-          )
+        ? _formatModelDisplayName(selectedModel.name)
         : null;
     final modelLabel = formattedModelName ?? l10n.chooseModel;
     final hasConversationTitle = displayConversationTitle != null;

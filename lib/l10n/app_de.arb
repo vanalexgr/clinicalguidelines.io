@@ -291,8 +291,6 @@
   "quickActionsDescription": "Wähle bis zu zwei Schnellzugriffe, die neben dem Eingabefeld angepinnt werden",
   "display": "Anzeige",
   "realtime": "Echtzeit",
-  "hideProviderInModelNames": "Anbieter in Modellnamen ausblenden",
-  "hideProviderInModelNamesDescription": "Zeige Namen wie \"gpt-4o\" statt \"openai/gpt-4o\".",
   "transportMode": "Transportmodus",
   "transportModeDescription": "Wähle, wie die App für Echtzeit-Updates verbindet.",
   "mode": "Modus",

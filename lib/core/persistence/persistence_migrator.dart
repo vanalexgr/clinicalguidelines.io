@@ -79,7 +79,6 @@ class PersistenceMigrator {
     copyBool(PreferenceKeys.largeText);
     copyBool(PreferenceKeys.darkMode);
     copyString(PreferenceKeys.defaultModel);
-    copyBool(PreferenceKeys.omitProviderInModelName);
     copyString(PreferenceKeys.voiceLocaleId);
     copyBool(PreferenceKeys.voiceHoldToTalk);
     copyBool(PreferenceKeys.voiceAutoSendFinal);
@@ -185,7 +184,6 @@ class PersistenceMigrator {
       PreferenceKeys.largeText,
       PreferenceKeys.darkMode,
       PreferenceKeys.defaultModel,
-      PreferenceKeys.omitProviderInModelName,
       PreferenceKeys.voiceLocaleId,
       PreferenceKeys.voiceHoldToTalk,
       PreferenceKeys.voiceAutoSendFinal,
