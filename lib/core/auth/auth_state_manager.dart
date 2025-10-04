@@ -610,12 +610,11 @@ class AuthStateManager extends _$AuthStateManager {
 
   /// Prime the conversations list so navigation drawers show real data after login.
   void _prefetchConversations() {
-    Future.microtask(() async {
+    Future.microtask(() {
       if (!ref.mounted) return;
       try {
         refreshConversationsCache(ref, includeFolders: true);
-        await ref.read(conversationsProvider.future);
-        DebugLogger.auth('Conversations prefetch requested');
+        DebugLogger.auth('Conversations prefetch scheduled');
       } catch (e) {
         if (!ref.mounted) return;
         DebugLogger.warning(

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as m;
 import 'package:markdown_widget/markdown_widget.dart';
 
-import '../../theme/theme_extensions.dart';
+import 'latex_block_widget.dart';
 
 const String _latexTag = 'latex';
 
@@ -12,7 +11,10 @@ class ConduitLatex {
   const ConduitLatex();
 
   /// Returns the inline syntax used to identify LaTeX segments.
-  m.InlineSyntax syntax() => _LatexSyntax();
+  List<m.InlineSyntax> syntaxes() => [
+    _LatexDollarSyntax(),
+    _LatexEscapedSyntax(),
+  ];
 
   /// Returns the span generator that renders LaTeX expressions.
   SpanNodeGeneratorWithTag generator({required bool isDark}) {
@@ -30,26 +32,55 @@ class ConduitLatex {
   }
 }
 
-class _LatexSyntax extends m.InlineSyntax {
-  _LatexSyntax() : super(r'(\$\$[\s\S]+?\$\$)|(\$[^\n]+?\$)');
+class _LatexDollarSyntax extends m.InlineSyntax {
+  _LatexDollarSyntax()
+    : super(
+        r'(\$\$[\s\S]+?\$\$)|(\$[^\n]+?\$)',
+        startCharacter: r'$'.codeUnitAt(0),
+      );
 
   @override
   bool onMatch(m.InlineParser parser, Match match) {
-    final raw = match.input.substring(match.start, match.end);
-    final element = m.Element.text(_latexTag, raw);
-    if (raw.startsWith(r'$$') && raw.endsWith(r'$$') && raw.length > 4) {
-      element.attributes['content'] = raw.substring(2, raw.length - 2);
-      element.attributes['isInline'] = 'false';
-    } else if (raw.startsWith(r'$') && raw.endsWith(r'$') && raw.length > 2) {
-      element.attributes['content'] = raw.substring(1, raw.length - 1);
-      element.attributes['isInline'] = 'true';
-    } else {
-      element.attributes['content'] = raw;
-      element.attributes['isInline'] = 'true';
-    }
-    parser.addNode(element);
-    return true;
+    return _handleMatch(parser, match.input.substring(match.start, match.end));
   }
+}
+
+class _LatexEscapedSyntax extends m.InlineSyntax {
+  _LatexEscapedSyntax()
+    : super(
+        r'(\\\\\([\s\S]+?\\\\\))|(\\\\\[[\s\S]+?\\\\\])',
+        startCharacter: r'\'.codeUnitAt(0),
+      );
+
+  @override
+  bool onMatch(m.InlineParser parser, Match match) {
+    return _handleMatch(parser, match.input.substring(match.start, match.end));
+  }
+}
+
+bool _handleMatch(m.InlineParser parser, String raw) {
+  final element = m.Element.text(_latexTag, raw);
+  String content = raw;
+  var isInline = true;
+
+  if (raw.startsWith(r'$$') && raw.endsWith(r'$$') && raw.length > 4) {
+    content = raw.substring(2, raw.length - 2);
+    isInline = false;
+  } else if (raw.startsWith(r'$') && raw.endsWith(r'$') && raw.length > 2) {
+    content = raw.substring(1, raw.length - 1);
+    isInline = true;
+  } else if (raw.startsWith(r'\\(') && raw.endsWith(r'\\)') && raw.length > 4) {
+    content = raw.substring(2, raw.length - 2);
+    isInline = true;
+  } else if (raw.startsWith(r'\\[') && raw.endsWith(r'\\]') && raw.length > 4) {
+    content = raw.substring(2, raw.length - 2);
+    isInline = false;
+  }
+
+  element.attributes['content'] = content;
+  element.attributes['isInline'] = '$isInline';
+  parser.addNode(element);
+  return true;
 }
 
 class _LatexNode extends SpanNode {
@@ -79,23 +110,14 @@ class _LatexNode extends SpanNode {
       return TextSpan(text: rawText, style: baseStyle);
     }
 
-    final latexWidget = Math.tex(
-      content,
-      mathStyle: MathStyle.text,
-      textStyle: baseStyle,
-      textScaleFactor: 1,
-      onErrorFallback: (error) {
-        return Text(rawText, style: baseStyle.copyWith(color: Colors.red));
-      },
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: LatexBlockWidget(
+        content: content,
+        isInline: isInline,
+        style: baseStyle,
+        isDark: isDark,
+      ),
     );
-
-    final widget = isInline
-        ? latexWidget
-        : Padding(
-            padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
-            child: Center(child: latexWidget),
-          );
-
-    return WidgetSpan(alignment: PlaceholderAlignment.middle, child: widget);
   }
 }

@@ -6,53 +6,73 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/a11y-dark.dart';
 import 'package:flutter_highlight/themes/a11y-light.dart';
-import 'package:markdown/markdown.dart' as m;
 import 'package:markdown_widget/markdown_widget.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../theme/color_tokens.dart';
 import '../../theme/theme_extensions.dart';
+import 'code_block_header.dart';
 import 'markdown_latex.dart';
 
-/// Callback invoked when a markdown link is tapped.
 typedef MarkdownLinkTapCallback = void Function(String url, String title);
 
-/// Bundles markdown configuration and generator metadata for the app theme.
-class ConduitMarkdownTheme {
-  const ConduitMarkdownTheme({
-    required this.config,
-    required this.inlineSyntaxes,
-    required this.blockSyntaxes,
-    required this.generators,
-    required this.linesMargin,
-  });
+class ConduitMarkdown {
+  const ConduitMarkdown._();
 
-  final MarkdownConfig config;
-  final List<m.InlineSyntax> inlineSyntaxes;
-  final List<m.BlockSyntax> blockSyntaxes;
-  final List<SpanNodeGeneratorWithTag> generators;
-  final EdgeInsets linesMargin;
-
-  MarkdownGenerator createGenerator() {
-    return MarkdownGenerator(
-      inlineSyntaxList: inlineSyntaxes,
-      blockSyntaxList: blockSyntaxes,
-      linesMargin: linesMargin,
-      generators: generators,
+  static MarkdownWidget build({
+    required BuildContext context,
+    required String data,
+    MarkdownLinkTapCallback? onTapLink,
+    bool selectable = true,
+    bool shrinkWrap = false,
+    ScrollPhysics? physics,
+  }) {
+    final components = prepare(context, onTapLink: onTapLink);
+    return MarkdownWidget(
+      data: data,
+      selectable: selectable,
+      config: components.config,
+      markdownGenerator: components.generator,
+      shrinkWrap: shrinkWrap,
+      physics: physics,
+      padding: EdgeInsets.zero,
     );
   }
-}
 
-class ConduitMarkdownConfig {
-  static ConduitMarkdownTheme resolve(
+  static MarkdownBlock buildBlock({
+    required BuildContext context,
+    required String data,
+    MarkdownLinkTapCallback? onTapLink,
+    bool selectable = true,
+  }) {
+    final components = prepare(context, onTapLink: onTapLink);
+    return MarkdownBlock(
+      data: data,
+      selectable: selectable,
+      config: components.config,
+      generator: components.generator,
+    );
+  }
+
+  static ({MarkdownConfig config, MarkdownGenerator generator}) prepare(
+    BuildContext context, {
+    MarkdownLinkTapCallback? onTapLink,
+  }) {
+    final config = _buildConfig(context, onTapLink: onTapLink);
+    final generator = _buildGenerator(context);
+    return (config: config, generator: generator);
+  }
+
+  static MarkdownConfig _buildConfig(
     BuildContext context, {
     MarkdownLinkTapCallback? onTapLink,
   }) {
     final theme = context.conduitTheme;
-    final materialTheme = Theme.of(context);
-    final isDark = materialTheme.brightness == Brightness.dark;
+    final material = Theme.of(context);
+    final isDark = material.brightness == Brightness.dark;
 
     final baseBody = AppTypography.bodyMediumStyle.copyWith(
       color: theme.textPrimary,
@@ -65,132 +85,129 @@ class ConduitMarkdownConfig {
 
     final codeBackground = theme.surfaceContainer.withValues(alpha: 0.55);
     final borderColor = theme.cardBorder.withValues(alpha: 0.25);
-    final latex = const ConduitLatex();
+    final highlightTheme = _codeHighlightTheme(theme, isDark: isDark);
 
-    final markdownConfig =
-        (isDark ? MarkdownConfig.darkConfig : MarkdownConfig.defaultConfig)
-            .copy(
-              configs: [
-                PConfig(textStyle: baseBody),
-                H1Config(
-                  style: AppTypography.headlineLargeStyle.copyWith(
-                    color: theme.textPrimary,
-                  ),
-                ),
-                H2Config(
-                  style: AppTypography.headlineMediumStyle.copyWith(
-                    color: theme.textPrimary,
-                  ),
-                ),
-                H3Config(
-                  style: AppTypography.headlineSmallStyle.copyWith(
-                    color: theme.textPrimary,
-                  ),
-                ),
-                H4Config(
-                  style: AppTypography.bodyLargeStyle.copyWith(
-                    color: theme.textPrimary,
-                  ),
-                ),
-                H5Config(style: baseBody.copyWith(fontWeight: FontWeight.w600)),
-                H6Config(style: secondaryBody),
-                LinkConfig(
-                  style: baseBody.copyWith(
-                    color: materialTheme.colorScheme.primary,
-                    decoration: TextDecoration.underline,
-                    decorationColor: materialTheme.colorScheme.primary,
-                  ),
-                  onTap: (url) => onTapLink?.call(url, url),
-                ),
-                CodeConfig(
-                  style: AppTypography.codeStyle.copyWith(
-                    color: theme.codeText,
-                    backgroundColor: codeBackground,
-                  ),
-                ),
-                PreConfig(
-                  padding: const EdgeInsets.all(Spacing.sm),
-                  margin: const EdgeInsets.symmetric(vertical: Spacing.xs),
-                  decoration: BoxDecoration(
-                    color: codeBackground,
-                    borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-                    border: Border.all(
-                      color: borderColor,
-                      width: BorderWidth.micro,
-                    ),
-                  ),
-                  textStyle: AppTypography.codeStyle.copyWith(
-                    color: theme.codeText,
-                  ),
-                  styleNotMatched: AppTypography.codeStyle.copyWith(
-                    color: theme.codeText,
-                  ),
-                  theme: _codeHighlightTheme(theme, isDark: isDark),
-                  language: 'plaintext',
-                ),
-                BlockquoteConfig(
-                  sideColor: materialTheme.colorScheme.primary.withValues(
-                    alpha: 0.35,
-                  ),
-                  textColor: theme.textSecondary,
-                  sideWith: BorderWidth.micro,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Spacing.md,
-                    vertical: Spacing.sm,
-                  ),
-                  margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
-                ),
-                ListConfig(marginLeft: Spacing.lg, marginBottom: Spacing.xs),
-                TableConfig(
-                  border: TableBorder.all(
-                    color: borderColor,
-                    width: BorderWidth.micro,
-                  ),
-                  headPadding: const EdgeInsets.symmetric(
-                    horizontal: Spacing.sm,
-                    vertical: Spacing.xs,
-                  ),
-                  bodyPadding: const EdgeInsets.symmetric(
-                    horizontal: Spacing.sm,
-                    vertical: Spacing.xs,
-                  ),
-                  headerStyle: secondaryBody.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  bodyStyle: secondaryBody,
-                  headerRowDecoration: BoxDecoration(
-                    color: theme.surfaceBackground.withValues(alpha: 0.35),
-                  ),
-                  bodyRowDecoration: BoxDecoration(
-                    color: theme.surfaceContainer.withValues(alpha: 0.2),
-                  ),
-                ),
-                HrConfig(color: theme.dividerColor, height: BorderWidth.small),
-                ImgConfig(
-                  builder: (url, _) {
-                    return Builder(
-                      builder: (context) {
-                        final uri = Uri.tryParse(url);
-                        if (uri == null) {
-                          return _buildImageError(
-                            context,
-                            context.conduitTheme,
-                          );
-                        }
-                        return _buildImage(context, uri);
-                      },
-                    );
-                  },
-                ),
-              ],
+    return MarkdownConfig(
+      configs: [
+        PConfig(textStyle: baseBody),
+        H1Config(
+          style: AppTypography.headlineLargeStyle.copyWith(
+            color: theme.textPrimary,
+          ),
+        ),
+        H2Config(
+          style: AppTypography.headlineMediumStyle.copyWith(
+            color: theme.textPrimary,
+          ),
+        ),
+        H3Config(
+          style: AppTypography.headlineSmallStyle.copyWith(
+            color: theme.textPrimary,
+          ),
+        ),
+        H4Config(
+          style: AppTypography.bodyLargeStyle.copyWith(
+            color: theme.textPrimary,
+          ),
+        ),
+        H5Config(style: baseBody.copyWith(fontWeight: FontWeight.w600)),
+        H6Config(style: secondaryBody),
+        LinkConfig(
+          style: baseBody.copyWith(
+            color: material.colorScheme.primary,
+            decoration: TextDecoration.underline,
+            decorationColor: material.colorScheme.primary,
+          ),
+          onTap: (url) => onTapLink?.call(url, url),
+        ),
+        CodeConfig(
+          style: AppTypography.codeStyle.copyWith(
+            color: theme.codeText,
+            backgroundColor: codeBackground,
+          ),
+        ),
+        PreConfig(
+          textStyle: AppTypography.codeStyle.copyWith(color: theme.codeText),
+          styleNotMatched: AppTypography.codeStyle.copyWith(
+            color: theme.codeText,
+          ),
+          theme: highlightTheme,
+          builder: (code, language) {
+            final normalizedLanguage = language.trim().isEmpty
+                ? 'plaintext'
+                : language.trim();
+            final highlight = HighlightView(
+              code,
+              language: normalizedLanguage == 'plaintext'
+                  ? null
+                  : normalizedLanguage,
+              theme: highlightTheme,
+              textStyle: AppTypography.codeStyle.copyWith(
+                color: theme.codeText,
+              ),
+              padding: EdgeInsets.zero,
             );
+            return _buildCodeWrapper(
+              context: context,
+              child: highlight,
+              backgroundColor: codeBackground,
+              borderColor: borderColor,
+              language: normalizedLanguage,
+              rawCode: code,
+            );
+          },
+        ),
+        BlockquoteConfig(
+          sideColor: material.colorScheme.primary.withValues(alpha: 0.35),
+          textColor: theme.textSecondary,
+          sideWith: BorderWidth.small,
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.md,
+            vertical: Spacing.sm,
+          ),
+          margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
+        ),
+        ListConfig(marginLeft: Spacing.lg, marginBottom: Spacing.xs),
+        TableConfig(
+          border: TableBorder.all(color: borderColor, width: BorderWidth.micro),
+          headPadding: const EdgeInsets.symmetric(
+            horizontal: Spacing.sm,
+            vertical: Spacing.xs,
+          ),
+          bodyPadding: const EdgeInsets.symmetric(
+            horizontal: Spacing.sm,
+            vertical: Spacing.xs,
+          ),
+          headerStyle: secondaryBody.copyWith(fontWeight: FontWeight.w600),
+          bodyStyle: secondaryBody,
+          headerRowDecoration: BoxDecoration(
+            color: theme.surfaceBackground.withValues(alpha: 0.35),
+          ),
+          bodyRowDecoration: BoxDecoration(
+            color: theme.surfaceContainer.withValues(alpha: 0.2),
+          ),
+        ),
+        HrConfig(color: theme.dividerColor, height: BorderWidth.small),
+        ImgConfig(
+          builder: (url, attributes) {
+            final uri = Uri.tryParse(url);
+            if (uri == null) {
+              return _buildImageError(context, theme);
+            }
+            return _buildImage(context, uri);
+          },
+        ),
+      ],
+    );
+  }
 
-    return ConduitMarkdownTheme(
-      config: markdownConfig,
-      inlineSyntaxes: [latex.syntax()],
-      blockSyntaxes: const [],
+  static MarkdownGenerator _buildGenerator(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final latex = ConduitLatex();
+    return MarkdownGenerator(
+      inlineSyntaxList: latex.syntaxes(),
       generators: [latex.generator(isDark: isDark)],
-      linesMargin: const EdgeInsets.only(bottom: Spacing.sm),
+      linesMargin: const EdgeInsets.symmetric(vertical: Spacing.xs),
     );
   }
 
@@ -210,6 +227,67 @@ class ConduitMarkdownConfig {
           height: codeStyle.height,
         ),
     };
+  }
+
+  static Widget _buildCodeWrapper({
+    required BuildContext context,
+    required Widget child,
+    required Color backgroundColor,
+    required Color borderColor,
+    required String language,
+    required String rawCode,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: Spacing.xs),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+            border: Border.all(color: borderColor, width: BorderWidth.micro),
+          ),
+          child: ClipRect(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CodeBlockHeader(
+                  language: language,
+                  onCopy: () async {
+                    await Clipboard.setData(ClipboardData(text: rawCode));
+                    if (!context.mounted) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Code copied to clipboard.'),
+                      ),
+                    );
+                  },
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: IntrinsicWidth(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: width),
+                      child: Padding(
+                        padding: const EdgeInsets.all(Spacing.sm),
+                        child: child,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   static Widget buildMermaidBlock(BuildContext context, String code) {
@@ -299,6 +377,13 @@ class ConduitMarkdownConfig {
         ),
       ),
       errorWidget: (context, url, error) => _buildImageError(context, theme),
+      imageBuilder: (context, imageProvider) => Container(
+        margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppBorderRadius.md),
+          image: DecorationImage(image: imageProvider, fit: BoxFit.contain),
+        ),
+      ),
     );
   }
 
@@ -486,73 +571,70 @@ class _MermaidDiagramState extends State<MermaidDiagram> {
 
   String _buildHtml(String code, String script) {
     final theme = widget.brightness == Brightness.dark ? 'dark' : 'default';
-    final encoded = jsonEncode(code);
     final primary = _toHex(widget.tokens.brandTone60);
     final secondary = _toHex(widget.tokens.accentTeal60);
     final background = _toHex(widget.tokens.codeBackground);
     final onBackground = _toHex(widget.tokens.codeText);
-    final lineColor = _toHex(widget.tokens.codeAccent);
-    final errorColor = _toHex(widget.tokens.statusError60);
 
     return '''
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      html, body { margin: 0; padding: 0; background: transparent; }
-      body { color: $onBackground; font-family: -apple-system, sans-serif; }
-      #diagram { padding: 8px; overflow: auto; }
-      svg { height: auto; display: block; }
-    </style>
-    <script type="text/javascript">
-$script
-    </script>
-  </head>
-  <body>
-    <div id="diagram"></div>
-    <script type="text/javascript">
-      const graphDefinition = $encoded;
-      const themeConfig = {
-        startOnLoad: false,
-        theme: '$theme',
-        securityLevel: 'loose',
-        themeVariables: {
-          primaryColor: '$primary',
-          secondaryColor: '$secondary',
-          background: '$background',
-          textColor: '$onBackground',
-          lineColor: '$lineColor'
-        }
-      };
-
-      (async () => {
-        const target = document.getElementById('diagram');
-        try {
-          mermaid.initialize(themeConfig);
-          const { svg, bindFunctions } = await mermaid.render('graphDiv', graphDefinition);
-          target.innerHTML = svg;
-          if (typeof bindFunctions === 'function') {
-            bindFunctions(target);
-          }
-        } catch (error) {
-          target.innerHTML = '<pre style="color:$errorColor">' + String(error) + '</pre>';
-          console.error('Mermaid render failed', error);
-        }
-      })();
-    </script>
-  </body>
+<head>
+<meta charset="utf-8" />
+<style>
+  body {
+    margin: 0;
+    background-color: transparent;
+  }
+  #container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <div class="mermaid">$code</div>
+</div>
+<script>$script</script>
+<script>
+  mermaid.initialize({
+    theme: '$theme',
+    themeVariables: {
+      primaryColor: '$primary',
+      primaryTextColor: '$onBackground',
+      primaryBorderColor: '$secondary',
+      background: '$background'
+    },
+  });
+  mermaid.contentLoaded();
+</script>
+</body>
 </html>
 ''';
   }
 
   String _toHex(Color color) {
-    final value = color.toARGB32();
-    return '#'
-            '${((value >> 16) & 0xFF).toRadixString(16).padLeft(2, '0')}'
-            '${((value >> 8) & 0xFF).toRadixString(16).padLeft(2, '0')}'
-            '${(value & 0xFF).toRadixString(16).padLeft(2, '0')}'
-        .toUpperCase();
+    int channel(double value) {
+      final scaled = (value * 255).round();
+      if (scaled < 0) {
+        return 0;
+      }
+      if (scaled > 255) {
+        return 255;
+      }
+      return scaled;
+    }
+
+    final argb =
+        (channel(color.a) << 24) |
+        (channel(color.r) << 16) |
+        (channel(color.g) << 8) |
+        channel(color.b);
+    return '#${argb.toRadixString(16).padLeft(8, '0')}';
   }
 }
