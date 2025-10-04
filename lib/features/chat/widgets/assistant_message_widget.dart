@@ -320,7 +320,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             }
           });
         },
-        borderRadius: BorderRadius.circular(AppBorderRadius.md),
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(
@@ -328,10 +328,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             vertical: Spacing.xs,
           ),
           decoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(AppBorderRadius.md),
+            color: theme.surfaceContainer.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
             border: Border.all(
-              color: theme.dividerColor,
+              color: theme.dividerColor.withValues(alpha: 0.5),
               width: BorderWidth.thin,
             ),
           ),
@@ -379,10 +379,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                   margin: const EdgeInsets.only(top: Spacing.sm),
                   padding: const EdgeInsets.all(Spacing.sm),
                   decoration: BoxDecoration(
-                    color: theme.surfaceContainer.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(AppBorderRadius.md),
+                    color: theme.surfaceContainer.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppBorderRadius.small),
                     border: Border.all(
-                      color: theme.dividerColor,
+                      color: theme.dividerColor.withValues(alpha: 0.5),
                       width: BorderWidth.thin,
                     ),
                   ),
@@ -1168,7 +1168,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             }
           });
         },
-        borderRadius: BorderRadius.circular(AppBorderRadius.md),
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(
@@ -1176,10 +1176,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             vertical: Spacing.xs,
           ),
           decoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(AppBorderRadius.md),
+            color: theme.surfaceContainer.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
             border: Border.all(
-              color: theme.dividerColor,
+              color: theme.dividerColor.withValues(alpha: 0.5),
               width: BorderWidth.thin,
             ),
           ),
@@ -1223,10 +1223,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                   margin: const EdgeInsets.only(top: Spacing.sm),
                   padding: const EdgeInsets.all(Spacing.sm),
                   decoration: BoxDecoration(
-                    color: theme.surfaceContainer.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(AppBorderRadius.md),
+                    color: theme.surfaceContainer.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppBorderRadius.small),
                     border: Border.all(
-                      color: theme.dividerColor,
+                      color: theme.dividerColor.withValues(alpha: 0.5),
                       width: BorderWidth.thin,
                     ),
                   ),
@@ -1418,7 +1418,7 @@ class _TimelineRow extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+      borderRadius: BorderRadius.circular(AppBorderRadius.small),
       child: wrapped,
     );
   }
@@ -1643,15 +1643,19 @@ class _QueryPills extends StatelessWidget {
               onTap: () => _launchUri(
                 'https://www.google.com/search?q=${Uri.encodeComponent(query)}',
               ),
-              borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+              borderRadius: BorderRadius.circular(AppBorderRadius.small),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: Spacing.sm,
-                  vertical: 6,
+                  vertical: Spacing.xs,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.surfaceContainer.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+                  color: theme.surfaceContainer.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.3),
+                    width: BorderWidth.thin,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1703,15 +1707,19 @@ class _LinkPills extends StatelessWidget {
           .map(
             (item) => InkWell(
               onTap: item.url != null ? () => _launchUri(item.url!) : null,
-              borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+              borderRadius: BorderRadius.circular(AppBorderRadius.small),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: Spacing.sm,
-                  vertical: 6,
+                  vertical: Spacing.xs,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.surfaceContainer.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+                  color: theme.surfaceContainer.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.3),
+                    width: BorderWidth.thin,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -2168,15 +2176,15 @@ class FollowUpSuggestionBar extends StatelessWidget {
           children: [
             Icon(
               Icons.lightbulb_outline,
-              size: 14,
-              color: theme.textSecondary.withValues(alpha: 0.8),
+              size: 12,
+              color: theme.textSecondary.withValues(alpha: 0.7),
             ),
             const SizedBox(width: Spacing.xxs),
             Text(
               'Continue with',
               style: TextStyle(
                 fontSize: AppTypography.labelSmall,
-                color: theme.textSecondary.withValues(alpha: 0.8),
+                color: theme.textSecondary.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -2184,7 +2192,7 @@ class FollowUpSuggestionBar extends StatelessWidget {
         ),
         const SizedBox(height: Spacing.xs),
         Wrap(
-          spacing: Spacing.sm,
+          spacing: Spacing.xs,
           runSpacing: Spacing.xs,
           children: [
             for (final suggestion in trimmedSuggestions)
@@ -2217,7 +2225,7 @@ class _MinimalFollowUpButton extends StatelessWidget {
 
     return InkWell(
       onTap: enabled ? onPressed : null,
-      borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+      borderRadius: BorderRadius.circular(AppBorderRadius.small),
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: Spacing.sm,
@@ -2225,14 +2233,14 @@ class _MinimalFollowUpButton extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: enabled
-              ? theme.surfaceContainer.withValues(alpha: 0.3)
+              ? theme.surfaceContainer.withValues(alpha: 0.2)
               : theme.surfaceContainer.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+          borderRadius: BorderRadius.circular(AppBorderRadius.small),
           border: Border.all(
             color: enabled
-                ? theme.buttonPrimary.withValues(alpha: 0.2)
-                : theme.dividerColor.withValues(alpha: 0.3),
-            width: 1,
+                ? theme.buttonPrimary.withValues(alpha: 0.15)
+                : theme.dividerColor.withValues(alpha: 0.2),
+            width: BorderWidth.thin,
           ),
         ),
         child: Row(
@@ -2240,10 +2248,10 @@ class _MinimalFollowUpButton extends StatelessWidget {
           children: [
             Icon(
               Icons.arrow_forward,
-              size: 12,
+              size: 11,
               color: enabled
-                  ? theme.buttonPrimary.withValues(alpha: 0.8)
-                  : theme.textSecondary.withValues(alpha: 0.5),
+                  ? theme.buttonPrimary.withValues(alpha: 0.7)
+                  : theme.textSecondary.withValues(alpha: 0.4),
             ),
             const SizedBox(width: Spacing.xxs),
             Flexible(
@@ -2251,7 +2259,7 @@ class _MinimalFollowUpButton extends StatelessWidget {
                 label,
                 style: TextStyle(
                   color: enabled
-                      ? theme.buttonPrimary
+                      ? theme.buttonPrimary.withValues(alpha: 0.9)
                       : theme.textSecondary.withValues(alpha: 0.5),
                   fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.w500,

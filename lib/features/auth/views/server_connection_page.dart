@@ -2,7 +2,6 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
@@ -470,9 +469,8 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
     return Column(
       children: [
         InkWell(
-          onTap: () => setState(
-            () => _showAdvancedSettings = !_showAdvancedSettings,
-          ),
+          onTap: () =>
+              setState(() => _showAdvancedSettings = !_showAdvancedSettings),
           borderRadius: BorderRadius.circular(AppBorderRadius.button),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -597,7 +595,9 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
               const SizedBox(width: Spacing.sm),
               ConduitIconButton(
                 icon: Platform.isIOS ? CupertinoIcons.plus : Icons.add,
-                onPressed: _customHeaders.length >= 10 ? null : _addCustomHeader,
+                onPressed: _customHeaders.length >= 10
+                    ? null
+                    : _addCustomHeader,
                 tooltip: _customHeaders.length >= 10
                     ? AppLocalizations.of(context)!.maximumHeadersReached
                     : AppLocalizations.of(context)!.addHeader,

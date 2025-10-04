@@ -61,7 +61,7 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
                 Expanded(
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
+                      constraints: const BoxConstraints(maxWidth: 480),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -71,13 +71,13 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
                             const SizedBox(height: Spacing.sm),
                             _buildServerDetails(context, activeServer),
                           ],
-                          const SizedBox(height: Spacing.md),
+                          const SizedBox(height: Spacing.lg),
                           Text(
                             l10n.connectionIssueSubtitle,
                             textAlign: TextAlign.center,
                             style: context.conduitTheme.bodyMedium?.copyWith(
                               color: context.conduitTheme.textSecondary,
-                              height: 1.45,
+                              height: 1.4,
                             ),
                           ),
                         ],
@@ -111,27 +111,30 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 72,
-          height: 72,
+          width: 64,
+          height: 64,
           decoration: BoxDecoration(
-            color: context.conduitTheme.surfaceContainerHighest,
+            color: context.conduitTheme.error.withValues(alpha: 0.1),
             shape: BoxShape.circle,
-            boxShadow: ConduitShadows.high(context),
+            border: Border.all(
+              color: context.conduitTheme.error.withValues(alpha: 0.2),
+              width: BorderWidth.thin,
+            ),
           ),
           child: Icon(
             Platform.isIOS
                 ? CupertinoIcons.wifi_exclamationmark
                 : Icons.wifi_off_rounded,
             color: iconColor,
-            size: 34,
+            size: 28,
           ),
         ),
-        const SizedBox(height: Spacing.md),
+        const SizedBox(height: Spacing.lg),
         Text(
           l10n.connectionIssueTitle,
           textAlign: TextAlign.center,
           style: context.conduitTheme.headingMedium?.copyWith(
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             color: context.conduitTheme.textPrimary,
           ),
         ),

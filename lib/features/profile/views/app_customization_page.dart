@@ -598,7 +598,7 @@ class _PaletteOption extends StatelessWidget {
 
     return InkWell(
       onTap: onSelect,
-      borderRadius: BorderRadius.circular(AppBorderRadius.md),
+      borderRadius: BorderRadius.circular(AppBorderRadius.small),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
         child: Row(
@@ -607,7 +607,7 @@ class _PaletteOption extends StatelessWidget {
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
               color: isSelected ? theme.buttonPrimary : theme.iconSecondary,
-              size: IconSize.md,
+              size: IconSize.small,
             ),
             const SizedBox(width: Spacing.sm),
             Expanded(
@@ -635,7 +635,7 @@ class _PaletteOption extends StatelessWidget {
                           child: Icon(
                             Icons.check_circle,
                             color: theme.buttonPrimary,
-                            size: IconSize.sm,
+                            size: IconSize.small,
                           ),
                         ),
                     ],
@@ -674,14 +674,14 @@ class _PaletteColorDot extends StatelessWidget {
     final theme = context.conduitTheme;
     return Container(
       margin: const EdgeInsets.only(right: Spacing.xs),
-      width: 20,
-      height: 20,
+      width: 18,
+      height: 18,
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
         border: Border.all(
-          color: theme.dividerColor.withValues(alpha: 0.4),
-          width: 1.2,
+          color: theme.dividerColor.withValues(alpha: 0.3),
+          width: BorderWidth.thin,
         ),
       ),
     );

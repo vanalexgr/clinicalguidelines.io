@@ -5,7 +5,6 @@ import 'enhanced_attachment.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:io' show Platform;
 import 'package:conduit/l10n/app_localizations.dart';
 import 'package:conduit/shared/widgets/chat_action_button.dart';
@@ -149,13 +148,6 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
               borderRadius: BorderRadius.circular(
                 AppBorderRadius.messageBubble,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: context.conduitTheme.cardShadow.withValues(alpha: 0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(
@@ -196,15 +188,6 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
                       borderRadius: BorderRadius.circular(
                         AppBorderRadius.messageBubble,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: context.conduitTheme.cardShadow.withValues(
-                            alpha: 0.08,
-                          ),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(
@@ -248,15 +231,6 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
                   return Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppBorderRadius.md),
-                      boxShadow: [
-                        BoxShadow(
-                          color: context.conduitTheme.cardShadow.withValues(
-                            alpha: 0.06,
-                          ),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(AppBorderRadius.md),
@@ -294,13 +268,6 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
               borderRadius: BorderRadius.circular(
                 AppBorderRadius.messageBubble,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: context.conduitTheme.cardShadow.withValues(alpha: 0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(
@@ -341,15 +308,6 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
                       borderRadius: BorderRadius.circular(
                         AppBorderRadius.messageBubble,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: context.conduitTheme.cardShadow.withValues(
-                            alpha: 0.08,
-                          ),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(
@@ -390,15 +348,6 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
                   return Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppBorderRadius.md),
-                      boxShadow: [
-                        BoxShadow(
-                          color: context.conduitTheme.cardShadow.withValues(
-                            alpha: 0.06,
-                          ),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(AppBorderRadius.md),
@@ -509,173 +458,148 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
     );
 
     return GestureDetector(
-          onLongPress: () => _toggleActions(),
-          behavior: HitTestBehavior.translucent,
-          child: Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(
-              bottom: Spacing.md,
-              left: Spacing.xxxl,
-              right: Spacing.xs,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Display images outside and above the text bubble (iMessage style)
-                // Prioritize files array over attachmentIds to avoid duplication
-                if (hasFilesFromArray) ...[
-                  _buildUserFileImages(),
-                ] else if (hasImages) ...[
-                  _buildUserAttachmentImages(),
-                ],
+      onLongPress: () => _toggleActions(),
+      behavior: HitTestBehavior.translucent,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(
+          bottom: Spacing.md,
+          left: Spacing.xxxl,
+          right: Spacing.xs,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Display images outside and above the text bubble (iMessage style)
+            // Prioritize files array over attachmentIds to avoid duplication
+            if (hasFilesFromArray) ...[
+              _buildUserFileImages(),
+            ] else if (hasImages) ...[
+              _buildUserAttachmentImages(),
+            ],
 
-                // Display text bubble if there's text content
-                if (hasText) const SizedBox(height: Spacing.xs),
-                if (hasText)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Flexible(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.82,
+            // Display text bubble if there's text content
+            if (hasText) const SizedBox(height: Spacing.xs),
+            if (hasText)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.82,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Spacing.chatBubblePadding,
+                          vertical: Spacing.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: context.conduitTheme.chatBubbleUser,
+                          borderRadius: BorderRadius.circular(
+                            AppBorderRadius.messageBubble,
                           ),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: Spacing.chatBubblePadding,
-                              vertical: Spacing.sm,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  context.conduitTheme.chatBubbleUser
-                                      .withValues(alpha: 0.95),
-                                  context.conduitTheme.chatBubbleUser,
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                AppBorderRadius.messageBubble,
-                              ),
-                              border: Border.all(
-                                color:
-                                    context.conduitTheme.chatBubbleUserBorder,
-                                width: BorderWidth.regular,
-                              ),
-                              boxShadow: ConduitShadows.small(context),
-                            ),
-                            child: _isEditing
-                                ? Focus(
-                                    focusNode: _editFocusNode,
-                                    autofocus: true,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        color: inlineEditFill,
-                                        borderRadius: BorderRadius.circular(
-                                          AppBorderRadius.sm,
-                                        ),
-                                        border: Border.all(
-                                          color: context
-                                              .conduitTheme
-                                              .inputBorderFocused
-                                              .withValues(alpha: 0.6),
-                                          width: BorderWidth.thin,
-                                        ),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: Spacing.xs,
-                                          vertical: Spacing.xxs,
-                                        ),
-                                        child: Platform.isIOS
-                                            ? CupertinoTextField(
-                                                controller: _editController,
-                                                maxLines: null,
-                                                padding: EdgeInsets.zero,
-                                                autofillHints: const <String>[],
-                                                style: AppTypography
-                                                    .chatMessageStyle
-                                                    .copyWith(
-                                                      color:
-                                                          inlineEditTextColor,
-                                                    ),
-                                                decoration:
-                                                    const BoxDecoration(),
-                                                cursorColor: context
-                                                    .conduitTheme
-                                                    .buttonPrimary,
-                                                onSubmitted: (_) =>
-                                                    _saveInlineEdit(),
-                                              )
-                                            : TextField(
-                                                controller: _editController,
-                                                maxLines: null,
-                                                autofillHints: const <String>[],
-                                                style: AppTypography
-                                                    .chatMessageStyle
-                                                    .copyWith(
-                                                      color:
-                                                          inlineEditTextColor,
-                                                    ),
-                                                decoration:
-                                                    const InputDecoration(
-                                                      isCollapsed: true,
-                                                      border: InputBorder.none,
-                                                      contentPadding:
-                                                          EdgeInsets.zero,
-                                                    ),
-                                                cursorColor: context
-                                                    .conduitTheme
-                                                    .buttonPrimary,
-                                                onSubmitted: (_) =>
-                                                    _saveInlineEdit(),
-                                              ),
-                                      ),
-                                    ),
-                                  )
-                                : Text(
-                                    widget.message.content,
-                                    style: AppTypography.chatMessageStyle
-                                        .copyWith(
-                                          color: context
-                                              .conduitTheme
-                                              .chatBubbleUserText,
-                                        ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.left,
-                                    textHeightBehavior:
-                                        const TextHeightBehavior(
-                                          applyHeightToFirstAscent: false,
-                                          applyHeightToLastDescent: false,
-                                          leadingDistribution:
-                                              TextLeadingDistribution.even,
-                                        ),
-                                  ),
+                          border: Border.all(
+                            color: context.conduitTheme.chatBubbleUserBorder
+                                .withValues(alpha: 0.5),
+                            width: BorderWidth.standard,
                           ),
                         ),
+                        child: _isEditing
+                            ? Focus(
+                                focusNode: _editFocusNode,
+                                autofocus: true,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: inlineEditFill,
+                                    borderRadius: BorderRadius.circular(
+                                      AppBorderRadius.small,
+                                    ),
+                                    border: Border.all(
+                                      color: context
+                                          .conduitTheme
+                                          .inputBorderFocused
+                                          .withValues(alpha: 0.5),
+                                      width: BorderWidth.thin,
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: Spacing.xs,
+                                      vertical: Spacing.xxs,
+                                    ),
+                                    child: Platform.isIOS
+                                        ? CupertinoTextField(
+                                            controller: _editController,
+                                            maxLines: null,
+                                            padding: EdgeInsets.zero,
+                                            autofillHints: const <String>[],
+                                            style: AppTypography
+                                                .chatMessageStyle
+                                                .copyWith(
+                                                  color: inlineEditTextColor,
+                                                ),
+                                            decoration: const BoxDecoration(),
+                                            cursorColor: context
+                                                .conduitTheme
+                                                .buttonPrimary,
+                                            onSubmitted: (_) =>
+                                                _saveInlineEdit(),
+                                          )
+                                        : TextField(
+                                            controller: _editController,
+                                            maxLines: null,
+                                            autofillHints: const <String>[],
+                                            style: AppTypography
+                                                .chatMessageStyle
+                                                .copyWith(
+                                                  color: inlineEditTextColor,
+                                                ),
+                                            decoration: const InputDecoration(
+                                              isCollapsed: true,
+                                              border: InputBorder.none,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                            cursorColor: context
+                                                .conduitTheme
+                                                .buttonPrimary,
+                                            onSubmitted: (_) =>
+                                                _saveInlineEdit(),
+                                          ),
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                widget.message.content,
+                                style: AppTypography.chatMessageStyle.copyWith(
+                                  color:
+                                      context.conduitTheme.chatBubbleUserText,
+                                ),
+                                softWrap: true,
+                                textAlign: TextAlign.left,
+                                textHeightBehavior: const TextHeightBehavior(
+                                  applyHeightToFirstAscent: false,
+                                  applyHeightToLastDescent: false,
+                                  leadingDistribution:
+                                      TextLeadingDistribution.even,
+                                ),
+                              ),
                       ),
-                    ],
+                    ),
                   ),
-                if (hasText) const SizedBox(height: Spacing.xs),
-
-                // Action buttons below the message
-                if (_showActions) ...[
-                  const SizedBox(height: Spacing.sm),
-                  _buildUserActionButtons(),
                 ],
-              ],
-            ),
-          ),
-        )
-        .animate()
-        .fadeIn(duration: AnimationDuration.messageAppear)
-        .slideX(
-          begin: AnimationValues.messageSlideDistance,
-          end: 0,
-          duration: AnimationDuration.messageSlide,
-          curve: AnimationCurves.messageSlide,
-        );
+              ),
+            if (hasText) const SizedBox(height: Spacing.xs),
+
+            // Action buttons below the message
+            if (_showActions) ...[
+              const SizedBox(height: Spacing.sm),
+              _buildUserActionButtons(),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   // Assistant-only message renderer removed.

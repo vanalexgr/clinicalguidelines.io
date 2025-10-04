@@ -565,16 +565,19 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       children: [
         Text(
           title,
-          style: AppTypography.labelStyle.copyWith(color: theme.textSecondary),
+          style: AppTypography.labelStyle.copyWith(
+            color: theme.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(width: Spacing.xs),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.6),
+            color: theme.surfaceContainer.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(AppBorderRadius.xs),
             border: Border.all(
-              color: theme.dividerColor,
+              color: theme.dividerColor.withValues(alpha: 0.5),
               width: BorderWidth.thin,
             ),
           ),
@@ -1029,18 +1032,15 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
             color: isHover
                 ? theme.buttonPrimary.withValues(alpha: 0.08)
                 : theme.surfaceContainer.withValues(alpha: 0.03),
-            borderRadius: BorderRadius.circular(AppBorderRadius.md),
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
             border: Border.all(
               color: isHover
-                  ? theme.buttonPrimary.withValues(alpha: 0.6)
-                  : theme.dividerColor,
-              width: BorderWidth.regular,
+                  ? theme.buttonPrimary.withValues(alpha: 0.5)
+                  : theme.dividerColor.withValues(alpha: 0.5),
+              width: BorderWidth.standard,
             ),
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.md,
-            vertical: Spacing.sm,
-          ),
+          padding: const EdgeInsets.all(Spacing.sm),
           child: Row(
             children: [
               Icon(
@@ -1048,14 +1048,15 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                     ? CupertinoIcons.folder_badge_minus
                     : Icons.folder_off_outlined,
                 color: theme.iconPrimary,
+                size: IconSize.small,
               ),
               const SizedBox(width: Spacing.sm),
               Expanded(
                 child: Text(
                   'Drop here to remove from folder',
-                  style: AppTypography.bodyMediumStyle.copyWith(
+                  style: AppTypography.bodySmallStyle.copyWith(
                     color: theme.textPrimary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -1351,55 +1352,46 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           if (user != null) ...[
             const SizedBox(height: Spacing.sm),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: Spacing.sm,
-                vertical: Spacing.xs,
-              ),
+              padding: const EdgeInsets.all(Spacing.sm),
               decoration: BoxDecoration(
-                color: theme.surfaceContainer.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(AppBorderRadius.md),
+                color: theme.surfaceContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(AppBorderRadius.small),
                 border: Border.all(
-                  color: theme.dividerColor,
-                  width: BorderWidth.regular,
+                  color: theme.dividerColor.withValues(alpha: 0.5),
+                  width: BorderWidth.standard,
                 ),
-                boxShadow: ConduitShadows.card(context),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: IconSize.xl,
-                    height: IconSize.xl,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(
                         AppBorderRadius.avatar,
                       ),
                       border: Border.all(
-                        color: theme.buttonPrimary.withValues(alpha: 0.35),
+                        color: theme.buttonPrimary.withValues(alpha: 0.25),
                         width: BorderWidth.thin,
                       ),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: UserAvatar(
-                      size: IconSize.xl,
+                      size: 36,
                       imageUrl: avatarUrl,
                       fallbackText: initial,
                     ),
                   ),
-                  const SizedBox(width: Spacing.xs),
+                  const SizedBox(width: Spacing.sm),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.bodySmallStyle.copyWith(
-                            color: theme.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySmallStyle.copyWith(
+                        color: theme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -1408,12 +1400,13 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                       Navigator.of(context).maybePop();
                       context.pushNamed(RouteNames.profile);
                     },
+                    visualDensity: VisualDensity.compact,
                     icon: Icon(
                       Platform.isIOS
                           ? CupertinoIcons.settings
                           : Icons.settings_rounded,
                       color: theme.iconSecondary,
-                      size: IconSize.listItem,
+                      size: IconSize.small,
                     ),
                   ),
                 ],
@@ -1621,19 +1614,14 @@ class _ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.conduitTheme;
-    final brightness = Theme.of(context).brightness;
     final borderRadius = BorderRadius.zero;
     final Color background = selected
-        ? theme.buttonPrimary.withValues(
-            alpha: brightness == Brightness.dark ? 0.28 : 0.16,
-          )
+        ? theme.buttonPrimary.withValues(alpha: 0.1)
         : theme.surfaceContainer;
     final Color borderColor = selected
-        ? theme.buttonPrimary.withValues(alpha: 0.7)
+        ? theme.buttonPrimary.withValues(alpha: 0.5)
         : theme.surfaceContainerHighest.withValues(alpha: 0.40);
-    final List<BoxShadow> shadow = selected
-        ? ConduitShadows.low(context)
-        : const [];
+    final List<BoxShadow> shadow = const [];
 
     Color? overlayForStates(Set<WidgetState> states) {
       if (states.contains(WidgetState.pressed)) {

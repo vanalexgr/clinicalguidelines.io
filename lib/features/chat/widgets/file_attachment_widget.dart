@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:io' show Platform;
 import 'package:conduit/l10n/app_localizations.dart';
 import '../services/file_attachment_service.dart';
@@ -75,10 +74,7 @@ class _FileAttachmentCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text(
-                fileState.fileIcon,
-                style: const TextStyle(fontSize: 20),
-              ),
+              Text(fileState.fileIcon, style: const TextStyle(fontSize: 20)),
               const Spacer(),
               _buildStatusIcon(context),
             ],
@@ -225,10 +221,7 @@ class MessageAttachmentPreview extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      '📎',
-                      style: TextStyle(fontSize: 14),
-                    ),
+                    const Text('📎', style: TextStyle(fontSize: 14)),
                     const SizedBox(width: Spacing.xs),
                     Text(
                       AppLocalizations.of(context)!.attachmentLabel,

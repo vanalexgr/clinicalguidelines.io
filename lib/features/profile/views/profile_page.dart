@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -306,11 +305,7 @@ class ProfilePage extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              UserAvatar(
-                size: 56,
-                imageUrl: avatarUrl,
-                fallbackText: initial,
-              ),
+              UserAvatar(size: 56, imageUrl: avatarUrl, fallbackText: initial),
               const SizedBox(width: Spacing.md),
               Expanded(
                 child: Column(
@@ -1187,7 +1182,8 @@ class _DefaultModelBottomSheetState
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-                    ] else if (model.isMultimodal || _modelSupportsReasoning(model)) ...[
+                    ] else if (model.isMultimodal ||
+                        _modelSupportsReasoning(model)) ...[
                       const SizedBox(height: Spacing.xs),
                       Row(
                         children: [
