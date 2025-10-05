@@ -50,6 +50,9 @@ class ConnectivityService {
   }
 
   Future<void> _checkConnectivity() async {
+    // Don't check connectivity if service is disposed
+    if (_connectivityController.isClosed) return;
+
     final serverReachability = await _probeActiveServer();
     if (serverReachability != null) {
       if (serverReachability) {
@@ -80,7 +83,10 @@ class ConnectivityService {
   void _updateStatus(ConnectivityStatus status) {
     if (_lastStatus != status) {
       _lastStatus = status;
-      _connectivityController.add(status);
+      // Only add to stream if controller is not closed
+      if (!_connectivityController.isClosed) {
+        _connectivityController.add(status);
+      }
     }
 
     // Adapt polling interval based on recent failures to reduce battery/CPU
@@ -99,10 +105,13 @@ class ConnectivityService {
     if (newInterval != _interval) {
       _interval = newInterval;
       _connectivityTimer?.cancel();
-      _connectivityTimer = Timer.periodic(
-        _interval,
-        (_) => _checkConnectivity(),
-      );
+      // Only create new timer if service is not disposed
+      if (!_connectivityController.isClosed) {
+        _connectivityTimer = Timer.periodic(
+          _interval,
+          (_) => _checkConnectivity(),
+        );
+      }
     }
   }
 
@@ -113,7 +122,10 @@ class ConnectivityService {
 
   void dispose() {
     _connectivityTimer?.cancel();
-    _connectivityController.close();
+    _connectivityTimer = null;
+    if (!_connectivityController.isClosed) {
+      _connectivityController.close();
+    }
   }
 
   Future<bool?> _probeActiveServer() async {
