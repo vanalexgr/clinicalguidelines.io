@@ -49,7 +49,7 @@ class BackgroundStreamingHandler {
           onStreamsSuspending?.call(streamIds);
 
           // Save stream states for recovery
-          await _saveStreamStatesForRecovery(streamIds, reason);
+          await saveStreamStatesForRecovery(streamIds, reason);
           break;
 
         case 'backgroundTaskExpiring':
@@ -188,7 +188,8 @@ class BackgroundStreamingHandler {
 
       final recovered = <StreamState>[];
       for (final stateData in states) {
-        final map = stateData as Map<String, dynamic>;
+        // Platform channels return Map<Object?, Object?>, need to convert
+        final map = Map<String, dynamic>.from(stateData as Map);
         final state = StreamState.fromMap(map);
         if (state != null) {
           recovered.add(state);
@@ -209,21 +210,38 @@ class BackgroundStreamingHandler {
   }
 
   /// Save stream states for recovery after app restart
-  Future<void> _saveStreamStatesForRecovery(
+  Future<void> saveStreamStatesForRecovery(
     List<String> streamIds,
     String reason,
   ) async {
+    DebugLogger.stream(
+      'saveStreamStatesForRecovery called',
+      scope: 'background',
+      data: {'streamIds': streamIds, 'reason': reason, 'statesCount': _streamStates.length},
+    );
+
     final statesToSave = streamIds
         .map((id) => _streamStates[id])
         .where((state) => state != null)
         .map((state) => state!.toMap())
         .toList();
 
+    DebugLogger.stream(
+      'statesToSave prepared',
+      scope: 'background',
+      data: {'count': statesToSave.length},
+    );
+
     try {
       await _channel.invokeMethod('saveStreamStates', {
         'states': statesToSave,
         'reason': reason,
       });
+      DebugLogger.stream(
+        'save-states-success',
+        scope: 'background',
+        data: {'count': statesToSave.length, 'reason': reason},
+      );
     } catch (e) {
       DebugLogger.error(
         'save-states-failed',

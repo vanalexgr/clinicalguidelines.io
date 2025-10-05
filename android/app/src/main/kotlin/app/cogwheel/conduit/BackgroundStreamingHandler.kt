@@ -31,15 +31,22 @@ class BackgroundStreamingService : Service() {
     
     override fun onCreate() {
         super.onCreate()
-        println("BackgroundStreamingService: Service created")
+        // Immediately start foreground to prevent timeout - will update with proper notification later
+        startForeground(NOTIFICATION_ID, createNotification(1))
+        println("BackgroundStreamingService: Service created with foreground notification")
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Always ensure we're foreground first to prevent timeout exceptions
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundWithNotification(1)
+        }
+
         when (intent?.action) {
             ACTION_START -> {
                 val streamCount = intent.getIntExtra("streamCount", 1)
                 acquireWakeLock()
-                startForegroundWithNotification(streamCount)
+                updateNotification(streamCount)
                 println("BackgroundStreamingService: Started foreground service for $streamCount streams")
             }
             ACTION_STOP -> {
@@ -51,7 +58,7 @@ class BackgroundStreamingService : Service() {
                 updateNotification(streamCount)
             }
         }
-        
+
         return START_STICKY // Restart if killed by system
     }
     
@@ -239,14 +246,20 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
     }
 
     private fun startForegroundService() {
-        val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
-        serviceIntent.putExtra("streamCount", activeStreams.size)
-        serviceIntent.action = BackgroundStreamingService.ACTION_START
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(serviceIntent)
-        } else {
-            context.startService(serviceIntent)
+        try {
+            val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
+            serviceIntent.putExtra("streamCount", activeStreams.size)
+            serviceIntent.action = BackgroundStreamingService.ACTION_START
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            println("BackgroundStreamingHandler: Failed to start foreground service: ${e.message}")
+            // Clear active streams as we couldn't start the service
+            activeStreams.clear()
         }
     }
 

@@ -150,6 +150,23 @@ class PersistentStreamingService with WidgetsBindingObserver {
       _disableWakeLock();
     }
 
+    // Close any controllers for streams that were suspended in background
+    // This allows the onComplete handlers to fire now that we're in foreground
+    final suspendedStreams = _streamMetadata.entries
+        .where((e) => e.value['suspended'] == true)
+        .map((e) => e.key)
+        .toList();
+
+    for (final streamId in suspendedStreams) {
+      final controller = _streamControllers[streamId];
+      if (controller != null && !controller.isClosed) {
+        DebugLogger.stream(
+          'PersistentStreamingService: Closing suspended stream $streamId controller in foreground',
+        );
+        controller.close();
+      }
+    }
+
     // Check and recover any interrupted streams
     _recoverActiveStreams();
   }
@@ -214,7 +231,18 @@ class PersistentStreamingService with WidgetsBindingObserver {
   }
 
   // Unregister a stream
-  void unregisterStream(String streamId) {
+  void unregisterStream(String streamId, {bool saveForRecovery = false}) {
+    // If app is in background and stream is unregistering, it might be due to
+    // network interruption - save state for recovery instead of just dropping it
+    if (_isInBackground && !saveForRecovery && _streamMetadata.containsKey(streamId)) {
+      DebugLogger.stream(
+        'PersistentStreamingService: Stream $streamId interrupted in background, saving for recovery',
+      );
+      // Don't unregister yet - keep it for recovery
+      _markStreamAsSuspended(streamId);
+      return;
+    }
+
     _activeStreams.remove(streamId);
     _streamControllers.remove(streamId);
     _streamRecoveryCallbacks.remove(streamId);
@@ -366,10 +394,20 @@ class PersistentStreamingService with WidgetsBindingObserver {
   }
 
   void _saveStreamStatesForRecovery() {
-    // The background handler will handle the actual saving
+    if (_activeStreams.isEmpty) {
+      DebugLogger.stream(
+        'PersistentStreaming: No active streams to save for recovery',
+      );
+      return;
+    }
+
     DebugLogger.stream(
       'PersistentStreaming: Saving ${_activeStreams.length} stream states for recovery',
     );
+
+    // Actually save the stream states through the background handler
+    final streamIds = _activeStreams.keys.toList();
+    _backgroundHandler.saveStreamStatesForRecovery(streamIds, 'app_detached');
   }
 
   // Update stream metadata when chunks are received
@@ -432,6 +470,9 @@ class PersistentStreamingService with WidgetsBindingObserver {
 
   // Get active stream count
   int get activeStreamCount => _activeStreams.length;
+
+  // Check if app is in background
+  bool get isInBackground => _isInBackground;
 
   // Get stream metadata
   Map<String, dynamic>? getStreamMetadata(String streamId) {

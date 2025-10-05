@@ -74,12 +74,54 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   final persistentController = StreamController<String>.broadcast();
   final persistentService = PersistentStreamingService();
 
-  final streamId = persistentService.registerStream(
-    subscription: stream.listen(
-      persistentController.add,
-      onDone: persistentController.close,
-      onError: persistentController.addError,
-    ),
+  // Track if stream has received any data
+  bool hasReceivedData = false;
+
+  // Create subscription first so we can reference it in onDone
+  late final String streamId;
+  final subscription = stream.listen(
+    (data) {
+      hasReceivedData = true;
+      persistentController.add(data);
+    },
+    onDone: () async {
+      DebugLogger.stream('Source stream onDone fired, hasReceivedData=$hasReceivedData');
+
+      // If stream closes immediately without data, it's likely due to backgrounding/network drop
+      // Not a natural completion
+      if (!hasReceivedData) {
+        DebugLogger.stream('Stream closed without data - likely interrupted, not completing');
+        // Check if app is backgrounding - if so, finish streaming with whatever we have
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (persistentService.isInBackground) {
+          DebugLogger.stream('App backgrounding during stream - finishing with current content');
+          finishStreaming();
+        }
+        // Don't close the controller to prevent cascading completion handlers
+        return;
+      }
+
+      // For streams with data, delay to allow background detection
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final isInBg = persistentService.isInBackground;
+      DebugLogger.stream('Stream onDone check: streamId=$streamId, isInBackground=$isInBg');
+
+      // Check if we're in background before closing
+      if (!isInBg) {
+        DebugLogger.stream('Closing stream controller for $streamId (foreground completion)');
+        persistentController.close();
+      } else {
+        DebugLogger.stream('Source stream completed in background for $streamId - keeping open for recovery');
+        // Finish streaming to save the content we have
+        finishStreaming();
+      }
+    },
+    onError: persistentController.addError,
+  );
+
+  streamId = persistentService.registerStream(
+    subscription: subscription,
     controller: persistentController,
     recoveryCallback: () async {
       DebugLogger.log(
