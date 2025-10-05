@@ -4,6 +4,30 @@
 class ConduitMarkdownPreprocessor {
   const ConduitMarkdownPreprocessor._();
 
+  // Pre-compile regex patterns for better performance during streaming
+  static final _bulletFenceRegex = RegExp(
+    r'^(\s*(?:[*+-]|\d+\.)\s+)```([^\s`]*)\s*$',
+    multiLine: true,
+  );
+  static final _dedentOpenRegex = RegExp(
+    r'^[ \t]+```([^\n`]*)\s*$',
+    multiLine: true,
+  );
+  static final _dedentCloseRegex = RegExp(
+    r'^[ \t]+```\s*$',
+    multiLine: true,
+  );
+  static final _inlineClosingRegex = RegExp(r'([^\r\n`])```(?=\s*(?:\r?\n|$))');
+  static final _labelThenDashRegex = RegExp(
+    r'^(\*\*[^\n*]+\*\*.*)\n(\s*-{3,}\s*$)',
+    multiLine: true,
+  );
+  static final _atxEnumRegex = RegExp(
+    r'^(\s{0,3}#{1,6}\s+\d+)\.(\s*)(\S)',
+    multiLine: true,
+  );
+  static final _fenceAtBolRegex = RegExp(r'^\s*```', multiLine: true);
+
   /// Normalises common fence and hard-break issues produced by LLMs.
   static String normalize(String input) {
     if (input.isEmpty) {
@@ -14,58 +38,42 @@ class ConduitMarkdownPreprocessor {
 
     // Move fenced code blocks that start on the same line as a list item onto
     // their own line so the parser does not treat them as list text.
-    final bulletFence = RegExp(
-      r'^(\s*(?:[*+-]|\d+\.)\s+)```([^\s`]*)\s*$',
-      multiLine: true,
-    );
     output = output.replaceAllMapped(
-      bulletFence,
+      _bulletFenceRegex,
       (match) => '${match[1]}\n```${match[2]}',
     );
 
     // Dedent opening fences to avoid partial code-block detection when the
     // model indents fences by accident.
-    final dedentOpen = RegExp(r'^[ \t]+```([^\n`]*)\s*$', multiLine: true);
-    output = output.replaceAllMapped(dedentOpen, (match) => '```${match[1]}');
+    output = output.replaceAllMapped(_dedentOpenRegex, (match) => '```${match[1]}');
 
     // Dedent closing fences for the same reason as the opening fences.
-    final dedentClose = RegExp(r'^[ \t]+```\s*$', multiLine: true);
-    output = output.replaceAllMapped(dedentClose, (_) => '```');
+    output = output.replaceAllMapped(_dedentCloseRegex, (_) => '```');
 
     // Ensure closing fences stand alone. Prevents situations like `}\n```foo`
     // from keeping trailing braces inside the code block.
-    final inlineClosing = RegExp(r'([^\r\n`])```(?=\s*(?:\r?\n|$))');
     output = output.replaceAllMapped(
-      inlineClosing,
+      _inlineClosingRegex,
       (match) => '${match[1]}\n```',
     );
 
     // Insert a blank line when a "label: value" line is followed by a
     // horizontal rule so it is not treated as a Setext heading underline.
-    final labelThenDash = RegExp(
-      r'^(\*\*[^\n*]+\*\*.*)\n(\s*-{3,}\s*$)',
-      multiLine: true,
-    );
     output = output.replaceAllMapped(
-      labelThenDash,
+      _labelThenDashRegex,
       (match) => '${match[1]}\n\n${match[2]}',
     );
 
     // Allow headings like "## 1. Summary" without triggering ordered-list
     // parsing by inserting a zero-width joiner after the numeric marker.
-    final atxEnum = RegExp(
-      r'^(\s{0,3}#{1,6}\s+\d+)\.(\s*)(\S)',
-      multiLine: true,
-    );
     output = output.replaceAllMapped(
-      atxEnum,
+      _atxEnumRegex,
       (match) => '${match[1]}.\u200C${match[2]}${match[3]}',
     );
 
     // Auto-close an unmatched opening fence at EOF to avoid the entire tail
     // of the message rendering as code.
-    final fenceAtBol = RegExp(r'^\s*```', multiLine: true);
-    final fenceCount = fenceAtBol.allMatches(output).length;
+    final fenceCount = _fenceAtBolRegex.allMatches(output).length;
     if (fenceCount.isOdd) {
       if (!output.endsWith('\n')) {
         output += '\n';

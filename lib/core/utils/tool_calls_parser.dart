@@ -180,17 +180,22 @@ class ToolCallsParser {
       if (seg.isToolCall && seg.entry != null) {
         calls.add(seg.entry!);
       } else if (seg.text != null && seg.text!.isNotEmpty) {
-        // Remove any embedded tool_calls blocks that may have slipped into text
-        final cleaned = seg.text!
-            .replaceAll(
-              RegExp(
-                r'<details\s+type=\"tool_calls\"[^>]*>[\s\S]*?<\/details>',
-                multiLine: true,
-                dotAll: true,
-              ),
-              '',
-            )
-            .trim();
+        final text = seg.text!;
+        // Quick check: only run cleanup regex if tool_calls details might exist
+        // (they should already be parsed as segments, but this is a safety net)
+        String cleaned = text;
+        if (text.contains('<details') && text.contains('tool_calls')) {
+          // Remove any embedded tool_calls blocks that may have slipped into text
+          cleaned = text.replaceAll(
+            RegExp(
+              r'<details\s+type=\"tool_calls\"[^>]*>[\s\S]*?<\/details>',
+              multiLine: true,
+              dotAll: true,
+            ),
+            '',
+          );
+        }
+        cleaned = cleaned.trim();
         if (cleaned.isNotEmpty) buf.write(cleaned);
       }
     }
@@ -290,16 +295,21 @@ class ToolCallsParser {
         }
         buf.write(out);
       } else {
-        // Keep the raw text, but also remove any stray non-tool_calls details blocks
-        final t = (seg.text ?? '').replaceAll(
-          RegExp(
-            r'<details(?!\s+type=\"tool_calls\")[^>]*>[\s\S]*?<\/details>',
-            multiLine: true,
-            dotAll: true,
-          ),
-          '',
-        );
-        if (t.isNotEmpty) buf.write(t);
+        final text = seg.text ?? '';
+        // Quick check: only run cleanup regex if details tags exist
+        String cleaned = text;
+        if (text.contains('<details')) {
+          // Keep the raw text, but also remove any stray non-tool_calls details blocks
+          cleaned = text.replaceAll(
+            RegExp(
+              r'<details(?!\s+type=\"tool_calls\")[^>]*>[\s\S]*?<\/details>',
+              multiLine: true,
+              dotAll: true,
+            ),
+            '',
+          );
+        }
+        if (cleaned.isNotEmpty) buf.write(cleaned);
       }
     }
 

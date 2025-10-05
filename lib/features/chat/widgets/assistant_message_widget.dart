@@ -724,22 +724,25 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     // and type="tool_calls") via a custom block syntax, so they won't be rendered as
     // plain text during streaming. This prevents character flashing.
 
-    // We still clean raw reasoning tags (<think>, <reasoning>) as a fallback.
-    // The server normally converts these to <details> format, but raw mode or
-    // direct API responses might still use them.
-    String cleaned = content
-        .replaceAll(
-          RegExp(r'<think>[\s\S]*?<\/think>', multiLine: true, dotAll: true),
-          '',
-        )
-        .replaceAll(
-          RegExp(
-            r'<reasoning>[\s\S]*?<\/reasoning>',
-            multiLine: true,
-            dotAll: true,
-          ),
-          '',
-        );
+    // Quick check: only run cleanup if raw tags might exist (rare case)
+    String cleaned = content;
+    if (content.contains('<think>') || content.contains('<reasoning>')) {
+      // Clean raw reasoning tags as a fallback for raw mode or direct API responses.
+      // The server normally converts these to <details> format.
+      cleaned = content
+          .replaceAll(
+            RegExp(r'<think>[\s\S]*?<\/think>', multiLine: true, dotAll: true),
+            '',
+          )
+          .replaceAll(
+            RegExp(
+              r'<reasoning>[\s\S]*?<\/reasoning>',
+              multiLine: true,
+              dotAll: true,
+            ),
+            '',
+          );
+    }
 
     // Process images in the remaining text
     final processedContent = _processContentForImages(cleaned);
