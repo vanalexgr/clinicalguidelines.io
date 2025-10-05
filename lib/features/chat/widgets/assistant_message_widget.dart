@@ -720,26 +720,14 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       return const SizedBox.shrink();
     }
 
-    // Always hide tool_calls blocks; tiles render them separately.
-    String cleaned = content.replaceAll(
-      RegExp(
-        r'<details\s+type="tool_calls"[^>]*>[\s\S]*?<\/details>',
-        multiLine: true,
-        dotAll: true,
-      ),
-      '',
-    );
-    // Also hide reasoning details blocks if any slipped into text
-    cleaned = cleaned.replaceAll(
-      RegExp(
-        r'<details\s+type="reasoning"[^>]*>[\s\S]*?<\/details>',
-        multiLine: true,
-        dotAll: true,
-      ),
-      '',
-    );
-    // Remove raw <think>...</think> or <reasoning>...</reasoning> tags in text
-    cleaned = cleaned
+    // Note: The markdown parser now handles <details> tags (including type="reasoning"
+    // and type="tool_calls") via a custom block syntax, so they won't be rendered as
+    // plain text during streaming. This prevents character flashing.
+
+    // We still clean raw reasoning tags (<think>, <reasoning>) as a fallback.
+    // The server normally converts these to <details> format, but raw mode or
+    // direct API responses might still use them.
+    String cleaned = content
         .replaceAll(
           RegExp(r'<think>[\s\S]*?<\/think>', multiLine: true, dotAll: true),
           '',
@@ -752,10 +740,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           ),
           '',
         );
-
-    // Note: The markdown parser now handles <details> tags via a custom block syntax,
-    // so they won't be rendered as plain text during streaming. This prevents the
-    // character flashing issue.
 
     // Process images in the remaining text
     final processedContent = _processContentForImages(cleaned);

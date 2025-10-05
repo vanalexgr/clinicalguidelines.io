@@ -763,9 +763,11 @@ class _DetailsBuilder extends MarkdownElementBuilder {
 
   @override
   Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    // The details element should not be rendered as markdown during streaming.
-    // Instead, it's handled by the ReasoningParser in assistant_message_widget.
-    // Return empty widget to prevent flashing.
+    // Details elements with type="reasoning" or type="tool_calls" should not be
+    // rendered as markdown during streaming. They are handled by:
+    // - ReasoningParser for reasoning blocks (creates thinking tiles)
+    // - ToolCallsParser for tool_calls blocks (creates tool execution tiles)
+    // Return empty widget to prevent character flashing during streaming.
     return const SizedBox.shrink();
   }
 }
