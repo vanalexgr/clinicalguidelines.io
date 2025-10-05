@@ -154,7 +154,6 @@ class SocketService with WidgetsBindingObserver {
       requireFocus: requireFocus,
       handler: handler,
     );
-    _bindCoreSocketHandlers();
     return SocketEventSubscription(() => _chatEventHandlers.remove(id));
   }
 
@@ -172,7 +171,6 @@ class SocketService with WidgetsBindingObserver {
       requireFocus: requireFocus,
       handler: handler,
     );
-    _bindCoreSocketHandlers();
     return SocketEventSubscription(() => _channelEventHandlers.remove(id));
   }
 
