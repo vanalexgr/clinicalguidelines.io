@@ -42,6 +42,7 @@ class ConduitMarkdown {
           : null,
       syntaxHighlighter: _CodeSyntaxHighlighter(context),
       inlineSyntaxes: _buildInlineSyntaxes(),
+      blockSyntaxes: _buildBlockSyntaxes(),
     );
   }
 
@@ -143,11 +144,16 @@ class ConduitMarkdown {
       'img': _ImageBuilder(context),
       'mermaid': _MermaidBuilder(context),
       'latex': _LatexBuilder(context),
+      'details': _DetailsBuilder(context),
     };
   }
 
   static List<md.InlineSyntax> _buildInlineSyntaxes() {
     return [_LatexInlineSyntax()];
+  }
+
+  static List<md.BlockSyntax> _buildBlockSyntaxes() {
+    return [_DetailsBlockSyntax()];
   }
 
   static Widget buildMermaidBlock(BuildContext context, String code) {
@@ -687,5 +693,79 @@ class _MermaidDiagramState extends State<MermaidDiagram> {
         (channel(color.g) << 8) |
         channel(color.b);
     return '#${argb.toRadixString(16).padLeft(8, '0')}';
+  }
+}
+
+// Details block syntax for parsing <details> tags
+class _DetailsBlockSyntax extends md.BlockSyntax {
+  @override
+  RegExp get pattern => RegExp(r'^<details(\s+[^>]*)?>$');
+
+  @override
+  md.Node? parse(md.BlockParser parser) {
+    final match = pattern.firstMatch(parser.current.content);
+    if (match == null) {
+      return null;
+    }
+
+    // Parse attributes from the opening tag
+    final attributesString = match.group(1) ?? '';
+    final attributes = _parseAttributes(attributesString);
+
+    parser.advance();
+
+    // Find the matching closing tag
+    String summary = '';
+    final contentLines = <String>[];
+    while (!parser.isDone) {
+      final line = parser.current.content;
+
+      // Check for closing tag
+      if (line.trim() == '</details>') {
+        parser.advance();
+        break;
+      }
+
+      // Check for summary tag
+      final summaryMatch = RegExp(r'^<summary>(.*?)<\/summary>$').firstMatch(line);
+      if (summaryMatch != null) {
+        summary = summaryMatch.group(1) ?? '';
+        parser.advance();
+        continue;
+      }
+
+      contentLines.add(line);
+      parser.advance();
+    }
+
+    final element = md.Element('details', [md.Text(contentLines.join('\n'))]);
+    element.attributes['summary'] = summary;
+    element.attributes.addAll(attributes);
+
+    return element;
+  }
+
+  Map<String, String> _parseAttributes(String attributesString) {
+    final attributes = <String, String>{};
+    final attrRegex = RegExp(r'(\w+)="([^"]*)"');
+    for (final match in attrRegex.allMatches(attributesString)) {
+      attributes[match.group(1)!] = match.group(2) ?? '';
+    }
+    return attributes;
+  }
+}
+
+// Details builder for rendering <details> elements
+class _DetailsBuilder extends MarkdownElementBuilder {
+  _DetailsBuilder(this.context);
+
+  final BuildContext context;
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    // The details element should not be rendered as markdown during streaming.
+    // Instead, it's handled by the ReasoningParser in assistant_message_widget.
+    // Return empty widget to prevent flashing.
+    return const SizedBox.shrink();
   }
 }

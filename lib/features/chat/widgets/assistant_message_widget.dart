@@ -753,14 +753,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           '',
         );
 
-    // If there's an unclosed <details>, drop the tail to avoid raw tags.
-    final lastOpen = cleaned.lastIndexOf('<details');
-    if (lastOpen >= 0) {
-      final tail = cleaned.substring(lastOpen);
-      if (!tail.contains('</details>')) {
-        cleaned = cleaned.substring(0, lastOpen);
-      }
-    }
+    // Note: The markdown parser now handles <details> tags via a custom block syntax,
+    // so they won't be rendered as plain text during streaming. This prevents the
+    // character flashing issue.
 
     // Process images in the remaining text
     final processedContent = _processContentForImages(cleaned);
