@@ -4,6 +4,9 @@ import '../../theme/theme_extensions.dart';
 import 'markdown_config.dart';
 import 'markdown_preprocessor.dart';
 
+// Pre-compiled regex for mermaid diagram detection (performance optimization)
+final _mermaidRegex = RegExp(r'```mermaid\s*([\s\S]*?)```', multiLine: true);
+
 class StreamingMarkdownWidget extends StatelessWidget {
   const StreamingMarkdownWidget({
     super.key,
@@ -23,8 +26,7 @@ class StreamingMarkdownWidget extends StatelessWidget {
     }
 
     final normalized = ConduitMarkdownPreprocessor.normalize(content);
-    final mermaidRegex = RegExp(r'```mermaid\s*([\s\S]*?)```', multiLine: true);
-    final matches = mermaidRegex.allMatches(normalized).toList();
+    final matches = _mermaidRegex.allMatches(normalized).toList();
 
     Widget buildMarkdown(String data) {
       return ConduitMarkdown.buildBlock(

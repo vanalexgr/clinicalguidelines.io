@@ -20,6 +20,28 @@ import 'streaming_response_controller.dart';
 // Keep local verbosity toggle for socket logs
 const bool kSocketVerboseLogging = false;
 
+// Pre-compiled regex patterns for image extraction (performance optimization)
+final _base64ImagePattern = RegExp(
+  r'data:image/[^;\s]+;base64,[A-Za-z0-9+/]+=*',
+);
+final _urlImagePattern = RegExp(
+  r'https?://[^\s<>\"]+\.(jpg|jpeg|png|gif|webp)',
+  caseSensitive: false,
+);
+final _jsonImagePattern = RegExp(
+  r'\{[^}]*"url"[^}]*:[^}]*"(data:image/[^"]+|https?://[^"]+\.(jpg|jpeg|png|gif|webp))"[^}]*\}',
+  caseSensitive: false,
+);
+final _jsonUrlExtractPattern = RegExp(r'"url"[^:]*:[^"]*"([^"]+)"');
+final _partialResultsPattern = RegExp(
+  r'(result|files)="([^"]*(?:data:image/[^"]*|https?://[^"]*\.(jpg|jpeg|png|gif|webp))[^"]*)"',
+  caseSensitive: false,
+);
+final _imageFilePattern = RegExp(
+  r'https?://[^\s]+\.(jpg|jpeg|png|gif|webp)$',
+  caseSensitive: false,
+);
+
 class ActiveSocketStream {
   ActiveSocketStream({
     required this.controller,
@@ -194,7 +216,8 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
 
       final collected = <Map<String, dynamic>>[];
 
-      if (content.contains('<details')) {
+      // Quick check: only parse tool calls if complete details blocks exist
+      if (content.contains('<details') && content.contains('</details>')) {
         final parsed = ToolCallsParser.parse(content);
         if (parsed != null) {
           for (final entry in parsed.toolCalls) {
@@ -209,10 +232,8 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       }
 
       if (collected.isEmpty) {
-        final base64Pattern = RegExp(
-          r'data:image/[^;\s]+;base64,[A-Za-z0-9+/]+=*',
-        );
-        final base64Matches = base64Pattern.allMatches(content);
+        // Use pre-compiled patterns for better performance
+        final base64Matches = _base64ImagePattern.allMatches(content);
         for (final match in base64Matches) {
           final url = match.group(0);
           if (url != null && url.isNotEmpty) {
@@ -220,11 +241,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
           }
         }
 
-        final urlPattern = RegExp(
-          r'https?://[^\s<>\"]+\.(jpg|jpeg|png|gif|webp)',
-          caseSensitive: false,
-        );
-        final urlMatches = urlPattern.allMatches(content);
+        final urlMatches = _urlImagePattern.allMatches(content);
         for (final match in urlMatches) {
           final url = match.group(0);
           if (url != null && url.isNotEmpty) {
@@ -232,25 +249,17 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
           }
         }
 
-        final jsonPattern = RegExp(
-          r'\{[^}]*"url"[^}]*:[^}]*"(data:image/[^"]+|https?://[^"]+\.(jpg|jpeg|png|gif|webp))"[^}]*\}',
-          caseSensitive: false,
-        );
-        final jsonMatches = jsonPattern.allMatches(content);
+        final jsonMatches = _jsonImagePattern.allMatches(content);
         for (final match in jsonMatches) {
-          final url = RegExp(
-            r'"url"[^:]*:[^"]*"([^"]+)"',
-          ).firstMatch(match.group(0) ?? '')?.group(1);
+          final url = _jsonUrlExtractPattern
+              .firstMatch(match.group(0) ?? '')
+              ?.group(1);
           if (url != null && url.isNotEmpty) {
             collected.add({'type': 'image', 'url': url});
           }
         }
 
-        final partialResultsPattern = RegExp(
-          r'(result|files)="([^"]*(?:data:image/[^"]*|https?://[^"]*\.(jpg|jpeg|png|gif|webp))[^"]*)"',
-          caseSensitive: false,
-        );
-        final partialMatches = partialResultsPattern.allMatches(content);
+        final partialMatches = _partialResultsPattern.allMatches(content);
         for (final match in partialMatches) {
           final attrValue = match.group(2);
           if (attrValue != null) {
@@ -259,10 +268,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
               collected.addAll(_extractFilesFromResult(decoded));
             } catch (_) {
               if (attrValue.startsWith('data:image/') ||
-                  RegExp(
-                    r'https?://[^\s]+\.(jpg|jpeg|png|gif|webp)$',
-                    caseSensitive: false,
-                  ).hasMatch(attrValue)) {
+                  _imageFilePattern.hasMatch(attrValue)) {
                 collected.add({'type': 'image', 'url': attrValue});
               }
             }
@@ -410,14 +416,9 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                               : null;
                           if (name is String && name.isNotEmpty) {
                             final msgs = getMessages();
-                            final exists =
-                                (msgs.isNotEmpty) &&
-                                RegExp(
-                                  r'<details\s+type=\"tool_calls\"[^>]*\bname=\"' +
-                                      RegExp.escape(name) +
-                                      r'\"',
-                                  multiLine: true,
-                                ).hasMatch(msgs.last.content);
+                            // Quick string check before expensive regex
+                            final exists = (msgs.isNotEmpty) &&
+                                msgs.last.content.contains('name="$name"');
                             if (!exists) {
                               final status =
                                   '\n<details type="tool_calls" done="false" name="$name"><summary>Executing...</summary>\n</details>\n';
@@ -517,14 +518,9 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                       : null;
                   if (name is String && name.isNotEmpty) {
                     final msgs = getMessages();
-                    final exists =
-                        (msgs.isNotEmpty) &&
-                        RegExp(
-                          r'<details\s+type=\"tool_calls\"[^>]*\bname=\"' +
-                              RegExp.escape(name) +
-                              r'\"',
-                          multiLine: true,
-                        ).hasMatch(msgs.last.content);
+                    // Quick string check before expensive regex
+                    final exists = (msgs.isNotEmpty) &&
+                        msgs.last.content.contains('name="$name"');
                     if (!exists) {
                       final status =
                           '\n<details type="tool_calls" done="false" name="$name"><summary>Executing...</summary>\n</details>\n';
@@ -552,14 +548,9 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                             : null;
                         if (name is String && name.isNotEmpty) {
                           final msgs = getMessages();
-                          final exists =
-                              (msgs.isNotEmpty) &&
-                              RegExp(
-                                r'<details\s+type=\"tool_calls\"[^>]*\bname=\"' +
-                                    RegExp.escape(name) +
-                                    r'\"',
-                                multiLine: true,
-                              ).hasMatch(msgs.last.content);
+                          // Quick string check before expensive regex
+                          final exists = (msgs.isNotEmpty) &&
+                              msgs.last.content.contains('name="$name"');
                           if (!exists) {
                             final status =
                                 '\n<details type="tool_calls" done="false" name="$name"><summary>Executing...</summary>\n</details>\n';

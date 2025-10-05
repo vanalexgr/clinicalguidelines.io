@@ -1,3 +1,7 @@
+// Pre-compiled regex patterns for markdown syntax detection (performance optimization)
+final _boldPattern = RegExp(r'\*\*');
+final _italicPattern = RegExp(r'(?<!\*)\*(?!\*)');
+
 /// Maintains a raw markdown buffer for streaming content and generates
 /// preview-safe output by appending synthetic closing tokens when necessary.
 class MarkdownStreamFormatter {
@@ -40,12 +44,12 @@ class MarkdownStreamFormatter {
       buffer.writeln('```');
     }
 
-    final boldCount = RegExp(r'\*\*').allMatches(content).length;
+    final boldCount = _boldPattern.allMatches(content).length;
     if (boldCount.isOdd) {
       buffer.write('**');
     }
 
-    final italicCount = RegExp(r'(?<!\*)\*(?!\*)').allMatches(content).length;
+    final italicCount = _italicPattern.allMatches(content).length;
     if (italicCount.isOdd) {
       buffer.write('*');
     }
