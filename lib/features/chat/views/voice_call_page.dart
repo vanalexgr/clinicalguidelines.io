@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/app_providers.dart';
+import '../../../core/utils/markdown_to_text.dart';
 import '../services/voice_call_service.dart';
 
 class VoiceCallPage extends ConsumerStatefulWidget {
@@ -239,7 +240,8 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
               builder: (context, child) {
                 final offset = (index * 0.2) % 1.0;
                 final animation = (_waveController.value + offset) % 1.0;
-                final height = 20.0 +
+                final height =
+                    20.0 +
                     (math.sin(animation * math.pi * 2) * 30.0).abs() +
                     (_currentIntensity * 4.0);
 
@@ -271,10 +273,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: primaryColor.withValues(alpha: 0.2),
-                border: Border.all(
-                  color: primaryColor,
-                  width: 3,
-                ),
+                border: Border.all(color: primaryColor, width: 3),
               ),
               child: Center(
                 child: Icon(
@@ -322,8 +321,9 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
         _currentTranscript.isNotEmpty) {
       displayText = _currentTranscript;
     } else if (_currentState == VoiceCallState.speaking &&
-               _currentResponse.isNotEmpty) {
-      displayText = _currentResponse;
+        _currentResponse.isNotEmpty) {
+      // Convert markdown to clean text for display
+      displayText = MarkdownToText.convert(_currentResponse);
     }
 
     if (displayText.isEmpty) {
@@ -405,25 +405,12 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
           child: Container(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color,
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 32,
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+            child: Icon(icon, color: Colors.white, size: 32),
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: color)),
       ],
     );
   }

@@ -5,6 +5,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/socket_service.dart';
+import '../../../core/utils/markdown_to_text.dart';
 import '../providers/chat_providers.dart';
 import 'text_to_speech_service.dart';
 import 'voice_input_service.dart';
@@ -53,10 +54,10 @@ class VoiceCallService {
     required TextToSpeechService tts,
     required SocketService socketService,
     required Ref ref,
-  })  : _voiceInput = voiceInput,
-        _tts = tts,
-        _socketService = socketService,
-        _ref = ref {
+  }) : _voiceInput = voiceInput,
+       _tts = tts,
+       _socketService = socketService,
+       _ref = ref {
     _tts.bindHandlers(
       onStart: _handleTtsStart,
       onComplete: _handleTtsComplete,
@@ -80,8 +81,8 @@ class VoiceCallService {
     await _notificationService.initialize();
 
     // Request notification permissions if needed
-    final notificationsEnabled =
-        await _notificationService.areNotificationsEnabled();
+    final notificationsEnabled = await _notificationService
+        .areNotificationsEnabled();
     if (!notificationsEnabled) {
       await _notificationService.requestPermissions();
     }
@@ -186,12 +187,10 @@ class VoiceCallService {
       );
 
       // Forward intensity stream for waveform visualization
-      _intensitySubscription = _voiceInput.intensityStream.listen(
-        (intensity) {
-          if (_isDisposed) return;
-          _intensityController.add(intensity);
-        },
-      );
+      _intensitySubscription = _voiceInput.intensityStream.listen((intensity) {
+        if (_isDisposed) return;
+        _intensityController.add(intensity);
+      });
     } catch (e) {
       _updateState(VoiceCallState.error);
       rethrow;
@@ -283,7 +282,17 @@ class VoiceCallService {
       await _intensitySubscription?.cancel();
 
       _updateState(VoiceCallState.speaking);
-      await _tts.speak(response);
+
+      // Convert markdown to clean text for TTS
+      final cleanText = MarkdownToText.convert(response);
+      if (cleanText.isEmpty) {
+        // No speakable content, restart listening
+        _isSpeaking = false;
+        await _startListening();
+        return;
+      }
+
+      await _tts.speak(cleanText);
       // After speaking completes, _handleTtsComplete will restart listening
     } catch (e) {
       _isSpeaking = false;

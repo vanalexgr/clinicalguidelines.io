@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/markdown_to_text.dart';
 import '../services/text_to_speech_service.dart';
 
 enum TtsPlaybackStatus { idle, initializing, loading, speaking, paused, error }
@@ -161,7 +162,21 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
     );
 
     try {
-      await _service.speak(text);
+      // Convert markdown to clean text for TTS
+      final cleanText = MarkdownToText.convert(text);
+      if (cleanText.isEmpty) {
+        // No speakable content
+        if (!ref.mounted) {
+          return;
+        }
+        state = state.copyWith(
+          status: TtsPlaybackStatus.idle,
+          clearActiveMessageId: true,
+        );
+        return;
+      }
+
+      await _service.speak(cleanText);
       if (!ref.mounted) {
         return;
       }
