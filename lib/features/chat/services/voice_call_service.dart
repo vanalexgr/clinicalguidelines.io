@@ -234,6 +234,7 @@ class VoiceCallService {
 
     try {
       _updateState(VoiceCallState.processing);
+      _accumulatedResponse = ''; // Reset response accumulator
 
       // Send message using the existing chat infrastructure
       sendMessageFromService(_ref, text, null);
@@ -243,34 +244,50 @@ class VoiceCallService {
     }
   }
 
+  String _accumulatedResponse = '';
+
   void _handleSocketEvent(
     Map<String, dynamic> event,
     void Function(dynamic response)? ack,
   ) {
     if (_isDisposed) return;
 
-    final type = event['type']?.toString();
-    final data = event['data'];
+    final outerData = event['data'];
 
-    if (data is Map<String, dynamic>) {
-      // Handle streaming response chunks
-      if (type == 'message' || type == 'delta') {
-        final content = data['content']?.toString() ?? '';
-        if (content.isNotEmpty) {
-          _responseController.add(content);
+    if (outerData is Map<String, dynamic>) {
+      final eventType = outerData['type']?.toString();
+      final innerData = outerData['data'];
+
+      if (eventType == 'chat:completion' && innerData is Map<String, dynamic>) {
+        // Handle streaming content chunks
+        if (innerData.containsKey('content')) {
+          final content = innerData['content']?.toString() ?? '';
+          if (content.isNotEmpty) {
+            _accumulatedResponse = content;
+            _responseController.add(content);
+          }
         }
-      }
 
-      // Handle completion
-      if (data['done'] == true || type == 'completion') {
-        final fullResponse = data['content']?.toString() ??
-            data['message']?.toString() ??
-            '';
-        if (fullResponse.isNotEmpty) {
-          _speakResponse(fullResponse);
-        } else {
-          // No response, restart listening
-          _startListening();
+        // Check for completion using choices[0].finish_reason
+        if (innerData.containsKey('choices')) {
+          final choices = innerData['choices'] as List?;
+          if (choices != null && choices.isNotEmpty) {
+            final firstChoice = choices[0] as Map<String, dynamic>?;
+            final finishReason = firstChoice?['finish_reason'];
+
+            if (finishReason == 'stop') {
+              // ignore: avoid_print
+              print('[VoiceCall] Response completed! Text: $_accumulatedResponse');
+
+              if (_accumulatedResponse.isNotEmpty) {
+                _speakResponse(_accumulatedResponse);
+                _accumulatedResponse = '';
+              } else {
+                // No response, restart listening
+                _startListening();
+              }
+            }
+          }
         }
       }
     }
@@ -280,10 +297,24 @@ class VoiceCallService {
     if (_isDisposed) return;
 
     try {
+      // ignore: avoid_print
+      print('[VoiceCall] _speakResponse called with: $response');
+
+      // Stop listening before speaking
+      await _voiceInput.stopListening();
+      await _transcriptSubscription?.cancel();
+      await _intensitySubscription?.cancel();
+
       _updateState(VoiceCallState.speaking);
+      // ignore: avoid_print
+      print('[VoiceCall] State updated to speaking, calling TTS...');
       await _tts.speak(response);
+      // ignore: avoid_print
+      print('[VoiceCall] TTS.speak() returned');
       // After speaking completes, _handleTtsComplete will restart listening
     } catch (e) {
+      // ignore: avoid_print
+      print('[VoiceCall] Error in _speakResponse: $e');
       _updateState(VoiceCallState.error);
       // Restart listening even if TTS fails
       await _startListening();

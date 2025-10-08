@@ -54,6 +54,16 @@ class TextToSpeechService {
 
     try {
       await _tts.awaitSpeakCompletion(false);
+
+      // Set volume to maximum
+      await _tts.setVolume(1.0);
+
+      // Set speech rate (1.0 is normal)
+      await _tts.setSpeechRate(0.5);
+
+      // Set pitch (1.0 is normal)
+      await _tts.setPitch(1.0);
+
       if (!kIsWeb && Platform.isIOS) {
         await _tts.setSharedInstance(true);
         await _tts.setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
@@ -63,6 +73,7 @@ class TextToSpeechService {
           IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
         ]);
       }
+
       await _configurePreferredVoice();
       _available = true;
     } catch (e) {
