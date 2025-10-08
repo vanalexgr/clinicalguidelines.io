@@ -24,6 +24,7 @@ import '../widgets/file_attachment_widget.dart';
 // import '../widgets/voice_input_sheet.dart'; // deprecated: replaced by inline voice input
 import '../services/voice_input_service.dart';
 import '../services/file_attachment_service.dart';
+import 'voice_call_page.dart';
 import 'package:path/path.dart' as path;
 import '../../../shared/services/tasks/task_queue.dart';
 import '../../tools/providers/tools_providers.dart';
@@ -527,6 +528,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         _showScrollToBottom = false;
       });
     }
+  }
+
+  void _handleVoiceCall() {
+    // Navigate to voice call page
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const VoiceCallPage(),
+        fullscreenDialog: true,
+      ),
+    );
   }
 
   // Replaced bottom-sheet chat list with left drawer (see ChatsDrawer)
@@ -1434,6 +1445,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   ),
             actions: [
               if (!_isSelectionMode) ...[
+                // Voice call button
+                IconButton(
+                  icon: Icon(
+                    CupertinoIcons.phone,
+                    color: context.conduitTheme.textPrimary,
+                    size: IconSize.appBar,
+                  ),
+                  onPressed: _handleVoiceCall,
+                  tooltip: 'Voice Call',
+                ),
                 Padding(
                   padding: const EdgeInsets.only(right: Spacing.inputPadding),
                   child: IconButton(
