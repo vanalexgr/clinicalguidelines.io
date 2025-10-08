@@ -68,6 +68,7 @@ dependencies:
   share_handler: ^0.0.19
   riverpod_annotation: ^3.0.0
   flutter_local_notifications: ^19.4.2
+  connectivity_plus: ^7.0.0
   
   # Clipboard functionality is available through flutter/services (part of Flutter SDK)
 

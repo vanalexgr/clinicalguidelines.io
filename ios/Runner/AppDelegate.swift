@@ -122,11 +122,26 @@ class BackgroundStreamingHandler: NSObject {
     }
     
     private func saveStreamStates(_ states: [[String: Any]]) {
-        UserDefaults.standard.set(states, forKey: "ConduitActiveStreams")
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: states, options: [])
+            UserDefaults.standard.set(jsonData, forKey: "ConduitActiveStreams")
+        } catch {
+            print("BackgroundStreamingHandler: Failed to serialize stream states: \(error)")
+        }
     }
-    
+
     private func recoverStreamStates() -> [[String: Any]] {
-        return UserDefaults.standard.array(forKey: "ConduitActiveStreams") as? [[String: Any]] ?? []
+        guard let jsonData = UserDefaults.standard.data(forKey: "ConduitActiveStreams") else {
+            return []
+        }
+        do {
+            if let states = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [[String: Any]] {
+                return states
+            }
+        } catch {
+            print("BackgroundStreamingHandler: Failed to deserialize stream states: \(error)")
+        }
+        return []
     }
     
     deinit {

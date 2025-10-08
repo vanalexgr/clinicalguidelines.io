@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -11,46 +12,171 @@ part 'connectivity_service.g.dart';
 enum ConnectivityStatus { online, offline, checking }
 
 class ConnectivityService {
-  final Dio _dio;
-  final Ref _ref;
-  Timer? _connectivityTimer;
-  final _connectivityController =
-      StreamController<ConnectivityStatus>.broadcast();
-  ConnectivityStatus _lastStatus = ConnectivityStatus.checking;
-  int _recentFailures = 0;
-  Duration _interval = const Duration(seconds: 10);
-  int _lastLatencyMs = -1;
-
-  ConnectivityService(this._dio, this._ref) {
+  ConnectivityService(this._dio, this._ref, [Connectivity? connectivity])
+    : _connectivity = connectivity ?? Connectivity() {
     _startConnectivityMonitoring();
   }
+
+  final Dio _dio;
+  final Ref _ref;
+  final Connectivity _connectivity;
+
+  final _connectivityController =
+      StreamController<ConnectivityStatus>.broadcast();
+
+  Timer? _initialCheckTimer;
+  Timer? _pollTimer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  Completer<void>? _activeCheck;
+  List<ConnectivityResult>? _lastConnectivityResults;
+
+  ConnectivityStatus _lastStatus = ConnectivityStatus.checking;
+  Duration _interval = const Duration(seconds: 10);
+  int _recentFailures = 0;
+  int _lastLatencyMs = -1;
+  bool _hasNetwork = true;
+  bool _queuedImmediateCheck = false;
 
   Stream<ConnectivityStatus> get connectivityStream =>
       _connectivityController.stream;
   ConnectivityStatus get currentStatus => _lastStatus;
   int get lastLatencyMs => _lastLatencyMs;
 
-  /// Stream that emits true when connected, false when offline
   Stream<bool> get isConnected =>
       connectivityStream.map((status) => status == ConnectivityStatus.online);
 
-  /// Check if currently connected
   bool get isCurrentlyConnected => _lastStatus == ConnectivityStatus.online;
 
   void _startConnectivityMonitoring() {
-    // Initial check after a brief delay to avoid showing offline during startup
-    Timer(const Duration(milliseconds: 800), () {
-      _checkConnectivity();
+    _initialCheckTimer = Timer(const Duration(milliseconds: 800), () {
+      unawaited(_runConnectivityCheck(force: true));
     });
 
-    // Check periodically; interval adapts to recent failures
-    _connectivityTimer = Timer.periodic(_interval, (_) {
-      _checkConnectivity();
+    _connectivitySubscription = _connectivity.onConnectivityChanged.listen((
+      results,
+    ) {
+      unawaited(_handleConnectivityChange(results));
+    });
+
+    unawaited(
+      _connectivity.checkConnectivity().then(
+        (results) => _handleConnectivityChange(results),
+      ),
+    );
+  }
+
+  Future<void> _runConnectivityCheck({bool force = false}) async {
+    if (_connectivityController.isClosed) return;
+
+    if (!_hasNetwork) {
+      _lastLatencyMs = -1;
+      _updateStatus(ConnectivityStatus.offline);
+      return;
+    }
+
+    _initialCheckTimer?.cancel();
+    _initialCheckTimer = null;
+    _cancelScheduledPoll();
+
+    final existingCheck = _activeCheck;
+    if (existingCheck != null) {
+      if (force) {
+        _queuedImmediateCheck = true;
+      }
+      await existingCheck.future;
+      if (force && _queuedImmediateCheck) {
+        _queuedImmediateCheck = false;
+        await _runConnectivityCheck(force: false);
+      }
+      return;
+    }
+
+    final completer = Completer<void>();
+    _activeCheck = completer;
+
+    if (_lastStatus != ConnectivityStatus.checking) {
+      _updateStatus(ConnectivityStatus.checking);
+    }
+
+    try {
+      await _checkConnectivity();
+    } finally {
+      completer.complete();
+      _activeCheck = null;
+    }
+
+    if (_queuedImmediateCheck) {
+      _queuedImmediateCheck = false;
+      await _runConnectivityCheck(force: false);
+      return;
+    }
+
+    _scheduleNextPoll();
+  }
+
+  void _scheduleNextPoll() {
+    if (_connectivityController.isClosed || !_hasNetwork) {
+      return;
+    }
+
+    _pollTimer = Timer(_interval, () {
+      _pollTimer = null;
+      unawaited(_runConnectivityCheck());
     });
   }
 
+  void _cancelScheduledPoll() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+
+  bool _haveSameConnectivity(
+    List<ConnectivityResult> previous,
+    List<ConnectivityResult> current,
+  ) {
+    if (identical(previous, current)) return true;
+    if (previous.length != current.length) return false;
+    final previousSet = previous.toSet();
+    final currentSet = current.toSet();
+    if (previousSet.length != currentSet.length) return false;
+    for (final value in previousSet) {
+      if (!currentSet.contains(value)) return false;
+    }
+    return true;
+  }
+
+  Future<void> _handleConnectivityChange(
+    List<ConnectivityResult> results,
+  ) async {
+    if (_connectivityController.isClosed) return;
+
+    final previousResults = _lastConnectivityResults;
+    _lastConnectivityResults = results;
+    final hadNetwork = _hasNetwork;
+    _hasNetwork = results.any((result) => result != ConnectivityResult.none);
+
+    if (!_hasNetwork) {
+      _lastLatencyMs = -1;
+      _queuedImmediateCheck = false;
+      _cancelScheduledPoll();
+      _initialCheckTimer?.cancel();
+      _initialCheckTimer = null;
+      _updateStatus(ConnectivityStatus.offline);
+      return;
+    }
+
+    final networkTypeChanged = previousResults == null
+        ? true
+        : !_haveSameConnectivity(previousResults, results);
+
+    if (!hadNetwork ||
+        _lastStatus == ConnectivityStatus.offline ||
+        networkTypeChanged) {
+      unawaited(_runConnectivityCheck(force: true));
+    }
+  }
+
   Future<void> _checkConnectivity() async {
-    // Don't check connectivity if service is disposed
     if (_connectivityController.isClosed) return;
 
     final serverReachability = await _probeActiveServer();
@@ -75,7 +201,6 @@ class ConnectivityService {
       return;
     }
 
-    // No configured server to probe; assume usable connectivity so setup flows continue.
     _lastLatencyMs = -1;
     _updateStatus(ConnectivityStatus.online);
   }
@@ -83,13 +208,11 @@ class ConnectivityService {
   void _updateStatus(ConnectivityStatus status) {
     if (_lastStatus != status) {
       _lastStatus = status;
-      // Only add to stream if controller is not closed
       if (!_connectivityController.isClosed) {
         _connectivityController.add(status);
       }
     }
 
-    // Adapt polling interval based on recent failures to reduce battery/CPU
     if (status == ConnectivityStatus.offline) {
       _recentFailures = (_recentFailures + 1).clamp(0, 10);
     } else if (status == ConnectivityStatus.online) {
@@ -104,25 +227,25 @@ class ConnectivityService {
 
     if (newInterval != _interval) {
       _interval = newInterval;
-      _connectivityTimer?.cancel();
-      // Only create new timer if service is not disposed
-      if (!_connectivityController.isClosed) {
-        _connectivityTimer = Timer.periodic(
-          _interval,
-          (_) => _checkConnectivity(),
-        );
+      _cancelScheduledPoll();
+      if (_lastStatus != ConnectivityStatus.offline && _hasNetwork) {
+        _scheduleNextPoll();
       }
     }
   }
 
   Future<bool> checkConnectivity() async {
-    await _checkConnectivity();
+    await _runConnectivityCheck(force: true);
     return _lastStatus == ConnectivityStatus.online;
   }
 
   void dispose() {
-    _connectivityTimer?.cancel();
-    _connectivityTimer = null;
+    _initialCheckTimer?.cancel();
+    _initialCheckTimer = null;
+    _cancelScheduledPoll();
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
+    _activeCheck = null;
     if (!_connectivityController.isClosed) {
       _connectivityController.close();
     }
@@ -151,14 +274,15 @@ class ConnectivityService {
   }
 
   Future<bool?> _probeBaseEndpoint(
-    Uri uri, {
+    Uri baseUri, {
     bool updateLatency = false,
   }) async {
     try {
       final start = DateTime.now();
+      final healthUri = baseUri.resolve('/health');
       final response = await _dio
           .getUri(
-            uri,
+            healthUri,
             options: Options(
               method: 'GET',
               sendTimeout: const Duration(seconds: 3),
@@ -175,7 +299,6 @@ class ConnectivityService {
       }
       return isHealthy;
     } catch (_) {
-      // Treat as unreachable.
       return false;
     }
   }
@@ -205,27 +328,22 @@ class ConnectivityService {
     }
     if (parsed == null) return null;
 
-    // Return the base URL directly instead of resolving to /health
     return parsed;
   }
 }
 
-// Providers
 final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
-  // Create a Dio instance with custom headers from the active server config
   final activeServer = ref.watch(activeServerProvider);
 
   return activeServer.maybeWhen(
     data: (server) {
       if (server == null) {
-        // No server configured, use lightweight Dio
         final dio = Dio();
         final service = ConnectivityService(dio, ref);
         ref.onDispose(() => service.dispose());
         return service;
       }
 
-      // Create Dio with custom headers from server config
       final dio = Dio(
         BaseOptions(
           baseUrl: server.url,
@@ -234,7 +352,6 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
           followRedirects: true,
           maxRedirects: 5,
           validateStatus: (status) => status != null && status < 400,
-          // Add custom headers from server config
           headers: server.customHeaders.isNotEmpty
               ? Map<String, String>.from(server.customHeaders)
               : null,
@@ -246,7 +363,6 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
       return service;
     },
     orElse: () {
-      // No server data available, use lightweight Dio
       final dio = Dio();
       final service = ConnectivityService(dio, ref);
       ref.onDispose(() => service.dispose());
@@ -280,17 +396,12 @@ class ConnectivityStatusNotifier extends _$ConnectivityStatusNotifier {
 }
 
 final isOnlineProvider = Provider<bool>((ref) {
-  // In reviewer mode, treat app as online to enable flows
   final reviewerMode = ref.watch(reviewerModeProvider);
   if (reviewerMode) return true;
   final status = ref.watch(connectivityStatusProvider);
   return status.when(
     data: (status) => status != ConnectivityStatus.offline,
-    loading: () => true, // Assume online while checking
-    error: (_, _) =>
-        true, // Assume online on error to avoid false offline states
+    loading: () => true,
+    error: (error, _) => true,
   );
 });
-
-// Dio provider (if not already defined elsewhere)
-// Removed unused Dio provider to avoid confusion. Use ApiService instead.
