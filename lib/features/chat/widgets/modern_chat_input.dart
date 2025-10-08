@@ -1480,9 +1480,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 ),
                 child: Center(
                   child: Icon(
-                    Platform.isIOS
-                        ? CupertinoIcons.waveform
-                        : Icons.graphic_eq,
+                    Platform.isIOS ? CupertinoIcons.waveform : Icons.graphic_eq,
                     size: IconSize.large,
                     color: enabledVoiceCall
                         ? context.conduitTheme.buttonPrimaryText

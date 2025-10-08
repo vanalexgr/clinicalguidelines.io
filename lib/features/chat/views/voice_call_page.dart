@@ -148,9 +148,8 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
           icon: const Icon(CupertinoIcons.xmark),
           onPressed: () async {
             await _service?.stopCall();
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
+            if (!context.mounted) return;
+            Navigator.of(context).pop();
           },
         ),
       ),

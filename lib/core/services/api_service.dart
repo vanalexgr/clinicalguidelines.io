@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 // import 'package:http_parser/http_parser.dart';
 // Removed legacy websocket/socket.io imports
 import 'package:uuid/uuid.dart';
@@ -62,6 +63,8 @@ class ApiService {
               : null,
         ),
       ) {
+    _configureSelfSignedSupport();
+
     // Use API key from server config if provided and no explicit auth token
     final effectiveAuthToken = authToken ?? serverConfig.apiKey;
 
@@ -123,6 +126,55 @@ class ApiService {
       this.onTokenInvalidated = onTokenInvalidated;
       _authInterceptor.onTokenInvalidated = onTokenInvalidated;
     }
+  }
+
+  void _configureSelfSignedSupport() {
+    if (kIsWeb || !serverConfig.allowSelfSignedCertificates) {
+      return;
+    }
+
+    final baseUri = _parseBaseUri(serverConfig.url);
+    if (baseUri == null) {
+      return;
+    }
+
+    final adapter = _dio.httpClientAdapter;
+    if (adapter is! IOHttpClientAdapter) {
+      return;
+    }
+
+    adapter.createHttpClient = () {
+      final client = HttpClient();
+      final host = baseUri.host.toLowerCase();
+      final port = baseUri.hasPort ? baseUri.port : null;
+      client.badCertificateCallback =
+          (X509Certificate cert, String requestHost, int requestPort) {
+            if (requestHost.toLowerCase() != host) {
+              return false;
+            }
+            if (port == null) {
+              return true;
+            }
+            return requestPort == port;
+          };
+      return client;
+    };
+  }
+
+  Uri? _parseBaseUri(String baseUrl) {
+    final trimmed = baseUrl.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    Uri? parsed = Uri.tryParse(trimmed);
+    if (parsed == null) {
+      return null;
+    }
+    if (!parsed.hasScheme) {
+      parsed =
+          Uri.tryParse('https://$trimmed') ?? Uri.tryParse('http://$trimmed');
+    }
+    return parsed;
   }
 
   // Health check

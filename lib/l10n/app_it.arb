@@ -259,6 +259,14 @@
   "advancedSettings": "Impostazioni avanzate",
   "customHeaders": "Header personalizzati",
   "customHeadersDescription": "Aggiungi header HTTP personalizzati per autenticazione, chiavi API o requisiti speciali del server.",
+  "allowSelfSignedCertificates": "Considera attendibili i certificati autofirmati",
+  "@allowSelfSignedCertificates": {
+    "description": "Etichetta dell'interruttore che consente i certificati TLS autofirmati per il server configurato."
+  },
+  "allowSelfSignedCertificatesDescription": "Accetta il certificato TLS di questo server anche se è autofirmato. Attiva questa opzione solo per server di cui ti fidi.",
+  "@allowSelfSignedCertificatesDescription": {
+    "description": "Testo di supporto che chiarisce i rischi dell'attivazione dell'opzione per certificati autofirmati."
+  },
   "headerNameEmpty": "Il nome header non può essere vuoto",
   "headerNameTooLong": "Nome header troppo lungo (max 64 caratteri)",
   "headerNameInvalidChars": "Nome header non valido. Usa solo lettere, numeri e questi simboli: !#$&-^_`|~",

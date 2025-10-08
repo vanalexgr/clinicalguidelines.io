@@ -766,6 +766,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ajoutez des en-têtes HTTP personnalisés pour l\'authentification, les clés API ou des exigences spécifiques du serveur.';
 
   @override
+  String get allowSelfSignedCertificates =>
+      'Faire confiance aux certificats auto-signés';
+
+  @override
+  String get allowSelfSignedCertificatesDescription =>
+      'Acceptez le certificat TLS de ce serveur même s\'il est auto-signé. Activez cette option uniquement pour les serveurs auxquels vous faites confiance.';
+
+  @override
   String get headerNameEmpty => 'Le nom de l\'en-tête ne peut pas être vide';
 
   @override

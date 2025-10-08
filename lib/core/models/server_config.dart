@@ -13,6 +13,9 @@ sealed class ServerConfig with _$ServerConfig {
     @Default({}) Map<String, String> customHeaders,
     DateTime? lastConnected,
     @Default(false) bool isActive,
+
+    /// Whether to trust self-signed TLS certificates for this server.
+    @Default(false) bool allowSelfSignedCertificates,
   }) = _ServerConfig;
 
   factory ServerConfig.fromJson(Map<String, dynamic> json) =>

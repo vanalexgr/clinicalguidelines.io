@@ -727,7 +727,9 @@ class _DetailsBlockSyntax extends md.BlockSyntax {
       }
 
       // Check for summary tag
-      final summaryMatch = RegExp(r'^<summary>(.*?)<\/summary>$').firstMatch(line);
+      final summaryMatch = RegExp(
+        r'^<summary>(.*?)<\/summary>$',
+      ).firstMatch(line);
       if (summaryMatch != null) {
         summary = summaryMatch.group(1) ?? '';
         parser.advance();

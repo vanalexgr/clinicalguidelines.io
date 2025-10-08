@@ -761,6 +761,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Füge benutzerdefinierte HTTP-Header für Authentifizierung, API-Schlüssel oder spezielle Serveranforderungen hinzu.';
 
   @override
+  String get allowSelfSignedCertificates =>
+      'Selbstsignierten Zertifikaten vertrauen';
+
+  @override
+  String get allowSelfSignedCertificatesDescription =>
+      'Akzeptiere das TLS-Zertifikat dieses Servers auch dann, wenn es selbstsigniert ist. Aktiviere diese Option nur für Server, denen du vertraust.';
+
+  @override
   String get headerNameEmpty => 'Header-Name darf nicht leer sein';
 
   @override

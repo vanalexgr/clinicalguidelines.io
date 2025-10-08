@@ -36,6 +36,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
   String? _connectionError;
   bool _isConnecting = false;
   bool _showAdvancedSettings = false;
+  bool _allowSelfSignedCertificates = false;
 
   @override
   void initState() {
@@ -45,9 +46,11 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
 
   Future<void> _prefillFromState() async {
     final activeServer = await ref.read(activeServerProvider.future);
-    if (activeServer != null) {
+    if (!mounted || activeServer == null) return;
+    setState(() {
       _urlController.text = activeServer.url;
-    }
+      _allowSelfSignedCertificates = activeServer.allowSelfSignedCertificates;
+    });
   }
 
   @override
@@ -75,6 +78,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         url: url,
         customHeaders: Map<String, String>.from(_customHeaders),
         isActive: true,
+        allowSelfSignedCertificates: _allowSelfSignedCertificates,
       );
 
       final api = ApiService(serverConfig: tempConfig);
@@ -536,6 +540,69 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(Spacing.md),
+            margin: const EdgeInsets.only(bottom: Spacing.md),
+            decoration: BoxDecoration(
+              color: context.conduitTheme.surfaceContainer.withValues(
+                alpha: 0.3,
+              ),
+              borderRadius: BorderRadius.circular(AppBorderRadius.small),
+              border: Border.all(
+                color: context.conduitTheme.dividerColor.withValues(alpha: 0.4),
+                width: BorderWidth.thin,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Platform.isIOS
+                      ? CupertinoIcons.lock_shield
+                      : Icons.verified_user,
+                  color: context.conduitTheme.iconSecondary,
+                  size: IconSize.small,
+                ),
+                const SizedBox(width: Spacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.allowSelfSignedCertificates,
+                        style: context.conduitTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: context.conduitTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: Spacing.xs),
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.allowSelfSignedCertificatesDescription,
+                        style: context.conduitTheme.bodySmall?.copyWith(
+                          color: context.conduitTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Spacing.sm),
+                Switch.adaptive(
+                  value: _allowSelfSignedCertificates,
+                  onChanged: (value) {
+                    setState(() {
+                      _allowSelfSignedCertificates = value;
+                    });
+                  },
+                  activeTrackColor: context.conduitTheme.buttonPrimary,
+                ),
+              ],
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

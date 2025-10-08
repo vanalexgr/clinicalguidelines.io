@@ -259,6 +259,14 @@
   "advancedSettings": "Erweiterte Einstellungen",
   "customHeaders": "Benutzerdefinierte Header",
   "customHeadersDescription": "Füge benutzerdefinierte HTTP-Header für Authentifizierung, API-Schlüssel oder spezielle Serveranforderungen hinzu.",
+  "allowSelfSignedCertificates": "Selbstsignierten Zertifikaten vertrauen",
+  "@allowSelfSignedCertificates": {
+    "description": "Schalterbeschriftung zum Zulassen selbstsignierter TLS-Zertifikate für den konfigurierten Server."
+  },
+  "allowSelfSignedCertificatesDescription": "Akzeptiere das TLS-Zertifikat dieses Servers auch dann, wenn es selbstsigniert ist. Aktiviere diese Option nur für Server, denen du vertraust.",
+  "@allowSelfSignedCertificatesDescription": {
+    "description": "Hilfetext, der die Risiken beim Aktivieren des Schalters für selbstsignierte Zertifikate erklärt."
+  },
   "headerNameEmpty": "Header-Name darf nicht leer sein",
   "headerNameTooLong": "Header-Name zu lang (max. 64 Zeichen)",
   "headerNameInvalidChars": "Ungültiger Header-Name. Verwende nur Buchstaben, Zahlen und diese Zeichen: !#$&-^_`|~",

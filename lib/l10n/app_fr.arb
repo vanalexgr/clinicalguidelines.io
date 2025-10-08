@@ -259,6 +259,14 @@
   "advancedSettings": "Paramètres avancés",
   "customHeaders": "En-têtes personnalisés",
   "customHeadersDescription": "Ajoutez des en-têtes HTTP personnalisés pour l'authentification, les clés API ou des exigences spécifiques du serveur.",
+  "allowSelfSignedCertificates": "Faire confiance aux certificats auto-signés",
+  "@allowSelfSignedCertificates": {
+    "description": "Libellé du commutateur permettant d'autoriser les certificats TLS auto-signés pour le serveur configuré."
+  },
+  "allowSelfSignedCertificatesDescription": "Acceptez le certificat TLS de ce serveur même s'il est auto-signé. Activez cette option uniquement pour les serveurs auxquels vous faites confiance.",
+  "@allowSelfSignedCertificatesDescription": {
+    "description": "Texte d'aide expliquant les risques liés à l'activation de l'option de certificat auto-signé."
+  },
   "headerNameEmpty": "Le nom de l'en-tête ne peut pas être vide",
   "headerNameTooLong": "Nom d'en-tête trop long (max 64 caractères)",
   "headerNameInvalidChars": "Nom d'en-tête invalide. Utilisez uniquement des lettres, des chiffres et ces symboles : !#$&-^_`|~",

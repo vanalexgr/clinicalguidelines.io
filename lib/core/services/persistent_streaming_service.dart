@@ -234,7 +234,9 @@ class PersistentStreamingService with WidgetsBindingObserver {
   void unregisterStream(String streamId, {bool saveForRecovery = false}) {
     // If app is in background and stream is unregistering, it might be due to
     // network interruption - save state for recovery instead of just dropping it
-    if (_isInBackground && !saveForRecovery && _streamMetadata.containsKey(streamId)) {
+    if (_isInBackground &&
+        !saveForRecovery &&
+        _streamMetadata.containsKey(streamId)) {
       DebugLogger.stream(
         'PersistentStreamingService: Stream $streamId interrupted in background, saving for recovery',
       );

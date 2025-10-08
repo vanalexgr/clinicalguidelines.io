@@ -11,6 +11,7 @@ import 'core/providers/app_providers.dart';
 import 'core/persistence/hive_bootstrap.dart';
 import 'core/persistence/persistence_migrator.dart';
 import 'core/persistence/persistence_providers.dart';
+import 'core/services/self_signed_certificate_manager.dart';
 import 'core/router/app_router.dart';
 import 'shared/widgets/offline_indicator.dart';
 import 'features/auth/providers/unified_auth_providers.dart';
@@ -28,6 +29,8 @@ void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      SelfSignedCertificateManager.instance.ensureInitialized();
 
       // Global error handlers
       FlutterError.onError = (FlutterErrorDetails details) {

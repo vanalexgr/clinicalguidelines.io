@@ -107,16 +107,22 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       persistentController.add(data);
     },
     onDone: () async {
-      DebugLogger.stream('Source stream onDone fired, hasReceivedData=$hasReceivedData');
+      DebugLogger.stream(
+        'Source stream onDone fired, hasReceivedData=$hasReceivedData',
+      );
 
       // If stream closes immediately without data, it's likely due to backgrounding/network drop
       // Not a natural completion
       if (!hasReceivedData) {
-        DebugLogger.stream('Stream closed without data - likely interrupted, not completing');
+        DebugLogger.stream(
+          'Stream closed without data - likely interrupted, not completing',
+        );
         // Check if app is backgrounding - if so, finish streaming with whatever we have
         await Future.delayed(const Duration(milliseconds: 300));
         if (persistentService.isInBackground) {
-          DebugLogger.stream('App backgrounding during stream - finishing with current content');
+          DebugLogger.stream(
+            'App backgrounding during stream - finishing with current content',
+          );
           finishStreaming();
         }
         // Don't close the controller to prevent cascading completion handlers
@@ -127,14 +133,20 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       await Future.delayed(const Duration(milliseconds: 500));
 
       final isInBg = persistentService.isInBackground;
-      DebugLogger.stream('Stream onDone check: streamId=$streamId, isInBackground=$isInBg');
+      DebugLogger.stream(
+        'Stream onDone check: streamId=$streamId, isInBackground=$isInBg',
+      );
 
       // Check if we're in background before closing
       if (!isInBg) {
-        DebugLogger.stream('Closing stream controller for $streamId (foreground completion)');
+        DebugLogger.stream(
+          'Closing stream controller for $streamId (foreground completion)',
+        );
         persistentController.close();
       } else {
-        DebugLogger.stream('Source stream completed in background for $streamId - keeping open for recovery');
+        DebugLogger.stream(
+          'Source stream completed in background for $streamId - keeping open for recovery',
+        );
         // Finish streaming to save the content we have
         finishStreaming();
       }
@@ -417,7 +429,8 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                           if (name is String && name.isNotEmpty) {
                             final msgs = getMessages();
                             // Quick string check before expensive regex
-                            final exists = (msgs.isNotEmpty) &&
+                            final exists =
+                                (msgs.isNotEmpty) &&
                                 msgs.last.content.contains('name="$name"');
                             if (!exists) {
                               final status =
@@ -519,7 +532,8 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                   if (name is String && name.isNotEmpty) {
                     final msgs = getMessages();
                     // Quick string check before expensive regex
-                    final exists = (msgs.isNotEmpty) &&
+                    final exists =
+                        (msgs.isNotEmpty) &&
                         msgs.last.content.contains('name="$name"');
                     if (!exists) {
                       final status =
@@ -549,7 +563,8 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                         if (name is String && name.isNotEmpty) {
                           final msgs = getMessages();
                           // Quick string check before expensive regex
-                          final exists = (msgs.isNotEmpty) &&
+                          final exists =
+                              (msgs.isNotEmpty) &&
                               msgs.last.content.contains('name="$name"');
                           if (!exists) {
                             final status =

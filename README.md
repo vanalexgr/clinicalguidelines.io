@@ -224,8 +224,7 @@ flutter pub run build_runner build --delete-conflicting-outputs
 
 If you protect Open‑WebUI with SSO or a reverse proxy (Authlia, Authentik,
 etc.), whitelist these path prefixes so Conduit can complete login, sync, and
-streaming flows. Paths are relative to your server base URL; replace tokens like
-`{chatId}` with actual identifiers.
+streaming flows. Paths are relative to your server base URL.
 
 - `/health`
 - `/api/*`

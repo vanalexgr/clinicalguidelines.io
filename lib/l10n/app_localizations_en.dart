@@ -755,6 +755,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add custom HTTP headers for authentication, API keys, or special server requirements.';
 
   @override
+  String get allowSelfSignedCertificates => 'Trust self-signed certificates';
+
+  @override
+  String get allowSelfSignedCertificatesDescription =>
+      'Accept this server\'s TLS certificate even if it is self-signed. Enable only for servers you trust.';
+
+  @override
   String get headerNameEmpty => 'Header name cannot be empty';
 
   @override

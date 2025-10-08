@@ -13,10 +13,7 @@ class ConduitMarkdownPreprocessor {
     r'^[ \t]+```([^\n`]*)\s*$',
     multiLine: true,
   );
-  static final _dedentCloseRegex = RegExp(
-    r'^[ \t]+```\s*$',
-    multiLine: true,
-  );
+  static final _dedentCloseRegex = RegExp(r'^[ \t]+```\s*$', multiLine: true);
   static final _inlineClosingRegex = RegExp(r'([^\r\n`])```(?=\s*(?:\r?\n|$))');
   static final _labelThenDashRegex = RegExp(
     r'^(\*\*[^\n*]+\*\*.*)\n(\s*-{3,}\s*$)',
@@ -45,7 +42,10 @@ class ConduitMarkdownPreprocessor {
 
     // Dedent opening fences to avoid partial code-block detection when the
     // model indents fences by accident.
-    output = output.replaceAllMapped(_dedentOpenRegex, (match) => '```${match[1]}');
+    output = output.replaceAllMapped(
+      _dedentOpenRegex,
+      (match) => '```${match[1]}',
+    );
 
     // Dedent closing fences for the same reason as the opening fences.
     output = output.replaceAllMapped(_dedentCloseRegex, (_) => '```');

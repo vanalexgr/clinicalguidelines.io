@@ -17,8 +17,7 @@ class VoiceCallNotificationService {
   // Notification IDs and channels
   static const String _channelId = 'voice_call_channel';
   static const String _channelName = 'Voice Call';
-  static const String _channelDescription =
-      'Ongoing voice call notifications';
+  static const String _channelDescription = 'Ongoing voice call notifications';
   static const int _notificationId = 2001;
 
   // Action IDs
@@ -32,7 +31,9 @@ class VoiceCallNotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -72,7 +73,8 @@ class VoiceCallNotificationService {
 
     await _notifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(androidChannel);
   }
 
@@ -190,8 +192,10 @@ class VoiceCallNotificationService {
   /// Check if notifications are enabled
   Future<bool> areNotificationsEnabled() async {
     if (Platform.isAndroid) {
-      final androidImpl = _notifications.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidImpl = _notifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       return await androidImpl?.areNotificationsEnabled() ?? false;
     } else if (Platform.isIOS) {
       // iOS doesn't have a direct check, assume enabled if initialized
@@ -203,13 +207,17 @@ class VoiceCallNotificationService {
   /// Request notification permissions
   Future<bool> requestPermissions() async {
     if (Platform.isAndroid) {
-      final androidImpl = _notifications.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidImpl = _notifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       final granted = await androidImpl?.requestNotificationsPermission();
       return granted ?? false;
     } else if (Platform.isIOS) {
       final iosImpl = _notifications
-          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       final granted = await iosImpl?.requestPermissions(
         alert: true,
         badge: false,

@@ -1482,6 +1482,18 @@ abstract class AppLocalizations {
   /// **'Add custom HTTP headers for authentication, API keys, or special server requirements.'**
   String get customHeadersDescription;
 
+  /// Toggle label that allows trusting self-signed TLS certificates for the configured server.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust self-signed certificates'**
+  String get allowSelfSignedCertificates;
+
+  /// Helper text clarifying the risks of enabling the self-signed certificate toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept this server\'s TLS certificate even if it is self-signed. Enable only for servers you trust.'**
+  String get allowSelfSignedCertificatesDescription;
+
   /// Validation message for empty header name.
   ///
   /// In en, this message translates to:

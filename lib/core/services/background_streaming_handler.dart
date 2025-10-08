@@ -217,7 +217,11 @@ class BackgroundStreamingHandler {
     DebugLogger.stream(
       'saveStreamStatesForRecovery called',
       scope: 'background',
-      data: {'streamIds': streamIds, 'reason': reason, 'statesCount': _streamStates.length},
+      data: {
+        'streamIds': streamIds,
+        'reason': reason,
+        'statesCount': _streamStates.length,
+      },
     );
 
     final statesToSave = streamIds

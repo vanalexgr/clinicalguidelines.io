@@ -550,6 +550,14 @@
   "@customHeaders": {"description": "Section title for adding custom HTTP headers."},
   "customHeadersDescription": "Add custom HTTP headers for authentication, API keys, or special server requirements.",
   "@customHeadersDescription": {"description": "Helper text explaining use-cases for custom headers."},
+  "allowSelfSignedCertificates": "Trust self-signed certificates",
+  "@allowSelfSignedCertificates": {
+    "description": "Toggle label that allows trusting self-signed TLS certificates for the configured server."
+  },
+  "allowSelfSignedCertificatesDescription": "Accept this server's TLS certificate even if it is self-signed. Enable only for servers you trust.",
+  "@allowSelfSignedCertificatesDescription": {
+    "description": "Helper text clarifying the risks of enabling the self-signed certificate toggle."
+  },
   "headerNameEmpty": "Header name cannot be empty",
   "@headerNameEmpty": {"description": "Validation message for empty header name."},
   "headerNameTooLong": "Header name too long (max 64 characters)",
