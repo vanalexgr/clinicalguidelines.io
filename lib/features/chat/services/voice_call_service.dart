@@ -32,7 +32,6 @@ class VoiceCallService {
 
   VoiceCallState _state = VoiceCallState.idle;
   String? _sessionId;
-  String? _activeConversationId;
   StreamSubscription<String>? _transcriptSubscription;
   StreamSubscription<int>? _intensitySubscription;
   String _accumulatedTranscript = '';
@@ -116,9 +115,6 @@ class VoiceCallService {
     if (_isDisposed) return;
 
     try {
-      // Set conversation ID first before updating state
-      _activeConversationId = conversationId;
-
       // Update state (this will trigger notification)
       _updateState(VoiceCallState.connecting);
 
@@ -333,7 +329,6 @@ class VoiceCallService {
     await WakelockPlus.disable();
 
     _sessionId = null;
-    _activeConversationId = null;
     _accumulatedTranscript = '';
     _isMuted = false;
     _updateState(VoiceCallState.disconnected);
@@ -374,7 +369,6 @@ class VoiceCallService {
     if (_state == VoiceCallState.idle ||
         _state == VoiceCallState.error ||
         _state == VoiceCallState.disconnected) {
-      print('VoiceCall: Skipping notification - state: $_state');
       return;
     }
 
@@ -382,15 +376,13 @@ class VoiceCallService {
       final selectedModel = _ref.read(selectedModelProvider);
       final modelName = selectedModel?.name ?? 'Assistant';
 
-      print('VoiceCall: Updating notification - model: $modelName, muted: $_isMuted, state: $_state');
-
       await _notificationService.updateCallStatus(
         modelName: modelName,
         isMuted: _isMuted,
         isSpeaking: _state == VoiceCallState.speaking,
       );
     } catch (e) {
-      print('VoiceCall: Failed to update notification: $e');
+      // Silently ignore notification errors
     }
   }
 

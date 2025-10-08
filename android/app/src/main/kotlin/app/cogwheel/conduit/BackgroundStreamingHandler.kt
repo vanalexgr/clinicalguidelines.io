@@ -21,91 +21,51 @@ import org.json.JSONObject
 class BackgroundStreamingService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private val activeStreams = mutableSetOf<String>()
-    
+
     companion object {
         const val CHANNEL_ID = "conduit_streaming_channel"
         const val NOTIFICATION_ID = 1001
         const val ACTION_START = "START_STREAMING"
         const val ACTION_STOP = "STOP_STREAMING"
     }
-    
+
     override fun onCreate() {
         super.onCreate()
-        // Immediately start foreground to prevent timeout - will update with proper notification later
-        startForeground(NOTIFICATION_ID, createNotification(1))
-        println("BackgroundStreamingService: Service created with foreground notification")
+        // Start foreground with minimal notification (required for foreground service)
+        startForeground(NOTIFICATION_ID, createMinimalNotification())
+        println("BackgroundStreamingService: Service created")
     }
-    
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Always ensure we're foreground first to prevent timeout exceptions
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundWithNotification(1)
-        }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val streamCount = intent.getIntExtra("streamCount", 1)
                 acquireWakeLock()
-                updateNotification(streamCount)
-                println("BackgroundStreamingService: Started foreground service for $streamCount streams")
+                println("BackgroundStreamingService: Started foreground service")
             }
             ACTION_STOP -> {
                 stopStreaming()
             }
             "KEEP_ALIVE" -> {
-                val streamCount = intent.getIntExtra("streamCount", 1)
                 keepAlive()
-                updateNotification(streamCount)
             }
         }
 
         return START_STICKY // Restart if killed by system
     }
-    
-    private fun startForegroundWithNotification(streamCount: Int) {
-        val notification = createNotification(streamCount)
-        startForeground(NOTIFICATION_ID, notification)
-    }
-    
-    private fun createNotification(streamCount: Int): Notification {
-        val title = if (streamCount == 1) {
-            "Chat streaming in progress"
-        } else {
-            "$streamCount chats streaming"
-        }
-        
-        // Create intent to return to app
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        
+
+    private fun createMinimalNotification(): Notification {
+        // Create a minimal, silent notification (required for foreground service)
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText("Processing chat responses...")
+            .setContentTitle("Conduit")
+            .setContentText("Background service active")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .setOngoing(true)
             .setShowWhen(false)
-            .setAutoCancel(false)
+            .setSilent(true)
             .build()
-    }
-    
-    private fun updateNotification(streamCount: Int) {
-        val notification = createNotification(streamCount)
-        val notificationManager = NotificationManagerCompat.from(this)
-        
-        try {
-            notificationManager.notify(NOTIFICATION_ID, notification)
-        } catch (e: SecurityException) {
-            println("BackgroundStreamingService: Notification permission not granted")
-        }
     }
     
     private fun acquireWakeLock() {
@@ -315,17 +275,18 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Conduit Streaming"
-            val descriptionText = "Keeps chat streams active in background"
-            val importance = NotificationManager.IMPORTANCE_LOW
+            val name = "Background Service"
+            val descriptionText = "Background service for Conduit"
+            val importance = NotificationManager.IMPORTANCE_MIN
             val channel = NotificationChannel(BackgroundStreamingService.CHANNEL_ID, name, importance).apply {
                 description = descriptionText
                 setShowBadge(false)
                 enableLights(false)
                 enableVibration(false)
                 setSound(null, null)
+                lockscreenVisibility = Notification.VISIBILITY_SECRET
             }
-            
+
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }

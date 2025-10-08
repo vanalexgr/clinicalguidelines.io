@@ -99,11 +99,8 @@ class VoiceCallNotificationService {
     required bool isSpeaking,
   }) async {
     if (!_initialized) {
-      print('VoiceCallNotification: Initializing...');
       await initialize();
     }
-
-    print('VoiceCallNotification: Showing notification for $modelName (muted: $isMuted, speaking: $isSpeaking)');
 
     final status = isSpeaking ? 'Speaking...' : 'Listening...';
     final muteAction = isMuted ? 'Unmute' : 'Mute';
