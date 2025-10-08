@@ -31,6 +31,8 @@ android {
         // Align with modern Android Gradle Plugin requirements
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Enable core library desugaring for flutter_local_notifications
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -73,6 +75,9 @@ dependencies {
     implementation("androidx.activity:activity:1.9.2")
     implementation("androidx.core:core:1.13.1")
     implementation("androidx.activity:activity-ktx:1.9.2")
+
+    // Core library desugaring for flutter_local_notifications
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {

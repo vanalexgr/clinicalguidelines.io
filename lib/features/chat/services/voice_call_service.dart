@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/socket_service.dart';
 import '../providers/chat_providers.dart';
 import 'text_to_speech_service.dart';
 import 'voice_input_service.dart';
+import 'voice_call_notification_service.dart';
 
 part 'voice_call_service.g.dart';
 
@@ -25,13 +27,17 @@ class VoiceCallService {
   final TextToSpeechService _tts;
   final SocketService _socketService;
   final Ref _ref;
+  final VoiceCallNotificationService _notificationService =
+      VoiceCallNotificationService();
 
   VoiceCallState _state = VoiceCallState.idle;
   String? _sessionId;
+  String? _activeConversationId;
   StreamSubscription<String>? _transcriptSubscription;
   StreamSubscription<int>? _intensitySubscription;
   String _accumulatedTranscript = '';
   bool _isDisposed = false;
+  bool _isMuted = false;
   SocketEventSubscription? _socketSubscription;
 
   final StreamController<VoiceCallState> _stateController =
@@ -57,6 +63,9 @@ class VoiceCallService {
       onComplete: _handleTtsComplete,
       onError: _handleTtsError,
     );
+
+    // Set up notification action handler
+    _notificationService.onActionPressed = _handleNotificationAction;
   }
 
   VoiceCallState get state => _state;
@@ -67,6 +76,16 @@ class VoiceCallService {
 
   Future<void> initialize() async {
     if (_isDisposed) return;
+
+    // Initialize notification service
+    await _notificationService.initialize();
+
+    // Request notification permissions if needed
+    final notificationsEnabled =
+        await _notificationService.areNotificationsEnabled();
+    if (!notificationsEnabled) {
+      await _notificationService.requestPermissions();
+    }
 
     // Initialize voice input
     final voiceInitialized = await _voiceInput.initialize();
@@ -97,7 +116,14 @@ class VoiceCallService {
     if (_isDisposed) return;
 
     try {
+      // Set conversation ID first before updating state
+      _activeConversationId = conversationId;
+
+      // Update state (this will trigger notification)
       _updateState(VoiceCallState.connecting);
+
+      // Enable wake lock to keep screen on and prevent audio interruption
+      await WakelockPlus.enable();
 
       // Ensure socket connection
       await _socketService.ensureConnected();
@@ -119,6 +145,8 @@ class VoiceCallService {
       await _startListening();
     } catch (e) {
       _updateState(VoiceCallState.error);
+      await WakelockPlus.disable();
+      await _notificationService.cancelNotification();
       rethrow;
     }
   }
@@ -298,8 +326,16 @@ class VoiceCallService {
     await _voiceInput.stopListening();
     await _tts.stop();
 
+    // Cancel notification
+    await _notificationService.cancelNotification();
+
+    // Disable wake lock when call ends
+    await WakelockPlus.disable();
+
     _sessionId = null;
+    _activeConversationId = null;
     _accumulatedTranscript = '';
+    _isMuted = false;
     _updateState(VoiceCallState.disconnected);
   }
 
@@ -326,6 +362,60 @@ class VoiceCallService {
     if (_isDisposed) return;
     _state = newState;
     _stateController.add(newState);
+
+    // Update notification when state changes (fire and forget)
+    _updateNotification().catchError((e) {
+      // Ignore notification errors
+    });
+  }
+
+  Future<void> _updateNotification() async {
+    // Skip notification for idle, error, and disconnected states
+    if (_state == VoiceCallState.idle ||
+        _state == VoiceCallState.error ||
+        _state == VoiceCallState.disconnected) {
+      print('VoiceCall: Skipping notification - state: $_state');
+      return;
+    }
+
+    try {
+      final selectedModel = _ref.read(selectedModelProvider);
+      final modelName = selectedModel?.name ?? 'Assistant';
+
+      print('VoiceCall: Updating notification - model: $modelName, muted: $_isMuted, state: $_state');
+
+      await _notificationService.updateCallStatus(
+        modelName: modelName,
+        isMuted: _isMuted,
+        isSpeaking: _state == VoiceCallState.speaking,
+      );
+    } catch (e) {
+      print('VoiceCall: Failed to update notification: $e');
+    }
+  }
+
+  void _handleNotificationAction(String action) {
+    switch (action) {
+      case 'mute_call':
+        _toggleMute();
+        break;
+      case 'unmute_call':
+        _toggleMute();
+        break;
+      case 'end_call':
+        stopCall();
+        break;
+    }
+  }
+
+  void _toggleMute() {
+    _isMuted = !_isMuted;
+    if (_isMuted) {
+      pauseListening();
+    } else {
+      resumeListening();
+    }
+    _updateNotification();
   }
 
   Future<void> dispose() async {
@@ -337,6 +427,12 @@ class VoiceCallService {
 
     _voiceInput.dispose();
     await _tts.dispose();
+
+    // Cancel notification
+    await _notificationService.cancelNotification();
+
+    // Ensure wake lock is disabled on dispose
+    await WakelockPlus.disable();
 
     await _stateController.close();
     await _transcriptController.close();
