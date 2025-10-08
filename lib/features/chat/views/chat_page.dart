@@ -1445,16 +1445,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   ),
             actions: [
               if (!_isSelectionMode) ...[
-                // Voice call button
-                IconButton(
-                  icon: Icon(
-                    CupertinoIcons.phone,
-                    color: context.conduitTheme.textPrimary,
-                    size: IconSize.appBar,
-                  ),
-                  onPressed: _handleVoiceCall,
-                  tooltip: 'Voice Call',
-                ),
                 Padding(
                   padding: const EdgeInsets.only(right: Spacing.inputPadding),
                   child: IconButton(
@@ -1566,6 +1556,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           onSendMessage: (text) =>
                               _handleMessageSend(text, selectedModel),
                           onVoiceInput: null,
+                          onVoiceCall: _handleVoiceCall,
                           onFileAttachment: _handleFileAttachment,
                           onImageAttachment: _handleImageAttachment,
                           onCameraCapture: () =>

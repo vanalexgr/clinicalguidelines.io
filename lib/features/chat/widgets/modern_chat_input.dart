@@ -60,6 +60,7 @@ class ModernChatInput extends ConsumerStatefulWidget {
   final Function(String) onSendMessage;
   final bool enabled;
   final Function()? onVoiceInput;
+  final Function()? onVoiceCall;
   final Function()? onFileAttachment;
   final Function()? onImageAttachment;
   final Function()? onCameraCapture;
@@ -69,6 +70,7 @@ class ModernChatInput extends ConsumerStatefulWidget {
     required this.onSendMessage,
     this.enabled = true,
     this.onVoiceInput,
+    this.onVoiceCall,
     this.onFileAttachment,
     this.onImageAttachment,
     this.onCameraCapture,
@@ -831,6 +833,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 ),
               ),
               const SizedBox(width: Spacing.sm),
+              if (!_hasText && voiceAvailable && !isGenerating)
+                _buildMicButton(voiceAvailable),
+              if (!_hasText && voiceAvailable && !isGenerating)
+                const SizedBox(width: Spacing.sm),
               _buildPrimaryButton(
                 _hasText,
                 isGenerating,
@@ -911,6 +917,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (!_hasText && voiceAvailable && !isGenerating) ...[
+                    _buildMicButton(voiceAvailable),
+                    const SizedBox(width: Spacing.sm),
+                  ],
                   _buildPrimaryButton(
                     _hasText,
                     isGenerating,
@@ -1242,6 +1252,45 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     );
   }
 
+  Widget _buildMicButton(bool voiceAvailable) {
+    final bool enabledMic = widget.enabled && voiceAvailable;
+    return Tooltip(
+      message: AppLocalizations.of(context)!.voiceInput,
+      child: Opacity(
+        opacity: enabledMic ? Alpha.primary : Alpha.disabled,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppBorderRadius.circular),
+            onTap: enabledMic
+                ? () {
+                    HapticFeedback.selectionClick();
+                    _toggleVoice();
+                  }
+                : null,
+            child: SizedBox(
+              width: TouchTarget.minimum,
+              height: TouchTarget.minimum,
+              child: Icon(
+                Platform.isIOS ? CupertinoIcons.mic : Icons.mic,
+                size: IconSize.large,
+                color: _isRecording
+                    ? context.conduitTheme.buttonPrimary
+                    : (enabledMic
+                          ? context.conduitTheme.textPrimary.withValues(
+                              alpha: Alpha.strong,
+                            )
+                          : context.conduitTheme.textPrimary.withValues(
+                              alpha: Alpha.disabled,
+                            )),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPrimaryButton(
     bool hasText,
     bool isGenerating,
@@ -1296,7 +1345,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       );
     }
 
-    // If there's text, render SEND variant; otherwise render MIC variant
+    // If there's text, render SEND variant; otherwise render VOICE CALL variant
     if (hasText) {
       return Tooltip(
         message: enabled
@@ -1374,37 +1423,74 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       );
     }
 
-    // MIC variant when no text is present
-    final bool enabledMic = widget.enabled && voiceAvailable;
+    // VOICE CALL variant when no text is present
+    final bool enabledVoiceCall = widget.enabled && widget.onVoiceCall != null;
     return Tooltip(
-      message: AppLocalizations.of(context)!.voiceInput,
+      message: 'Voice Call',
       child: Opacity(
-        opacity: enabledMic ? Alpha.primary : Alpha.disabled,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppBorderRadius.circular),
-            onTap: enabledMic
-                ? () {
-                    HapticFeedback.selectionClick();
-                    _toggleVoice();
-                  }
-                : null,
-            child: SizedBox(
-              width: TouchTarget.minimum,
-              height: TouchTarget.minimum,
-              child: Icon(
-                Platform.isIOS ? CupertinoIcons.mic : Icons.mic,
-                size: IconSize.large,
-                color: _isRecording
-                    ? context.conduitTheme.buttonPrimary
-                    : (enabledMic
-                          ? context.conduitTheme.textPrimary.withValues(
-                              alpha: Alpha.strong,
-                            )
-                          : context.conduitTheme.textPrimary.withValues(
-                              alpha: Alpha.disabled,
-                            )),
+        opacity: enabledVoiceCall ? Alpha.primary : Alpha.disabled,
+        child: IgnorePointer(
+          ignoring: !enabledVoiceCall,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(radius),
+              onTap: enabledVoiceCall
+                  ? () {
+                      PlatformUtils.lightHaptic();
+                      widget.onVoiceCall!();
+                    }
+                  : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOutCubic,
+                width: buttonSize,
+                height: buttonSize,
+                decoration: BoxDecoration(
+                  color: enabledVoiceCall
+                      ? context.conduitTheme.buttonPrimary
+                      : context.conduitTheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(radius),
+                  border: Border.all(
+                    color: enabledVoiceCall
+                        ? context.conduitTheme.buttonPrimary.withValues(
+                            alpha: 0.8,
+                          )
+                        : context.conduitTheme.cardBorder.withValues(
+                            alpha: 0.45,
+                          ),
+                    width: BorderWidth.thin,
+                  ),
+                  boxShadow: enabledVoiceCall
+                      ? <BoxShadow>[
+                          BoxShadow(
+                            color: context.conduitTheme.cardShadow.withValues(
+                              alpha:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? 0.36
+                                  : 0.18,
+                            ),
+                            blurRadius: 18,
+                            spreadRadius: -6,
+                            offset: const Offset(0, 8),
+                          ),
+                        ]
+                      : const [],
+                ),
+                child: Center(
+                  child: Icon(
+                    Platform.isIOS
+                        ? CupertinoIcons.waveform
+                        : Icons.graphic_eq,
+                    size: IconSize.large,
+                    color: enabledVoiceCall
+                        ? context.conduitTheme.buttonPrimaryText
+                        : context.conduitTheme.textPrimary.withValues(
+                            alpha: Alpha.disabled,
+                          ),
+                  ),
+                ),
               ),
             ),
           ),

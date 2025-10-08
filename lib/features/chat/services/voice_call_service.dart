@@ -190,6 +190,7 @@ class VoiceCallService {
   }
 
   String _accumulatedResponse = '';
+  bool _isSpeaking = false;
 
   void _handleSocketEvent(
     Map<String, dynamic> event,
@@ -204,7 +205,7 @@ class VoiceCallService {
       final innerData = outerData['data'];
 
       if (eventType == 'chat:completion' && innerData is Map<String, dynamic>) {
-        // Handle streaming content chunks
+        // Handle full content replacement (used by some models/backends)
         if (innerData.containsKey('content')) {
           final content = innerData['content']?.toString() ?? '';
           if (content.isNotEmpty) {
@@ -213,18 +214,29 @@ class VoiceCallService {
           }
         }
 
-        // Check for completion using choices[0].finish_reason
+        // Handle streaming delta chunks (incremental updates)
         if (innerData.containsKey('choices')) {
           final choices = innerData['choices'] as List?;
           if (choices != null && choices.isNotEmpty) {
             final firstChoice = choices[0] as Map<String, dynamic>?;
+            final delta = firstChoice?['delta'];
             final finishReason = firstChoice?['finish_reason'];
 
+            // Extract incremental content from delta
+            if (delta is Map<String, dynamic>) {
+              final deltaContent = delta['content']?.toString() ?? '';
+              if (deltaContent.isNotEmpty) {
+                _accumulatedResponse += deltaContent;
+                _responseController.add(_accumulatedResponse);
+              }
+            }
+
+            // Check for completion
             if (finishReason == 'stop') {
-              if (_accumulatedResponse.isNotEmpty) {
+              if (_accumulatedResponse.isNotEmpty && !_isSpeaking) {
                 _speakResponse(_accumulatedResponse);
                 _accumulatedResponse = '';
-              } else {
+              } else if (_accumulatedResponse.isEmpty) {
                 // No response, restart listening
                 _startListening();
               }
@@ -236,9 +248,11 @@ class VoiceCallService {
   }
 
   Future<void> _speakResponse(String response) async {
-    if (_isDisposed) return;
+    if (_isDisposed || _isSpeaking) return;
 
     try {
+      _isSpeaking = true;
+
       // Stop listening before speaking
       await _voiceInput.stopListening();
       await _transcriptSubscription?.cancel();
@@ -248,6 +262,7 @@ class VoiceCallService {
       await _tts.speak(response);
       // After speaking completes, _handleTtsComplete will restart listening
     } catch (e) {
+      _isSpeaking = false;
       _updateState(VoiceCallState.error);
       // Restart listening even if TTS fails
       await _startListening();
@@ -261,6 +276,7 @@ class VoiceCallService {
 
   void _handleTtsComplete() {
     if (_isDisposed) return;
+    _isSpeaking = false;
     // After assistant finishes speaking, start listening for user again
     _startListening();
   }
