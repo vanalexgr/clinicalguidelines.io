@@ -1179,8 +1179,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           backgroundColor: context.conduitTheme.surfaceBackground,
           // Left navigation drawer with draggable edge open (native, finger-following)
           drawerEnableOpenDragGesture: true,
-          drawerDragStartBehavior: DragStartBehavior.start,
-          drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.75,
+          drawerDragStartBehavior: DragStartBehavior.down,
+          drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.5,
           drawerScrimColor: context.colorTokens.overlayStrong,
           drawer: Drawer(
             width: (MediaQuery.of(context).size.width * 0.80).clamp(
@@ -2038,7 +2038,8 @@ class _ModelSelectorSheetState extends ConsumerState<_ModelSelectorSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (model.isMultimodal || _modelSupportsReasoning(model)) ...[
+                    if (model.isMultimodal ||
+                        _modelSupportsReasoning(model)) ...[
                       const SizedBox(height: Spacing.xs),
                       Row(
                         children: [
