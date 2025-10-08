@@ -52,12 +52,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
 
   Future<void> _initializeCall() async {
     try {
-      // ignore: avoid_print
-      print('[VoiceCallPage] _initializeCall started');
-
       _service = ref.read(voiceCallServiceProvider);
-      // ignore: avoid_print
-      print('[VoiceCallPage] Service instance: ${_service.hashCode}');
 
       // Subscribe to service streams
       _stateSubscription = _service!.stateStream.listen((state) {
@@ -93,29 +88,12 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
       });
 
       // Initialize and start the call
-      // ignore: avoid_print
-      print('[VoiceCallPage] About to initialize service');
       await _service!.initialize();
-      // ignore: avoid_print
-      print('[VoiceCallPage] Service initialized, reading activeConversation');
       final activeConversation = ref.read(activeConversationProvider);
-      // ignore: avoid_print
-      print('[VoiceCallPage] Active conversation: ${activeConversation?.id}');
-      // ignore: avoid_print
-      print('[VoiceCallPage] About to call startCall');
       await _service!.startCall(activeConversation?.id);
-      // ignore: avoid_print
-      print('[VoiceCallPage] startCall completed');
     } catch (e) {
       if (mounted) {
-        // Show error details in a debug-friendly way
-        final errorMessage = e.toString();
-        _showErrorDialog(errorMessage);
-        // Also print to console for debugging
-        // ignore: avoid_print
-        print('[VoiceCallPage] ERROR during initialization: $errorMessage');
-        // ignore: avoid_print
-        print('[VoiceCallPage] Stack trace: ${StackTrace.current}');
+        _showErrorDialog(e.toString());
       }
     }
   }
@@ -143,6 +121,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
 
   @override
   void dispose() {
+    // Cancel subscriptions (fire and forget)
     _stateSubscription?.cancel();
     _transcriptSubscription?.cancel();
     _responseSubscription?.cancel();
@@ -185,7 +164,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
                   Text(
                     selectedModel?.name ?? '',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: textColor.withOpacity(0.7),
+                      color: textColor.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 48),
@@ -291,7 +270,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: primaryColor.withOpacity(0.2),
+                color: primaryColor.withValues(alpha: 0.2),
                 border: Border.all(
                   color: primaryColor,
                   width: 3,
@@ -325,12 +304,12 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
         height: 120,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: textColor.withOpacity(0.1),
+          color: textColor.withValues(alpha: 0.1),
         ),
         child: Icon(
           CupertinoIcons.mic_fill,
           size: 48,
-          color: textColor.withOpacity(0.5),
+          color: textColor.withValues(alpha: 0.5),
         ),
       );
     }
@@ -359,7 +338,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,
-            color: textColor.withOpacity(0.8),
+            color: textColor.withValues(alpha: 0.8),
             height: 1.5,
           ),
         ),

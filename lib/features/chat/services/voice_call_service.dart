@@ -68,13 +68,8 @@ class VoiceCallService {
   Future<void> initialize() async {
     if (_isDisposed) return;
 
-    // ignore: avoid_print
-    print('[VoiceCall] Starting initialization...');
-
     // Initialize voice input
     final voiceInitialized = await _voiceInput.initialize();
-    // ignore: avoid_print
-    print('[VoiceCall] Voice initialized: $voiceInitialized');
     if (!voiceInitialized) {
       _updateState(VoiceCallState.error);
       throw Exception('Voice input initialization failed');
@@ -82,8 +77,6 @@ class VoiceCallService {
 
     // Check if local STT is available
     final hasLocalStt = _voiceInput.hasLocalStt;
-    // ignore: avoid_print
-    print('[VoiceCall] Has local STT: $hasLocalStt');
     if (!hasLocalStt) {
       _updateState(VoiceCallState.error);
       throw Exception('Speech recognition not available on this device');
@@ -91,8 +84,6 @@ class VoiceCallService {
 
     // Check microphone permissions
     final hasMicPermission = await _voiceInput.checkPermissions();
-    // ignore: avoid_print
-    print('[VoiceCall] Has mic permission: $hasMicPermission');
     if (!hasMicPermission) {
       _updateState(VoiceCallState.error);
       throw Exception('Microphone permission not granted');
@@ -100,40 +91,23 @@ class VoiceCallService {
 
     // Initialize TTS
     await _tts.initialize();
-    // ignore: avoid_print
-    print('[VoiceCall] TTS initialized');
   }
 
   Future<void> startCall(String? conversationId) async {
-    // ignore: avoid_print
-    print('[VoiceCall] startCall() entered. _isDisposed=$_isDisposed');
-
-    if (_isDisposed) {
-      // ignore: avoid_print
-      print('[VoiceCall] EARLY RETURN: Service is disposed');
-      return;
-    }
+    if (_isDisposed) return;
 
     try {
-      // ignore: avoid_print
-      print('[VoiceCall] Starting call for conversation: $conversationId');
       _updateState(VoiceCallState.connecting);
 
       // Ensure socket connection
-      // ignore: avoid_print
-      print('[VoiceCall] Ensuring socket connection...');
       await _socketService.ensureConnected();
       _sessionId = _socketService.sessionId;
-      // ignore: avoid_print
-      print('[VoiceCall] Session ID: $_sessionId');
 
       if (_sessionId == null) {
         throw Exception('Failed to establish socket connection');
       }
 
       // Set up socket event listener for assistant responses
-      // ignore: avoid_print
-      print('[VoiceCall] Setting up socket event handler...');
       _socketSubscription = _socketService.addChatEventHandler(
         conversationId: conversationId,
         sessionId: _sessionId,
@@ -142,14 +116,8 @@ class VoiceCallService {
       );
 
       // Start listening for user voice input
-      // ignore: avoid_print
-      print('[VoiceCall] Starting to listen...');
       await _startListening();
-      // ignore: avoid_print
-      print('[VoiceCall] Listen started successfully');
     } catch (e) {
-      // ignore: avoid_print
-      print('[VoiceCall] Error in startCall: $e');
       _updateState(VoiceCallState.error);
       rethrow;
     }
@@ -161,44 +129,27 @@ class VoiceCallService {
     try {
       _accumulatedTranscript = '';
 
-      // ignore: avoid_print
-      print('[VoiceCall] _startListening called');
-
       // Check if voice input is available
       if (!_voiceInput.hasLocalStt) {
-        // ignore: avoid_print
-        print('[VoiceCall] ERROR: No local STT available');
         _updateState(VoiceCallState.error);
         throw Exception('Voice input not available on this device');
       }
 
-      // ignore: avoid_print
-      print('[VoiceCall] Setting state to listening...');
       _updateState(VoiceCallState.listening);
 
-      // ignore: avoid_print
-      print('[VoiceCall] Calling beginListening...');
       final stream = await _voiceInput.beginListening();
-      // ignore: avoid_print
-      print('[VoiceCall] Got stream from beginListening');
 
       _transcriptSubscription = stream.listen(
         (text) {
-          // ignore: avoid_print
-          print('[VoiceCall] Transcript received: $text');
           if (_isDisposed) return;
           _accumulatedTranscript = text;
           _transcriptController.add(text);
         },
         onError: (error) {
-          // ignore: avoid_print
-          print('[VoiceCall] Stream error: $error');
           if (_isDisposed) return;
           _updateState(VoiceCallState.error);
         },
         onDone: () async {
-          // ignore: avoid_print
-          print('[VoiceCall] Stream done. Transcript: $_accumulatedTranscript');
           if (_isDisposed) return;
           // User stopped speaking, send message to assistant
           if (_accumulatedTranscript.trim().isNotEmpty) {
@@ -210,8 +161,6 @@ class VoiceCallService {
         },
       );
 
-      // ignore: avoid_print
-      print('[VoiceCall] Setting up intensity stream...');
       // Forward intensity stream for waveform visualization
       _intensitySubscription = _voiceInput.intensityStream.listen(
         (intensity) {
@@ -219,11 +168,7 @@ class VoiceCallService {
           _intensityController.add(intensity);
         },
       );
-      // ignore: avoid_print
-      print('[VoiceCall] _startListening completed successfully');
     } catch (e) {
-      // ignore: avoid_print
-      print('[VoiceCall] ERROR in _startListening: $e');
       _updateState(VoiceCallState.error);
       rethrow;
     }
@@ -276,9 +221,6 @@ class VoiceCallService {
             final finishReason = firstChoice?['finish_reason'];
 
             if (finishReason == 'stop') {
-              // ignore: avoid_print
-              print('[VoiceCall] Response completed! Text: $_accumulatedResponse');
-
               if (_accumulatedResponse.isNotEmpty) {
                 _speakResponse(_accumulatedResponse);
                 _accumulatedResponse = '';
@@ -297,24 +239,15 @@ class VoiceCallService {
     if (_isDisposed) return;
 
     try {
-      // ignore: avoid_print
-      print('[VoiceCall] _speakResponse called with: $response');
-
       // Stop listening before speaking
       await _voiceInput.stopListening();
       await _transcriptSubscription?.cancel();
       await _intensitySubscription?.cancel();
 
       _updateState(VoiceCallState.speaking);
-      // ignore: avoid_print
-      print('[VoiceCall] State updated to speaking, calling TTS...');
       await _tts.speak(response);
-      // ignore: avoid_print
-      print('[VoiceCall] TTS.speak() returned');
       // After speaking completes, _handleTtsComplete will restart listening
     } catch (e) {
-      // ignore: avoid_print
-      print('[VoiceCall] Error in _speakResponse: $e');
       _updateState(VoiceCallState.error);
       // Restart listening even if TTS fails
       await _startListening();
