@@ -74,7 +74,7 @@ flutter run -d ios   # or: -d android
 Conduit supports multiple authentication flows when connecting to your Open‑WebUI:
 - **Username + Password**: Sign in directly against servers that expose a login endpoint. Credentials are stored securely using platform keychains.
 - **API Key**: Paste a server‑issued API token for stateless auth.
-- **Custom Headers**: Add headers during login (e.g., `X-API-Key`, `Authorization`, `X-Org`, or self‑hosted SSO headers) that Conduit will include on all HTTP/WebSocket requests.
+- **Custom Headers**: Add headers during login (e.g., `X-API-Key`, `Authorization`, `X-Org`, or self‑hosted SSO headers) that Conduit will include on all HTTP/WebSocket requests (see [Endpoint Allowlist](#endpoint-allowlist-custom-auth) for reverse proxy whitelisting).
 
 ## Screenshots
 
@@ -219,6 +219,19 @@ flutter pub run build_runner build --delete-conflicting-outputs
 - Credentials are stored using platform secure storage (Keychain/Keystore).
 - No analytics or telemetry are collected.
 - Network calls are only made to your configured Open‑WebUI server.
+
+### Endpoint Allowlist (Custom Auth)
+
+If you protect Open‑WebUI with SSO or a reverse proxy (Authlia, Authentik,
+etc.), whitelist these path prefixes so Conduit can complete login, sync, and
+streaming flows. Paths are relative to your server base URL; replace tokens like
+`{chatId}` with actual identifiers.
+
+- `/health`
+- `/api/*`
+
+WebSocket connections use the Socket.IO handshake on `/ws/socket.io`. Ensure the
+same headers (or allowlist rules) apply there as well.
 
 ## License
 
