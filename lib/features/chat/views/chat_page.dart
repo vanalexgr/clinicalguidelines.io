@@ -29,8 +29,6 @@ import 'package:path/path.dart' as path;
 import '../../../shared/services/tasks/task_queue.dart';
 import '../../tools/providers/tools_providers.dart';
 import '../../navigation/widgets/chats_drawer.dart';
-import '../../../shared/widgets/offline_indicator.dart';
-import '../../../core/services/connectivity_service.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/model.dart';
 import '../../../shared/widgets/loading_states.dart';
@@ -332,13 +330,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         return;
       }
       if (selectedModel == null) return;
-    }
-
-    final isOnline = ref.read(isOnlineProvider);
-    final isReviewerMode = ref.read(reviewerModeProvider);
-
-    if (!isOnline && !isReviewerMode) {
-      return;
     }
 
     try {
@@ -1039,8 +1030,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    // Use select to watch only connectivity status to reduce rebuilds
-    final isOnline = ref.watch(isOnlineProvider.select((status) => status));
     // Use select to watch only the selected model to reduce rebuilds
     final selectedModel = ref.watch(
       selectedModelProvider.select((model) => model),
@@ -1537,9 +1526,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     // File attachments
                     const FileAttachmentWidget(),
 
-                    // Offline indicator
-                    const ChatOfflineOverlay(),
-
                     // Modern Input (root matches input background including safe area)
                     RepaintBoundary(
                       child: MeasureSize(
@@ -1551,8 +1537,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           }
                         },
                         child: ModernChatInput(
-                          enabled:
-                              (isOnline || ref.watch(reviewerModeProvider)),
                           onSendMessage: (text) =>
                               _handleMessageSend(text, selectedModel),
                           onVoiceInput: null,

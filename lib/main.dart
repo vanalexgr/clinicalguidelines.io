@@ -13,7 +13,6 @@ import 'core/persistence/persistence_migrator.dart';
 import 'core/persistence/persistence_providers.dart';
 import 'core/services/self_signed_certificate_manager.dart';
 import 'core/router/app_router.dart';
-import 'shared/widgets/offline_indicator.dart';
 import 'features/auth/providers/unified_auth_providers.dart';
 import 'core/auth/auth_state_manager.dart';
 import 'core/utils/debug_logger.dart';
@@ -218,7 +217,7 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
                 maxScaleFactor: 3.0,
               ),
             ),
-            child: OfflineIndicator(child: child ?? const SizedBox.shrink()),
+            child: child ?? const SizedBox.shrink(),
           );
         },
       ),

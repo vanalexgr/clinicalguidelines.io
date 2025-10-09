@@ -1406,7 +1406,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                           ? CupertinoIcons.settings
                           : Icons.settings_rounded,
                       color: theme.iconSecondary,
-                      size: IconSize.small,
+                      size: IconSize.medium,
                     ),
                   ),
                 ],
