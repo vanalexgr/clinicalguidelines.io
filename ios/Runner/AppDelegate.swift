@@ -1,10 +1,55 @@
+import AVFoundation
 import Flutter
 import UIKit
+
+final class VoiceBackgroundAudioManager {
+    static let shared = VoiceBackgroundAudioManager()
+
+    private var isActive = false
+
+    private init() {}
+
+    func activate() {
+        guard !isActive else { return }
+
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(
+                .playAndRecord,
+                mode: .voiceChat,
+                options: [
+                    .allowBluetooth,
+                    .allowBluetoothA2DP,
+                    .mixWithOthers,
+                    .defaultToSpeaker,
+                ]
+            )
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            isActive = true
+        } catch {
+            print("VoiceBackgroundAudioManager: Failed to activate audio session: \(error)")
+        }
+    }
+
+    func deactivate() {
+        guard isActive else { return }
+
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("VoiceBackgroundAudioManager: Failed to deactivate audio session: \(error)")
+        }
+
+        isActive = false
+    }
+}
 
 // Background streaming handler class
 class BackgroundStreamingHandler: NSObject {
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var activeStreams: Set<String> = []
+    private var microphoneStreams: Set<String> = []
     private var channel: FlutterMethodChannel?
     
     override init() {
@@ -47,7 +92,8 @@ class BackgroundStreamingHandler: NSObject {
         case "startBackgroundExecution":
             if let args = call.arguments as? [String: Any],
                let streamIds = args["streamIds"] as? [String] {
-                startBackgroundExecution(streamIds: streamIds)
+                let requiresMic = args["requiresMicrophone"] as? Bool ?? false
+                startBackgroundExecution(streamIds: streamIds, requiresMic: requiresMic)
                 result(nil)
             } else {
                 result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
@@ -83,19 +129,28 @@ class BackgroundStreamingHandler: NSObject {
         }
     }
     
-    private func startBackgroundExecution(streamIds: [String]) {
+    private func startBackgroundExecution(streamIds: [String], requiresMic: Bool) {
         activeStreams = Set(streamIds)
-        
+        if requiresMic {
+            microphoneStreams = microphoneStreams.union(streamIds)
+            VoiceBackgroundAudioManager.shared.activate()
+        }
+
         if UIApplication.shared.applicationState == .background {
             startBackgroundTask()
         }
     }
-    
+
     private func stopBackgroundExecution(streamIds: [String]) {
         streamIds.forEach { activeStreams.remove($0) }
-        
+        streamIds.forEach { microphoneStreams.remove($0) }
+
         if activeStreams.isEmpty {
             endBackgroundTask()
+        }
+
+        if microphoneStreams.isEmpty {
+            VoiceBackgroundAudioManager.shared.deactivate()
         }
     }
     
@@ -118,6 +173,10 @@ class BackgroundStreamingHandler: NSObject {
         if backgroundTask != .invalid {
             endBackgroundTask()
             startBackgroundTask()
+        }
+
+        if !microphoneStreams.isEmpty {
+            VoiceBackgroundAudioManager.shared.activate()
         }
     }
     
@@ -147,6 +206,7 @@ class BackgroundStreamingHandler: NSObject {
     deinit {
         NotificationCenter.default.removeObserver(self)
         endBackgroundTask()
+        VoiceBackgroundAudioManager.shared.deactivate()
     }
 }
 
