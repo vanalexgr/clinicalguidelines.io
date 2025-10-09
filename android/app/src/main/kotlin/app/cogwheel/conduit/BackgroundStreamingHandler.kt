@@ -35,7 +35,7 @@ class BackgroundStreamingService : Service() {
         const val NOTIFICATION_ID = 1001
         const val ACTION_START = "START_STREAMING"
         const val ACTION_STOP = "STOP_STREAMING"
-        private const val EXTRA_REQUIRES_MICROPHONE = "requiresMicrophone"
+        const val EXTRA_REQUIRES_MICROPHONE = "requiresMicrophone"
     }
 
     override fun onCreate() {
@@ -195,8 +195,9 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
     private lateinit var channel: MethodChannel
     private lateinit var context: Context
     private lateinit var sharedPrefs: SharedPreferences
-    
+
     private val activeStreams = mutableSetOf<String>()
+    private val streamsRequiringMic = mutableSetOf<String>()
     private var backgroundJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
@@ -219,8 +220,9 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         when (call.method) {
             "startBackgroundExecution" -> {
                 val streamIds = call.argument<List<String>>("streamIds")
+                val requiresMic = call.argument<Boolean>("requiresMicrophone") ?: false
                 if (streamIds != null) {
-                    startBackgroundExecution(streamIds)
+                    startBackgroundExecution(streamIds, requiresMic)
                     result.success(null)
                 } else {
                     result.error("INVALID_ARGS", "Stream IDs required", null)
@@ -263,9 +265,12 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         }
     }
 
-    private fun startBackgroundExecution(streamIds: List<String>) {
+    private fun startBackgroundExecution(streamIds: List<String>, requiresMic: Boolean) {
         activeStreams.addAll(streamIds)
-        
+        if (requiresMic) {
+            streamsRequiringMic.addAll(streamIds)
+        }
+
         if (activeStreams.isNotEmpty()) {
             startForegroundService()
             startBackgroundMonitoring()
@@ -274,7 +279,8 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
 
     private fun stopBackgroundExecution(streamIds: List<String>) {
         activeStreams.removeAll(streamIds.toSet())
-        
+        streamsRequiringMic.removeAll(streamIds.toSet())
+
         if (activeStreams.isEmpty()) {
             stopForegroundService()
             stopBackgroundMonitoring()
@@ -285,6 +291,10 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         try {
             val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
             serviceIntent.putExtra("streamCount", activeStreams.size)
+            serviceIntent.putExtra(
+                BackgroundStreamingService.EXTRA_REQUIRES_MICROPHONE,
+                streamsRequiringMic.isNotEmpty(),
+            )
             serviceIntent.action = BackgroundStreamingService.ACTION_START
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -296,6 +306,7 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
             println("BackgroundStreamingHandler: Failed to start foreground service: ${e.message}")
             // Clear active streams as we couldn't start the service
             activeStreams.clear()
+            streamsRequiringMic.clear()
         }
     }
 
@@ -346,6 +357,10 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
         serviceIntent.action = "KEEP_ALIVE"
         serviceIntent.putExtra("streamCount", activeStreams.size)
+        serviceIntent.putExtra(
+            BackgroundStreamingService.EXTRA_REQUIRES_MICROPHONE,
+            streamsRequiringMic.isNotEmpty(),
+        )
         context.startService(serviceIntent)
     }
 

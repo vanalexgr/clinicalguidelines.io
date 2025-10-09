@@ -61,7 +61,10 @@ class BackgroundStreamingHandler {
   }
 
   /// Start background execution for given stream IDs
-  Future<void> startBackgroundExecution(List<String> streamIds) async {
+  Future<void> startBackgroundExecution(
+    List<String> streamIds, {
+    bool requiresMicrophone = false,
+  }) async {
     if (!Platform.isIOS && !Platform.isAndroid) return;
 
     _activeStreamIds.addAll(streamIds);
@@ -69,6 +72,7 @@ class BackgroundStreamingHandler {
     try {
       await _channel.invokeMethod('startBackgroundExecution', {
         'streamIds': streamIds,
+        'requiresMicrophone': requiresMicrophone,
       });
 
       DebugLogger.stream(

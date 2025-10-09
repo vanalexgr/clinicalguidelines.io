@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/providers/app_providers.dart';
+import '../../../core/services/background_streaming_handler.dart';
 import '../../../core/services/socket_service.dart';
 import '../../../core/utils/markdown_to_text.dart';
 import '../providers/chat_providers.dart';
@@ -24,6 +25,8 @@ enum VoiceCallState {
 }
 
 class VoiceCallService {
+  static const String _voiceCallStreamId = 'voice-call';
+
   final VoiceInputService _voiceInput;
   final TextToSpeechService _tts;
   final SocketService _socketService;
@@ -130,6 +133,10 @@ class VoiceCallService {
         throw Exception('Failed to establish socket connection');
       }
 
+      await BackgroundStreamingHandler.instance.startBackgroundExecution(const [
+        _voiceCallStreamId,
+      ], requiresMicrophone: true);
+
       // Set up socket event listener for assistant responses
       _socketSubscription = _socketService.addChatEventHandler(
         conversationId: conversationId,
@@ -144,6 +151,9 @@ class VoiceCallService {
       _updateState(VoiceCallState.error);
       await WakelockPlus.disable();
       await _notificationService.cancelNotification();
+      await BackgroundStreamingHandler.instance.stopBackgroundExecution(const [
+        _voiceCallStreamId,
+      ]);
       rethrow;
     }
   }
@@ -331,6 +341,10 @@ class VoiceCallService {
     await _voiceInput.stopListening();
     await _tts.stop();
 
+    await BackgroundStreamingHandler.instance.stopBackgroundExecution(const [
+      _voiceCallStreamId,
+    ]);
+
     // Cancel notification
     await _notificationService.cancelNotification();
 
@@ -434,6 +448,10 @@ class VoiceCallService {
 
     // Ensure wake lock is disabled on dispose
     await WakelockPlus.disable();
+
+    await BackgroundStreamingHandler.instance.stopBackgroundExecution(const [
+      _voiceCallStreamId,
+    ]);
 
     await _stateController.close();
     await _transcriptController.close();
