@@ -222,7 +222,9 @@ class SocketService with WidgetsBindingObserver {
     if (socket == null) return;
 
     socket
+      ..off('events', _handleChatEvent)
       ..off('chat-events', _handleChatEvent)
+      ..off('events:channel', _handleChannelEvent)
       ..off('channel-events', _handleChannelEvent)
       ..off('connect', _handleConnect)
       ..off('connect_error', _handleConnectError)
@@ -232,7 +234,9 @@ class SocketService with WidgetsBindingObserver {
       ..off('disconnect', _handleDisconnect);
 
     socket
+      ..on('events', _handleChatEvent)
       ..on('chat-events', _handleChatEvent)
+      ..on('events:channel', _handleChannelEvent)
       ..on('channel-events', _handleChannelEvent)
       ..on('connect', _handleConnect)
       ..on('connect_error', _handleConnectError)

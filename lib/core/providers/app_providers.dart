@@ -239,7 +239,10 @@ class SocketServiceManager extends _$SocketServiceManager {
       appSettingsProvider.select((settings) => settings.socketTransportMode),
     );
     final websocketOnly = transportMode == 'ws';
-    final token = ref.watch(authTokenProvider3);
+
+    // Don't watch authTokenProvider3 here to avoid rebuilding on token changes
+    // Token updates are handled via the subscription below
+    final token = ref.read(authTokenProvider3);
 
     final requiresNewService =
         _service == null ||
