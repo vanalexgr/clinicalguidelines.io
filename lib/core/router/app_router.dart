@@ -85,6 +85,7 @@ class RouterNotifier extends ChangeNotifier {
     }
 
     final authState = ref.read(authNavigationStateProvider);
+    final connectivityService = ref.read(connectivityServiceProvider);
 
     if (location == Routes.serverConnection) {
       return authState == AuthNavigationState.authenticated
@@ -102,7 +103,9 @@ class RouterNotifier extends ChangeNotifier {
     final shouldShowConnectionIssue =
         !reviewerMode &&
         connectivity == ConnectivityStatus.offline &&
-        authState == AuthNavigationState.authenticated;
+        authState == AuthNavigationState.authenticated &&
+        connectivityService.isAppForeground &&
+        !connectivityService.isOfflineSuppressed;
 
     if (shouldShowConnectionIssue) {
       return location == Routes.connectionIssue ? null : Routes.connectionIssue;

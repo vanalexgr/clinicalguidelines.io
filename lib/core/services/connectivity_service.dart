@@ -5,6 +5,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -24,7 +25,7 @@ enum ConnectivityStatus { online, offline }
 /// - Assumes online by default (optimistic)
 /// - Only shows offline when explicitly confirmed
 /// - Minimal state changes during startup
-class ConnectivityService {
+class ConnectivityService with WidgetsBindingObserver {
   ConnectivityService(this._dio, this._ref, [Connectivity? connectivity])
     : _connectivity = connectivity ?? Connectivity() {
     _initialize();
@@ -38,6 +39,8 @@ class ConnectivityService {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   Timer? _pollTimer;
   Timer? _noNetworkGraceTimer;
+  DateTime? _offlineSuppressedUntil;
+  bool _isAppForeground = true;
 
   // Start optimistically as online to prevent flash
   ConnectivityStatus _currentStatus = ConnectivityStatus.online;
@@ -51,6 +54,8 @@ class ConnectivityService {
   ConnectivityStatus get currentStatus => _currentStatus;
   int get lastLatencyMs => _lastLatencyMs;
   bool get isOnline => _currentStatus == ConnectivityStatus.online;
+  bool get isAppForeground => _isAppForeground;
+  bool get isOfflineSuppressed => _isOfflineSuppressed;
 
   void _initialize() {
     // Listen to network interface changes
@@ -64,6 +69,9 @@ class ConnectivityService {
 
     // Start periodic health checks
     _scheduleNextCheck();
+
+    WidgetsBinding.instance.addObserver(this);
+    _extendOfflineSuppression(const Duration(seconds: 3));
   }
 
   void _handleNetworkChange(List<ConnectivityResult> results) {
@@ -104,6 +112,10 @@ class ConnectivityService {
 
   void _scheduleNextCheck({Duration? delay}) {
     _stopPolling();
+
+    if (!_isAppForeground) {
+      return;
+    }
 
     // Adaptive polling based on failure count
     final interval =
@@ -222,12 +234,39 @@ class ConnectivityService {
     if (_currentStatus != newStatus && !_statusController.isClosed) {
       _currentStatus = newStatus;
       _statusController.add(newStatus);
+    } else {
+      _currentStatus = newStatus;
+    }
+
+    if (newStatus == ConnectivityStatus.online) {
+      _offlineSuppressedUntil = null;
     }
   }
 
   void _cancelNoNetworkGrace() {
     _noNetworkGraceTimer?.cancel();
     _noNetworkGraceTimer = null;
+  }
+
+  bool get _isOfflineSuppressed {
+    final until = _offlineSuppressedUntil;
+    if (until == null) {
+      return false;
+    }
+    if (DateTime.now().isBefore(until)) {
+      return true;
+    }
+    _offlineSuppressedUntil = null;
+    return false;
+  }
+
+  void _extendOfflineSuppression(Duration duration) {
+    final base = DateTime.now();
+    final proposed = base.add(duration);
+    if (_offlineSuppressedUntil == null ||
+        proposed.isAfter(_offlineSuppressedUntil!)) {
+      _offlineSuppressedUntil = proposed;
+    }
   }
 
   /// Manually trigger a connectivity check.
@@ -241,6 +280,7 @@ class ConnectivityService {
     _connectivitySubscription?.cancel();
     _connectivitySubscription = null;
     _cancelNoNetworkGrace();
+    WidgetsBinding.instance.removeObserver(this);
 
     if (!_statusController.isClosed) {
       _statusController.close();
@@ -286,6 +326,29 @@ class ConnectivityService {
     }
 
     return parsed;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _isAppForeground = true;
+        _extendOfflineSuppression(const Duration(seconds: 4));
+        // Give networking stack a short window to settle
+        _scheduleNextCheck(delay: const Duration(milliseconds: 500));
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        _isAppForeground = false;
+        _extendOfflineSuppression(const Duration(seconds: 6));
+        _stopPolling();
+        break;
+      case AppLifecycleState.detached:
+        _isAppForeground = false;
+        _stopPolling();
+        break;
+    }
   }
 }
 

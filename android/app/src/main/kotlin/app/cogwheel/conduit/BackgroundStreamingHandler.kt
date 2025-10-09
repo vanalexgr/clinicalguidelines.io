@@ -1,14 +1,20 @@
 package app.cogwheel.conduit
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -21,22 +27,41 @@ import org.json.JSONObject
 class BackgroundStreamingService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private val activeStreams = mutableSetOf<String>()
+    private var isForeground = false
+    private var currentForegroundType: Int = 0
 
     companion object {
         const val CHANNEL_ID = "conduit_streaming_channel"
         const val NOTIFICATION_ID = 1001
         const val ACTION_START = "START_STREAMING"
         const val ACTION_STOP = "STOP_STREAMING"
+        private const val EXTRA_REQUIRES_MICROPHONE = "requiresMicrophone"
     }
 
     override fun onCreate() {
         super.onCreate()
-        // Start foreground with minimal notification (required for foreground service)
-        startForeground(NOTIFICATION_ID, createMinimalNotification())
         println("BackgroundStreamingService: Service created")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val notification = createMinimalNotification()
+        val desiredType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            resolveForegroundServiceType(intent)
+        } else {
+            0
+        }
+
+        if (!isForeground) {
+            if (!startForegroundInternal(notification, desiredType)) {
+                stopSelf()
+                return START_NOT_STICKY
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            currentForegroundType != desiredType
+        ) {
+            updateForegroundType(notification, desiredType)
+        }
+
         when (intent?.action) {
             ACTION_START -> {
                 acquireWakeLock()
@@ -51,6 +76,55 @@ class BackgroundStreamingService : Service() {
         }
 
         return START_STICKY // Restart if killed by system
+    }
+
+    private fun startForegroundInternal(notification: Notification, type: Int): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, type)
+                currentForegroundType = type
+            } else {
+                @Suppress("DEPRECATION")
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            isForeground = true
+            true
+        } catch (e: SecurityException) {
+            println("BackgroundStreamingService: Failed to enter foreground: ${e.message}")
+            false
+        }
+    }
+
+    private fun updateForegroundType(notification: Notification, type: Int) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        try {
+            startForeground(NOTIFICATION_ID, notification, type)
+            currentForegroundType = type
+        } catch (e: SecurityException) {
+            println("BackgroundStreamingService: Unable to update foreground type: ${e.message}")
+        }
+    }
+
+    private fun resolveForegroundServiceType(intent: Intent?): Int {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return 0
+
+        val requiresMicrophone = intent?.getBooleanExtra(EXTRA_REQUIRES_MICROPHONE, false) ?: false
+        if (requiresMicrophone) {
+            if (hasRecordAudioPermission()) {
+                return ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            }
+            println("BackgroundStreamingService: Microphone permission missing; falling back to data sync type")
+        }
+
+        return ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+    }
+
+    private fun hasRecordAudioPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            android.Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun createMinimalNotification(): Notification {
@@ -103,15 +177,17 @@ class BackgroundStreamingService : Service() {
         releaseWakeLock()
         stopForeground(true)
         stopSelf()
+        isForeground = false
         println("BackgroundStreamingService: Service stopped")
     }
-    
+
     override fun onDestroy() {
         releaseWakeLock()
+        isForeground = false
         super.onDestroy()
         println("BackgroundStreamingService: Service destroyed")
     }
-    
+
     override fun onBind(intent: Intent?): IBinder? = null
 }
 

@@ -58,13 +58,18 @@ void _scheduleConversationWarmup(Ref ref, {bool force = false}) {
     return;
   }
 
+  final connectivity = ref.read(connectivityServiceProvider);
+  if (!connectivity.isAppForeground) {
+    return;
+  }
+
   final isOnline = ref.read(isOnlineProvider);
   if (!isOnline) {
     return;
   }
 
   // If network latency is high, delay warmup further to reduce contention
-  final latency = ref.read(connectivityServiceProvider).lastLatencyMs;
+  final latency = connectivity.lastLatencyMs;
   final extraDelay = latency > 800
       ? 400
       : latency > 400
@@ -99,6 +104,11 @@ void _scheduleConversationWarmup(Ref ref, {bool force = false}) {
       await Future.delayed(Duration(milliseconds: extraDelay));
     }
     try {
+      if (!ref.read(connectivityServiceProvider).isAppForeground) {
+        statusController.set(_ConversationWarmupStatus.idle);
+        return;
+      }
+
       final existing = ref.read(conversationsProvider);
       if (existing.hasValue) {
         statusController.set(_ConversationWarmupStatus.complete);
