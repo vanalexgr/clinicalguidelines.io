@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -9,329 +12,284 @@ import '../providers/app_providers.dart';
 
 part 'connectivity_service.g.dart';
 
-enum ConnectivityStatus { online, offline, checking }
+/// Connectivity status for the app.
+/// - [online]: Server is reachable
+/// - [offline]: No network or server unreachable
+enum ConnectivityStatus { online, offline }
 
+/// Simplified connectivity service that monitors network and server health.
+///
+/// Key improvements:
+/// - No "checking" state to prevent UI flashing
+/// - Assumes online by default (optimistic)
+/// - Only shows offline when explicitly confirmed
+/// - Minimal state changes during startup
 class ConnectivityService {
   ConnectivityService(this._dio, this._ref, [Connectivity? connectivity])
     : _connectivity = connectivity ?? Connectivity() {
-    _startConnectivityMonitoring();
+    _initialize();
   }
 
   final Dio _dio;
   final Ref _ref;
   final Connectivity _connectivity;
 
-  final _connectivityController =
-      StreamController<ConnectivityStatus>.broadcast();
-
-  Timer? _initialCheckTimer;
-  Timer? _pollTimer;
+  final _statusController = StreamController<ConnectivityStatus>.broadcast();
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
-  Completer<void>? _activeCheck;
-  List<ConnectivityResult>? _lastConnectivityResults;
+  Timer? _pollTimer;
+  Timer? _noNetworkGraceTimer;
 
-  ConnectivityStatus _lastStatus = ConnectivityStatus.checking;
-  Duration _interval = const Duration(seconds: 10);
-  int _recentFailures = 0;
+  // Start optimistically as online to prevent flash
+  ConnectivityStatus _currentStatus = ConnectivityStatus.online;
+  bool _hasNetworkInterface = false;
+  bool _hasConfirmedNetwork = false;
+  bool _hasSuccessfulProbe = false;
+  int _consecutiveFailures = 0;
   int _lastLatencyMs = -1;
-  bool _hasNetwork = true;
-  bool _queuedImmediateCheck = false;
 
-  Stream<ConnectivityStatus> get connectivityStream =>
-      _connectivityController.stream;
-  ConnectivityStatus get currentStatus => _lastStatus;
+  Stream<ConnectivityStatus> get statusStream => _statusController.stream;
+  ConnectivityStatus get currentStatus => _currentStatus;
   int get lastLatencyMs => _lastLatencyMs;
+  bool get isOnline => _currentStatus == ConnectivityStatus.online;
 
-  Stream<bool> get isConnected =>
-      connectivityStream.map((status) => status == ConnectivityStatus.online);
-
-  bool get isCurrentlyConnected => _lastStatus == ConnectivityStatus.online;
-
-  void _startConnectivityMonitoring() {
-    _initialCheckTimer = Timer(const Duration(milliseconds: 800), () {
-      unawaited(_runConnectivityCheck(force: true));
-    });
-
-    _connectivitySubscription = _connectivity.onConnectivityChanged.listen((
-      results,
-    ) {
-      unawaited(_handleConnectivityChange(results));
-    });
-
-    unawaited(
-      _connectivity.checkConnectivity().then(
-        (results) => _handleConnectivityChange(results),
-      ),
+  void _initialize() {
+    // Listen to network interface changes
+    _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
+      _handleNetworkChange,
+      onError: (_) {}, // Ignore connectivity errors
     );
+
+    // Check initial network state immediately
+    _connectivity.checkConnectivity().then(_handleNetworkChange);
+
+    // Start periodic health checks
+    _scheduleNextCheck();
   }
 
-  Future<void> _runConnectivityCheck({bool force = false}) async {
-    if (_connectivityController.isClosed) return;
+  void _handleNetworkChange(List<ConnectivityResult> results) {
+    final hadNetwork = _hasNetworkInterface;
+    final hasNetwork = results.any((r) => r != ConnectivityResult.none);
+    _hasNetworkInterface = hasNetwork;
 
-    if (!_hasNetwork) {
-      _lastLatencyMs = -1;
-      _updateStatus(ConnectivityStatus.offline);
-      return;
-    }
-
-    _initialCheckTimer?.cancel();
-    _initialCheckTimer = null;
-    _cancelScheduledPoll();
-
-    final existingCheck = _activeCheck;
-    if (existingCheck != null) {
-      if (force) {
-        _queuedImmediateCheck = true;
-      }
-      await existingCheck.future;
-      if (force && _queuedImmediateCheck) {
-        _queuedImmediateCheck = false;
-        await _runConnectivityCheck(force: false);
+    if (!hasNetwork) {
+      if (hadNetwork || _hasConfirmedNetwork) {
+        // Lost network after previously confirming it
+        _cancelNoNetworkGrace();
+        _updateStatus(ConnectivityStatus.offline);
+        _stopPolling();
+      } else {
+        // During startup we often get a transient "none" result.
+        // Defer emitting offline until it persists beyond the grace window.
+        _noNetworkGraceTimer ??= Timer(const Duration(seconds: 2), () {
+          if (!_hasNetworkInterface) {
+            _updateStatus(ConnectivityStatus.offline);
+            _stopPolling();
+          }
+        });
       }
       return;
     }
 
-    final completer = Completer<void>();
-    _activeCheck = completer;
-
-    if (_lastStatus != ConnectivityStatus.checking) {
-      _updateStatus(ConnectivityStatus.checking);
+    // Network available
+    _cancelNoNetworkGrace();
+    if (!_hasConfirmedNetwork) {
+      _hasConfirmedNetwork = true;
     }
 
-    try {
-      await _checkConnectivity();
-    } finally {
-      completer.complete();
-      _activeCheck = null;
+    if (!hadNetwork) {
+      // Network just came back, check server immediately
+      _checkServerHealth();
     }
-
-    if (_queuedImmediateCheck) {
-      _queuedImmediateCheck = false;
-      await _runConnectivityCheck(force: false);
-      return;
-    }
-
-    _scheduleNextPoll();
   }
 
-  void _scheduleNextPoll() {
-    if (_connectivityController.isClosed || !_hasNetwork) {
-      return;
-    }
+  void _scheduleNextCheck({Duration? delay}) {
+    _stopPolling();
 
-    _pollTimer = Timer(_interval, () {
-      _pollTimer = null;
-      unawaited(_runConnectivityCheck());
+    // Adaptive polling based on failure count
+    final interval =
+        delay ??
+        (_consecutiveFailures >= 3
+            ? const Duration(seconds: 30)
+            : _consecutiveFailures >= 1
+            ? const Duration(seconds: 20)
+            : const Duration(seconds: 15));
+
+    _pollTimer = Timer(interval, () {
+      if (_hasNetworkInterface) {
+        _checkServerHealth();
+      }
     });
   }
 
-  void _cancelScheduledPoll() {
+  void _stopPolling() {
     _pollTimer?.cancel();
     _pollTimer = null;
   }
 
-  bool _haveSameConnectivity(
-    List<ConnectivityResult> previous,
-    List<ConnectivityResult> current,
-  ) {
-    if (identical(previous, current)) return true;
-    if (previous.length != current.length) return false;
-    final previousSet = previous.toSet();
-    final currentSet = current.toSet();
-    if (previousSet.length != currentSet.length) return false;
-    for (final value in previousSet) {
-      if (!currentSet.contains(value)) return false;
-    }
-    return true;
-  }
-
-  Future<void> _handleConnectivityChange(
-    List<ConnectivityResult> results,
-  ) async {
-    if (_connectivityController.isClosed) return;
-
-    final previousResults = _lastConnectivityResults;
-    _lastConnectivityResults = results;
-    final hadNetwork = _hasNetwork;
-    _hasNetwork = results.any((result) => result != ConnectivityResult.none);
-
-    if (!_hasNetwork) {
-      _lastLatencyMs = -1;
-      _queuedImmediateCheck = false;
-      _cancelScheduledPoll();
-      _initialCheckTimer?.cancel();
-      _initialCheckTimer = null;
-      _updateStatus(ConnectivityStatus.offline);
+  Future<void> _checkServerHealth() async {
+    if (_statusController.isClosed || !_hasNetworkInterface) {
       return;
     }
 
-    final networkTypeChanged = previousResults == null
-        ? true
-        : !_haveSameConnectivity(previousResults, results);
+    final isReachable = await _probeServer();
 
-    if (!hadNetwork ||
-        _lastStatus == ConnectivityStatus.offline ||
-        networkTypeChanged) {
-      unawaited(_runConnectivityCheck(force: true));
-    }
-  }
+    Duration? overrideDelay;
 
-  Future<void> _checkConnectivity() async {
-    if (_connectivityController.isClosed) return;
-
-    final serverReachability = await _probeActiveServer();
-    if (serverReachability != null) {
-      if (serverReachability) {
-        _updateStatus(ConnectivityStatus.online);
-      } else {
-        _lastLatencyMs = -1;
+    if (isReachable) {
+      _consecutiveFailures = 0;
+      _hasSuccessfulProbe = true;
+      _updateStatus(ConnectivityStatus.online);
+    } else {
+      _consecutiveFailures++;
+      // Only surface offline after we've confirmed the server once or we have
+      // multiple consecutive failures. This avoids startup flicker where
+      // authorization or DNS is still settling.
+      if (_hasSuccessfulProbe || _consecutiveFailures >= 2) {
         _updateStatus(ConnectivityStatus.offline);
-      }
-      return;
-    }
-
-    final fallbackReachability = await _probeAnyKnownServer();
-    if (fallbackReachability != null) {
-      if (fallbackReachability) {
-        _updateStatus(ConnectivityStatus.online);
       } else {
-        _lastLatencyMs = -1;
-        _updateStatus(ConnectivityStatus.offline);
-      }
-      return;
-    }
-
-    _lastLatencyMs = -1;
-    _updateStatus(ConnectivityStatus.online);
-  }
-
-  void _updateStatus(ConnectivityStatus status) {
-    if (_lastStatus != status) {
-      _lastStatus = status;
-      if (!_connectivityController.isClosed) {
-        _connectivityController.add(status);
+        overrideDelay = const Duration(seconds: 3);
       }
     }
 
-    if (status == ConnectivityStatus.offline) {
-      _recentFailures = (_recentFailures + 1).clamp(0, 10);
-    } else if (status == ConnectivityStatus.online) {
-      _recentFailures = 0;
+    _scheduleNextCheck(delay: overrideDelay);
+  }
+
+  Future<bool> _probeServer() async {
+    final baseUri = _getServerUri();
+    if (baseUri == null) {
+      // No server configured yet, assume online
+      return true;
     }
 
-    final newInterval = _recentFailures >= 3
-        ? const Duration(seconds: 20)
-        : _recentFailures == 2
-        ? const Duration(seconds: 15)
-        : const Duration(seconds: 10);
-
-    if (newInterval != _interval) {
-      _interval = newInterval;
-      _cancelScheduledPoll();
-      if (_lastStatus != ConnectivityStatus.offline && _hasNetwork) {
-        _scheduleNextPoll();
-      }
-    }
-  }
-
-  Future<bool> checkConnectivity() async {
-    await _runConnectivityCheck(force: true);
-    return _lastStatus == ConnectivityStatus.online;
-  }
-
-  void dispose() {
-    _initialCheckTimer?.cancel();
-    _initialCheckTimer = null;
-    _cancelScheduledPoll();
-    _connectivitySubscription?.cancel();
-    _connectivitySubscription = null;
-    _activeCheck = null;
-    if (!_connectivityController.isClosed) {
-      _connectivityController.close();
-    }
-  }
-
-  Future<bool?> _probeActiveServer() async {
-    final baseUri = _resolveBaseUri();
-    if (baseUri == null) return null;
-
-    return _probeBaseEndpoint(baseUri, updateLatency: true);
-  }
-
-  Future<bool?> _probeAnyKnownServer() async {
-    try {
-      final configs = await _ref.read(serverConfigsProvider.future);
-      for (final config in configs) {
-        final uri = _buildBaseUri(config.url);
-        if (uri == null) continue;
-        final result = await _probeBaseEndpoint(uri);
-        if (result != null) {
-          return result;
-        }
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  Future<bool?> _probeBaseEndpoint(
-    Uri baseUri, {
-    bool updateLatency = false,
-  }) async {
     try {
       final start = DateTime.now();
       final healthUri = baseUri.resolve('/health');
+
       final response = await _dio
           .getUri(
             healthUri,
             options: Options(
-              method: 'GET',
-              sendTimeout: const Duration(seconds: 3),
-              receiveTimeout: const Duration(seconds: 3),
+              sendTimeout: const Duration(seconds: 2),
+              receiveTimeout: const Duration(seconds: 2),
               followRedirects: false,
               validateStatus: (status) => status != null && status < 500,
             ),
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 3));
 
       final isHealthy = response.statusCode == 200;
-      if (isHealthy && updateLatency) {
+
+      if (isHealthy) {
         _lastLatencyMs = DateTime.now().difference(start).inMilliseconds;
+      } else {
+        _lastLatencyMs = -1;
       }
+
       return isHealthy;
     } catch (_) {
+      _lastLatencyMs = -1;
       return false;
     }
   }
 
-  Uri? _resolveBaseUri() {
+  Uri? _getServerUri() {
     final api = _ref.read(apiServiceProvider);
     if (api != null) {
-      return _buildBaseUri(api.baseUrl);
+      return _parseUri(api.baseUrl);
     }
 
     final activeServer = _ref.read(activeServerProvider);
     return activeServer.maybeWhen(
-      data: (server) => server != null ? _buildBaseUri(server.url) : null,
+      data: (server) => server != null ? _parseUri(server.url) : null,
       orElse: () => null,
     );
   }
 
-  Uri? _buildBaseUri(String baseUrl) {
-    if (baseUrl.isEmpty) return null;
+  Uri? _parseUri(String url) {
+    if (url.isEmpty) return null;
 
-    Uri? parsed = Uri.tryParse(baseUrl.trim());
+    Uri? parsed = Uri.tryParse(url.trim());
+    if (parsed == null) return null;
+
+    if (!parsed.hasScheme) {
+      parsed = Uri.tryParse('https://$url') ?? Uri.tryParse('http://$url');
+    }
+
+    return parsed;
+  }
+
+  void _updateStatus(ConnectivityStatus newStatus) {
+    if (_currentStatus != newStatus && !_statusController.isClosed) {
+      _currentStatus = newStatus;
+      _statusController.add(newStatus);
+    }
+  }
+
+  void _cancelNoNetworkGrace() {
+    _noNetworkGraceTimer?.cancel();
+    _noNetworkGraceTimer = null;
+  }
+
+  /// Manually trigger a connectivity check.
+  Future<bool> checkNow() async {
+    await _checkServerHealth();
+    return _currentStatus == ConnectivityStatus.online;
+  }
+
+  void dispose() {
+    _stopPolling();
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
+    _cancelNoNetworkGrace();
+
+    if (!_statusController.isClosed) {
+      _statusController.close();
+    }
+  }
+
+  /// Configures the Dio instance to accept self-signed certificates.
+  static void configureSelfSignedCerts(Dio dio, String serverUrl) {
+    if (kIsWeb) return;
+
+    final uri = _parseStaticUri(serverUrl);
+    if (uri == null) return;
+
+    final adapter = dio.httpClientAdapter;
+    if (adapter is! IOHttpClientAdapter) return;
+
+    adapter.createHttpClient = () {
+      final client = HttpClient();
+      final host = uri.host.toLowerCase();
+      final port = uri.hasPort ? uri.port : null;
+
+      client.badCertificateCallback =
+          (X509Certificate cert, String requestHost, int requestPort) {
+            if (requestHost.toLowerCase() != host) return false;
+            if (port == null) return true;
+            return requestPort == port;
+          };
+
+      return client;
+    };
+  }
+
+  static Uri? _parseStaticUri(String url) {
+    if (url.trim().isEmpty) return null;
+
+    Uri? parsed = Uri.tryParse(url.trim());
     if (parsed == null) return null;
 
     if (!parsed.hasScheme) {
       parsed =
-          Uri.tryParse('https://$baseUrl') ?? Uri.tryParse('http://$baseUrl');
+          Uri.tryParse('https://${url.trim()}') ??
+          Uri.tryParse('http://${url.trim()}');
     }
-    if (parsed == null) return null;
 
     return parsed;
   }
 }
 
+// Provider for the connectivity service
 final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
   final activeServer = ref.watch(activeServerProvider);
 
@@ -340,7 +298,7 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
       if (server == null) {
         final dio = Dio();
         final service = ConnectivityService(dio, ref);
-        ref.onDispose(() => service.dispose());
+        ref.onDispose(service.dispose);
         return service;
       }
 
@@ -358,32 +316,36 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
         ),
       );
 
+      if (server.allowSelfSignedCertificates) {
+        ConnectivityService.configureSelfSignedCerts(dio, server.url);
+      }
+
       final service = ConnectivityService(dio, ref);
-      ref.onDispose(() => service.dispose());
+      ref.onDispose(service.dispose);
       return service;
     },
     orElse: () {
       final dio = Dio();
       final service = ConnectivityService(dio, ref);
-      ref.onDispose(() => service.dispose());
+      ref.onDispose(service.dispose);
       return service;
     },
   );
 });
 
+// Riverpod notifier for connectivity status
 @Riverpod(keepAlive: true)
 class ConnectivityStatusNotifier extends _$ConnectivityStatusNotifier {
   StreamSubscription<ConnectivityStatus>? _subscription;
 
   @override
-  FutureOr<ConnectivityStatus> build() {
+  ConnectivityStatus build() {
     final service = ref.watch(connectivityServiceProvider);
 
     _subscription?.cancel();
-    _subscription = service.connectivityStream.listen(
-      (status) => state = AsyncValue.data(status),
-      onError: (error, stackTrace) =>
-          state = AsyncValue.error(error, stackTrace),
+    _subscription = service.statusStream.listen(
+      (status) => state = status,
+      onError: (_, _) {}, // Ignore errors, keep current state
     );
 
     ref.onDispose(() {
@@ -391,17 +353,16 @@ class ConnectivityStatusNotifier extends _$ConnectivityStatusNotifier {
       _subscription = null;
     });
 
+    // Return current status immediately (starts as online)
     return service.currentStatus;
   }
 }
 
+// Simple provider for checking if online
 final isOnlineProvider = Provider<bool>((ref) {
   final reviewerMode = ref.watch(reviewerModeProvider);
   if (reviewerMode) return true;
+
   final status = ref.watch(connectivityStatusProvider);
-  return status.when(
-    data: (status) => status != ConnectivityStatus.offline,
-    loading: () => true,
-    error: (error, _) => true,
-  );
+  return status == ConnectivityStatus.online;
 });

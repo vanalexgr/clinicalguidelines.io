@@ -31,6 +31,10 @@ class RouterNotifier extends ChangeNotifier {
         authNavigationStateProvider,
         _onStateChanged,
       ),
+      ref.listen<ConnectivityStatus>(
+        connectivityStatusProvider,
+        _onStateChanged,
+      ),
     ];
   }
 
@@ -87,13 +91,18 @@ class RouterNotifier extends ChangeNotifier {
           ? Routes.chat
           : Routes.authentication;
     }
-    final connectivityAsync = ref.read(connectivityStatusProvider);
-    final connectivity = connectivityAsync.asData?.value;
 
+    // Check connectivity status to determine if we should show connection issue
+    final connectivity = ref.read(connectivityStatusProvider);
+
+    // Only show connection issue page if:
+    // 1. Not in reviewer mode
+    // 2. Connectivity is explicitly offline
+    // 3. Auth is authenticated (don't interrupt auth flow)
     final shouldShowConnectionIssue =
         !reviewerMode &&
         connectivity == ConnectivityStatus.offline &&
-        authState != AuthNavigationState.needsLogin;
+        authState == AuthNavigationState.authenticated;
 
     if (shouldShowConnectionIssue) {
       return location == Routes.connectionIssue ? null : Routes.connectionIssue;

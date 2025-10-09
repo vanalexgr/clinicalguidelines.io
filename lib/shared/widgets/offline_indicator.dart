@@ -28,20 +28,16 @@ class OfflineIndicator extends ConsumerWidget {
       orElse: () => false,
     );
 
-    final overlay = connectivityStatus.when(
-      data: (status) {
-        if ((status == ConnectivityStatus.offline || socketOffline) &&
-            !wasOffline) {
-          return const SizedBox.shrink();
-        }
-        if (wasOffline) {
-          return const _BackOnlineToast();
-        }
+    final overlay = () {
+      if ((connectivityStatus == ConnectivityStatus.offline || socketOffline) &&
+          !wasOffline) {
         return const SizedBox.shrink();
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (unusedError, unusedStackTrace) => const SizedBox.shrink(),
-    );
+      }
+      if (wasOffline) {
+        return const _BackOnlineToast();
+      }
+      return const SizedBox.shrink();
+    }();
 
     return Stack(children: [child, overlay]);
   }
@@ -53,22 +49,16 @@ class _WasOffline extends _$WasOffline {
   @override
   bool build() {
     // Initialize based on current connectivity (assume online until proven otherwise)
-    ref.listen<AsyncValue<ConnectivityStatus>>(connectivityStatusProvider, (
+    ref.listen<ConnectivityStatus>(connectivityStatusProvider, (
       prev,
       next,
     ) {
-      next.when(
-        data: (status) {
-          if (status == ConnectivityStatus.offline) {
-            state = true; // mark that we have been offline
-          } else if (status == ConnectivityStatus.online && state) {
-            // After we emit the toast once, clear flag shortly after
-            Future.microtask(() => state = false);
-          }
-        },
-        loading: () {},
-        error: (error, stackTrace) {},
-      );
+      if (next == ConnectivityStatus.offline) {
+        state = true; // mark that we have been offline
+      } else if (next == ConnectivityStatus.online && state) {
+        // After we emit the toast once, clear flag shortly after
+        Future.microtask(() => state = false);
+      }
     });
     return false;
   }

@@ -74,9 +74,9 @@ class PersistentStreamingService with WidgetsBindingObserver {
 
     _connectivitySubscription?.cancel();
     _connectivityService = service;
-    _connectivitySubscription = service.isConnected.listen(
-      _handleConnectivityChange,
-    );
+    _connectivitySubscription = service.statusStream
+        .map((status) => status == ConnectivityStatus.online)
+        .listen(_handleConnectivityChange);
   }
 
   void _handleConnectivityChange(bool connected) {

@@ -30,8 +30,7 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final connectivityAsync = ref.watch(connectivityStatusProvider);
-    final connectivity = connectivityAsync.asData?.value;
+    final connectivity = ref.watch(connectivityStatusProvider);
     final activeServerAsync = ref.watch(activeServerProvider);
     final activeServer = activeServerAsync.asData?.value;
 
@@ -253,14 +252,12 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
   }
 
   String? _statusLabel(ConnectivityStatus? status, AppLocalizations l10n) {
+    if (status == null) return null;
     switch (status) {
       case ConnectivityStatus.online:
         return l10n.connectedToServer;
       case ConnectivityStatus.offline:
         return l10n.pleaseCheckConnection;
-      case ConnectivityStatus.checking:
-      case null:
-        return null;
     }
   }
 }
