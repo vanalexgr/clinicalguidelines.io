@@ -24,7 +24,6 @@ class ConnectionIssuePage extends ConsumerStatefulWidget {
 }
 
 class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
-  bool _isRetrying = false;
   bool _isLoggingOut = false;
   String? _statusMessage;
 
@@ -48,16 +47,6 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: ConduitIconButton(
-                    icon: Platform.isIOS
-                        ? CupertinoIcons.gear_alt_fill
-                        : Icons.settings_ethernet,
-                    onPressed: () => context.go(Routes.serverConnection),
-                    tooltip: l10n.backToServerSetup,
-                  ),
-                ),
                 Expanded(
                   child: Center(
                     child: ConstrainedBox(
@@ -186,8 +175,9 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
         children: [
           ConduitButton(
             text: l10n.retry,
-            onPressed: _isRetrying || _isLoggingOut ? null : () => _retry(l10n),
-            isLoading: _isRetrying,
+            onPressed: _isLoggingOut
+                ? null
+                : () => context.go(Routes.serverConnection),
             icon: Platform.isIOS
                 ? CupertinoIcons.refresh
                 : Icons.refresh_rounded,
@@ -196,9 +186,7 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
           const SizedBox(height: Spacing.sm),
           ConduitButton(
             text: l10n.signOut,
-            onPressed: _isRetrying || _isLoggingOut
-                ? null
-                : () => _logout(l10n),
+            onPressed: _isLoggingOut ? null : () => _logout(l10n),
             isLoading: _isLoggingOut,
             isSecondary: true,
             icon: Platform.isIOS
@@ -223,39 +211,6 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
         ),
       ),
     );
-  }
-
-  Future<void> _retry(AppLocalizations l10n) async {
-    setState(() {
-      _isRetrying = true;
-      _statusMessage = null;
-    });
-
-    try {
-      final service = ref.read(connectivityServiceProvider);
-      final isOnline = await service.checkConnectivity();
-
-      if (!mounted) return;
-
-      if (isOnline) {
-        await ref.read(authActionsProvider).refresh();
-      } else {
-        setState(() {
-          _statusMessage = l10n.stillOfflineMessage;
-        });
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _statusMessage = l10n.couldNotConnectGeneric;
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRetrying = false;
-        });
-      }
-    }
   }
 
   Future<void> _logout(AppLocalizations l10n) async {

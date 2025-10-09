@@ -708,11 +708,11 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
         return Material(
           color: isHover ? hoverColor : baseColor,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.zero,
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
             side: BorderSide(color: borderColor, width: BorderWidth.thin),
           ),
           child: InkWell(
-            borderRadius: BorderRadius.zero,
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
             onTap: () {
               final current = {...ref.read(_expandedFoldersProvider)};
               final next = !isExpanded;
@@ -1171,7 +1171,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
               ? theme.navigationSelectedBackground
               : theme.surfaceContainer,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.zero,
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
             side: BorderSide(
               color: show
                   ? theme.navigationSelected
@@ -1180,7 +1180,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
             ),
           ),
           child: InkWell(
-            borderRadius: BorderRadius.zero,
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
             onTap: () => ref.read(_showArchivedProvider.notifier).set(!show),
             overlayColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.pressed)) {
@@ -1452,7 +1452,7 @@ class _ConversationDragFeedback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.zero;
+    final borderRadius = BorderRadius.circular(AppBorderRadius.small);
     final borderColor = theme.surfaceContainerHighest.withValues(alpha: 0.40);
 
     return Material(
@@ -1614,7 +1614,7 @@ class _ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.conduitTheme;
-    final borderRadius = BorderRadius.zero;
+    final borderRadius = BorderRadius.circular(AppBorderRadius.small);
     final Color background = selected
         ? theme.buttonPrimary.withValues(alpha: 0.1)
         : theme.surfaceContainer;
