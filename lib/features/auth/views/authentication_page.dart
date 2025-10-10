@@ -205,7 +205,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
       children: [
         ConduitIconButton(
           icon: Platform.isIOS ? CupertinoIcons.back : Icons.arrow_back,
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.go(Routes.serverConnection),
           tooltip: AppLocalizations.of(context)!.backToServerSetup,
         ),
         const Spacer(),

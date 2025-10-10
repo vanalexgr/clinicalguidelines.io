@@ -562,6 +562,10 @@ class AuthStateManager extends _$AuthStateManager {
       await storage.clearAuthData();
       _updateApiServiceToken(null);
 
+      // Clear active server to force return to server connection page
+      await storage.setActiveServerId(null);
+      ref.invalidate(activeServerProvider);
+
       // Update state
       _update(
         (current) => current.copyWith(
@@ -577,6 +581,10 @@ class AuthStateManager extends _$AuthStateManager {
     } catch (e) {
       DebugLogger.error('logout-failed', scope: 'auth/state', error: e);
       // Even if logout fails, clear local state
+      final storage = ref.read(optimizedStorageServiceProvider);
+      await storage.setActiveServerId(null);
+      ref.invalidate(activeServerProvider);
+
       _update(
         (current) => current.copyWith(
           status: AuthStatus.unauthenticated,

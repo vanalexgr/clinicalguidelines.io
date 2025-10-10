@@ -87,10 +87,13 @@ class RouterNotifier extends ChangeNotifier {
     final authState = ref.read(authNavigationStateProvider);
     final connectivityService = ref.read(connectivityServiceProvider);
 
+    // Allow staying on server connection page
     if (location == Routes.serverConnection) {
+      // If authenticated but on server connection page, go to chat
+      // Otherwise stay on server connection page (for back navigation)
       return authState == AuthNavigationState.authenticated
           ? Routes.chat
-          : Routes.authentication;
+          : null;
     }
 
     // Check connectivity status to determine if we should show connection issue
