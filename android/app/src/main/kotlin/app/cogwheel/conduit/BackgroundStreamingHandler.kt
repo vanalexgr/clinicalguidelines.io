@@ -144,13 +144,13 @@ class BackgroundStreamingService : Service() {
     
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) return
-        
+
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
             "Conduit::StreamingWakeLock"
         ).apply {
-            acquire(15 * 60 * 1000L) // 15 minutes max
+            acquire(3 * 60 * 60 * 1000L) // 3 hours max (refreshed every 5 minutes)
         }
         println("BackgroundStreamingService: Wake lock acquired")
     }

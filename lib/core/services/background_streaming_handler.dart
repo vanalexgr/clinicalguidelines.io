@@ -169,12 +169,16 @@ class BackgroundStreamingHandler {
     return _streamStates[streamId];
   }
 
-  /// Keep alive the background task (iOS only)
+  /// Keep alive the background task
+  ///
+  /// On iOS: Refreshes background task to prevent early termination
+  /// On Android: Refreshes wake lock to keep service running
   Future<void> keepAlive() async {
-    if (!Platform.isIOS) return;
+    if (!Platform.isIOS && !Platform.isAndroid) return;
 
     try {
       await _channel.invokeMethod('keepAlive');
+      DebugLogger.stream('keepalive-success', scope: 'background');
     } catch (e) {
       DebugLogger.error('keepalive-failed', scope: 'background', error: e);
     }

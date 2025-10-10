@@ -42,6 +42,7 @@ class VoiceCallService {
   bool _isDisposed = false;
   bool _isMuted = false;
   SocketEventSubscription? _socketSubscription;
+  Timer? _keepAliveTimer;
 
   final StreamController<VoiceCallState> _stateController =
       StreamController<VoiceCallState>.broadcast();
@@ -137,6 +138,13 @@ class VoiceCallService {
         _voiceCallStreamId,
       ], requiresMicrophone: true);
 
+      // Set up periodic keep-alive to refresh wake lock (every 5 minutes)
+      _keepAliveTimer?.cancel();
+      _keepAliveTimer = Timer.periodic(
+        const Duration(minutes: 5),
+        (_) => BackgroundStreamingHandler.instance.keepAlive(),
+      );
+
       // Set up socket event listener for assistant responses
       _socketSubscription = _socketService.addChatEventHandler(
         conversationId: conversationId,
@@ -149,6 +157,8 @@ class VoiceCallService {
       await _startListening();
     } catch (e) {
       _updateState(VoiceCallState.error);
+      _keepAliveTimer?.cancel();
+      _keepAliveTimer = null;
       await WakelockPlus.disable();
       await _notificationService.cancelNotification();
       await BackgroundStreamingHandler.instance.stopBackgroundExecution(const [
@@ -334,6 +344,10 @@ class VoiceCallService {
   Future<void> stopCall() async {
     if (_isDisposed) return;
 
+    // Cancel keep-alive timer
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = null;
+
     await _transcriptSubscription?.cancel();
     await _intensitySubscription?.cancel();
     _socketSubscription?.dispose();
@@ -435,6 +449,10 @@ class VoiceCallService {
 
   Future<void> dispose() async {
     _isDisposed = true;
+
+    // Cancel keep-alive timer
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = null;
 
     await _transcriptSubscription?.cancel();
     await _intensitySubscription?.cancel();
