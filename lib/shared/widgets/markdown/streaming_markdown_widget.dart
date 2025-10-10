@@ -13,11 +13,14 @@ class StreamingMarkdownWidget extends StatelessWidget {
     required this.content,
     required this.isStreaming,
     this.onTapLink,
+    this.imageBuilderOverride,
   });
 
   final String content;
   final bool isStreaming;
   final MarkdownLinkTapCallback? onTapLink;
+  final Widget Function(Uri uri, String? title, String? alt)?
+  imageBuilderOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +37,7 @@ class StreamingMarkdownWidget extends StatelessWidget {
         data: data,
         onTapLink: onTapLink,
         selectable: false,
+        imageBuilderOverride: imageBuilderOverride,
       );
     }
 

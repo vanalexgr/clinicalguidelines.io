@@ -771,6 +771,16 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       content: processedContent,
       isStreaming: widget.isStreaming,
       onTapLink: (url, _) => _launchUri(url),
+      imageBuilderOverride: (uri, title, alt) {
+        // Route markdown images through the enhanced image widget so they
+        // get caching, auth headers, fullscreen viewer, and sharing.
+        return EnhancedImageAttachment(
+          attachmentId: uri.toString(),
+          isMarkdownFormat: true,
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 400),
+          disableAnimation: widget.isStreaming,
+        );
+      },
     );
 
     final responseBuilder = ref.watch(assistantResponseBuilderProvider);

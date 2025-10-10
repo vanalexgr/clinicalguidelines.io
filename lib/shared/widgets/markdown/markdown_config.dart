@@ -29,6 +29,7 @@ class ConduitMarkdown {
     bool selectable = true,
     bool shrinkWrap = false,
     ScrollPhysics? physics,
+    Widget Function(Uri uri, String? title, String? alt)? imageBuilderOverride,
   }) {
     return MarkdownBody(
       data: data,
@@ -36,6 +37,11 @@ class ConduitMarkdown {
       shrinkWrap: shrinkWrap,
       styleSheet: _buildStyleSheet(context),
       builders: _buildCustomBuilders(context, onTapLink),
+      // Allow callers to override how markdown images render (e.g., to use
+      // EnhancedImageAttachment in assistant views). Fallback to default.
+      imageBuilder: (uri, title, alt) => imageBuilderOverride != null
+          ? imageBuilderOverride(uri, title, alt)
+          : _ImageBuilder(context).buildFromUri(uri),
       extensionSet: md.ExtensionSet.gitHubFlavored,
       onTapLink: onTapLink != null
           ? (text, href, title) => onTapLink(href ?? '', title)
@@ -51,6 +57,7 @@ class ConduitMarkdown {
     required String data,
     MarkdownLinkTapCallback? onTapLink,
     bool selectable = true,
+    Widget Function(Uri uri, String? title, String? alt)? imageBuilderOverride,
   }) {
     return build(
       context: context,
@@ -58,6 +65,7 @@ class ConduitMarkdown {
       onTapLink: onTapLink,
       selectable: selectable,
       shrinkWrap: true,
+      imageBuilderOverride: imageBuilderOverride,
     );
   }
 
@@ -141,7 +149,6 @@ class ConduitMarkdown {
   ) {
     return {
       'code': _CodeBlockBuilder(context),
-      'img': _ImageBuilder(context),
       'mermaid': _MermaidBuilder(context),
       'latex': _LatexBuilder(context),
       'details': _DetailsBuilder(context),
@@ -345,22 +352,23 @@ class _ImageBuilder extends MarkdownElementBuilder {
 
   @override
   Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    final theme = context.conduitTheme;
     final url = element.attributes['src'] ?? '';
     final uri = Uri.tryParse(url);
-
     if (uri == null) {
-      return _buildImageError(context, theme);
+      return _buildImageError(context, context.conduitTheme);
     }
+    return buildFromUri(uri);
+  }
 
+  /// Public helper used by the Markdown `imageBuilder` callback.
+  Widget buildFromUri(Uri uri) {
+    final theme = context.conduitTheme;
     if (uri.scheme == 'data') {
       return _buildBase64Image(uri.toString(), context, theme);
     }
-
     if (uri.scheme.isEmpty || uri.scheme == 'http' || uri.scheme == 'https') {
       return _buildNetworkImage(uri.toString(), context, theme);
     }
-
     return _buildImageError(context, theme);
   }
 
