@@ -108,6 +108,8 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           key: const PageStorageKey<String>('chats_drawer_scroll'),
           controller: _listController,
           physics: const AlwaysScrollableScrollPhysics(),
+          // Precache a bit ahead for perceived smoothness when scrolling.
+          cacheExtent: 800,
           padding: padding,
           children: children,
         ),
@@ -1068,7 +1070,10 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   }
 
   Widget _buildTileFor(dynamic conv, {bool inFolder = false}) {
-    final isActive = ref.watch(activeConversationProvider)?.id == conv.id;
+    // Only rebuild this tile when its own selected state changes.
+    final isActive = ref.watch(
+      activeConversationProvider.select((c) => c?.id == conv.id),
+    );
     final title = conv.title?.isEmpty == true ? 'Chat' : (conv.title ?? 'Chat');
     final theme = context.conduitTheme;
     final bool isLoadingSelected =
@@ -1124,38 +1129,40 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       },
     );
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: Spacing.xs,
-        left: inFolder ? Spacing.md : 0,
-      ),
-      child: LongPressDraggable<_DragConversationData>(
-        data: _DragConversationData(id: conv.id, title: title),
-        dragAnchorStrategy: pointerDragAnchorStrategy,
-        feedback: _ConversationDragFeedback(
-          title: title,
-          pinned: isPinned,
-          theme: theme,
+    return RepaintBoundary(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: Spacing.xs,
+          left: inFolder ? Spacing.md : 0,
         ),
-        childWhenDragging: Opacity(
-          opacity: 0.5,
-          child: IgnorePointer(child: tile),
+        child: LongPressDraggable<_DragConversationData>(
+          data: _DragConversationData(id: conv.id, title: title),
+          dragAnchorStrategy: pointerDragAnchorStrategy,
+          feedback: _ConversationDragFeedback(
+            title: title,
+            pinned: isPinned,
+            theme: theme,
+          ),
+          childWhenDragging: Opacity(
+            opacity: 0.5,
+            child: IgnorePointer(child: tile),
+          ),
+          onDragStarted: () {
+            HapticFeedback.lightImpact();
+            final hasFolder =
+                (conv.folderId != null && (conv.folderId as String).isNotEmpty);
+            setState(() {
+              _isDragging = true;
+              _draggingHasFolder = hasFolder;
+            });
+          },
+          onDragEnd: (_) => setState(() {
+            _dragHoverFolderId = null;
+            _isDragging = false;
+            _draggingHasFolder = false;
+          }),
+          child: tile,
         ),
-        onDragStarted: () {
-          HapticFeedback.lightImpact();
-          final hasFolder =
-              (conv.folderId != null && (conv.folderId as String).isNotEmpty);
-          setState(() {
-            _isDragging = true;
-            _draggingHasFolder = hasFolder;
-          });
-        },
-        onDragEnd: (_) => setState(() {
-          _dragHoverFolderId = null;
-          _isDragging = false;
-          _draggingHasFolder = false;
-        }),
-        child: tile,
       ),
     );
   }
@@ -1375,7 +1382,9 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                         width: BorderWidth.thin,
                       ),
                     ),
-                    clipBehavior: Clip.antiAlias,
+                    // Hard-edge clipping is cheaper than anti-aliased clipping
+                    // and sufficient for avatar squares with rounded corners.
+                    clipBehavior: Clip.hardEdge,
                     child: UserAvatar(
                       size: 36,
                       imageUrl: avatarUrl,
