@@ -79,10 +79,18 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   }
 
   // Build a lazily-constructed sliver list of conversation tiles.
-  Widget _conversationsSliver(List<dynamic> items, {bool inFolder = false}) {
+  Widget _conversationsSliver(
+    List<dynamic> items, {
+    bool inFolder = false,
+    Map<String, Model> modelsById = const <String, Model>{},
+  }) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, index) => _buildTileFor(items[index], inFolder: inFolder),
+        (context, index) => _buildTileFor(
+          items[index],
+          inFolder: inFolder,
+          modelsById: modelsById,
+        ),
         childCount: items.length,
       ),
     );
@@ -239,6 +247,15 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       return conversationsAsync.when(
         data: (items) {
           final list = items;
+          // Build a models map once for this build.
+          final modelsAsync = ref.watch(modelsProvider);
+          final Map<String, Model> modelsById = modelsAsync.maybeWhen(
+            data: (models) => {
+              for (final m in models)
+                if (m.id.isNotEmpty) m.id: m,
+            },
+            orElse: () => const <String, Model>{},
+          );
 
           if (list.isEmpty) {
             return Center(
@@ -297,7 +314,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: Spacing.xs)),
-              _conversationsSliver(pinned),
+              _conversationsSliver(pinned, modelsById: modelsById),
               const SliverToBoxAdapter(child: SizedBox(height: Spacing.md)),
             ],
 
@@ -357,7 +374,13 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                             child: SizedBox(height: Spacing.xs),
                           ),
                         );
-                        out.add(_conversationsSliver(convs, inFolder: true));
+                        out.add(
+                          _conversationsSliver(
+                            convs,
+                            inFolder: true,
+                            modelsById: modelsById,
+                          ),
+                        );
                         out.add(
                           const SliverToBoxAdapter(
                             child: SizedBox(height: Spacing.xs),
@@ -396,7 +419,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: Spacing.xs)),
-              _conversationsSliver(regular),
+              _conversationsSliver(regular, modelsById: modelsById),
             ],
 
             if (archived.isNotEmpty) ...[
@@ -404,9 +427,13 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
                 sliver: SliverToBoxAdapter(
-                  child: _buildArchivedSection(archived),
+                  child: _buildArchivedHeader(archived.length),
                 ),
               ),
+              if (ref.watch(_showArchivedProvider)) ...[
+                const SliverToBoxAdapter(child: SizedBox(height: Spacing.xs)),
+                _conversationsSliver(archived, modelsById: modelsById),
+              ],
             ],
           ];
           return _buildRefreshableScrollableSlivers(slivers: slivers);
@@ -446,6 +473,15 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
         }
 
         final pinned = list.where((c) => c.pinned == true).toList();
+        // Build a models map once for search builds too.
+        final modelsAsync = ref.watch(modelsProvider);
+        final Map<String, Model> modelsById = modelsAsync.maybeWhen(
+          data: (models) => {
+            for (final m in models)
+              if (m.id.isNotEmpty) m.id: m,
+          },
+          orElse: () => const <String, Model>{},
+        );
 
         // For search results, apply the same folder safety logic
         final foldersState = ref.watch(foldersProvider);
@@ -495,7 +531,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: Spacing.xs)),
-            _conversationsSliver(pinned),
+            _conversationsSliver(pinned, modelsById: modelsById),
             const SliverToBoxAdapter(child: SizedBox(height: Spacing.md)),
           ]);
         }
@@ -559,7 +595,13 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                         child: SizedBox(height: Spacing.xs),
                       ),
                     );
-                    out.add(_conversationsSliver(convs, inFolder: true));
+                    out.add(
+                      _conversationsSliver(
+                        convs,
+                        inFolder: true,
+                        modelsById: modelsById,
+                      ),
+                    );
                     out.add(
                       const SliverToBoxAdapter(
                         child: SizedBox(height: Spacing.sm),
@@ -595,7 +637,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: Spacing.xs)),
-            _conversationsSliver(regular),
+            _conversationsSliver(regular, modelsById: modelsById),
           ]);
         }
 
@@ -605,10 +647,16 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
               sliver: SliverToBoxAdapter(
-                child: _buildArchivedSection(archived),
+                child: _buildArchivedHeader(archived.length),
               ),
             ),
           ]);
+          if (ref.watch(_showArchivedProvider)) {
+            slivers.add(
+              const SliverToBoxAdapter(child: SizedBox(height: Spacing.xs)),
+            );
+            slivers.add(_conversationsSliver(archived, modelsById: modelsById));
+          }
         }
 
         return _buildRefreshableScrollableSlivers(slivers: slivers);
@@ -1137,7 +1185,11 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     );
   }
 
-  Widget _buildTileFor(dynamic conv, {bool inFolder = false}) {
+  Widget _buildTileFor(
+    dynamic conv, {
+    bool inFolder = false,
+    Map<String, Model> modelsById = const <String, Model>{},
+  }) {
     // Only rebuild this tile when its own selected state changes.
     final isActive = ref.watch(
       activeConversationProvider.select((c) => c?.id == conv.id),
@@ -1154,16 +1206,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
         ? conv.model as String
         : null;
     if (modelId != null) {
-      final modelsAsync = ref.watch(modelsProvider);
-      model = modelsAsync.maybeWhen(
-        data: (models) {
-          for (final m in models) {
-            if (m.id == modelId) return m;
-          }
-          return null;
-        },
-        orElse: () => null,
-      );
+      model = modelsById[modelId];
     }
 
     final api = ref.watch(apiServiceProvider);
@@ -1235,113 +1278,95 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     );
   }
 
-  Widget _buildArchivedSection(List<dynamic> archived) {
+  Widget _buildArchivedHeader(int count) {
     final theme = context.conduitTheme;
     final show = ref.watch(_showArchivedProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Material(
+    return Material(
+      color: show ? theme.navigationSelectedBackground : theme.surfaceContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
+        side: BorderSide(
           color: show
-              ? theme.navigationSelectedBackground
-              : theme.surfaceContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.small),
-            side: BorderSide(
-              color: show
-                  ? theme.navigationSelected
-                  : theme.surfaceContainerHighest.withValues(alpha: 0.40),
-              width: BorderWidth.thin,
+              ? theme.navigationSelected
+              : theme.surfaceContainerHighest.withValues(alpha: 0.40),
+          width: BorderWidth.thin,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
+        onTap: () => ref.read(_showArchivedProvider.notifier).set(!show),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return theme.buttonPrimary.withValues(alpha: Alpha.buttonPressed);
+          }
+          if (states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused)) {
+            return theme.buttonPrimary.withValues(alpha: Alpha.hover);
+          }
+          return Colors.transparent;
+        }),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: TouchTarget.listItem),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.md,
+              vertical: Spacing.xs,
             ),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppBorderRadius.small),
-            onTap: () => ref.read(_showArchivedProvider.notifier).set(!show),
-            overlayColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.pressed)) {
-                return theme.buttonPrimary.withValues(
-                  alpha: Alpha.buttonPressed,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final hasFiniteWidth = constraints.maxWidth.isFinite;
+                final textFit = hasFiniteWidth ? FlexFit.tight : FlexFit.loose;
+                return Row(
+                  mainAxisSize: hasFiniteWidth
+                      ? MainAxisSize.max
+                      : MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Platform.isIOS
+                          ? CupertinoIcons.archivebox
+                          : Icons.archive_rounded,
+                      color: theme.iconPrimary,
+                      size: IconSize.listItem,
+                    ),
+                    const SizedBox(width: Spacing.sm),
+                    Flexible(
+                      fit: textFit,
+                      child: Text(
+                        AppLocalizations.of(context)!.archived,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.standard.copyWith(
+                          color: theme.textPrimary,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: Spacing.sm),
+                    Text(
+                      '$count',
+                      style: AppTypography.standard.copyWith(
+                        color: theme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: Spacing.xs),
+                    Icon(
+                      show
+                          ? (Platform.isIOS
+                                ? CupertinoIcons.chevron_up
+                                : Icons.expand_less)
+                          : (Platform.isIOS
+                                ? CupertinoIcons.chevron_down
+                                : Icons.expand_more),
+                      color: theme.iconSecondary,
+                      size: IconSize.listItem,
+                    ),
+                  ],
                 );
-              }
-              if (states.contains(WidgetState.hovered) ||
-                  states.contains(WidgetState.focused)) {
-                return theme.buttonPrimary.withValues(alpha: Alpha.hover);
-              }
-              return Colors.transparent;
-            }),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minHeight: TouchTarget.listItem,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.md,
-                  vertical: Spacing.xs,
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final hasFiniteWidth = constraints.maxWidth.isFinite;
-                    final textFit = hasFiniteWidth
-                        ? FlexFit.tight
-                        : FlexFit.loose;
-
-                    return Row(
-                      mainAxisSize: hasFiniteWidth
-                          ? MainAxisSize.max
-                          : MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Platform.isIOS
-                              ? CupertinoIcons.archivebox
-                              : Icons.archive_rounded,
-                          color: theme.iconPrimary,
-                          size: IconSize.listItem,
-                        ),
-                        const SizedBox(width: Spacing.sm),
-                        Flexible(
-                          fit: textFit,
-                          child: Text(
-                            AppLocalizations.of(context)!.archived,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.standard.copyWith(
-                              color: theme.textPrimary,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: Spacing.sm),
-                        Text(
-                          '${archived.length}',
-                          style: AppTypography.standard.copyWith(
-                            color: theme.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: Spacing.xs),
-                        Icon(
-                          show
-                              ? (Platform.isIOS
-                                    ? CupertinoIcons.chevron_up
-                                    : Icons.expand_less)
-                              : (Platform.isIOS
-                                    ? CupertinoIcons.chevron_down
-                                    : Icons.expand_more),
-                          color: theme.iconSecondary,
-                          size: IconSize.listItem,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
+              },
             ),
           ),
         ),
-        if (show) ...[
-          const SizedBox(height: Spacing.xs),
-          ...archived.map((c) => _buildTileFor(c)),
-        ],
-      ],
+      ),
     );
   }
 
