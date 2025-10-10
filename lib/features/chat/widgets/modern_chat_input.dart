@@ -158,7 +158,12 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   }
 
   void _ensureFocusedIfEnabled() {
-    if (!widget.enabled || _focusNode.hasFocus || _pendingFocus) {
+    // Respect global suppression flag to avoid re-opening keyboard
+    final autofocusEnabled = ref.read(composerAutofocusEnabledProvider);
+    if (!widget.enabled ||
+        _focusNode.hasFocus ||
+        _pendingFocus ||
+        !autofocusEnabled) {
       return;
     }
 
@@ -629,7 +634,8 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final selectedToolIds = ref.watch(selectedToolIdsProvider);
 
     final focusTick = ref.watch(inputFocusTriggerProvider);
-    if (focusTick != _lastHandledFocusTick) {
+    final autofocusEnabled = ref.watch(composerAutofocusEnabledProvider);
+    if (autofocusEnabled && focusTick != _lastHandledFocusTick) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _isDeactivated) return;
         _ensureFocusedIfEnabled();
@@ -1010,6 +1016,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       behavior: HitTestBehavior.opaque,
       onTap: () {
         if (!widget.enabled) return;
+        // Explicit user intent to focus: re-enable autofocus and focus
+        try {
+          ref.read(composerAutofocusEnabledProvider.notifier).set(true);
+        } catch (_) {}
         _ensureFocusedIfEnabled();
       },
       child: Semantics(

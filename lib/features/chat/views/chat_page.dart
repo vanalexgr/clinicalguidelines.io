@@ -67,6 +67,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _shouldAutoScrollToBottom = true;
   bool _autoScrollCallbackScheduled = false;
   bool _pendingConversationScrollReset = false;
+  bool _suppressKeepPinnedOnce = false; // skip keep-pinned bottom after reset
   String? _cachedGreetingName;
   bool _greetingReady = false;
 
@@ -780,6 +781,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         // When opening an existing conversation, start reading from the top
         _shouldAutoScrollToBottom = false;
         _resetScrollToTop();
+        _suppressKeepPinnedOnce = true;
       }
     }
 
@@ -788,6 +790,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        if (_suppressKeepPinnedOnce) {
+          // Skip the one-time keep-pinned-to-bottom adjustment right after
+          // a conversation switch so we remain at the top.
+          _suppressKeepPinnedOnce = false;
+          return;
+        }
         const double keepPinnedThreshold = 60.0;
         final distanceFromBottom = _distanceFromBottom();
         if (distanceFromBottom > 0 &&
@@ -1178,6 +1186,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               edgeFraction: edgeFraction,
               settleFraction: 0.06, // even gentler settle for instant open feel
               scrimColor: scrim,
+              onOpenStart: () {
+                // Suppress composer auto-focus once we unfocus for the drawer
+                try {
+                  ref
+                      .read(composerAutofocusEnabledProvider.notifier)
+                      .set(false);
+                } catch (_) {}
+              },
               drawer: SafeArea(
                 top: true,
                 bottom: true,
@@ -1214,7 +1230,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             ),
                             child: IconButton(
                               onPressed: () {
-                                // Open slide drawer
+                                // Suppress auto-focus and dismiss keyboard, then open drawer
+                                try {
+                                  ref
+                                      .read(
+                                        composerAutofocusEnabledProvider
+                                            .notifier,
+                                      )
+                                      .set(false);
+                                  FocusManager.instance.primaryFocus?.unfocus();
+                                  SystemChannels.textInput.invokeMethod(
+                                    'TextInput.hide',
+                                  );
+                                } catch (_) {}
                                 SlideDrawer.of(ctx)?.open();
                               },
                               icon: Icon(

@@ -75,6 +75,16 @@ class ComposerHasFocus extends _$ComposerHasFocus {
   void set(bool value) => state = value;
 }
 
+// Whether the chat composer is allowed to auto-focus.
+// When false, the composer will remain unfocused until the user taps it.
+@Riverpod(keepAlive: true)
+class ComposerAutofocusEnabled extends _$ComposerAutofocusEnabled {
+  @override
+  bool build() => true;
+
+  void set(bool value) => state = value;
+}
+
 // Chat messages notifier class
 class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
   StreamingResponseController? _messageStream;

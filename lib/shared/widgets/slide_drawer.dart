@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 import '../../shared/theme/theme_extensions.dart';
 
@@ -18,6 +19,8 @@ class SlideDrawer extends StatefulWidget {
   final double contentScaleDelta;
   // Max blur sigma applied to pushed content at full open.
   final double contentBlurSigma;
+  // Optional hook invoked right as opening begins (button or drag).
+  final VoidCallback? onOpenStart;
 
   const SlideDrawer({
     super.key,
@@ -32,6 +35,7 @@ class SlideDrawer extends StatefulWidget {
     this.pushContent = true,
     this.contentScaleDelta = 0.02,
     this.contentBlurSigma = 2.0,
+    this.onOpenStart,
   });
 
   static SlideDrawerState? of(BuildContext context) =>
@@ -60,7 +64,11 @@ class SlideDrawerState extends State<SlideDrawer>
 
   bool get isOpen => _controller.value == 1.0;
 
-  Future<void> _animateTo(double target, {double velocity = 0.0}) async {
+  Future<void> _animateTo(
+    double target, {
+    double velocity = 0.0,
+    bool? easeOut,
+  }) async {
     final current = _controller.value;
     final distance = (current - target).abs().clamp(0.0, 1.0);
     // Smooth, distance-based duration so snaps don't feel abrupt.
@@ -70,7 +78,8 @@ class SlideDrawerState extends State<SlideDrawer>
     final ms = (baseMs * distance / (1.0 + 1.5 * normSpeed))
         .clamp(90, baseMs)
         .round();
-    final curve = target > current
+    final bool useEaseOut = easeOut ?? (target > current);
+    final curve = useEaseOut
         ? (normSpeed > 0.5 ? Curves.linearToEaseOut : Curves.easeOutCubic)
         : (normSpeed > 0.5 ? Curves.easeInToLinear : Curves.easeInCubic);
     await _controller.animateTo(
@@ -80,13 +89,39 @@ class SlideDrawerState extends State<SlideDrawer>
     );
   }
 
-  void open({double velocity = 0.0}) => _animateTo(1.0, velocity: velocity);
-  void close({double velocity = 0.0}) => _animateTo(0.0, velocity: velocity);
+  void open({double velocity = 0.0}) {
+    // Notify caller and dismiss keyboard before animating open
+    try {
+      widget.onOpenStart?.call();
+    } catch (_) {}
+    _dismissKeyboard();
+    _animateTo(1.0, velocity: velocity);
+  }
+
+  void close({double velocity = 0.0}) =>
+      _animateTo(0.0, velocity: velocity, easeOut: true);
   void toggle() => isOpen ? close() : open();
+
+  void _dismissKeyboard() {
+    try {
+      FocusManager.instance.primaryFocus?.unfocus();
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    } catch (_) {
+      // Best-effort: ignore platform channel errors.
+    }
+  }
 
   double _startValue = 0.0;
 
   void _onDragStart(DragStartDetails d) {
+    // Let drags from the open state be interactive rather than snapping.
+    // If starting to open from the edge, dismiss any active keyboard
+    if (_controller.value <= 0.001) {
+      try {
+        widget.onOpenStart?.call();
+      } catch (_) {}
+      _dismissKeyboard();
+    }
     _startValue = _controller.value;
   }
 

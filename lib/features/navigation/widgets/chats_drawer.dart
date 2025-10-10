@@ -22,6 +22,7 @@ import '../../../core/utils/user_avatar_utils.dart';
 import '../../../shared/utils/conversation_context_menu.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../../shared/widgets/model_avatar.dart';
+import '../../../shared/widgets/slide_drawer.dart';
 import '../../../core/models/model.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/models/folder.dart';
@@ -1373,7 +1374,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   Future<void> _selectConversation(BuildContext context, String id) async {
     if (_isLoadingConversation) return;
     setState(() => _isLoadingConversation = true);
-    final navigator = Navigator.of(context);
+    // Keep a reference only if needed in the future; currently unused.
     // Capture a provider container detached from this widget's lifecycle so
     // we can continue to read/write providers after the drawer is closed.
     final container = ProviderScope.containerOf(context, listen: false);
@@ -1386,15 +1387,9 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       container.read(activeConversationProvider.notifier).clear();
       container.read(chat.chatMessagesProvider.notifier).clearMessages();
 
-      // Close the drawer immediately for faster perceived performance
+      // Close the slide drawer for faster perceived performance
       if (mounted) {
-        // Prefer closing the Scaffold's drawer to avoid popping other routes
-        final scaffold = Scaffold.maybeOf(context);
-        if (scaffold?.isDrawerOpen == true) {
-          scaffold!.closeDrawer();
-        } else {
-          navigator.maybePop();
-        }
+        SlideDrawer.of(context)?.close();
       }
 
       // Load the full conversation details in the background
