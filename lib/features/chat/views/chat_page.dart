@@ -687,82 +687,95 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Widget _buildLoadingMessagesList() {
-    return ListView.builder(
+    // Use slivers to align with the actual messages view.
+    // Do not attach the primary scroll controller here to avoid
+    // AnimatedSwitcher attaching the same controller twice.
+    return CustomScrollView(
       key: const ValueKey('loading_messages'),
-      // Do not reuse the primary scroll controller here to avoid
-      // attaching the same controller to multiple lists during
-      // AnimatedSwitcher transitions.
       controller: null,
-      padding: const EdgeInsets.fromLTRB(
-        Spacing.lg,
-        Spacing.md,
-        Spacing.lg,
-        Spacing.lg,
-      ),
-      physics:
-          const AlwaysScrollableScrollPhysics(), // Allow pull-to-refresh while loading
-      // Modest cache extent to avoid offscreen overwork but keep shimmer smooth
+      physics: const AlwaysScrollableScrollPhysics(),
       cacheExtent: 300,
-      itemCount: 6,
-      itemBuilder: (context, index) {
-        final isUser = index.isOdd;
-        return Align(
-          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: Spacing.md),
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.82,
-            ),
-            padding: const EdgeInsets.all(Spacing.md),
-            decoration: BoxDecoration(
-              color: isUser
-                  ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.15)
-                  : context.conduitTheme.cardBackground,
-              borderRadius: BorderRadius.circular(
-                AppBorderRadius.messageBubble,
-              ),
-              border: Border.all(
-                color: context.conduitTheme.cardBorder,
-                width: BorderWidth.regular,
-              ),
-              boxShadow: ConduitShadows.messageBubble(context),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 14,
-                  width: index % 3 == 0 ? 140 : 220,
-                  decoration: BoxDecoration(
-                    color: context.conduitTheme.shimmerBase,
-                    borderRadius: BorderRadius.circular(AppBorderRadius.xs),
-                  ),
-                ).animate().shimmer(duration: AnimationDuration.slow),
-                const SizedBox(height: Spacing.xs),
-                Container(
-                  height: 14,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: context.conduitTheme.shimmerBase,
-                    borderRadius: BorderRadius.circular(AppBorderRadius.xs),
-                  ),
-                ).animate().shimmer(duration: AnimationDuration.slow),
-                if (index % 3 != 0) ...[
-                  const SizedBox(height: Spacing.xs),
-                  Container(
-                    height: 14,
-                    width: index % 2 == 0 ? 180 : 120,
-                    decoration: BoxDecoration(
-                      color: context.conduitTheme.shimmerBase,
-                      borderRadius: BorderRadius.circular(AppBorderRadius.xs),
-                    ),
-                  ).animate().shimmer(duration: AnimationDuration.slow),
-                ],
-              ],
-            ),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            Spacing.lg,
+            Spacing.md,
+            Spacing.lg,
+            Spacing.lg,
           ),
-        );
-      },
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final isUser = index.isOdd;
+              return Align(
+                alignment: isUser
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: Spacing.md),
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.82,
+                  ),
+                  padding: const EdgeInsets.all(Spacing.md),
+                  decoration: BoxDecoration(
+                    color: isUser
+                        ? context.conduitTheme.buttonPrimary.withValues(
+                            alpha: 0.15,
+                          )
+                        : context.conduitTheme.cardBackground,
+                    borderRadius: BorderRadius.circular(
+                      AppBorderRadius.messageBubble,
+                    ),
+                    border: Border.all(
+                      color: context.conduitTheme.cardBorder,
+                      width: BorderWidth.regular,
+                    ),
+                    boxShadow: ConduitShadows.messageBubble(context),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 14,
+                        width: index % 3 == 0 ? 140 : 220,
+                        decoration: BoxDecoration(
+                          color: context.conduitTheme.shimmerBase,
+                          borderRadius: BorderRadius.circular(
+                            AppBorderRadius.xs,
+                          ),
+                        ),
+                      ).animate().shimmer(duration: AnimationDuration.slow),
+                      const SizedBox(height: Spacing.xs),
+                      Container(
+                        height: 14,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: context.conduitTheme.shimmerBase,
+                          borderRadius: BorderRadius.circular(
+                            AppBorderRadius.xs,
+                          ),
+                        ),
+                      ).animate().shimmer(duration: AnimationDuration.slow),
+                      if (index % 3 != 0) ...[
+                        const SizedBox(height: Spacing.xs),
+                        Container(
+                          height: 14,
+                          width: index % 2 == 0 ? 180 : 120,
+                          decoration: BoxDecoration(
+                            color: context.conduitTheme.shimmerBase,
+                            borderRadius: BorderRadius.circular(
+                              AppBorderRadius.xs,
+                            ),
+                          ),
+                        ).animate().shimmer(duration: AnimationDuration.slow),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }, childCount: 6),
+          ),
+        ),
+      ],
     );
   }
 
@@ -805,102 +818,109 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       });
     }
 
-    return OptimizedList<ChatMessage>(
+    return CustomScrollView(
       key: const ValueKey('actual_messages'),
-      scrollController: _scrollController,
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      items: messages,
-      padding: const EdgeInsets.fromLTRB(
-        Spacing.lg,
-        Spacing.md,
-        Spacing.lg,
-        Spacing.lg,
-      ),
-      itemBuilder: (context, message, index) {
-        final isUser = message.role == 'user';
-        final isStreaming = message.isStreaming;
+      cacheExtent: 600,
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            Spacing.lg,
+            Spacing.md,
+            Spacing.lg,
+            Spacing.lg,
+          ),
+          sliver: OptimizedSliverList<ChatMessage>(
+            items: messages,
+            itemBuilder: (context, message, index) {
+              final isUser = message.role == 'user';
+              final isStreaming = message.isStreaming;
 
-        final isSelected = _selectedMessageIds.contains(message.id);
+              final isSelected = _selectedMessageIds.contains(message.id);
 
-        // Resolve a friendly model display name for message headers
-        String? displayModelName;
-        Model? matchedModel;
-        final rawModel = message.model;
-        if (rawModel != null && rawModel.isNotEmpty) {
-          final modelsAsync = ref.watch(modelsProvider);
-          if (modelsAsync.hasValue) {
-            final models = modelsAsync.value!;
-            try {
-              // Prefer exact ID match; fall back to exact name match
-              final match = models.firstWhere(
-                (m) => m.id == rawModel || m.name == rawModel,
+              // Resolve a friendly model display name for message headers
+              String? displayModelName;
+              Model? matchedModel;
+              final rawModel = message.model;
+              if (rawModel != null && rawModel.isNotEmpty) {
+                final modelsAsync = ref.watch(modelsProvider);
+                if (modelsAsync.hasValue) {
+                  final models = modelsAsync.value!;
+                  try {
+                    // Prefer exact ID match; fall back to exact name match
+                    final match = models.firstWhere(
+                      (m) => m.id == rawModel || m.name == rawModel,
+                    );
+                    matchedModel = match;
+                    displayModelName = _formatModelDisplayName(match.name);
+                  } catch (_) {
+                    // As a fallback, format the raw value to be more readable
+                    displayModelName = _formatModelDisplayName(rawModel);
+                  }
+                } else {
+                  // Models not loaded yet; format raw value for readability
+                  displayModelName = _formatModelDisplayName(rawModel);
+                }
+              }
+
+              final modelIconUrl = resolveModelIconUrlForModel(
+                apiService,
+                matchedModel,
               );
-              matchedModel = match;
-              displayModelName = _formatModelDisplayName(match.name);
-            } catch (_) {
-              // As a fallback, format the raw value to be more readable
-              displayModelName = _formatModelDisplayName(rawModel);
-            }
-          } else {
-            // Models not loaded yet; format raw value for readability
-            displayModelName = _formatModelDisplayName(rawModel);
-          }
-        }
 
-        final modelIconUrl = resolveModelIconUrlForModel(
-          apiService,
-          matchedModel,
-        );
+              // Wrap message in selection container if in selection mode
+              Widget messageWidget;
 
-        // Wrap message in selection container if in selection mode
-        Widget messageWidget;
+              // Use documentation style for assistant messages, bubble for user messages
+              if (isUser) {
+                messageWidget = UserMessageBubble(
+                  key: ValueKey('user-${message.id}'),
+                  message: message,
+                  isUser: isUser,
+                  isStreaming: isStreaming,
+                  modelName: displayModelName,
+                  onCopy: () => _copyMessage(message.content),
+                  onRegenerate: () => _regenerateMessage(message),
+                );
+              } else {
+                messageWidget = assistant.AssistantMessageWidget(
+                  key: ValueKey('assistant-${message.id}'),
+                  message: message,
+                  isStreaming: isStreaming,
+                  modelName: displayModelName,
+                  modelIconUrl: modelIconUrl,
+                  onCopy: () => _copyMessage(message.content),
+                  onRegenerate: () => _regenerateMessage(message),
+                );
+              }
 
-        // Use documentation style for assistant messages, bubble for user messages
-        if (isUser) {
-          messageWidget = UserMessageBubble(
-            key: ValueKey('user-${message.id}'),
-            message: message,
-            isUser: isUser,
-            isStreaming: isStreaming,
-            modelName: displayModelName,
-            onCopy: () => _copyMessage(message.content),
-            onRegenerate: () => _regenerateMessage(message),
-          );
-        } else {
-          messageWidget = assistant.AssistantMessageWidget(
-            key: ValueKey('assistant-${message.id}'),
-            message: message,
-            isStreaming: isStreaming,
-            modelName: displayModelName,
-            modelIconUrl: modelIconUrl,
-            onCopy: () => _copyMessage(message.content),
-            onRegenerate: () => _regenerateMessage(message),
-          );
-        }
-
-        // Add selection functionality if in selection mode
-        if (_isSelectionMode) {
-          return _SelectableMessageWrapper(
-            isSelected: isSelected,
-            onTap: () => _toggleMessageSelection(message.id),
-            onLongPress: () {
-              if (!_isSelectionMode) {
-                _toggleSelectionMode();
-                _toggleMessageSelection(message.id);
+              // Add selection functionality if in selection mode
+              if (_isSelectionMode) {
+                return _SelectableMessageWrapper(
+                  isSelected: isSelected,
+                  onTap: () => _toggleMessageSelection(message.id),
+                  onLongPress: () {
+                    if (!_isSelectionMode) {
+                      _toggleSelectionMode();
+                      _toggleMessageSelection(message.id);
+                    }
+                  },
+                  child: messageWidget,
+                );
+              } else {
+                return GestureDetector(
+                  onLongPress: () {
+                    _toggleSelectionMode();
+                    _toggleMessageSelection(message.id);
+                  },
+                  child: messageWidget,
+                );
               }
             },
-            child: messageWidget,
-          );
-        } else {
-          return GestureDetector(
-            onLongPress: () {
-              _toggleSelectionMode();
-              _toggleMessageSelection(message.id);
-            },
-            child: messageWidget,
-          );
-        }
-      },
+          ),
+        ),
+      ],
     );
   }
 
