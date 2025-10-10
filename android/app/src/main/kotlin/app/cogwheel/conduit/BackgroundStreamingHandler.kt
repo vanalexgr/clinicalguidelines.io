@@ -266,7 +266,6 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
     }
 
     private fun startBackgroundExecution(streamIds: List<String>, requiresMic: Boolean) {
-        activeStreams.clear()
         activeStreams.addAll(streamIds)
         streamsRequiringMic.retainAll(activeStreams)
         if (requiresMic) {

@@ -130,9 +130,13 @@ class BackgroundStreamingHandler: NSObject {
     }
     
     private func startBackgroundExecution(streamIds: [String], requiresMic: Bool) {
-        activeStreams = Set(streamIds)
+        activeStreams.formUnion(streamIds)
+        microphoneStreams.formIntersection(activeStreams)
         if requiresMic {
-            microphoneStreams = microphoneStreams.union(streamIds)
+            microphoneStreams.formUnion(streamIds)
+        }
+
+        if !microphoneStreams.isEmpty {
             VoiceBackgroundAudioManager.shared.activate()
         }
 
