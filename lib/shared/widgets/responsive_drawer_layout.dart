@@ -3,26 +3,31 @@ import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 import '../../shared/theme/theme_extensions.dart';
 
-class SlideDrawer extends StatefulWidget {
+/// A responsive layout that shows a persistent drawer on tablets (side-by-side)
+/// and an overlay drawer on mobile devices.
+///
+/// On tablets (shortestSide >= 600), the drawer is always visible alongside
+/// the content. On mobile, it behaves like a standard slide drawer.
+class ResponsiveDrawerLayout extends StatefulWidget {
   final Widget child;
   final Widget drawer;
-  final double maxFraction; // 0..1 of screen width
+
+  // Mobile-specific configuration
+  final double maxFraction; // 0..1 of screen width for mobile drawer
   final double edgeFraction; // 0..1 active edge width for open gesture
   final double settleFraction; // threshold to settle open on release
   final Duration duration;
   final Curve curve;
   final Color? scrimColor;
-  // When true, opening the drawer pushes the content to the right
-  // instead of overlaying above it.
   final bool pushContent;
-  // Max scale reduction for pushed content at full open (e.g., 0.02 => 98%).
   final double contentScaleDelta;
-  // Max blur sigma applied to pushed content at full open.
   final double contentBlurSigma;
-  // Optional hook invoked right as opening begins (button or drag).
   final VoidCallback? onOpenStart;
 
-  const SlideDrawer({
+  // Tablet-specific configuration
+  final double tabletDrawerWidth; // Fixed width for tablet drawer
+
+  const ResponsiveDrawerLayout({
     super.key,
     required this.child,
     required this.drawer,
@@ -36,22 +41,28 @@ class SlideDrawer extends StatefulWidget {
     this.contentScaleDelta = 0.02,
     this.contentBlurSigma = 2.0,
     this.onOpenStart,
+    this.tabletDrawerWidth = 320.0,
   });
 
-  static SlideDrawerState? of(BuildContext context) =>
-      context.findAncestorStateOfType<SlideDrawerState>();
+  static ResponsiveDrawerLayoutState? of(BuildContext context) =>
+      context.findAncestorStateOfType<ResponsiveDrawerLayoutState>();
 
   @override
-  State<SlideDrawer> createState() => SlideDrawerState();
+  State<ResponsiveDrawerLayout> createState() => ResponsiveDrawerLayoutState();
 }
 
-class SlideDrawerState extends State<SlideDrawer>
+class ResponsiveDrawerLayoutState extends State<ResponsiveDrawerLayout>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: widget.duration,
     value: 0.0,
   );
+
+  bool _isTablet(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    return size.shortestSide >= 600;
+  }
 
   double get _panelWidth =>
       (MediaQuery.of(context).size.width * widget.maxFraction).clamp(
@@ -71,10 +82,8 @@ class SlideDrawerState extends State<SlideDrawer>
   }) async {
     final current = _controller.value;
     final distance = (current - target).abs().clamp(0.0, 1.0);
-    // Smooth, distance-based duration so snaps don't feel abrupt.
     final baseMs = widget.duration.inMilliseconds;
     final normSpeed = (velocity.abs() / (_panelWidth + 0.001)).clamp(0.0, 4.0);
-    // Higher velocity => shorter duration.
     final ms = (baseMs * distance / (1.0 + 1.5 * normSpeed))
         .clamp(90, baseMs)
         .round();
@@ -90,7 +99,9 @@ class SlideDrawerState extends State<SlideDrawer>
   }
 
   void open({double velocity = 0.0}) {
-    // Notify caller and dismiss keyboard before animating open
+    // Only animate on mobile; on tablet, drawer is always visible
+    if (_isTablet(context)) return;
+
     try {
       widget.onOpenStart?.call();
     } catch (_) {}
@@ -98,24 +109,32 @@ class SlideDrawerState extends State<SlideDrawer>
     _animateTo(1.0, velocity: velocity);
   }
 
-  void close({double velocity = 0.0}) =>
-      _animateTo(0.0, velocity: velocity, easeOut: true);
-  void toggle() => isOpen ? close() : open();
+  void close({double velocity = 0.0}) {
+    // Only animate on mobile; on tablet, drawer is always visible
+    if (_isTablet(context)) return;
+
+    _animateTo(0.0, velocity: velocity, easeOut: true);
+  }
+
+  void toggle() {
+    // Only toggle on mobile; on tablet, drawer is always visible
+    if (_isTablet(context)) return;
+
+    isOpen ? close() : open();
+  }
 
   void _dismissKeyboard() {
     try {
       FocusManager.instance.primaryFocus?.unfocus();
       SystemChannels.textInput.invokeMethod('TextInput.hide');
-    } catch (_) {
-      // Best-effort: ignore platform channel errors.
-    }
+    } catch (_) {}
   }
 
   double _startValue = 0.0;
 
   void _onDragStart(DragStartDetails d) {
-    // Let drags from the open state be interactive rather than snapping.
-    // If starting to open from the edge, dismiss any active keyboard
+    if (_isTablet(context)) return;
+
     if (_controller.value <= 0.001) {
       try {
         widget.onOpenStart?.call();
@@ -126,6 +145,8 @@ class SlideDrawerState extends State<SlideDrawer>
   }
 
   void _onDragUpdate(DragUpdateDetails d) {
+    if (_isTablet(context)) return;
+
     final delta = d.primaryDelta ?? 0.0;
     final next = (_startValue + delta / _panelWidth).clamp(0.0, 1.0);
     _controller.value = next;
@@ -133,9 +154,10 @@ class SlideDrawerState extends State<SlideDrawer>
   }
 
   void _onDragEnd(DragEndDetails d) {
+    if (_isTablet(context)) return;
+
     final vx = d.primaryVelocity ?? 0.0;
     final vMag = vx.abs();
-    // Fling assistance first.
     if (vMag > 300.0) {
       if (vx > 0) {
         open(velocity: vMag);
@@ -144,7 +166,6 @@ class SlideDrawerState extends State<SlideDrawer>
       }
       return;
     }
-    // Gentle settle threshold (less aggressive snap-back).
     if (_controller.value >= widget.settleFraction) {
       open(velocity: vMag);
     } else {
@@ -156,7 +177,38 @@ class SlideDrawerState extends State<SlideDrawer>
   Widget build(BuildContext context) {
     final theme = context.conduitTheme;
     final scrim = widget.scrimColor ?? context.colorTokens.overlayStrong;
+    final isTablet = _isTablet(context);
 
+    if (isTablet) {
+      // Tablet layout: persistent side-by-side
+      return _buildTabletLayout(theme);
+    } else {
+      // Mobile layout: overlay drawer
+      return _buildMobileLayout(theme, scrim);
+    }
+  }
+
+  Widget _buildTabletLayout(ConduitThemeExtension theme) {
+    return Row(
+      children: [
+        // Persistent drawer
+        Container(
+          width: widget.tabletDrawerWidth,
+          decoration: BoxDecoration(
+            color: theme.surfaceBackground,
+            border: Border(
+              right: BorderSide(color: theme.dividerColor, width: 1),
+            ),
+          ),
+          child: widget.drawer,
+        ),
+        // Content
+        Expanded(child: widget.child),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout(ConduitThemeExtension theme, Color scrim) {
     return Stack(
       children: [
         // Content (optionally pushed by the drawer)
@@ -166,7 +218,7 @@ class SlideDrawerState extends State<SlideDrawer>
             builder: (context, _) {
               final t = _controller.value;
               final dx = (widget.pushContent ? _panelWidth * t : 0.0)
-                  .roundToDouble(); // snap to pixel to avoid jitter
+                  .roundToDouble();
               final scale =
                   1.0 -
                   (widget.pushContent
@@ -265,5 +317,11 @@ class SlideDrawerState extends State<SlideDrawer>
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }

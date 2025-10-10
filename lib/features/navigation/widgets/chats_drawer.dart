@@ -22,7 +22,7 @@ import '../../../core/utils/user_avatar_utils.dart';
 import '../../../shared/utils/conversation_context_menu.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../../shared/widgets/model_avatar.dart';
-import '../../../shared/widgets/slide_drawer.dart';
+import '../../../shared/widgets/responsive_drawer_layout.dart';
 import '../../../core/models/model.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/models/folder.dart';
@@ -1388,8 +1388,9 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       container.read(chat.chatMessagesProvider.notifier).clearMessages();
 
       // Close the slide drawer for faster perceived performance
+      // (only on mobile; on tablet, drawer stays visible)
       if (mounted) {
-        SlideDrawer.of(context)?.close();
+        ResponsiveDrawerLayout.of(context)?.close();
       }
 
       // Load the full conversation details in the background

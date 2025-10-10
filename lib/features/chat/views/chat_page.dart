@@ -8,7 +8,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:io' show Platform;
-import '../../../shared/widgets/slide_drawer.dart';
+import '../../../shared/widgets/responsive_drawer_layout.dart';
 import '../../navigation/widgets/chats_drawer.dart';
 import 'dart:async';
 import '../../../core/providers/app_providers.dart';
@@ -1201,13 +1201,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 ? context.colorTokens.overlayMedium
                 : context.colorTokens.overlayStrong;
 
-            return SlideDrawer(
+            return ResponsiveDrawerLayout(
               maxFraction: maxFraction,
               edgeFraction: edgeFraction,
               settleFraction: 0.06, // even gentler settle for instant open feel
               scrimColor: scrim,
               contentScaleDelta: 0.0,
               contentBlurSigma: 0.0,
+              tabletDrawerWidth: 320.0,
               onOpenStart: () {
                 // Suppress composer auto-focus once we unfocus for the drawer
                 try {
@@ -1245,38 +1246,41 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           ),
                           onPressed: _clearSelection,
                         )
-                      : Builder(
-                          builder: (ctx) => Padding(
-                            padding: const EdgeInsets.only(
-                              left: Spacing.inputPadding,
-                            ),
-                            child: IconButton(
-                              onPressed: () {
-                                // Suppress auto-focus and dismiss keyboard, then open drawer
-                                try {
-                                  ref
-                                      .read(
-                                        composerAutofocusEnabledProvider
-                                            .notifier,
-                                      )
-                                      .set(false);
-                                  FocusManager.instance.primaryFocus?.unfocus();
-                                  SystemChannels.textInput.invokeMethod(
-                                    'TextInput.hide',
-                                  );
-                                } catch (_) {}
-                                SlideDrawer.of(ctx)?.open();
-                              },
-                              icon: Icon(
-                                Platform.isIOS
-                                    ? CupertinoIcons.line_horizontal_3
-                                    : Icons.menu,
-                                color: context.conduitTheme.textPrimary,
-                                size: IconSize.appBar,
-                              ),
-                            ),
-                          ),
-                        ),
+                      : (isTablet
+                            ? null // Hide menu button on tablets (drawer is always visible)
+                            : Builder(
+                                builder: (ctx) => Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: Spacing.inputPadding,
+                                  ),
+                                  child: IconButton(
+                                    onPressed: () {
+                                      // Suppress auto-focus and dismiss keyboard, then open drawer
+                                      try {
+                                        ref
+                                            .read(
+                                              composerAutofocusEnabledProvider
+                                                  .notifier,
+                                            )
+                                            .set(false);
+                                        FocusManager.instance.primaryFocus
+                                            ?.unfocus();
+                                        SystemChannels.textInput.invokeMethod(
+                                          'TextInput.hide',
+                                        );
+                                      } catch (_) {}
+                                      ResponsiveDrawerLayout.of(ctx)?.open();
+                                    },
+                                    icon: Icon(
+                                      Platform.isIOS
+                                          ? CupertinoIcons.line_horizontal_3
+                                          : Icons.menu,
+                                      color: context.conduitTheme.textPrimary,
+                                      size: IconSize.appBar,
+                                    ),
+                                  ),
+                                ),
+                              )),
                   title: _isSelectionMode
                       ? Text(
                           '${_selectedMessageIds.length} selected',
@@ -1719,7 +1723,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     ],
                   ),
                 ),
-              ), // Scaffold inside SlideDrawer
+              ), // Scaffold inside ResponsiveDrawerLayout
             );
           },
         ),
