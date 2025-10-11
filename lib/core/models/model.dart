@@ -16,6 +16,7 @@ sealed class Model with _$Model {
     Map<String, dynamic>? capabilities,
     Map<String, dynamic>? metadata,
     List<String>? supportedParameters,
+    List<String>? toolIds,
   }) = _Model;
 
   factory Model.fromJson(Map<String, dynamic> json) {
@@ -111,6 +112,18 @@ sealed class Model with _$Model {
       mergedMetadata['info'] = {...existingInfo, ...infoSection};
     }
 
+    // Extract toolIds from info.meta.toolIds (OpenWebUI format)
+    List<String>? toolIds;
+    final infoMeta = (infoSection?['meta'] as Map<String, dynamic>?) ??
+        (metaSection) ??
+        (mergedMetadata['meta'] as Map<String, dynamic>?);
+    if (infoMeta != null) {
+      final toolIdsData = infoMeta['toolIds'];
+      if (toolIdsData is List) {
+        toolIds = toolIdsData.map((e) => e.toString()).toList();
+      }
+    }
+
     return Model(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -126,6 +139,7 @@ sealed class Model with _$Model {
         'supported_parameters': supportedParamsList ?? supportedParams,
       },
       metadata: mergedMetadata,
+      toolIds: toolIds,
     );
   }
 }

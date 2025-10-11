@@ -25,6 +25,7 @@ import '../utils/debug_logger.dart';
 import '../models/socket_event.dart';
 import '../../shared/theme/color_palettes.dart';
 import '../../shared/theme/app_theme.dart';
+import '../../features/tools/providers/tools_providers.dart';
 
 part 'app_providers.g.dart';
 
@@ -645,9 +646,45 @@ final _settingsWatcherProvider = Provider<void>((ref) {
   });
 });
 
+// Auto-apply model-specific tools when model changes
+final modelToolsAutoSelectionProvider = Provider<void>((ref) {
+  ref.listen<Model?>(selectedModelProvider, (previous, next) {
+    // Only react when the model actually changes
+    if (previous?.id == next?.id) return;
+    if (next == null) return;
+
+    // Load tools configured for this model
+    final modelToolIds = next.toolIds ?? [];
+    if (modelToolIds.isNotEmpty) {
+      // Filter to only include tools that are actually available
+      final toolsAsync = ref.read(toolsListProvider);
+      toolsAsync.whenData((availableTools) {
+        final validToolIds = modelToolIds
+            .where((id) => availableTools.any((t) => t.id == id))
+            .toList();
+
+        if (validToolIds.isNotEmpty) {
+          ref.read(selectedToolIdsProvider.notifier).set(validToolIds);
+          DebugLogger.log(
+            'auto-apply-tools',
+            scope: 'models/tools',
+            data: {'modelId': next.id, 'toolCount': validToolIds.length},
+          );
+        }
+      });
+    } else {
+      // Clear tools if model has no configured tools
+      ref.read(selectedToolIdsProvider.notifier).set([]);
+    }
+  });
+});
+
 // Auto-apply default model from settings when it changes (and not manually overridden)
 // keepAlive to maintain listener throughout app lifecycle
 final defaultModelAutoSelectionProvider = Provider<void>((ref) {
+  // Initialize the model tools auto-selection
+  ref.watch(modelToolsAutoSelectionProvider);
+
   ref.listen<AppSettings>(appSettingsProvider, (previous, next) {
     // Only react when default model value changes
     if (previous?.defaultModel == next.defaultModel) return;
