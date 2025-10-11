@@ -26,7 +26,8 @@ class BackgroundStreamingHandler {
   // Callbacks for platform-specific events
   void Function(List<String> streamIds)? onStreamsSuspending;
   void Function()? onBackgroundTaskExpiring;
-  void Function(List<String> streamIds, int estimatedSeconds)? onBackgroundTaskExtended;
+  void Function(List<String> streamIds, int estimatedSeconds)?
+  onBackgroundTaskExtended;
   void Function()? onBackgroundKeepAlive;
   bool Function()? shouldContinueInBackground;
 

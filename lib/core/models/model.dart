@@ -114,7 +114,8 @@ sealed class Model with _$Model {
 
     // Extract toolIds from info.meta.toolIds (OpenWebUI format)
     List<String>? toolIds;
-    final infoMeta = (infoSection?['meta'] as Map<String, dynamic>?) ??
+    final infoMeta =
+        (infoSection?['meta'] as Map<String, dynamic>?) ??
         (metaSection) ??
         (mergedMetadata['meta'] as Map<String, dynamic>?);
     if (infoMeta != null) {

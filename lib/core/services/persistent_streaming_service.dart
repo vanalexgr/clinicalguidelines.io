@@ -62,7 +62,8 @@ class PersistentStreamingService with WidgetsBindingObserver {
       _saveStreamStatesForRecovery();
     };
 
-    _backgroundHandler.onBackgroundTaskExtended = (streamIds, estimatedSeconds) {
+    _backgroundHandler
+        .onBackgroundTaskExtended = (streamIds, estimatedSeconds) {
       DebugLogger.stream(
         'PersistentStreaming: Background task extended for $estimatedSeconds seconds',
       );

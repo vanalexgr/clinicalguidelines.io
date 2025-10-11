@@ -3,6 +3,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../models/server_config.dart';
 import '../utils/debug_logger.dart';
+import 'socket_tls_override.dart';
 
 typedef SocketChatEventHandler =
     void Function(
@@ -120,7 +121,11 @@ class SocketService with WidgetsBindingObserver {
       builder.setExtraHeaders(extraHeaders);
     }
 
-    _socket = io.io(base, builder.build());
+    _socket = createSocketWithOptionalBadCertOverride(
+      base,
+      builder,
+      serverConfig,
+    );
 
     _bindCoreSocketHandlers();
   }
