@@ -178,63 +178,66 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
 
   Widget _buildSearchField(BuildContext context) {
     final theme = context.conduitTheme;
-    return TextField(
-      controller: _searchController,
-      focusNode: _searchFocusNode,
-      onChanged: (_) => _onSearchChanged(),
-      style: AppTypography.standard.copyWith(color: theme.inputText),
-      decoration: InputDecoration(
-        isDense: true,
-        hintText: AppLocalizations.of(context)!.searchConversations,
-        hintStyle: AppTypography.standard.copyWith(
-          color: theme.inputPlaceholder,
-        ),
-        prefixIcon: Icon(
-          Platform.isIOS ? CupertinoIcons.search : Icons.search,
-          color: theme.iconSecondary,
-          size: IconSize.input,
-        ),
-        prefixIconConstraints: const BoxConstraints(
-          minWidth: TouchTarget.minimum,
-          minHeight: TouchTarget.minimum,
-        ),
-        suffixIcon: _query.isNotEmpty
-            ? IconButton(
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() => _query = '');
-                  _searchFocusNode.unfocus();
-                },
-                icon: Icon(
-                  Platform.isIOS
-                      ? CupertinoIcons.clear_circled_solid
-                      : Icons.clear,
-                  color: theme.iconSecondary,
-                  size: IconSize.input,
-                ),
-              )
-            : null,
-        suffixIconConstraints: const BoxConstraints(
-          minWidth: TouchTarget.minimum,
-          minHeight: TouchTarget.minimum,
-        ),
-        filled: true,
-        fillColor: theme.inputBackground,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide(color: theme.inputBorder, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide(color: theme.buttonPrimary, width: 1),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: Spacing.md,
-          vertical: Spacing.xs,
+    return Material(
+      color: Colors.transparent,
+      child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        onChanged: (_) => _onSearchChanged(),
+        style: AppTypography.standard.copyWith(color: theme.inputText),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: AppLocalizations.of(context)!.searchConversations,
+          hintStyle: AppTypography.standard.copyWith(
+            color: theme.inputPlaceholder,
+          ),
+          prefixIcon: Icon(
+            Platform.isIOS ? CupertinoIcons.search : Icons.search,
+            color: theme.iconSecondary,
+            size: IconSize.input,
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: TouchTarget.minimum,
+            minHeight: TouchTarget.minimum,
+          ),
+          suffixIcon: _query.isNotEmpty
+              ? IconButton(
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
+                    _searchFocusNode.unfocus();
+                  },
+                  icon: Icon(
+                    Platform.isIOS
+                        ? CupertinoIcons.clear_circled_solid
+                        : Icons.clear,
+                    color: theme.iconSecondary,
+                    size: IconSize.input,
+                  ),
+                )
+              : null,
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: TouchTarget.minimum,
+            minHeight: TouchTarget.minimum,
+          ),
+          filled: true,
+          fillColor: theme.inputBackground,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppBorderRadius.md),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppBorderRadius.md),
+            borderSide: BorderSide(color: theme.inputBorder, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppBorderRadius.md),
+            borderSide: BorderSide(color: theme.buttonPrimary, width: 1),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: Spacing.md,
+            vertical: Spacing.xs,
+          ),
         ),
       ),
     );
@@ -687,6 +690,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           style: AppTypography.labelStyle.copyWith(
             color: theme.textSecondary,
             fontWeight: FontWeight.w600,
+            decoration: TextDecoration.none,
           ),
         ),
         const SizedBox(width: Spacing.xs),
@@ -702,7 +706,10 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           ),
           child: Text(
             '$count',
-            style: AppTypography.tiny.copyWith(color: theme.textSecondary),
+            style: AppTypography.tiny.copyWith(
+              color: theme.textSecondary,
+              decoration: TextDecoration.none,
+            ),
           ),
         ),
       ],
@@ -716,7 +723,10 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       children: [
         Text(
           AppLocalizations.of(context)!.folders,
-          style: AppTypography.labelStyle.copyWith(color: theme.textSecondary),
+          style: AppTypography.labelStyle.copyWith(
+            color: theme.textSecondary,
+            decoration: TextDecoration.none,
+          ),
         ),
         const Spacer(),
         IconButton(
@@ -1489,6 +1499,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                       style: AppTypography.bodySmallStyle.copyWith(
                         color: theme.textPrimary,
                         fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                   ),
