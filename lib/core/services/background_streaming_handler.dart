@@ -5,7 +5,7 @@ import '../utils/debug_logger.dart';
 
 /// Handles background streaming continuation for iOS and Android
 ///
-/// On iOS: Uses background tasks to keep streams alive for ~30 seconds
+/// On iOS: Uses beginBackgroundTask (~30s) + BGTaskScheduler (~3+ minutes)
 /// On Android: Uses foreground service notifications
 class BackgroundStreamingHandler {
   static const MethodChannel _channel = MethodChannel(
@@ -26,6 +26,8 @@ class BackgroundStreamingHandler {
   // Callbacks for platform-specific events
   void Function(List<String> streamIds)? onStreamsSuspending;
   void Function()? onBackgroundTaskExpiring;
+  void Function(List<String> streamIds, int estimatedSeconds)? onBackgroundTaskExtended;
+  void Function()? onBackgroundKeepAlive;
   bool Function()? shouldContinueInBackground;
 
   void _setupMethodCallHandler() {
@@ -55,6 +57,26 @@ class BackgroundStreamingHandler {
         case 'backgroundTaskExpiring':
           DebugLogger.stream('task-expiring', scope: 'background');
           onBackgroundTaskExpiring?.call();
+          break;
+
+        case 'backgroundTaskExtended':
+          final Map<String, dynamic> args =
+              call.arguments as Map<String, dynamic>;
+          final List<String> streamIds = (args['streamIds'] as List)
+              .cast<String>();
+          final int estimatedTime = args['estimatedTime'] as int;
+
+          DebugLogger.stream(
+            'task-extended',
+            scope: 'background',
+            data: {'count': streamIds.length, 'time': estimatedTime},
+          );
+          onBackgroundTaskExtended?.call(streamIds, estimatedTime);
+          break;
+
+        case 'backgroundKeepAlive':
+          DebugLogger.stream('keepalive-signal', scope: 'background');
+          onBackgroundKeepAlive?.call();
           break;
       }
     });

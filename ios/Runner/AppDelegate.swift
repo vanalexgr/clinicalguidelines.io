@@ -1,4 +1,5 @@
 import AVFoundation
+import BackgroundTasks
 import Flutter
 import UIKit
 
@@ -48,10 +49,13 @@ final class VoiceBackgroundAudioManager {
 // Background streaming handler class
 class BackgroundStreamingHandler: NSObject {
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    private var bgProcessingTask: BGTask?
     private var activeStreams: Set<String> = []
     private var microphoneStreams: Set<String> = []
     private var channel: FlutterMethodChannel?
-    
+
+    static let processingTaskIdentifier = "app.cogwheel.conduit.refresh"
+
     override init() {
         super.init()
         setupNotifications()
@@ -142,6 +146,7 @@ class BackgroundStreamingHandler: NSObject {
 
         if UIApplication.shared.applicationState == .background {
             startBackgroundTask()
+            scheduleBGProcessingTask()
         }
     }
 
@@ -151,6 +156,7 @@ class BackgroundStreamingHandler: NSObject {
 
         if activeStreams.isEmpty {
             endBackgroundTask()
+            cancelBGProcessingTask()
         }
 
         if microphoneStreams.isEmpty {
@@ -206,7 +212,95 @@ class BackgroundStreamingHandler: NSObject {
         }
         return []
     }
-    
+
+    // MARK: - BGTaskScheduler Methods
+
+    func registerBackgroundTasks() {
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.processingTaskIdentifier,
+            using: nil
+        ) { [weak self] task in
+            self?.handleBGProcessingTask(task: task as! BGProcessingTask)
+        }
+    }
+
+    private func scheduleBGProcessingTask() {
+        // Cancel any existing task
+        cancelBGProcessingTask()
+
+        let request = BGProcessingTaskRequest(identifier: Self.processingTaskIdentifier)
+        request.requiresNetworkConnectivity = true
+        request.requiresExternalPower = false
+
+        // Schedule for immediate execution when app backgrounds
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 1)
+
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            print("BackgroundStreamingHandler: Scheduled BGProcessingTask")
+        } catch {
+            print("BackgroundStreamingHandler: Failed to schedule BGProcessingTask: \(error)")
+        }
+    }
+
+    private func cancelBGProcessingTask() {
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.processingTaskIdentifier)
+        print("BackgroundStreamingHandler: Cancelled BGProcessingTask")
+    }
+
+    private func handleBGProcessingTask(task: BGProcessingTask) {
+        print("BackgroundStreamingHandler: BGProcessingTask started")
+        bgProcessingTask = task
+
+        // Schedule a new task for continuation if streams are still active
+        if !activeStreams.isEmpty {
+            scheduleBGProcessingTask()
+        }
+
+        // Set expiration handler
+        task.expirationHandler = { [weak self] in
+            print("BackgroundStreamingHandler: BGProcessingTask expiring")
+            self?.notifyTaskExpiring()
+            self?.bgProcessingTask = nil
+        }
+
+        // Notify Flutter that we have extended background time
+        channel?.invokeMethod("backgroundTaskExtended", arguments: [
+            "streamIds": Array(activeStreams),
+            "estimatedTime": 180 // ~3 minutes typical for BGProcessingTask
+        ])
+
+        // Keep task alive while streams are active
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+
+            // Keep sending keepAlive signals
+            let keepAliveInterval: TimeInterval = 30
+            var elapsedTime: TimeInterval = 0
+            let maxTime: TimeInterval = 180 // 3 minutes
+
+            while !self.activeStreams.isEmpty && elapsedTime < maxTime {
+                Thread.sleep(forTimeInterval: keepAliveInterval)
+                elapsedTime += keepAliveInterval
+
+                // Notify Flutter to keep streams alive
+                DispatchQueue.main.async {
+                    self.channel?.invokeMethod("backgroundKeepAlive", arguments: nil)
+                }
+            }
+
+            // Mark task as complete
+            task.setTaskCompleted(success: true)
+            self.bgProcessingTask = nil
+        }
+
+        DispatchQueue.global(qos: .background).async(execute: workItem)
+    }
+
+    private func notifyTaskExpiring() {
+        channel?.invokeMethod("backgroundTaskExpiring", arguments: nil)
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
         endBackgroundTask()
@@ -217,13 +311,13 @@ class BackgroundStreamingHandler: NSObject {
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private var backgroundStreamingHandler: BackgroundStreamingHandler?
-  
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
-    
+
     // Setup background streaming handler using the plugin registry messenger
     if let registrar = self.registrar(forPlugin: "BackgroundStreamingHandler") {
       let channel = FlutterMethodChannel(
@@ -234,12 +328,15 @@ class BackgroundStreamingHandler: NSObject {
       backgroundStreamingHandler = BackgroundStreamingHandler()
       backgroundStreamingHandler?.setup(with: channel)
 
+      // Register BGTaskScheduler tasks
+      backgroundStreamingHandler?.registerBackgroundTasks()
+
       // Register method call handler
       channel.setMethodCallHandler { [weak self] (call, result) in
         self?.backgroundStreamingHandler?.handle(call, result: result)
       }
     }
-    
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

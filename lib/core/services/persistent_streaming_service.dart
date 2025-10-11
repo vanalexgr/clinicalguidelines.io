@@ -62,6 +62,28 @@ class PersistentStreamingService with WidgetsBindingObserver {
       _saveStreamStatesForRecovery();
     };
 
+    _backgroundHandler.onBackgroundTaskExtended = (streamIds, estimatedSeconds) {
+      DebugLogger.stream(
+        'PersistentStreaming: Background task extended for $estimatedSeconds seconds',
+      );
+      // BGTaskScheduler has given us more time - streams can continue
+      for (final streamId in streamIds) {
+        final metadata = _streamMetadata[streamId];
+        if (metadata != null) {
+          metadata['bgTaskExtended'] = true;
+          metadata['bgTaskExtendedAt'] = DateTime.now();
+          metadata['bgTaskEstimatedTime'] = estimatedSeconds;
+        }
+      }
+    };
+
+    _backgroundHandler.onBackgroundKeepAlive = () {
+      DebugLogger.stream('PersistentStreaming: Background keep-alive signal');
+      // BGTaskScheduler is keeping us alive - we can continue streaming
+      _heartbeatTimer?.cancel();
+      _startHeartbeat(); // Restart heartbeat timer
+    };
+
     _backgroundHandler.shouldContinueInBackground = () {
       return _activeStreams.isNotEmpty;
     };

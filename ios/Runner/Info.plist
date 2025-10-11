@@ -92,5 +92,10 @@
 			<string>audio</string>
 			<string>processing</string>
 		</array>
+		<!-- Background Task Identifiers -->
+		<key>BGTaskSchedulerPermittedIdentifiers</key>
+		<array>
+			<string>app.cogwheel.conduit.refresh</string>
+		</array>
 	</dict>
 </plist>
