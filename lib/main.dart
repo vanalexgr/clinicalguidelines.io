@@ -29,8 +29,6 @@ void main() {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      SelfSignedCertificateManager.instance.ensureInitialized();
-
       // Global error handlers
       FlutterError.onError = (FlutterErrorDetails details) {
         DebugLogger.error(
@@ -59,11 +57,16 @@ void main() {
       _startupTimeline!.start('app_startup');
       _startupTimeline!.instant('bindings_initialized');
 
-      // Defer edge-to-edge mode to post-frame to avoid impacting first paint
+      // Defer edge-to-edge mode and certificate manager to post-frame to avoid
+      // impacting first paint
       WidgetsBinding.instance.addPostFrameCallback((_) {
         // ignore: discarded_futures
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
         _startupTimeline?.instant('edge_to_edge_enabled');
+
+        // Initialize certificate manager lazily after first frame
+        SelfSignedCertificateManager.instance.ensureInitialized();
+        _startupTimeline?.instant('cert_manager_ready');
       });
 
       const secureStorage = FlutterSecureStorage(
@@ -80,9 +83,11 @@ void main() {
       );
       _startupTimeline!.instant('secure_storage_ready');
 
+      // Initialize Hive (now optimized with migration state caching)
       final hiveBoxes = await HiveBootstrap.instance.ensureInitialized();
       _startupTimeline!.instant('hive_ready');
 
+      // Run migration check (now fast-pathed after first run)
       final migrator = PersistenceMigrator(hiveBoxes: hiveBoxes);
       await migrator.migrateIfNeeded();
       _startupTimeline!.instant('migration_complete');

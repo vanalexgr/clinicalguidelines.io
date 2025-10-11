@@ -11,13 +11,20 @@ class PersistenceMigrator {
   PersistenceMigrator({required HiveBoxes hiveBoxes}) : _boxes = hiveBoxes;
 
   static const int _targetVersion = 1;
+  static bool _migrationComplete = false;
 
   final HiveBoxes _boxes;
 
   Future<void> migrateIfNeeded() async {
+    // Fast path: if we already checked migration in this app session, skip
+    if (_migrationComplete) {
+      return;
+    }
+
     final currentVersion =
         _boxes.metadata.get(HiveStoreKeys.migrationVersion) as int?;
     if (currentVersion != null && currentVersion >= _targetVersion) {
+      _migrationComplete = true;
       return;
     }
 
@@ -34,6 +41,7 @@ class PersistenceMigrator {
       await _migrateTaskQueue(prefs);
 
       await _boxes.metadata.put(HiveStoreKeys.migrationVersion, _targetVersion);
+      _migrationComplete = true;
 
       await _cleanupLegacyKeys(prefs);
       DebugLogger.log('Migration completed', scope: 'persistence/migration');
