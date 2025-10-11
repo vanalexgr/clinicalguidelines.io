@@ -288,6 +288,16 @@ class ConnectivityService with WidgetsBindingObserver {
   }
 
   /// Configures the Dio instance to accept self-signed certificates.
+  ///
+  /// This method sets up a [badCertificateCallback] that trusts certificates
+  /// from the specified server's host and port for health check requests.
+  ///
+  /// Security considerations:
+  /// - Only certificates from the exact host/port are trusted
+  /// - If no port is specified in the URL, all ports on the host are trusted
+  /// - Web platforms ignore this (browsers handle TLS validation)
+  ///
+  /// This is called per-Dio-instance rather than using global HttpOverrides.
   static void configureSelfSignedCerts(Dio dio, String serverUrl) {
     if (kIsWeb) return;
 
@@ -304,8 +314,11 @@ class ConnectivityService with WidgetsBindingObserver {
 
       client.badCertificateCallback =
           (X509Certificate cert, String requestHost, int requestPort) {
+            // Only trust certificates from our configured server
             if (requestHost.toLowerCase() != host) return false;
+            // If no specific port configured, trust any port on this host
             if (port == null) return true;
+            // Otherwise, port must match exactly
             return requestPort == port;
           };
 

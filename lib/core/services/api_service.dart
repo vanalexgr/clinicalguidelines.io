@@ -128,6 +128,16 @@ class ApiService {
     }
   }
 
+  /// Configures this Dio instance to accept self-signed certificates.
+  ///
+  /// When [ServerConfig.allowSelfSignedCertificates] is enabled, this method
+  /// sets up a [badCertificateCallback] that trusts certificates from the
+  /// configured server's host and port.
+  ///
+  /// Security considerations:
+  /// - Only certificates from the exact host/port are trusted
+  /// - If no port is specified, all ports on the host are trusted
+  /// - Web platforms ignore this (browsers handle TLS validation)
   void _configureSelfSignedSupport() {
     if (kIsWeb || !serverConfig.allowSelfSignedCertificates) {
       return;
@@ -149,12 +159,15 @@ class ApiService {
       final port = baseUri.hasPort ? baseUri.port : null;
       client.badCertificateCallback =
           (X509Certificate cert, String requestHost, int requestPort) {
+            // Only trust certificates from our configured server
             if (requestHost.toLowerCase() != host) {
               return false;
             }
+            // If no specific port configured, trust any port on this host
             if (port == null) {
               return true;
             }
+            // Otherwise, port must match exactly
             return requestPort == port;
           };
       return client;

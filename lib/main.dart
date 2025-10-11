@@ -11,7 +11,6 @@ import 'core/providers/app_providers.dart';
 import 'core/persistence/hive_bootstrap.dart';
 import 'core/persistence/persistence_migrator.dart';
 import 'core/persistence/persistence_providers.dart';
-import 'core/services/self_signed_certificate_manager.dart';
 import 'core/router/app_router.dart';
 import 'features/auth/providers/unified_auth_providers.dart';
 import 'core/auth/auth_state_manager.dart';
@@ -57,16 +56,11 @@ void main() {
       _startupTimeline!.start('app_startup');
       _startupTimeline!.instant('bindings_initialized');
 
-      // Defer edge-to-edge mode and certificate manager to post-frame to avoid
-      // impacting first paint
+      // Defer edge-to-edge mode to post-frame to avoid impacting first paint
       WidgetsBinding.instance.addPostFrameCallback((_) {
         // ignore: discarded_futures
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
         _startupTimeline?.instant('edge_to_edge_enabled');
-
-        // Initialize certificate manager lazily after first frame
-        SelfSignedCertificateManager.instance.ensureInitialized();
-        _startupTimeline?.instant('cert_manager_ready');
       });
 
       const secureStorage = FlutterSecureStorage(

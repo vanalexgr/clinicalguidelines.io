@@ -9,7 +9,6 @@ import '../persistence/hive_boxes.dart';
 import '../persistence/persistence_keys.dart';
 import '../utils/debug_logger.dart';
 import 'secure_credential_storage.dart';
-import 'self_signed_certificate_manager.dart';
 
 /// Optimized storage service backed by Hive for non-sensitive data and
 /// FlutterSecureStorage for credentials.
@@ -197,9 +196,6 @@ class OptimizedStorageService {
       await _secureCredentialStorage.saveServerConfigs(jsonString);
       _cache['server_config_count'] = configs.length;
       _cacheTimestamps['server_config_count'] = DateTime.now();
-      SelfSignedCertificateManager.instance
-        ..ensureInitialized()
-        ..updateTrustedServers(configs);
       DebugLogger.log(
         'Server configs saved (${configs.length} entries)',
         scope: 'storage/optimized',
@@ -219,9 +215,6 @@ class OptimizedStorageService {
       if (jsonString == null || jsonString.isEmpty) {
         _cache['server_config_count'] = 0;
         _cacheTimestamps['server_config_count'] = DateTime.now();
-        SelfSignedCertificateManager.instance
-          ..ensureInitialized()
-          ..clearTrustedServers();
         return const [];
       }
 
@@ -231,16 +224,12 @@ class OptimizedStorageService {
           .toList();
       _cache['server_config_count'] = configs.length;
       _cacheTimestamps['server_config_count'] = DateTime.now();
-      SelfSignedCertificateManager.instance
-        ..ensureInitialized()
-        ..updateTrustedServers(configs);
       return configs;
     } catch (error) {
       DebugLogger.log(
         'Failed to retrieve server configs: $error',
         scope: 'storage/optimized',
       );
-      SelfSignedCertificateManager.instance.clearTrustedServers();
       return const [];
     }
   }
