@@ -494,6 +494,14 @@ class AppCustomizationPage extends ConsumerWidget {
         return AppLocalizations.of(context)!.francais;
       case 'it':
         return AppLocalizations.of(context)!.italiano;
+      case 'es':
+        return AppLocalizations.of(context)!.espanol;
+      case 'nl':
+        return AppLocalizations.of(context)!.nederlands;
+      case 'ru':
+        return AppLocalizations.of(context)!.russian;
+      case 'zh':
+        return AppLocalizations.of(context)!.chinese;
       default:
         return AppLocalizations.of(context)!.system;
     }
@@ -555,6 +563,11 @@ class AppCustomizationPage extends ConsumerWidget {
                 onTap: () => Navigator.pop(context, 'de'),
               ),
               ListTile(
+                title: Text(AppLocalizations.of(context)!.espanol),
+                trailing: current == 'es' ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.pop(context, 'es'),
+              ),
+              ListTile(
                 title: Text(AppLocalizations.of(context)!.francais),
                 trailing: current == 'fr' ? const Icon(Icons.check) : null,
                 onTap: () => Navigator.pop(context, 'fr'),
@@ -563,6 +576,21 @@ class AppCustomizationPage extends ConsumerWidget {
                 title: Text(AppLocalizations.of(context)!.italiano),
                 trailing: current == 'it' ? const Icon(Icons.check) : null,
                 onTap: () => Navigator.pop(context, 'it'),
+              ),
+              ListTile(
+                title: Text(AppLocalizations.of(context)!.nederlands),
+                trailing: current == 'nl' ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.pop(context, 'nl'),
+              ),
+              ListTile(
+                title: Text(AppLocalizations.of(context)!.russian),
+                trailing: current == 'ru' ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.pop(context, 'ru'),
+              ),
+              ListTile(
+                title: Text(AppLocalizations.of(context)!.chinese),
+                trailing: current == 'zh' ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.pop(context, 'zh'),
               ),
               const SizedBox(height: Spacing.sm),
             ],

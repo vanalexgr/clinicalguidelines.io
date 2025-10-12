@@ -211,6 +211,10 @@
   "deutsch": "Deutsch",
   "francais": "Français",
   "italiano": "Italiano",
+  "espanol": "Español",
+  "nederlands": "Nederlands",
+  "russian": "Русский",
+  "chinese": "中文",
   "deleteMessagesTitle": "Удалить сообщения",
   "deleteMessagesMessage": "Удалить {count, plural, one{{count} сообщение} few{{count} сообщения} other{{count} сообщений}}?",
   "@deleteMessagesMessage": {

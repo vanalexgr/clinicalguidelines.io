@@ -211,6 +211,10 @@
   "deutsch": "Deutsch",
   "francais": "Français",
   "italiano": "Italiano",
+  "espanol": "Español",
+  "nederlands": "Nederlands",
+  "russian": "Русский",
+  "chinese": "中文",
   "deleteMessagesTitle": "Eliminar mensajes",
   "deleteMessagesMessage": "¿Eliminar {count} mensajes?",
   "@deleteMessagesMessage": {

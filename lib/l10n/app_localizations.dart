@@ -1286,6 +1286,30 @@ abstract class AppLocalizations {
   /// **'Italiano'**
   String get italiano;
 
+  /// Language name: Spanish.
+  ///
+  /// In en, this message translates to:
+  /// **'Español'**
+  String get espanol;
+
+  /// Language name: Dutch.
+  ///
+  /// In en, this message translates to:
+  /// **'Nederlands'**
+  String get nederlands;
+
+  /// Language name: Russian.
+  ///
+  /// In en, this message translates to:
+  /// **'Русский'**
+  String get russian;
+
+  /// Language name: Chinese.
+  ///
+  /// In en, this message translates to:
+  /// **'中文'**
+  String get chinese;
+
   /// Dialog title asking to confirm deletion of messages.
   ///
   /// In en, this message translates to:

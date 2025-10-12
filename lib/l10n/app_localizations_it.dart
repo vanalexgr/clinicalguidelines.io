@@ -648,6 +648,18 @@ class AppLocalizationsIt extends AppLocalizations {
   String get italiano => 'Italiano';
 
   @override
+  String get espanol => 'Spagnolo';
+
+  @override
+  String get nederlands => 'Olandese';
+
+  @override
+  String get russian => 'Russo';
+
+  @override
+  String get chinese => 'Cinese';
+
+  @override
   String get deleteMessagesTitle => 'Elimina messaggi';
 
   @override

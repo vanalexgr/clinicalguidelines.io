@@ -211,6 +211,10 @@
   "deutsch": "Deutsch",
   "francais": "Français",
   "italiano": "Italiano",
+  "espanol": "Español",
+  "nederlands": "Nederlands",
+  "russian": "Русский",
+  "chinese": "中文",
   "deleteMessagesTitle": "删除消息",
   "deleteMessagesMessage": "删除 {count} 条消息？",
   "@deleteMessagesMessage": {
