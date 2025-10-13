@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -17,6 +18,7 @@ import '../models/chat_message.dart';
 import '../models/folder.dart';
 import '../models/user_settings.dart';
 import '../models/file_info.dart';
+import '../models/tool.dart';
 import '../models/knowledge_base.dart';
 import '../services/settings_service.dart';
 import '../services/optimized_storage_service.dart';
@@ -646,36 +648,84 @@ final _settingsWatcherProvider = Provider<void>((ref) {
   });
 });
 
-// Auto-apply model-specific tools when model changes
+// Auto-apply model-specific tools when model changes or tools load
 final modelToolsAutoSelectionProvider = Provider<void>((ref) {
-  ref.listen<Model?>(selectedModelProvider, (previous, next) {
-    // Only react when the model actually changes
-    if (previous?.id == next?.id) return;
-    if (next == null) return;
-
-    // Load tools configured for this model
-    final modelToolIds = next.toolIds ?? [];
-    if (modelToolIds.isNotEmpty) {
-      // Filter to only include tools that are actually available
-      final toolsAsync = ref.read(toolsListProvider);
-      toolsAsync.whenData((availableTools) {
-        final validToolIds = modelToolIds
-            .where((id) => availableTools.any((t) => t.id == id))
-            .toList();
-
-        if (validToolIds.isNotEmpty) {
-          ref.read(selectedToolIdsProvider.notifier).set(validToolIds);
-          DebugLogger.log(
-            'auto-apply-tools',
-            scope: 'models/tools',
-            data: {'modelId': next.id, 'toolCount': validToolIds.length},
-          );
-        }
-      });
-    } else {
-      // Clear tools if model has no configured tools
-      ref.read(selectedToolIdsProvider.notifier).set([]);
+  Future<void> applyTools(Model? model) async {
+    if (model == null) {
+      final current = ref.read(selectedToolIdsProvider);
+      if (current.isNotEmpty) {
+        ref.read(selectedToolIdsProvider.notifier).set([]);
+      }
+      return;
     }
+
+    final modelToolIds = model.toolIds ?? [];
+    if (modelToolIds.isEmpty) {
+      final current = ref.read(selectedToolIdsProvider);
+      if (current.isNotEmpty) {
+        ref.read(selectedToolIdsProvider.notifier).set([]);
+      }
+      return;
+    }
+
+    void updateSelection(List<Tool> availableTools) {
+      final validToolIds = modelToolIds
+          .where((id) => availableTools.any((tool) => tool.id == id))
+          .toList();
+
+      final currentSelection = ref.read(selectedToolIdsProvider);
+      if (validToolIds.isEmpty) {
+        if (currentSelection.isNotEmpty) {
+          ref.read(selectedToolIdsProvider.notifier).set([]);
+        }
+        return;
+      }
+      if (listEquals(currentSelection, validToolIds)) return;
+
+      ref.read(selectedToolIdsProvider.notifier).set(validToolIds);
+      DebugLogger.log(
+        'auto-apply-tools',
+        scope: 'models/tools',
+        data: {'modelId': model.id, 'toolCount': validToolIds.length},
+      );
+    }
+
+    final toolsAsync = ref.read(toolsListProvider);
+    if (toolsAsync.hasValue) {
+      updateSelection(toolsAsync.value ?? const <Tool>[]);
+      return;
+    }
+
+    try {
+      final availableTools = await ref.read(toolsListProvider.future);
+      if (!ref.mounted) return;
+      updateSelection(availableTools);
+    } catch (error, stackTrace) {
+      DebugLogger.error(
+        'auto-apply-tools-failed',
+        scope: 'models/tools',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> scheduleApply(Model? model) async {
+    await applyTools(model);
+  }
+
+  Future.microtask(() => scheduleApply(ref.read(selectedModelProvider)));
+
+  ref.listen<Model?>(selectedModelProvider, (previous, next) {
+    if (previous?.id == next?.id && previous != null) {
+      return;
+    }
+    Future.microtask(() => scheduleApply(next));
+  });
+
+  ref.listen(toolsListProvider, (previous, next) {
+    if (!next.hasValue) return;
+    Future.microtask(() => scheduleApply(ref.read(selectedModelProvider)));
   });
 });
 
