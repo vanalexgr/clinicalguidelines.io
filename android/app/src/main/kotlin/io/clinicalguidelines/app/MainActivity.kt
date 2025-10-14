@@ -1,4 +1,4 @@
-package app.cogwheel.conduit
+package io.clinicalguidelines.app
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/widgets/error_boundary.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'brand/locked_bootstrap.dart';
 import 'core/providers/app_providers.dart';
 import 'core/persistence/hive_bootstrap.dart';
 import 'core/persistence/persistence_migrator.dart';
@@ -16,8 +17,9 @@ import 'features/auth/providers/unified_auth_providers.dart';
 import 'core/auth/auth_state_manager.dart';
 import 'core/utils/debug_logger.dart';
 import 'core/utils/system_ui_style.dart';
+import 'core/services/optimized_storage_service.dart';
 
-import 'package:conduit/l10n/app_localizations.dart';
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
 import 'core/services/share_receiver_service.dart';
 import 'core/providers/app_startup_providers.dart';
 
@@ -86,6 +88,12 @@ void main() {
       await migrator.migrateIfNeeded();
       _startupTimeline!.instant('migration_complete');
 
+      final storage = OptimizedStorageService(
+        secureStorage: secureStorage,
+        boxes: hiveBoxes,
+      );
+      await preseedLockedServer(storage);
+
       // Finish timeline after first frame paints
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _startupTimeline?.instant('first_frame_rendered');
@@ -98,6 +106,7 @@ void main() {
           overrides: [
             secureStorageProvider.overrideWithValue(secureStorage),
             hiveBoxesProvider.overrideWithValue(hiveBoxes),
+            optimizedStorageServiceProvider.overrideWithValue(storage),
           ],
           child: const ConduitApp(),
         ),

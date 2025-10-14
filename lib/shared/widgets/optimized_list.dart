@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'skeleton_loader.dart';
-import 'package:conduit/l10n/app_localizations.dart';
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
 import 'improved_loading_states.dart';
 
 /// Sliver version of an optimized list for use in CustomScrollView.

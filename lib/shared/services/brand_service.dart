@@ -253,7 +253,7 @@ class BrandService {
   }
 
   /// Brand-specific semantic labels for accessibility
-  static String get brandName => 'Conduit';
+  static String get brandName => 'Clinical Guidelines';
   static String get brandDescription => 'Your AI Conversation Hub';
   static String get connectionLabel => 'Hub Connection';
   static String get networkLabel => 'Network Hub';

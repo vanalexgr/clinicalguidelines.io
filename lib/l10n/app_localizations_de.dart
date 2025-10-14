@@ -9,7 +9,7 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
-  String get appTitle => 'Conduit';
+  String get appTitle => 'Clinical Guidelines';
 
   @override
   String get initializationFailed => 'Initialisierung fehlgeschlagen';
@@ -48,7 +48,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get account => 'Konto';
 
   @override
-  String get supportConduit => 'Conduit unterstützen';
+  String get supportConduit => 'Clinical Guidelines unterstützen';
 
   @override
   String get supportConduitSubtitle =>
@@ -695,7 +695,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get aboutApp => 'Über die App';
 
   @override
-  String get aboutAppSubtitle => 'Conduit Informationen und Links';
+  String get aboutAppSubtitle => 'Clinical Guidelines Informationen und Links';
 
   @override
   String get web => 'Web';

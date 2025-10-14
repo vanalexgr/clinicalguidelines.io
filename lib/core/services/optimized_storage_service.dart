@@ -9,6 +9,7 @@ import '../persistence/hive_boxes.dart';
 import '../persistence/persistence_keys.dart';
 import '../utils/debug_logger.dart';
 import 'secure_credential_storage.dart';
+import '../../brand/locked_config.dart';
 
 /// Optimized storage service backed by Hive for non-sensitive data and
 /// FlutterSecureStorage for credentials.
@@ -192,12 +193,14 @@ class OptimizedStorageService {
 
   Future<void> saveServerConfigs(List<ServerConfig> configs) async {
     try {
-      final jsonString = jsonEncode(configs.map((c) => c.toJson()).toList());
+      final effectiveConfigs = _enforceLockedServerConfigs(configs);
+      final jsonString =
+          jsonEncode(effectiveConfigs.map((c) => c.toJson()).toList());
       await _secureCredentialStorage.saveServerConfigs(jsonString);
-      _cache['server_config_count'] = configs.length;
+      _cache['server_config_count'] = effectiveConfigs.length;
       _cacheTimestamps['server_config_count'] = DateTime.now();
       DebugLogger.log(
-        'Server configs saved (${configs.length} entries)',
+        'Server configs saved (${effectiveConfigs.length} entries)',
         scope: 'storage/optimized',
       );
     } catch (error) {
@@ -222,9 +225,10 @@ class OptimizedStorageService {
       final configs = decoded
           .map((item) => ServerConfig.fromJson(item))
           .toList();
-      _cache['server_config_count'] = configs.length;
+      final effectiveConfigs = _enforceLockedServerConfigs(configs);
+      _cache['server_config_count'] = effectiveConfigs.length;
       _cacheTimestamps['server_config_count'] = DateTime.now();
-      return configs;
+      return effectiveConfigs;
     } catch (error) {
       DebugLogger.log(
         'Failed to retrieve server configs: $error',
@@ -235,23 +239,38 @@ class OptimizedStorageService {
   }
 
   Future<void> setActiveServerId(String? serverId) async {
-    if (serverId != null) {
-      await _preferencesBox.put(_activeServerIdKey, serverId);
+    final effectiveId = LockedConfig.allowCustomServer
+        ? serverId
+        : (serverId ?? LockedConfig.serverId);
+
+    if (effectiveId != null) {
+      await _preferencesBox.put(_activeServerIdKey, effectiveId);
     } else {
       await _preferencesBox.delete(_activeServerIdKey);
     }
-    _cache[_activeServerIdKey] = serverId;
+    _cache[_activeServerIdKey] = effectiveId;
     _cacheTimestamps[_activeServerIdKey] = DateTime.now();
   }
 
   Future<String?> getActiveServerId() async {
     if (_isCacheValid(_activeServerIdKey)) {
-      return _cache[_activeServerIdKey] as String?;
+      final cached = _cache[_activeServerIdKey] as String?;
+      if (!LockedConfig.allowCustomServer && cached == null) {
+        _cache[_activeServerIdKey] = LockedConfig.serverId;
+        return LockedConfig.serverId;
+      }
+      return cached;
     }
-    final serverId = _preferencesBox.get(_activeServerIdKey) as String?;
-    _cache[_activeServerIdKey] = serverId;
+    final stored = _preferencesBox.get(_activeServerIdKey) as String?;
+    final effectiveId = LockedConfig.allowCustomServer
+        ? stored
+        : (stored ?? LockedConfig.serverId);
+    if (!LockedConfig.allowCustomServer && effectiveId != stored) {
+      await _preferencesBox.put(_activeServerIdKey, effectiveId);
+    }
+    _cache[_activeServerIdKey] = effectiveId;
     _cacheTimestamps[_activeServerIdKey] = DateTime.now();
-    return serverId;
+    return effectiveId;
   }
 
   String? getThemeMode() {
@@ -430,6 +449,24 @@ class OptimizedStorageService {
       return false;
     }
     return DateTime.now().difference(timestamp) < _cacheTimeout;
+  }
+
+  List<ServerConfig> _enforceLockedServerConfigs(
+    List<ServerConfig> configs,
+  ) {
+    if (LockedConfig.allowCustomServer) {
+      return configs;
+    }
+
+    final matchedConfig = configs.firstWhere(
+      (config) =>
+          config.id == LockedConfig.serverId ||
+          config.url.trim().toLowerCase() ==
+              LockedConfig.baseUrl.trim().toLowerCase(),
+      orElse: () => LockedConfig.buildServerConfig(),
+    );
+
+    return [LockedConfig.buildServerConfig(matchedConfig)];
   }
 
   void clearCache() {

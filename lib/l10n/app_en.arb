@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "Conduit",
+  "appTitle": "Clinical Guidelines",
   "@appTitle": {"description": "Application name displayed in the app and OS UI."},
   "initializationFailed": "Initialization Failed",
   "@initializationFailed": {"description": "Shown if the app fails to initialize critical services."},
@@ -30,11 +30,11 @@
   "@pleaseCheckConnection": {"description": "Generic connectivity hint after an error."},
   "account": "Account",
   "@account": {"description": "Section header for account-related options."},
-  "supportConduit": "Support Conduit",
+  "supportConduit": "Support Clinical Guidelines",
   "@supportConduit": {
     "description": "Section header inviting the user to financially support the project."
   },
-  "supportConduitSubtitle": "Keep Conduit independent by funding ongoing development.",
+  "supportConduitSubtitle": "Keep Clinical Guidelines independent by funding ongoing development.",
   "@supportConduitSubtitle": {
     "description": "Subtitle explaining why donations are helpful."
   },
@@ -116,7 +116,7 @@
   "@knowledgeBase": {"description": "Section for knowledge base content."},
   "noFilesYet": "No files yet",
   "@noFilesYet": {"description": "Empty state when no files are present."},
-  "uploadDocsPrompt": "Upload documents to reference in your conversations with Conduit",
+  "uploadDocsPrompt": "Upload documents to reference in your conversations with Clinical Guidelines",
   "@uploadDocsPrompt": {"description": "Prompt encouraging users to upload documents."},
   "uploadFirstFile": "Upload your first file",
   "@uploadFirstFile": {"description": "CTA to add the first file."},
@@ -503,7 +503,7 @@
   "@failedToDeleteFolder": {"description": "Error notice when deleting a folder fails."},
   "aboutApp": "About App",
   "@aboutApp": {"description": "Settings tile title to view app information."},
-  "aboutAppSubtitle": "Conduit information and links",
+  "aboutAppSubtitle": "Clinical Guidelines information and links",
   "@aboutAppSubtitle": {"description": "Subtitle/description for the About section."},
   "web": "Web",
   "@web": {"description": "Tab/section label for web features."},
@@ -615,7 +615,7 @@
   "@currentlyUsingDarkTheme": {"description": "Status text indicating dark theme is active."},
   "currentlyUsingLightTheme": "Currently using Light theme",
   "@currentlyUsingLightTheme": {"description": "Status text indicating light theme is active."},
-  "aboutConduit": "About Conduit",
+  "aboutConduit": "About Clinical Guidelines",
   "@aboutConduit": {"description": "Dialog title for app information."},
   "versionLabel": "Version: {version} ({build})",
   "@versionLabel": {

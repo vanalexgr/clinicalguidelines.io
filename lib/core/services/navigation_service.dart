@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../brand/locked_config.dart';
 import '../../shared/widgets/themed_dialogs.dart';
 
 /// Service for handling navigation throughout the app.
@@ -76,16 +77,23 @@ class NavigationService {
   }
 
   static Future<void> navigateToChat() => navigateTo(Routes.chat);
-  static Future<void> navigateToLogin() => navigateTo(Routes.serverConnection);
+  static Future<void> navigateToLogin() => LockedConfig.allowCustomServer
+      ? navigateTo(Routes.serverConnection)
+      : navigateTo(Routes.login);
   static Future<void> navigateToProfile() => navigateTo(Routes.profile);
   static Future<void> navigateToServerConnection() =>
-      navigateTo(Routes.serverConnection);
+      LockedConfig.allowCustomServer
+          ? navigateTo(Routes.serverConnection)
+          : navigateTo(Routes.login);
 
   /// Clear navigation history. With GoRouter this becomes a simple go call.
   static void clearNavigationStack() {
     final router = _router;
     if (router == null) return;
-    router.go(Routes.serverConnection);
+    final target = LockedConfig.allowCustomServer
+        ? Routes.serverConnection
+        : Routes.login;
+    router.go(target);
   }
 }
 
