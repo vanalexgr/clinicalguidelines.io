@@ -1,12 +1,14 @@
-import 'package:flutter/material.dart';
-import '../theme/theme_extensions.dart';
+import 'dart:io' show Platform;
+
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io' show Platform;
+
 import '../services/brand_service.dart';
 import '../theme/color_tokens.dart';
-import 'package:clinical_guidelines/l10n/app_localizations.dart';
+import '../theme/theme_extensions.dart';
 
 /// Standard loading indicators following Conduit design patterns
 class ConduitLoading {

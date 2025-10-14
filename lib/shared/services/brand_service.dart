@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
-import '../theme/theme_extensions.dart';
-import 'package:flutter/cupertino.dart';
 import 'dart:io' show Platform;
-import '../theme/color_tokens.dart';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+
 import '../theme/color_palettes.dart';
+import '../theme/color_tokens.dart';
+import '../theme/theme_extensions.dart';
 
 /// Centralized service for consistent brand identity throughout the app
 /// Uses the hub icon as the primary brand element

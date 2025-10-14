@@ -1,28 +1,27 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/services.dart';
-import '../../../shared/theme/theme_extensions.dart';
-// app_theme not required here; using theme extension tokens
-import '../../../shared/widgets/sheet_handle.dart';
+import 'dart:async';
+import 'dart:io' show Platform;
+import 'dart:math' as math;
+import 'dart:ui';
 
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'dart:io' show Platform;
-import 'dart:async';
-import 'dart:ui';
-import 'dart:math' as math;
-import '../providers/chat_providers.dart';
-import '../../tools/providers/tools_providers.dart';
+import '../../chat/services/voice_input_service.dart';
 import '../../prompts/providers/prompts_providers.dart';
-import '../../../core/models/tool.dart';
+import '../../tools/providers/tools_providers.dart';
 import '../../../core/models/prompt.dart';
+import '../../../core/models/tool.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/settings_service.dart';
-import '../../chat/services/voice_input_service.dart';
-
+import '../../../shared/theme/theme_extensions.dart';
+// app_theme not required here; using theme extension tokens
 import '../../../shared/utils/platform_utils.dart';
-import 'package:clinical_guidelines/l10n/app_localizations.dart';
 import '../../../shared/widgets/modal_safe_area.dart';
+import '../../../shared/widgets/sheet_handle.dart';
+import '../providers/chat_providers.dart';
 
 class _SendMessageIntent extends Intent {
   const _SendMessageIntent();

@@ -1,17 +1,18 @@
-import 'package:flutter/material.dart';
-import '../../../shared/theme/theme_extensions.dart';
-import 'enhanced_image_attachment.dart';
-import 'enhanced_attachment.dart';
-
-import 'package:flutter/cupertino.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io' show Platform;
+
 import 'package:clinical_guidelines/l10n/app_localizations.dart';
 import 'package:clinical_guidelines/shared/widgets/chat_action_button.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/providers/app_providers.dart';
-import '../providers/chat_providers.dart';
 import '../../../shared/services/tasks/task_queue.dart';
+import '../../../shared/theme/theme_extensions.dart';
 import '../../tools/providers/tools_providers.dart';
+import '../providers/chat_providers.dart';
+import 'enhanced_attachment.dart';
+import 'enhanced_image_attachment.dart';
 
 class UserMessageBubble extends ConsumerStatefulWidget {
   final dynamic message;

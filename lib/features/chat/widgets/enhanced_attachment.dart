@@ -1,14 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../shared/theme/theme_extensions.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/api_service.dart';
+import '../../../shared/theme/theme_extensions.dart';
 import 'enhanced_image_attachment.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
-import 'dart:convert';
 
 class EnhancedAttachment extends ConsumerStatefulWidget {
   final String attachmentId;
