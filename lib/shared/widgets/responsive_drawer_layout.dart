@@ -1,6 +1,8 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui' as ui;
+
 import '../../shared/theme/theme_extensions.dart';
 
 /// A responsive layout that shows a persistent drawer on tablets (side-by-side)

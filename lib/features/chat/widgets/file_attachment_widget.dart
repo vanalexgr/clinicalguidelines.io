@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
-import '../../../shared/theme/theme_extensions.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io' show Platform;
+
 import 'package:clinical_guidelines/l10n/app_localizations.dart';
-import '../services/file_attachment_service.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/loading_states.dart';
+import '../services/file_attachment_service.dart';
 
 class FileAttachmentWidget extends ConsumerWidget {
   const FileAttachmentWidget({super.key});

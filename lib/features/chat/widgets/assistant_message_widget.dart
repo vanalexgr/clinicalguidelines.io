@@ -1,27 +1,29 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
+
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
+import 'package:clinical_guidelines/shared/widgets/chat_action_button.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+
+import '../../../core/models/chat_message.dart';
+import '../../../core/utils/debug_logger.dart';
+import '../../../core/utils/message_segments.dart';
+import '../../../core/utils/reasoning_parser.dart';
+import '../../../core/utils/tool_calls_parser.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/markdown/streaming_markdown_widget.dart';
-import '../../../core/utils/reasoning_parser.dart';
-import '../../../core/utils/message_segments.dart';
-import '../../../core/utils/tool_calls_parser.dart';
-import '../../../core/models/chat_message.dart';
-import '../providers/text_to_speech_provider.dart';
-import 'enhanced_image_attachment.dart';
-import 'package:clinical_guidelines/l10n/app_localizations.dart';
-import 'enhanced_attachment.dart';
-import 'package:clinical_guidelines/shared/widgets/chat_action_button.dart';
 import '../../../shared/widgets/model_avatar.dart';
-import 'package:url_launcher/url_launcher_string.dart';
-import '../providers/chat_providers.dart' show sendMessageWithContainer;
-import '../../../core/utils/debug_logger.dart';
-import 'sources/openwebui_sources.dart';
 import '../providers/assistant_response_builder_provider.dart';
+import '../providers/chat_providers.dart' show sendMessageWithContainer;
+import '../providers/text_to_speech_provider.dart';
+import 'enhanced_attachment.dart';
+import 'enhanced_image_attachment.dart';
+import 'sources/openwebui_sources.dart';
 
 // Pre-compiled regex patterns for TTS sanitization (performance optimization)
 final _ttsCodeBlockPattern = RegExp(r'```');

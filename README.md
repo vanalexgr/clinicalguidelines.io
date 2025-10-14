@@ -53,6 +53,20 @@ flutter pub run build_runner build --delete-conflicting-outputs
 flutter run -d ios   # or: -d android
 ```
 
+### Install the Flutter SDK locally
+
+If you do not already have Flutter installed, use the helper script to
+download the stable release into `../.flutter` relative to the repository:
+
+```bash
+./scripts/install_flutter.sh
+export PATH="$PATH:$(pwd)/../.flutter/flutter/bin"
+flutter --version
+```
+
+Set `FLUTTER_VERSION`, `FLUTTER_CHANNEL`, or `FLUTTER_INSTALL_DIR` when you need
+to customise the downloaded SDK.
+
 ## Features
 
 ### Core Features

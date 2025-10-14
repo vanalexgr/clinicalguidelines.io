@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'dart:io' show Platform;
-import '../theme/theme_extensions.dart';
+
 import 'package:clinical_guidelines/l10n/app_localizations.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+
+import '../theme/theme_extensions.dart';
 
 /// Utility functions for common UI patterns and helpers
 /// Following Conduit design principles
