@@ -1,7 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:conduit/core/models/tool.dart';
-import 'package:conduit/core/services/tools_service.dart';
+import 'package:clinical_guidelines/core/models/tool.dart';
+import 'package:clinical_guidelines/core/services/tools_service.dart';
 
 part 'tools_providers.g.dart';
 

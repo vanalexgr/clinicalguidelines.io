@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
-import 'package:conduit/l10n/app_localizations.dart';
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
 
 import '../../../core/models/server_config.dart';
 import '../../../core/providers/app_providers.dart';

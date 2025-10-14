@@ -18,6 +18,7 @@ import '../../features/profile/views/app_customization_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../models/server_config.dart';
+import '../../brand/locked_config.dart';
 
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this.ref) {
@@ -77,7 +78,8 @@ class RouterNotifier extends ChangeNotifier {
     }
 
     final activeServer = activeServerAsync.asData?.value;
-    final hasActiveServer = activeServer != null;
+    final isLocked = !LockedConfig.allowCustomServer;
+    final hasActiveServer = activeServer != null || isLocked;
     if (!hasActiveServer) {
       // Allow auth-related routes while no server configured
       if (_isAuthLocation(location)) return null;
@@ -91,6 +93,11 @@ class RouterNotifier extends ChangeNotifier {
     if (location == Routes.serverConnection) {
       // If authenticated but on server connection page, go to chat
       // Otherwise stay on server connection page (for back navigation)
+      if (isLocked) {
+        return authState == AuthNavigationState.authenticated
+            ? Routes.chat
+            : Routes.login;
+      }
       return authState == AuthNavigationState.authenticated
           ? Routes.chat
           : null;

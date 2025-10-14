@@ -54,7 +54,7 @@ class BackgroundStreamingHandler: NSObject {
     private var microphoneStreams: Set<String> = []
     private var channel: FlutterMethodChannel?
 
-    static let processingTaskIdentifier = "app.cogwheel.conduit.refresh"
+    static let processingTaskIdentifier = "io.clinicalguidelines.app.refresh"
 
     override init() {
         super.init()
@@ -167,7 +167,7 @@ class BackgroundStreamingHandler: NSObject {
     private func startBackgroundTask() {
         guard backgroundTask == .invalid else { return }
         
-        backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "ConduitStreaming") { [weak self] in
+        backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "ClinicalGuidelinesStreaming") { [weak self] in
             self?.endBackgroundTask()
         }
     }
@@ -193,14 +193,14 @@ class BackgroundStreamingHandler: NSObject {
     private func saveStreamStates(_ states: [[String: Any]]) {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: states, options: [])
-            UserDefaults.standard.set(jsonData, forKey: "ConduitActiveStreams")
+            UserDefaults.standard.set(jsonData, forKey: "ClinicalGuidelinesActiveStreams")
         } catch {
             print("BackgroundStreamingHandler: Failed to serialize stream states: \(error)")
         }
     }
 
     private func recoverStreamStates() -> [[String: Any]] {
-        guard let jsonData = UserDefaults.standard.data(forKey: "ConduitActiveStreams") else {
+        guard let jsonData = UserDefaults.standard.data(forKey: "ClinicalGuidelinesActiveStreams") else {
             return []
         }
         do {

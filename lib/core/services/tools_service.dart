@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
-import 'package:conduit/core/models/tool.dart';
-import 'package:conduit/core/services/api_service.dart';
-import 'package:conduit/core/error/api_error_handler.dart';
-import 'package:conduit/core/providers/app_providers.dart';
+import 'package:clinical_guidelines/core/models/tool.dart';
+import 'package:clinical_guidelines/core/services/api_service.dart';
+import 'package:clinical_guidelines/core/error/api_error_handler.dart';
+import 'package:clinical_guidelines/core/providers/app_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ToolsService {

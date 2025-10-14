@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:conduit/l10n/app_localizations.dart';
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
 import '../../../core/widgets/error_boundary.dart';
 import '../../../shared/widgets/optimized_list.dart';
 import '../../../shared/theme/theme_extensions.dart';

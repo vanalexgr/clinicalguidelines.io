@@ -113,7 +113,7 @@ abstract class AppLocalizations {
   /// Application name displayed in the app and OS UI.
   ///
   /// In en, this message translates to:
-  /// **'Conduit'**
+  /// **'Clinical Guidelines'**
   String get appTitle;
 
   /// Shown if the app fails to initialize critical services.
@@ -185,14 +185,14 @@ abstract class AppLocalizations {
   /// Section header inviting the user to financially support the project.
   ///
   /// In en, this message translates to:
-  /// **'Support Conduit'**
-  String get supportConduit;
+  /// **'Support Clinical Guidelines'**
+  String get supportClinical Guidelines;
 
   /// Subtitle explaining why donations are helpful.
   ///
   /// In en, this message translates to:
-  /// **'Keep Conduit independent by funding ongoing development.'**
-  String get supportConduitSubtitle;
+  /// **'Keep Clinical Guidelines independent by funding ongoing development.'**
+  String get supportClinical GuidelinesSubtitle;
 
   /// Tile title linking to the GitHub Sponsors page.
   ///
@@ -359,7 +359,7 @@ abstract class AppLocalizations {
   /// Prompt encouraging users to upload documents.
   ///
   /// In en, this message translates to:
-  /// **'Upload documents to reference in your conversations with Conduit'**
+  /// **'Upload documents to reference in your conversations with Clinical Guidelines'**
   String get uploadDocsPrompt;
 
   /// CTA to add the first file.
@@ -1367,7 +1367,7 @@ abstract class AppLocalizations {
   /// Subtitle/description for the About section.
   ///
   /// In en, this message translates to:
-  /// **'Conduit information and links'**
+  /// **'Clinical Guidelines information and links'**
   String get aboutAppSubtitle;
 
   /// Tab/section label for web features.
@@ -1643,8 +1643,8 @@ abstract class AppLocalizations {
   /// Dialog title for app information.
   ///
   /// In en, this message translates to:
-  /// **'About Conduit'**
-  String get aboutConduit;
+  /// **'About Clinical Guidelines'**
+  String get aboutClinical Guidelines;
 
   /// Displays version and build number in the About dialog.
   ///

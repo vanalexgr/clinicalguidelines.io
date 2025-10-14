@@ -14,6 +14,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/conduit_components.dart';
 import '../providers/unified_auth_providers.dart';
+import '../../../brand/locked_config.dart';
 
 class ConnectionIssuePage extends ConsumerStatefulWidget {
   const ConnectionIssuePage({super.key});
@@ -167,6 +168,9 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
   }
 
   Widget _buildActions(BuildContext context, AppLocalizations l10n) {
+    final targetRoute = LockedConfig.allowCustomServer
+        ? Routes.serverConnection
+        : Routes.login;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
       child: Column(
@@ -176,7 +180,7 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
             text: l10n.retry,
             onPressed: _isLoggingOut
                 ? null
-                : () => context.go(Routes.serverConnection),
+                : () => context.go(targetRoute),
             icon: Platform.isIOS
                 ? CupertinoIcons.refresh
                 : Icons.refresh_rounded,

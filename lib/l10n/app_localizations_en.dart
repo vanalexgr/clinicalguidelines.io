@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Conduit';
+  String get appTitle => 'Clinical Guidelines';
 
   @override
   String get initializationFailed => 'Initialization Failed';
@@ -690,7 +690,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutApp => 'About App';
 
   @override
-  String get aboutAppSubtitle => 'Conduit information and links';
+  String get aboutAppSubtitle => 'Clinical Guidelines information and links';
 
   @override
   String get web => 'Web';

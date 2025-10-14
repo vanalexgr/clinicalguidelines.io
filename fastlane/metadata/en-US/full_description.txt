@@ -1,4 +1,4 @@
-Conduit is an open-source, native mobile client for Open‑WebUI. Connect to your own server to chat with AI models, manage conversations, and take your self‑hosted AI with you—securely and on the go.
+Clinical Guidelines is an open-source, native mobile client for Open‑WebUI. Connect to your own server to chat with AI models, manage conversations, and take your self‑hosted AI with you—securely and on the go.
 
 Features
 - Real-time streaming chat
@@ -13,7 +13,7 @@ Features
 - Offline-aware experience
 
 Requirements
-- Requires an existing Open‑WebUI server. Conduit does not host or provide AI models.
+- Requires an existing Open‑WebUI server. Clinical Guidelines does not host or provide AI models.
 - No data is sent to third-party services by default; everything stays with your configured server.
 
 Permissions

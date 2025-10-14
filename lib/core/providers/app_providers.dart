@@ -835,7 +835,7 @@ Future<List<Conversation>> conversations(Ref ref) async {
     return [
       Conversation(
         id: 'demo-conv-1',
-        title: 'Welcome to Conduit (Demo)',
+        title: 'Welcome to Clinical Guidelines (Demo)',
         createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
         updatedAt: DateTime.now().subtract(const Duration(minutes: 10)),
         messages: [
@@ -843,7 +843,7 @@ Future<List<Conversation>> conversations(Ref ref) async {
             id: 'demo-msg-1',
             role: 'assistant',
             content:
-                '**Welcome to Conduit Demo Mode**\n\nThis is a demo for app review - responses are pre-written, not from real AI.\n\nTry these features:\n• Send messages\n• Attach images\n• Use voice input\n• Switch models (tap header)\n• Create new chats (menu)\n\nAll features work offline. No server needed.',
+                '**Welcome to Clinical Guidelines Demo Mode**\n\nThis is a demo for app review - responses are pre-written, not from real AI.\n\nTry these features:\n• Send messages\n• Attach images\n• Use voice input\n• Switch models (tap header)\n• Create new chats (menu)\n\nAll features work offline. No server needed.',
             timestamp: DateTime.now().subtract(const Duration(minutes: 10)),
             model: 'Gemma 2 Mini (Demo)',
             isStreaming: false,

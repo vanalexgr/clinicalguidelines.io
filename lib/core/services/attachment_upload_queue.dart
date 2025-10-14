@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:hive_ce/hive.dart';
+import '../../brand/locked_config.dart';
 import '../persistence/hive_boxes.dart';
 import '../utils/debug_logger.dart';
 
@@ -180,7 +181,16 @@ class AttachmentUploadQueue {
     _isProcessing = true;
     try {
       // Quick network probe using Dio HEAD to common health path if possible
-      final dio = Dio();
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: LockedConfig.baseUrl,
+          connectTimeout: const Duration(seconds: 20),
+          receiveTimeout: const Duration(seconds: 30),
+          headers: LockedConfig.defaultHeaders.isNotEmpty
+              ? Map<String, String>.from(LockedConfig.defaultHeaders)
+              : null,
+        ),
+      );
       try {
         await dio.head('/api/health').timeout(const Duration(seconds: 3));
       } catch (_) {

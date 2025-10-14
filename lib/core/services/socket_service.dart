@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
+import '../../brand/locked_config.dart';
 import '../models/server_config.dart';
 import '../utils/debug_logger.dart';
 import 'socket_tls_override.dart';
@@ -59,7 +60,10 @@ class SocketService with WidgetsBindingObserver {
       _socket?.dispose();
     } catch (_) {}
 
-    String base = serverConfig.url.replaceFirst(RegExp(r'/+$'), '');
+    String base = (LockedConfig.allowCustomServer
+            ? serverConfig.url
+            : LockedConfig.baseUrl)
+        .replaceFirst(RegExp(r'/+$'), '');
     // Normalize accidental ":0" ports or invalid port values in stored URL
     try {
       final u = Uri.parse(base);
@@ -85,7 +89,9 @@ class SocketService with WidgetsBindingObserver {
 
     // Merge Authorization (if any) with user-defined custom headers for the
     // Socket.IO handshake. Avoid overriding reserved headers.
-    final Map<String, String> extraHeaders = {};
+    final Map<String, String> extraHeaders = {
+      ...LockedConfig.defaultHeaders,
+    };
     if (_authToken != null && _authToken!.isNotEmpty) {
       extraHeaders['Authorization'] = 'Bearer $_authToken';
       builder.setAuth({'token': _authToken});

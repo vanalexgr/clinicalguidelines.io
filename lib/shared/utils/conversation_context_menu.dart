@@ -1,18 +1,18 @@
 import 'dart:io' show Platform;
 
-import 'package:conduit/core/providers/app_providers.dart';
-import 'package:conduit/l10n/app_localizations.dart';
-import 'package:conduit/shared/theme/theme_extensions.dart';
-import 'package:conduit/shared/widgets/conduit_components.dart';
-import 'package:conduit/shared/widgets/modal_safe_area.dart';
-import 'package:conduit/shared/widgets/sheet_handle.dart';
-import 'package:conduit/shared/widgets/themed_dialogs.dart';
+import 'package:clinical_guidelines/core/providers/app_providers.dart';
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
+import 'package:clinical_guidelines/shared/theme/theme_extensions.dart';
+import 'package:clinical_guidelines/shared/widgets/conduit_components.dart';
+import 'package:clinical_guidelines/shared/widgets/modal_safe_area.dart';
+import 'package:clinical_guidelines/shared/widgets/sheet_handle.dart';
+import 'package:clinical_guidelines/shared/widgets/themed_dialogs.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:conduit/features/chat/providers/chat_providers.dart' as chat;
+import 'package:clinical_guidelines/features/chat/providers/chat_providers.dart' as chat;
 
 class ConduitContextMenuAction {
   final IconData cupertinoIcon;

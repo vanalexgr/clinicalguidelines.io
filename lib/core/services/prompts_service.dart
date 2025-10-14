@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:conduit/core/error/api_error_handler.dart';
-import 'package:conduit/core/models/prompt.dart';
-import 'package:conduit/core/providers/app_providers.dart';
-import 'package:conduit/core/services/api_service.dart';
+import 'package:clinical_guidelines/core/error/api_error_handler.dart';
+import 'package:clinical_guidelines/core/models/prompt.dart';
+import 'package:clinical_guidelines/core/providers/app_providers.dart';
+import 'package:clinical_guidelines/core/services/api_service.dart';
 
 class PromptsService {
   const PromptsService(this._apiService);

@@ -9,10 +9,11 @@ import 'package:dio/dio.dart' as dio;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../shared/theme/theme_extensions.dart';
-import 'package:conduit/l10n/app_localizations.dart';
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../auth/providers/unified_auth_providers.dart';
 import '../../../core/utils/debug_logger.dart';
+import '../../../brand/locked_config.dart';
 
 // Simple global cache to prevent reloading
 final _globalImageCache = <String, String>{};
@@ -638,7 +639,17 @@ class FullScreenImageViewer extends ConsumerWidget {
           headers.addAll(api.serverConfig.customHeaders);
         }
 
-        final client = api?.dio ?? dio.Dio();
+        final client = api?.dio ??
+            dio.Dio(
+              dio.BaseOptions(
+                baseUrl: LockedConfig.baseUrl,
+                connectTimeout: const Duration(seconds: 20),
+                receiveTimeout: const Duration(seconds: 30),
+                headers: LockedConfig.defaultHeaders.isNotEmpty
+                    ? Map<String, String>.from(LockedConfig.defaultHeaders)
+                    : null,
+              ),
+            );
         final response = await client.get<List<int>>(
           imageData,
           options: dio.Options(

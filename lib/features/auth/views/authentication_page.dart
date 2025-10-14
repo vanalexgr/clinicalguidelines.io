@@ -15,8 +15,9 @@ import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/conduit_components.dart';
 import '../../../core/auth/auth_state_manager.dart';
 import '../../../core/utils/debug_logger.dart';
-import 'package:conduit/l10n/app_localizations.dart';
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
 import '../providers/unified_auth_providers.dart';
+import '../../../brand/locked_config.dart';
 
 class AuthenticationPage extends ConsumerStatefulWidget {
   final ServerConfig? serverConfig;
@@ -201,11 +202,18 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   }
 
   Widget _buildHeader() {
+    if (!LockedConfig.allowCustomServer) {
+      return const SizedBox.shrink();
+    }
     return Row(
       children: [
         ConduitIconButton(
           icon: Platform.isIOS ? CupertinoIcons.back : Icons.arrow_back,
-          onPressed: () => context.go(Routes.serverConnection),
+          onPressed: () => context.go(
+            LockedConfig.allowCustomServer
+                ? Routes.serverConnection
+                : Routes.login,
+          ),
           tooltip: AppLocalizations.of(context)!.backToServerSetup,
         ),
         const Spacer(),
@@ -240,9 +248,11 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   Widget _buildServerStatus() {
     // Prefer route-provided config; otherwise fall back to active server
     final activeServerAsync = ref.watch(activeServerProvider);
-    final cfg =
-        widget.serverConfig ??
-        activeServerAsync.maybeWhen(data: (s) => s, orElse: () => null);
+    final cfg = widget.serverConfig ??
+        activeServerAsync.maybeWhen(data: (s) => s, orElse: () => null) ??
+        (LockedConfig.allowCustomServer
+            ? null
+            : LockedConfig.buildServerConfig());
     final hostText = () {
       try {
         final url = cfg?.url;

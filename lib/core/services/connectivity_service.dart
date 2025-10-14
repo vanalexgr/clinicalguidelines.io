@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../brand/locked_config.dart';
 import '../providers/app_providers.dart';
 
 part 'connectivity_service.g.dart';
@@ -372,28 +373,45 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
   return activeServer.maybeWhen(
     data: (server) {
       if (server == null) {
-        final dio = Dio();
+        final dio = LockedConfig.allowCustomServer
+            ? Dio()
+            : Dio(
+                BaseOptions(
+                  baseUrl: LockedConfig.baseUrl,
+                  connectTimeout: const Duration(seconds: 20),
+                  receiveTimeout: const Duration(seconds: 30),
+                  headers: LockedConfig.defaultHeaders.isNotEmpty
+                      ? Map<String, String>.from(LockedConfig.defaultHeaders)
+                      : null,
+                ),
+              );
         final service = ConnectivityService(dio, ref);
         ref.onDispose(service.dispose);
         return service;
       }
 
+      final headers = <String, String>{...LockedConfig.defaultHeaders};
+      if (server.customHeaders.isNotEmpty) {
+        headers.addAll(server.customHeaders);
+      }
+      final baseUrl = LockedConfig.allowCustomServer
+          ? server.url
+          : LockedConfig.baseUrl;
+
       final dio = Dio(
         BaseOptions(
-          baseUrl: server.url,
-          connectTimeout: const Duration(seconds: 30),
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 20),
           receiveTimeout: const Duration(seconds: 30),
           followRedirects: true,
           maxRedirects: 5,
           validateStatus: (status) => status != null && status < 400,
-          headers: server.customHeaders.isNotEmpty
-              ? Map<String, String>.from(server.customHeaders)
-              : null,
+          headers: headers.isNotEmpty ? headers : null,
         ),
       );
 
       if (server.allowSelfSignedCertificates) {
-        ConnectivityService.configureSelfSignedCerts(dio, server.url);
+        ConnectivityService.configureSelfSignedCerts(dio, baseUrl);
       }
 
       final service = ConnectivityService(dio, ref);
@@ -401,7 +419,18 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
       return service;
     },
     orElse: () {
-      final dio = Dio();
+      final dio = LockedConfig.allowCustomServer
+          ? Dio()
+          : Dio(
+              BaseOptions(
+                baseUrl: LockedConfig.baseUrl,
+                connectTimeout: const Duration(seconds: 20),
+                receiveTimeout: const Duration(seconds: 30),
+                headers: LockedConfig.defaultHeaders.isNotEmpty
+                    ? Map<String, String>.from(LockedConfig.defaultHeaders)
+                    : null,
+              ),
+            );
       final service = ConnectivityService(dio, ref);
       ref.onDispose(service.dispose);
       return service;

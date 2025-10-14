@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 // import 'package:http_parser/http_parser.dart';
 // Removed legacy websocket/socket.io imports
 import 'package:uuid/uuid.dart';
+import '../../brand/locked_config.dart';
 import '../models/server_config.dart';
 import '../models/user.dart';
 import '../models/model.dart';
@@ -40,7 +41,8 @@ class ApiService {
   Dio get dio => _dio;
 
   // Public getter for base URL
-  String get baseUrl => serverConfig.url;
+  String get baseUrl =>
+      LockedConfig.allowCustomServer ? serverConfig.url : LockedConfig.baseUrl;
 
   // Callback to notify when auth token becomes invalid
   void Function()? onAuthTokenInvalid;
@@ -51,16 +53,15 @@ class ApiService {
   ApiService({required this.serverConfig, String? authToken})
     : _dio = Dio(
         BaseOptions(
-          baseUrl: serverConfig.url,
-          connectTimeout: const Duration(seconds: 30),
+          baseUrl: LockedConfig.allowCustomServer
+              ? serverConfig.url
+              : LockedConfig.baseUrl,
+          connectTimeout: const Duration(seconds: 20),
           receiveTimeout: const Duration(seconds: 30),
           followRedirects: true,
           maxRedirects: 5,
           validateStatus: (status) => status != null && status < 400,
-          // Add custom headers from server config
-          headers: serverConfig.customHeaders.isNotEmpty
-              ? Map<String, String>.from(serverConfig.customHeaders)
-              : null,
+          headers: _resolveHeaders(serverConfig.customHeaders),
         ),
       ) {
     _configureSelfSignedSupport();
@@ -128,6 +129,14 @@ class ApiService {
     }
   }
 
+  Map<String, String>? _resolveHeaders(Map<String, String> customHeaders) {
+    final headers = <String, String>{...LockedConfig.defaultHeaders};
+    if (customHeaders.isNotEmpty) {
+      headers.addAll(customHeaders);
+    }
+    return headers.isEmpty ? null : headers;
+  }
+
   /// Configures this Dio instance to accept self-signed certificates.
   ///
   /// When [ServerConfig.allowSelfSignedCertificates] is enabled, this method
@@ -143,7 +152,7 @@ class ApiService {
       return;
     }
 
-    final baseUri = _parseBaseUri(serverConfig.url);
+    final baseUri = _parseBaseUri(baseUrl);
     if (baseUri == null) {
       return;
     }

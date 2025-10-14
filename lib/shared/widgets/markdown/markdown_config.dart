@@ -11,7 +11,7 @@ import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:webview_flutter/webview_flutter.dart';
 
-import 'package:conduit/l10n/app_localizations.dart';
+import 'package:clinical_guidelines/l10n/app_localizations.dart';
 
 import '../../theme/color_tokens.dart';
 import '../../theme/theme_extensions.dart';

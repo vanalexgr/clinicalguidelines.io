@@ -9,7 +9,7 @@ class AppLocalizationsIt extends AppLocalizations {
   AppLocalizationsIt([String locale = 'it']) : super(locale);
 
   @override
-  String get appTitle => 'Conduit';
+  String get appTitle => 'Clinical Guidelines';
 
   @override
   String get initializationFailed => 'Inizializzazione non riuscita';

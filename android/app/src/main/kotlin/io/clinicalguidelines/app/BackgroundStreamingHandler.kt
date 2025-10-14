@@ -1,4 +1,4 @@
-package app.cogwheel.conduit
+package io.clinicalguidelines.app
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -130,7 +130,7 @@ class BackgroundStreamingService : Service() {
     private fun createMinimalNotification(): Notification {
         // Create a minimal, silent notification (required for foreground service)
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Conduit")
+            .setContentTitle("Clinical Guidelines")
             .setContentText("Background service active")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setPriority(NotificationCompat.PRIORITY_MIN)
@@ -148,7 +148,7 @@ class BackgroundStreamingService : Service() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
-            "Conduit::StreamingWakeLock"
+            "ClinicalGuidelines::StreamingWakeLock"
         ).apply {
             acquire(3 * 60 * 60 * 1000L) // 3 hours max (refreshed every 5 minutes)
         }
@@ -368,7 +368,7 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Background Service"
-            val descriptionText = "Background service for Conduit"
+            val descriptionText = "Background service for Clinical Guidelines"
             val importance = NotificationManager.IMPORTANCE_MIN
             val channel = NotificationChannel(BackgroundStreamingService.CHANNEL_ID, name, importance).apply {
                 description = descriptionText
