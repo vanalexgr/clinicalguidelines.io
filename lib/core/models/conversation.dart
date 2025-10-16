@@ -26,7 +26,6 @@ sealed class Conversation with _$Conversation {
       _$ConversationFromJson(json);
 }
 
-/// Custom converter to handle Map<dynamic, dynamic> from storage
 class _MetadataConverter
     implements JsonConverter<Map<String, dynamic>, Object?> {
   const _MetadataConverter();
