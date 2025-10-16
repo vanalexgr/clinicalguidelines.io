@@ -3317,60 +3317,10 @@ class ApiService {
           }
         }
 
-        // 4) If nothing found by id, fall back to the latest assistant message
-        if (content.isEmpty) {
-          // Prefer chat.messages list
-          if (chatObj != null && chatObj['messages'] is List) {
-            final List messagesList = chatObj['messages'] as List;
-            // Find last assistant
-            for (int i = messagesList.length - 1; i >= 0; i--) {
-              final m = messagesList[i];
-              if (m is Map && (m['role']?.toString() == 'assistant')) {
-                final rawContent = m['content'];
-                if (rawContent is String) {
-                  content = rawContent;
-                } else if (rawContent is List) {
-                  final textItem = rawContent.firstWhere(
-                    (i) => i is Map && i['type'] == 'text',
-                    orElse: () => null,
-                  );
-                  if (textItem != null) {
-                    content = textItem['text']?.toString() ?? '';
-                  }
-                }
-                if (content.isNotEmpty) break;
-              }
-            }
-          }
-
-          // Try history map if still empty
-          if (content.isEmpty && chatObj != null) {
-            final history = chatObj['history'];
-            if (history is Map && history['messages'] is Map) {
-              final Map<dynamic, dynamic> msgMapDyn =
-                  history['messages'] as Map;
-              // Iterate by values; no guaranteed ordering, but often sufficient
-              for (final entry in msgMapDyn.values) {
-                if (entry is Map &&
-                    (entry['role']?.toString() == 'assistant')) {
-                  final rawContent = entry['content'];
-                  if (rawContent is String) {
-                    content = rawContent;
-                  } else if (rawContent is List) {
-                    final textItem = rawContent.firstWhere(
-                      (i) => i is Map && i['type'] == 'text',
-                      orElse: () => null,
-                    );
-                    if (textItem != null) {
-                      content = textItem['text']?.toString() ?? '';
-                    }
-                  }
-                  if (content.isNotEmpty) break;
-                }
-              }
-            }
-          }
-        }
+        // Note: We intentionally removed the fallback to "any latest assistant message"
+        // because it causes duplication issues in multi-turn conversations.
+        // If we can't find the specific message by ID, we skip this poll iteration
+        // and wait for the next one rather than showing content from a different message.
 
         if (content.isEmpty) {
           continue;
