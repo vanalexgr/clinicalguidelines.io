@@ -15,11 +15,33 @@
 
 default_platform(:android)
 
+def write_android_changelog
+  require 'yaml'
+  pubspec_path = File.expand_path('../../pubspec.yaml', __dir__)
+  pubspec = YAML.load_file(pubspec_path)
+  version = pubspec['version']
+  semver, build = version.split('+', 2)
+  tag = "v#{semver}"
+  link = "https://github.com/cogwheel0/conduit/releases/tag/#{tag}"
+
+  changelog_dir = File.expand_path('metadata/android/en-US/changelogs', __dir__)
+  Dir.mkdir(changelog_dir) unless Dir.exist?(changelog_dir)
+  changelog_file = File.join(changelog_dir, "#{build}.txt")
+  File.write(changelog_file, link + "\n")
+end
+
 desc "Push a new release build to the Google Play"
   lane :release do
+    write_android_changelog
     upload_to_play_store(
-    json_key_data: ENV['FASTLANE_JSON_KEY']
-    track: 'production',
-    aab: '../build/app/outputs/bundle/release/app-release.aab'
-  )
+      json_key: ENV['FASTLANE_JSON_KEY_PATH'],
+      track: 'production',
+      aab: '../build/app/outputs/bundle/release/app-release.aab', 
+      skip_upload_apk: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_metadata: false,
+      skip_upload_changelogs: false,
+      skip_upload_aab: false,
+    )
   end
