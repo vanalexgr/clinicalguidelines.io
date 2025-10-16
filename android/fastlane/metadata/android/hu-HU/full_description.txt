@@ -1,0 +1,31 @@
+A Conduit egy nyílt forráskódú, natív mobil kliens az Open-WebUI-hoz. Csatlakozzon saját szerveréhez, hogy AI modellekkel cseveghessen, kezelje a beszélgetéseit, és magával vihesse saját, helyben futtatott AI-ját – biztonságosan, bárhol és bármikor.
+
+Jellemzők
+- Valós idejű, folyamatos csevegés
+- Modellválasztás
+- Beszélgetések keresése és kezelése
+- Hangbevitel (beszédfelismerés)
+- Fájl- és képfeltöltés a visszakeresés-alapú generáláshoz (RAG)
+- Képfelismerés és többmódú támogatás
+- Markdown megjelenítés szintaxiskiemeléssel
+- Világos, sötét és rendszer témák
+- Biztonságos hitelesítő adatok tárolása (Keychain/Keystore)
+- Offline is használható élmény
+
+Követelmények
+- Szükséges egy meglévő Open-WebUI szerver. A Conduit nem tárol és nem biztosít AI modelleket.
+- Alapértelmezés szerint nem küld adatokat harmadik fél szolgáltatásainak; minden a beállított szerverén marad.
+
+Engedélyek
+- Mikrofon: Hangbevitelhez
+- Kamera és Fotók/Tárhely: Kép/fájl csatolmányokhoz
+- Hálózat: Csatlakozás az Open-WebUI szerverhez
+
+Nyílt Forráskód:
+A Conduit egy nyílt forráskódú projekt. Támogatásért, hibajelentésért vagy a forráskód megtekintéséért látogasson el GitHub tárolónkba:
+
+https://github.com/cogwheel0/conduit
+
+-----
+
+Jogi nyilatkozat: Ez egy független, harmadik féltől származó alkalmazás, amely a GNU General Public License v3.0 (GPLv3) alatt licencelt, és hivatalosan nem áll kapcsolatban az OpenWebUI projekttel.

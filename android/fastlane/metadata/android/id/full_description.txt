@@ -1,0 +1,31 @@
+Conduit adalah klien seluler asli sumber terbuka untuk Open-WebUI. Hubungkan ke server Anda sendiri untuk mengobrol dengan model AI, mengelola percakapan, dan membawa AI yang Anda kelola sendiri—dengan aman dan praktis saat bepergian.
+
+Fitur
+- Obrolan streaming secara real-time
+- Pemilihan model AI
+- Pencarian dan pengelolaan percakapan
+- Input suara (speech-to-text)
+- Unggah file dan gambar untuk generasi yang diperkaya pengambilan (RAG)
+- Dukungan visi dan multi-modal
+- Rendering Markdown dengan penyorotan sintaks
+- Tema terang, gelap, dan mengikuti sistem
+- Penyimpanan kredensial yang aman (Keychain/Keystore)
+- Pengalaman yang tetap berfungsi saat offline
+
+Persyaratan
+- Membutuhkan server Open-WebUI yang sudah ada. Conduit tidak menyediakan atau meng-host model AI.
+- Secara default, tidak ada data yang dikirim ke layanan pihak ketiga; semuanya tetap berada di server yang Anda konfigurasi.
+
+Izin
+- Mikrofon: Untuk input suara
+- Kamera dan Foto/Penyimpanan: Untuk melampirkan gambar/file
+- Jaringan: Untuk terhubung ke server Open-WebUI Anda
+
+Sumber Terbuka:
+Conduit adalah proyek sumber terbuka. Untuk mendapatkan dukungan, melaporkan masalah, atau melihat kode sumber, silakan kunjungi repositori GitHub kami:
+
+https://github.com/cogwheel0/conduit
+
+-----
+
+Penafian: Ini adalah aplikasi pihak ketiga independen yang dilisensikan di bawah GNU General Public License v3.0 (GPLv3) dan tidak berafiliasi secara resmi dengan proyek OpenWebUI.

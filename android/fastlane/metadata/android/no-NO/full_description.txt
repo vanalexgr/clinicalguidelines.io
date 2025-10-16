@@ -1,0 +1,31 @@
+Conduit er en åpen kildekode, native mobilklient for Open-WebUI. Koble til din egen server for å chatte med AI-modeller, administrere samtaler, og ta med deg din selv-hostede AI – sikkert og på farten.
+
+Funksjoner
+- Sanntids chat-strømming
+- Valg av modell
+- Søk og administrasjon av samtaler
+- Stemmeinndata (tale-til-tekst)
+- Opplasting av filer og bilder for gjenfinning-forsterket generering (RAG)
+- Støtte for syn og multi-modalitet
+- Markdown-gjengivelse med syntaksutheving
+- Lyse, mørke og systemtemaer
+- Sikker lagring av legitimasjon (Nøkkelring/Keystore)
+- Opplevelse som tar hensyn til frakobling
+
+Krav
+- Krever en eksisterende Open-WebUI server. Conduit hoster eller tilbyr ikke AI-modeller.
+- Ingen data sendes til tredjepartstjenester som standard; alt forblir på din konfigurerte server.
+
+Tillatelser
+- Mikrofon: Stemmeinndata
+- Kamera og Bilder/Lagring: Vedlegg av bilder/filer
+- Nettverk: Koble til din Open-WebUI server
+
+Åpen Kildekode:
+Conduit er et åpen kildekode-prosjekt. For støtte, for å rapportere problemer, eller for å se kildekoden, vennligst besøk vårt GitHub-arkiv:
+
+https://github.com/cogwheel0/conduit
+
+-----
+
+Ansvarsfraskrivelse: Dette er en uavhengig tredjepartsapplikasjon lisensiert under GNU General Public License v3.0 (GPLv3) og er ikke offisielt tilknyttet OpenWebUI-prosjektet.

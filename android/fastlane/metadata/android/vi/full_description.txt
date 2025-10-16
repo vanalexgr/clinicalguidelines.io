@@ -1,0 +1,31 @@
+Conduit là ứng dụng di động mã nguồn mở, được phát triển riêng cho Open-WebUI. Kết nối với máy chủ của bạn để trò chuyện với các mô hình AI, quản lý cuộc hội thoại và mang theo AI tự lưu trữ của bạn một cách an toàn, mọi lúc mọi nơi.
+
+Tính năng
+- Trò chuyện trực tuyến theo thời gian thực
+- Lựa chọn mô hình AI
+- Tìm kiếm và quản lý cuộc trò chuyện
+- Nhập liệu bằng giọng nói (chuyển giọng nói thành văn bản)
+- Tải lên tệp và hình ảnh để hỗ trợ tạo nội dung (RAG)
+- Hỗ trợ thị giác và đa phương thức
+- Hiển thị Markdown với tô sáng cú pháp
+- Giao diện sáng, tối và theo hệ thống
+- Lưu trữ thông tin đăng nhập an toàn (Keychain/Keystore)
+- Trải nghiệm liền mạch ngay cả khi ngoại tuyến
+
+Yêu cầu
+- Cần có máy chủ Open-WebUI đang hoạt động. Conduit không lưu trữ hay cung cấp các mô hình AI.
+- Mặc định, không có dữ liệu nào được gửi đến dịch vụ bên thứ ba; mọi thứ đều nằm trên máy chủ bạn đã cấu hình.
+
+Quyền truy cập
+- Micro: Nhập liệu bằng giọng nói
+- Camera và Ảnh/Bộ nhớ: Đính kèm hình ảnh/tệp
+- Mạng: Kết nối với máy chủ Open-WebUI của bạn
+
+Mã nguồn mở:
+Conduit là một dự án mã nguồn mở. Để được hỗ trợ, báo cáo lỗi hoặc xem mã nguồn, vui lòng truy cập kho lưu trữ GitHub của chúng tôi tại:
+
+https://github.com/cogwheel0/conduit
+
+-----
+
+Tuyên bố từ chối trách nhiệm: Đây là ứng dụng độc lập, do bên thứ ba phát triển, được cấp phép theo Giấy phép Công cộng GNU phiên bản 3.0 (GPLv3) và không có liên kết chính thức với dự án OpenWebUI.

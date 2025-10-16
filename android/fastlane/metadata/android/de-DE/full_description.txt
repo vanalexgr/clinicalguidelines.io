@@ -1,0 +1,31 @@
+Conduit ist ein nativer Open-Source-Client für Open-WebUI. Verbinden Sie sich mit Ihrem eigenen Server, um mit KI-Modellen zu chatten, Unterhaltungen zu verwalten und Ihre selbst gehostete KI sicher und unterwegs dabei zu haben.
+
+Funktionen
+- Echtzeit-Streaming-Chat
+- Modellauswahl
+- Suche und Verwaltung von Unterhaltungen
+- Spracheingabe (Sprache-zu-Text)
+- Datei- und Bild-Uploads für Retrieval-Augmented Generation (RAG)
+- Unterstützung für Vision und Multi-Modale Modelle
+- Markdown-Rendering mit Syntax-Hervorhebung
+- Helle, dunkle und System-Designs
+- Sichere Speicherung von Zugangsdaten (Keychain/Keystore)
+- Funktionalität auch offline
+
+Anforderungen
+- Erfordert einen bestehenden Open-WebUI-Server. Conduit hostet oder stellt keine KI-Modelle bereit.
+- Standardmäßig werden keine Daten an Drittanbieter gesendet; alles verbleibt auf Ihrem konfigurierten Server.
+
+Berechtigungen
+- Mikrofon: Spracheingabe
+- Kamera und Fotos/Speicher: Anhängen von Bildern/Dateien
+- Netzwerk: Verbindung zu Ihrem Open-WebUI-Server
+
+Open Source:
+Conduit ist ein Open-Source-Projekt. Für Support, zur Meldung von Problemen oder zur Einsicht des Quellcodes besuchen Sie bitte unser GitHub-Repository:
+
+https://github.com/cogwheel0/conduit
+
+-----
+
+Haftungsausschluss: Dies ist eine unabhängige Drittanbieteranwendung, lizenziert unter der GNU General Public License v3.0 (GPLv3) und steht in keiner offiziellen Verbindung zum OpenWebUI-Projekt.

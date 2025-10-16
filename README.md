@@ -18,7 +18,7 @@
 <br>
 
 <div align="center">
-<img src="fastlane/metadata/en-US/images/conduit-demo.gif" alt="Conduit Demo" style="height:600px;"/>
+<img src="docs/conduit-demo.gif" alt="Conduit Demo" style="height:600px;"/>
 </div>
 
 <br>
@@ -80,7 +80,7 @@ Conduit supports multiple authentication flows when connecting to your Open‑We
 
 | | | | |
 | --- | --- | --- | --- |
-| <img src="fastlane/metadata/en-US/images/phoneScreenshots/2.png" alt="Screenshot 2" width="200" /> | <img src="fastlane/metadata/en-US/images/phoneScreenshots/3.png" alt="Screenshot 3" width="200" /> | <img src="fastlane/metadata/en-US/images/phoneScreenshots/4.png" alt="Screenshot 4" width="200" /> | <img src="fastlane/metadata/en-US/images/phoneScreenshots/5.png" alt="Screenshot 5" width="200" /> |
+| <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/2_en-US.png" alt="Screenshot 2" width="200" /> | <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/3_en-US.png" alt="Screenshot 3" width="200" /> | <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/4_en-US.png" alt="Screenshot 4" width="200" /> | <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/5_en-US.png" alt="Screenshot 5" width="200" /> |
 
 ## Requirements
 
@@ -145,23 +145,6 @@ The app will request permissions for:
 - Speech recognition
 - Camera access
 - Photo library access
-
-## Localization (i18n)
-
-See the dedicated documentation: [docs/localization.md](docs/localization.md)
-
-## Compatibility
-
-| Conduit App | Open‑WebUI | Notes |
-| --- | --- | --- |
-| 1.x | 0.3.x+ | OpenAPI validation removed in 1.1+ (no bundled schema) |
-
-## Docs
-
-- Localization: `docs/localization.md`
-- Architecture (planned): `docs/architecture.md`
-- Theming (planned): `docs/theming.md`
-- Release Process (planned): `docs/release.md`
 
 ## Architecture
 

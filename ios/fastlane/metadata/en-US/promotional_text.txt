@@ -1,0 +1,2 @@
+Patch Release: Fix response solution, tools not enabling, connection issues.
+New Languages: Spanish, Dutch, Russian and Chinese.

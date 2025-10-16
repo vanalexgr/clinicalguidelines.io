@@ -1,0 +1,31 @@
+Conduit est un client mobile natif et open source pour Open-WebUI. Connectez-vous à votre propre serveur pour discuter avec des modèles d'IA, gérer vos conversations et emporter votre IA auto-hébergée partout avec vous, en toute sécurité.
+
+Fonctionnalités
+- Chat en streaming en temps réel
+- Sélection de modèles
+- Recherche et gestion des conversations
+- Saisie vocale (synthèse vocale)
+- Téléchargement de fichiers et d'images pour la génération augmentée par récupération (RAG)
+- Prise en charge de la vision et du multi-modal
+- Rendu Markdown avec coloration syntaxique
+- Thèmes clair, sombre et système
+- Stockage sécurisé des identifiants (Keychain/Keystore)
+- Expérience adaptée à l'état hors ligne
+
+Prérequis
+- Nécessite un serveur Open-WebUI existant. Conduit n'héberge ni ne fournit de modèles d'IA.
+- Aucune donnée n'est envoyée à des services tiers par défaut ; tout reste sur votre serveur configuré.
+
+Autorisations
+- Microphone : Saisie vocale
+- Appareil photo et Photos/Stockage : Pièces jointes (images/fichiers)
+- Réseau : Connexion à votre serveur Open-WebUI
+
+Open Source :
+Conduit est un projet open source. Pour obtenir de l'aide, signaler des problèmes ou consulter le code source, veuillez visiter notre dépôt GitHub :
+
+https://github.com/cogwheel0/conduit
+
+-----
+
+Clause de non-responsabilité : Cette application est une application tierce indépendante, sous licence GNU General Public License v3.0 (GPLv3), et n'est pas officiellement affiliée au projet OpenWebUI.

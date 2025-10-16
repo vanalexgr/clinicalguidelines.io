@@ -1,0 +1,31 @@
+Conduit on avoimen lähdekoodin natiivi mobiilisovellus Open-WebUI:lle. Yhdistä omaan palvelimeesi keskustellaksesi tekoälymallien kanssa, hallitaksesi keskustelujasi ja pitääksesi itse isännöimäsi tekoälyn mukanasi – turvallisesti ja missä tahansa liikutkin.
+
+Ominaisuudet
+- Reaaliaikainen suoratoistokeskustelu
+- Mallin valinta
+- Keskustelujen haku ja hallinta
+- Äänisyöte (puhe tekstiksi)
+- Tiedosto- ja kuvien lataus hakuun perustuvaa generointia varten (RAG)
+- Näkö- ja monimodaalinen tuki
+- Markdown-renderöinti syntaksikorostuksella
+- Vaalea, tumma ja järjestelmän teemat
+- Turvallinen tunnistetietojen tallennus (Keychain/Keystore)
+- Toimii myös offline-tilassa
+
+Vaatimukset
+- Vaatii olemassa olevan Open-WebUI-palvelimen. Conduit ei isännöi tai tarjoa tekoälymalleja.
+- Tietoja ei lähetetä kolmansien osapuolten palveluihin oletuksena; kaikki pysyy määritetyn palvelimesi kanssa.
+
+Luvat
+- Mikrofoni: Äänisyöte
+- Kamera ja Valokuvat/Tallennustila: Kuva-/tiedostoliitteet
+- Verkko: Yhdistä Open-WebUI-palvelimeesi
+
+Avoin lähdekoodi:
+Conduit on avoimen lähdekoodin projekti. Tukea, ongelmien ilmoittamista tai lähdekoodin tarkastelua varten vieraile GitHub-arkistossamme:
+
+https://github.com/cogwheel0/conduit
+
+-----
+
+Vastuuvapauslauseke: Tämä on itsenäinen, kolmannen osapuolen sovellus, joka on lisensoitu GNU General Public License v3.0 (GPLv3) -lisenssillä, eikä se ole virallisesti sidoksissa OpenWebUI-projektiin.
