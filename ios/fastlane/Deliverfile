@@ -4,4 +4,5 @@
 submit_for_review(true)
 skip_metadata(true)
 skip_screenshots(true)
+run_precheck_before_submit(false)
 ipa("../build/ios/ipa/conduit.ipa")

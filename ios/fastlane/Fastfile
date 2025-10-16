@@ -12,3 +12,12 @@
 
 # Uncomment the line if you want fastlane to automatically update itself
 # update_fastlane
+default_platform(:ios)
+lane :release do
+    app_store_connect_api_key(
+      key_id: ENV['FASTLANE_API_KEY_ID'],
+      issuer_id: ENV['FASTLANE_API_KEY_ISSUER_ID'],
+      key_filepath: ENV['FASTLANE_API_KEY_PATH']
+    )
+    deliver
+  end
