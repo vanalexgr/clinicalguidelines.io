@@ -1718,6 +1718,84 @@ abstract class AppLocalizations {
   /// **'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available'**
   String get sendOnEnterDescription;
 
+  /// Section header for TTS-related customization options.
+  ///
+  /// In en, this message translates to:
+  /// **'Text to Speech'**
+  String get ttsSettings;
+
+  /// Title for voice selection tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice'**
+  String get ttsVoice;
+
+  /// Title for speech rate slider.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech Rate'**
+  String get ttsSpeechRate;
+
+  /// Title for pitch slider.
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch'**
+  String get ttsPitch;
+
+  /// Title for volume slider.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get ttsVolume;
+
+  /// Title for preview button.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview Voice'**
+  String get ttsPreview;
+
+  /// Label for system default voice option.
+  ///
+  /// In en, this message translates to:
+  /// **'System Default'**
+  String get ttsSystemDefault;
+
+  /// Title for voice picker bottom sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Voice'**
+  String get ttsSelectVoice;
+
+  /// Sample text spoken during voice preview.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a preview of the selected voice.'**
+  String get ttsPreviewText;
+
+  /// Error message when no TTS voices can be found.
+  ///
+  /// In en, this message translates to:
+  /// **'No voices available'**
+  String get ttsNoVoicesAvailable;
+
+  /// Section header for voices matching the app language
+  ///
+  /// In en, this message translates to:
+  /// **'{language} Voices'**
+  String ttsVoicesForLanguage(String language);
+
+  /// Section header for voices in other languages.
+  ///
+  /// In en, this message translates to:
+  /// **'Other Languages'**
+  String get ttsOtherVoices;
+
+  /// Generic error label.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get error;
+
   /// Section header for visual and layout related settings.
   ///
   /// In en, this message translates to:

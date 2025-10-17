@@ -136,6 +136,12 @@ class SettingsService {
           (box.get(_quickPillsKey) as List<dynamic>?) ?? const <String>[],
         ),
         sendOnEnter: (box.get(_sendOnEnterKey) as bool?) ?? false,
+        ttsVoice: box.get(PreferenceKeys.ttsVoice) as String?,
+        ttsSpeechRate:
+            (box.get(PreferenceKeys.ttsSpeechRate) as num?)?.toDouble() ?? 0.5,
+        ttsPitch: (box.get(PreferenceKeys.ttsPitch) as num?)?.toDouble() ?? 1.0,
+        ttsVolume:
+            (box.get(PreferenceKeys.ttsVolume) as num?)?.toDouble() ?? 1.0,
       ),
     );
   }
@@ -155,6 +161,9 @@ class SettingsService {
       _socketTransportModeKey: settings.socketTransportMode,
       _quickPillsKey: settings.quickPills.take(2).toList(),
       _sendOnEnterKey: settings.sendOnEnter,
+      PreferenceKeys.ttsSpeechRate: settings.ttsSpeechRate,
+      PreferenceKeys.ttsPitch: settings.ttsPitch,
+      PreferenceKeys.ttsVolume: settings.ttsVolume,
     };
 
     await box.putAll(updates);
@@ -169,6 +178,12 @@ class SettingsService {
       await box.put(_voiceLocaleKey, settings.voiceLocaleId);
     } else {
       await box.delete(_voiceLocaleKey);
+    }
+
+    if (settings.ttsVoice != null && settings.ttsVoice!.isNotEmpty) {
+      await box.put(PreferenceKeys.ttsVoice, settings.ttsVoice);
+    } else {
+      await box.delete(PreferenceKeys.ttsVoice);
     }
   }
 
@@ -295,6 +310,10 @@ class AppSettings {
   final String socketTransportMode; // 'auto' or 'ws'
   final List<String> quickPills; // e.g., ['web','image']
   final bool sendOnEnter;
+  final String? ttsVoice;
+  final double ttsSpeechRate;
+  final double ttsPitch;
+  final double ttsVolume;
   const AppSettings({
     this.reduceMotion = false,
     this.animationSpeed = 1.0,
@@ -309,6 +328,10 @@ class AppSettings {
     this.socketTransportMode = 'ws',
     this.quickPills = const [],
     this.sendOnEnter = false,
+    this.ttsVoice,
+    this.ttsSpeechRate = 0.5,
+    this.ttsPitch = 1.0,
+    this.ttsVolume = 1.0,
   });
 
   AppSettings copyWith({
@@ -325,6 +348,10 @@ class AppSettings {
     String? socketTransportMode,
     List<String>? quickPills,
     bool? sendOnEnter,
+    Object? ttsVoice = const _DefaultValue(),
+    double? ttsSpeechRate,
+    double? ttsPitch,
+    double? ttsVolume,
   }) {
     return AppSettings(
       reduceMotion: reduceMotion ?? this.reduceMotion,
@@ -344,6 +371,10 @@ class AppSettings {
       socketTransportMode: socketTransportMode ?? this.socketTransportMode,
       quickPills: quickPills ?? this.quickPills,
       sendOnEnter: sendOnEnter ?? this.sendOnEnter,
+      ttsVoice: ttsVoice is _DefaultValue ? this.ttsVoice : ttsVoice as String?,
+      ttsSpeechRate: ttsSpeechRate ?? this.ttsSpeechRate,
+      ttsPitch: ttsPitch ?? this.ttsPitch,
+      ttsVolume: ttsVolume ?? this.ttsVolume,
     );
   }
 
@@ -362,6 +393,10 @@ class AppSettings {
         other.voiceHoldToTalk == voiceHoldToTalk &&
         other.voiceAutoSendFinal == voiceAutoSendFinal &&
         other.sendOnEnter == sendOnEnter &&
+        other.ttsVoice == ttsVoice &&
+        other.ttsSpeechRate == ttsSpeechRate &&
+        other.ttsPitch == ttsPitch &&
+        other.ttsVolume == ttsVolume &&
         _listEquals(other.quickPills, quickPills);
     // socketTransportMode intentionally not included in == to avoid frequent rebuilds
   }
@@ -381,6 +416,10 @@ class AppSettings {
       voiceAutoSendFinal,
       socketTransportMode,
       sendOnEnter,
+      ttsVoice,
+      ttsSpeechRate,
+      ttsPitch,
+      ttsVolume,
       Object.hashAllUnordered(quickPills),
     );
   }
@@ -482,6 +521,26 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
   Future<void> setSendOnEnter(bool value) async {
     state = state.copyWith(sendOnEnter: value);
     await SettingsService.setSendOnEnter(value);
+  }
+
+  Future<void> setTtsVoice(String? voice) async {
+    state = state.copyWith(ttsVoice: voice);
+    await SettingsService.saveSettings(state);
+  }
+
+  Future<void> setTtsSpeechRate(double rate) async {
+    state = state.copyWith(ttsSpeechRate: rate);
+    await SettingsService.saveSettings(state);
+  }
+
+  Future<void> setTtsPitch(double pitch) async {
+    state = state.copyWith(ttsPitch: pitch);
+    await SettingsService.saveSettings(state);
+  }
+
+  Future<void> setTtsVolume(double volume) async {
+    state = state.copyWith(ttsVolume: volume);
+    await SettingsService.saveSettings(state);
   }
 
   Future<void> resetToDefaults() async {

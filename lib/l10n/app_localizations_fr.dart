@@ -904,6 +904,47 @@ class AppLocalizationsFr extends AppLocalizations {
       'Entrée envoie (clavier logiciel). Cmd/Ctrl+Entrée aussi disponible';
 
   @override
+  String get ttsSettings => 'Synthèse vocale';
+
+  @override
+  String get ttsVoice => 'Voix';
+
+  @override
+  String get ttsSpeechRate => 'Vitesse de parole';
+
+  @override
+  String get ttsPitch => 'Hauteur';
+
+  @override
+  String get ttsVolume => 'Volume';
+
+  @override
+  String get ttsPreview => 'Aperçu de la voix';
+
+  @override
+  String get ttsSystemDefault => 'Système par défaut';
+
+  @override
+  String get ttsSelectVoice => 'Sélectionner la voix';
+
+  @override
+  String get ttsPreviewText => 'Ceci est un aperçu de la voix sélectionnée.';
+
+  @override
+  String get ttsNoVoicesAvailable => 'Aucune voix disponible';
+
+  @override
+  String ttsVoicesForLanguage(String language) {
+    return 'Voix $language';
+  }
+
+  @override
+  String get ttsOtherVoices => 'Autres langues';
+
+  @override
+  String get error => 'Erreur';
+
+  @override
   String get display => 'Affichage';
 
   @override

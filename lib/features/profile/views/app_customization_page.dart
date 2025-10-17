@@ -13,6 +13,7 @@ import '../../../shared/widgets/conduit_components.dart';
 import '../../../shared/utils/ui_utils.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../chat/providers/text_to_speech_provider.dart';
 
 class AppCustomizationPage extends ConsumerWidget {
   const AppCustomizationPage({super.key});
@@ -66,6 +67,8 @@ class AppCustomizationPage extends ConsumerWidget {
             _buildQuickPillsSection(context, ref, settings),
             const SizedBox(height: Spacing.xl),
             _buildChatSection(context, ref, settings),
+            const SizedBox(height: Spacing.xl),
+            _buildTtsSection(context, ref, settings),
           ],
         ),
       ),
@@ -482,6 +485,613 @@ class AppCustomizationPage extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildTtsSection(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) {
+    final theme = context.conduitTheme;
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.ttsSettings,
+          style:
+              theme.headingSmall?.copyWith(color: theme.textPrimary) ??
+              TextStyle(color: theme.textPrimary, fontSize: 18),
+        ),
+        const SizedBox(height: Spacing.sm),
+        // Voice Selection
+        _CustomizationTile(
+          leading: _buildIconBadge(
+            context,
+            Platform.isIOS ? CupertinoIcons.speaker_3 : Icons.record_voice_over,
+            color: theme.buttonPrimary,
+          ),
+          title: l10n.ttsVoice,
+          subtitle: _getDisplayVoiceName(
+            settings.ttsVoice,
+            l10n.ttsSystemDefault,
+          ),
+          onTap: () => _showVoicePickerSheet(context, ref, settings),
+        ),
+        const SizedBox(height: Spacing.xs),
+        // Speech Rate Slider
+        _buildSliderTile(
+          context,
+          ref,
+          icon: Platform.isIOS ? CupertinoIcons.speedometer : Icons.speed,
+          title: l10n.ttsSpeechRate,
+          value: settings.ttsSpeechRate,
+          min: 0.25,
+          max: 2.0,
+          divisions: 7,
+          label: '${(settings.ttsSpeechRate * 100).round()}%',
+          onChanged: (value) =>
+              ref.read(appSettingsProvider.notifier).setTtsSpeechRate(value),
+        ),
+        const SizedBox(height: Spacing.xs),
+        // Pitch Slider
+        _buildSliderTile(
+          context,
+          ref,
+          icon: Platform.isIOS ? CupertinoIcons.waveform : Icons.graphic_eq,
+          title: l10n.ttsPitch,
+          value: settings.ttsPitch,
+          min: 0.5,
+          max: 2.0,
+          divisions: 6,
+          label: settings.ttsPitch.toStringAsFixed(1),
+          onChanged: (value) =>
+              ref.read(appSettingsProvider.notifier).setTtsPitch(value),
+        ),
+        const SizedBox(height: Spacing.xs),
+        // Volume Slider
+        _buildSliderTile(
+          context,
+          ref,
+          icon: Platform.isIOS ? CupertinoIcons.volume_up : Icons.volume_up,
+          title: l10n.ttsVolume,
+          value: settings.ttsVolume,
+          min: 0.0,
+          max: 1.0,
+          divisions: 10,
+          label: '${(settings.ttsVolume * 100).round()}%',
+          onChanged: (value) =>
+              ref.read(appSettingsProvider.notifier).setTtsVolume(value),
+        ),
+        const SizedBox(height: Spacing.xs),
+        // Preview Button
+        _CustomizationTile(
+          leading: _buildIconBadge(
+            context,
+            Platform.isIOS ? CupertinoIcons.play_fill : Icons.play_arrow,
+            color: theme.buttonSecondary,
+          ),
+          title: l10n.ttsPreview,
+          subtitle: l10n.ttsPreviewText,
+          onTap: () => _previewTtsVoice(context, ref),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSliderTile(
+    BuildContext context,
+    WidgetRef ref, {
+    required IconData icon,
+    required String title,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required String label,
+    required ValueChanged<double> onChanged,
+  }) {
+    final theme = context.conduitTheme;
+    return ConduitCard(
+      padding: const EdgeInsets.all(Spacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _buildIconBadge(context, icon, color: theme.buttonSecondary),
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style:
+                      theme.bodyMedium?.copyWith(
+                        color: theme.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ) ??
+                      TextStyle(color: theme.textPrimary, fontSize: 14),
+                ),
+              ),
+              Text(
+                label,
+                style:
+                    theme.bodyMedium?.copyWith(
+                      color: theme.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ) ??
+                    TextStyle(color: theme.textSecondary, fontSize: 14),
+              ),
+            ],
+          ),
+          Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showVoicePickerSheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = context.conduitTheme;
+    final ttsService = ref.read(textToSpeechServiceProvider);
+
+    // Fetch available voices
+    final allVoices = await ttsService.getAvailableVoices();
+
+    if (!context.mounted) return;
+
+    if (allVoices.isEmpty) {
+      // Show error if no voices available
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.ttsNoVoicesAvailable),
+          backgroundColor: theme.error,
+        ),
+      );
+      return;
+    }
+
+    // Get the app's current locale
+    final appLocale = ref.read(appLocaleProvider);
+    final appLanguageCode =
+        appLocale?.languageCode ?? Localizations.localeOf(context).languageCode;
+
+    // Filter and sort voices: prioritize matching app language
+    final matchingVoices = <Map<String, dynamic>>[];
+    final otherVoices = <Map<String, dynamic>>[];
+
+    for (final voice in allVoices) {
+      final voiceName = voice['name'] as String? ?? '';
+      final voiceLocale = voice['locale'] as String? ?? '';
+
+      // Check if voice matches app language (e.g., 'en' matches 'en-us', 'en-gb')
+      final matchesLanguage =
+          voiceName.toLowerCase().startsWith(appLanguageCode) ||
+          voiceLocale.toLowerCase().startsWith(appLanguageCode);
+
+      if (matchesLanguage) {
+        matchingVoices.add(voice);
+      } else {
+        otherVoices.add(voice);
+      }
+    }
+
+    // Sort each group alphabetically by name
+    matchingVoices.sort((a, b) {
+      final nameA = a['name'] as String? ?? '';
+      final nameB = b['name'] as String? ?? '';
+      return nameA.compareTo(nameB);
+    });
+
+    otherVoices.sort((a, b) {
+      final nameA = a['name'] as String? ?? '';
+      final nameB = b['name'] as String? ?? '';
+      return nameA.compareTo(nameB);
+    });
+
+    // Combine: matching voices first, then others
+    final voices = [...matchingVoices, ...otherVoices];
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.surfaceBackground,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext sheetContext) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(Spacing.md),
+                  child: Row(
+                    children: [
+                      Text(
+                        l10n.ttsSelectVoice,
+                        style:
+                            theme.headingSmall?.copyWith(
+                              color: theme.textPrimary,
+                            ) ??
+                            TextStyle(
+                              color: theme.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(Icons.close, color: theme.iconPrimary),
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // System Default Option
+                ListTile(
+                  leading: Icon(
+                    Platform.isIOS
+                        ? CupertinoIcons.speaker_3
+                        : Icons.record_voice_over,
+                    color: theme.iconPrimary,
+                  ),
+                  title: Text(
+                    l10n.ttsSystemDefault,
+                    style:
+                        theme.bodyMedium?.copyWith(
+                          color: theme.textPrimary,
+                          fontWeight: settings.ttsVoice == null
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ) ??
+                        TextStyle(color: theme.textPrimary),
+                  ),
+                  trailing: settings.ttsVoice == null
+                      ? Icon(Icons.check, color: theme.buttonPrimary)
+                      : null,
+                  onTap: () {
+                    ref.read(appSettingsProvider.notifier).setTtsVoice(null);
+                    Navigator.of(sheetContext).pop();
+                  },
+                ),
+                const Divider(height: 1),
+                // Voices List
+                Expanded(
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount:
+                        voices.length +
+                        (matchingVoices.isNotEmpty && otherVoices.isNotEmpty
+                            ? 2
+                            : 0),
+                    itemBuilder: (context, index) {
+                      // Show section header for matching voices
+                      if (index == 0 &&
+                          matchingVoices.isNotEmpty &&
+                          otherVoices.isNotEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                          child: Text(
+                            l10n.ttsVoicesForLanguage(
+                              appLanguageCode.toUpperCase(),
+                            ),
+                            style:
+                                theme.bodySmall?.copyWith(
+                                  color: theme.textSecondary,
+                                  fontWeight: FontWeight.bold,
+                                ) ??
+                                TextStyle(
+                                  color: theme.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        );
+                      }
+
+                      // Show section header for other voices
+                      if (index == matchingVoices.length + 1 &&
+                          matchingVoices.isNotEmpty &&
+                          otherVoices.isNotEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                          child: Text(
+                            l10n.ttsOtherVoices,
+                            style:
+                                theme.bodySmall?.copyWith(
+                                  color: theme.textSecondary,
+                                  fontWeight: FontWeight.bold,
+                                ) ??
+                                TextStyle(
+                                  color: theme.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        );
+                      }
+
+                      // Adjust index for headers
+                      int voiceIndex = index;
+                      if (matchingVoices.isNotEmpty && otherVoices.isNotEmpty) {
+                        if (index == 0) return const SizedBox.shrink();
+                        if (index <= matchingVoices.length) {
+                          voiceIndex = index - 1;
+                        } else {
+                          voiceIndex = index - 2;
+                        }
+                      }
+
+                      final voice = voices[voiceIndex];
+                      final voiceId = _getVoiceIdentifier(voice);
+                      final displayName = _formatVoiceName(voice);
+                      final subtitle = _getVoiceSubtitle(voice);
+                      final isSelected = settings.ttsVoice == voiceId;
+
+                      return ListTile(
+                        leading: Icon(
+                          Platform.isIOS
+                              ? CupertinoIcons.person_fill
+                              : Icons.person,
+                          color: theme.iconSecondary,
+                        ),
+                        title: Text(
+                          displayName,
+                          style:
+                              theme.bodyMedium?.copyWith(
+                                color: theme.textPrimary,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ) ??
+                              TextStyle(color: theme.textPrimary),
+                        ),
+                        subtitle: subtitle.isNotEmpty
+                            ? Text(
+                                subtitle,
+                                style:
+                                    theme.bodySmall?.copyWith(
+                                      color: theme.textSecondary,
+                                    ) ??
+                                    TextStyle(
+                                      color: theme.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                              )
+                            : null,
+                        trailing: isSelected
+                            ? Icon(Icons.check, color: theme.buttonPrimary)
+                            : null,
+                        onTap: () {
+                          ref
+                              .read(appSettingsProvider.notifier)
+                              .setTtsVoice(voiceId);
+                          Navigator.of(sheetContext).pop();
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _previewTtsVoice(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = context.conduitTheme;
+
+    try {
+      final ttsController = ref.read(textToSpeechControllerProvider.notifier);
+
+      // Try to read the state, but handle if provider is in error
+      TextToSpeechState? ttsState;
+      try {
+        ttsState = ref.read(textToSpeechControllerProvider);
+      } catch (_) {
+        // Provider is in error state, proceed anyway to initialize it
+        ttsState = null;
+      }
+
+      // Don't preview if already speaking
+      if (ttsState != null && (ttsState.isSpeaking || ttsState.isBusy)) {
+        await ttsController.stop();
+        return;
+      }
+
+      // Use the preview text from localization
+      await ttsController.toggleForMessage(
+        messageId: 'tts_preview',
+        text: l10n.ttsPreviewText,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${l10n.error}: $e'),
+          backgroundColor: theme.error,
+        ),
+      );
+    }
+  }
+
+  String _getDisplayVoiceName(String? voiceName, String defaultLabel) {
+    if (voiceName == null || voiceName.isEmpty) {
+      return defaultLabel;
+    }
+
+    // Format Android-style voice names with # separator
+    if (voiceName.contains('#')) {
+      final parts = voiceName.split('#');
+      if (parts.length > 1) {
+        var friendlyName = parts[1]
+            .replaceAll('-local', '')
+            .replaceAll('-network', '')
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map(
+              (word) =>
+                  word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1),
+            )
+            .join(' ');
+
+        final localeInfo = parts[0].toUpperCase().replaceAll('_', '-');
+        return '$localeInfo - $friendlyName';
+      }
+    }
+
+    // Handle Android-style voice IDs without # (e.g., "es-us-x-sfb-local")
+    if (voiceName.contains('-x-') ||
+        voiceName.endsWith('-local') ||
+        voiceName.endsWith('-network') ||
+        voiceName.endsWith('-language')) {
+      var localePart = '';
+      var qualityPart = '';
+
+      if (voiceName.contains('-x-')) {
+        final xParts = voiceName.split('-x-');
+        localePart = xParts[0];
+        qualityPart = xParts.length > 1 ? xParts[1] : '';
+      } else if (voiceName.contains('-language')) {
+        localePart = voiceName.replaceAll('-language', '');
+      } else {
+        final dashIndex = voiceName.indexOf('-', 3);
+        if (dashIndex > 0) {
+          localePart = voiceName.substring(0, dashIndex);
+        } else {
+          localePart = voiceName;
+        }
+      }
+
+      final formattedLocale = localePart.toUpperCase();
+
+      if (qualityPart.isNotEmpty) {
+        qualityPart = qualityPart
+            .replaceAll('-local', '')
+            .replaceAll('-network', '')
+            .toUpperCase();
+        return '$formattedLocale ($qualityPart)';
+      }
+
+      return formattedLocale;
+    }
+
+    // For iOS or other platforms with proper names, return as-is
+    return voiceName;
+  }
+
+  String _formatVoiceName(Map<String, dynamic> voice) {
+    final name = voice['name'] as String? ?? 'Unknown';
+    final locale = voice['locale'] as String? ?? '';
+
+    // Handle Android-style voice IDs with # separator (e.g., "en-us-x-sfg#male_1-local")
+    if (name.contains('#')) {
+      final parts = name.split('#');
+      if (parts.length > 1) {
+        var friendlyName = parts[1]
+            .replaceAll('-local', '')
+            .replaceAll('-network', '')
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map(
+              (word) =>
+                  word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1),
+            )
+            .join(' ');
+
+        if (locale.isNotEmpty) {
+          final localeUpper = locale.toUpperCase().replaceAll('_', '-');
+          return '$localeUpper - $friendlyName';
+        }
+        return friendlyName;
+      }
+    }
+
+    // Handle Android-style voice IDs without # (e.g., "es-us-x-sfb-local", "ja-jp-x-htm-network")
+    if (name.contains('-x-') ||
+        name.endsWith('-local') ||
+        name.endsWith('-network') ||
+        name.endsWith('-language')) {
+      // Extract the main locale part (first 2-5 chars before -x- or other markers)
+      var localePart = '';
+      var qualityPart = '';
+
+      if (name.contains('-x-')) {
+        final xParts = name.split('-x-');
+        localePart = xParts[0];
+        qualityPart = xParts.length > 1 ? xParts[1] : '';
+      } else if (name.contains('-language')) {
+        localePart = name.replaceAll('-language', '');
+      } else {
+        // Try to extract locale (first 5 chars like "es-us" or "ja-jp")
+        final dashIndex = name.indexOf('-', 3);
+        if (dashIndex > 0) {
+          localePart = name.substring(0, dashIndex);
+        } else {
+          localePart = name;
+        }
+      }
+
+      // Format the locale part
+      final formattedLocale = localePart.toUpperCase();
+
+      // Format quality indicators
+      if (qualityPart.isNotEmpty) {
+        qualityPart = qualityPart
+            .replaceAll('-local', '')
+            .replaceAll('-network', '')
+            .toUpperCase();
+        return '$formattedLocale ($qualityPart)';
+      }
+
+      return formattedLocale;
+    }
+
+    // For iOS or other platforms with proper names, return as-is
+    return name;
+  }
+
+  String _getVoiceIdentifier(Map<String, dynamic> voice) {
+    // Use name as the unique identifier (this is what we set in settings)
+    return voice['name'] as String? ??
+        voice['identifier'] as String? ??
+        voice['id'] as String? ??
+        'unknown';
+  }
+
+  String _getVoiceSubtitle(Map<String, dynamic> voice) {
+    final locale = voice['locale'] as String? ?? '';
+    final name = voice['name'] as String? ?? '';
+
+    // If name contains technical info, show the locale part
+    if (name.contains('#')) {
+      final parts = name.split('#');
+      if (parts.isNotEmpty) {
+        final localeInfo = parts[0].toUpperCase().replaceAll('_', '-');
+        return localeInfo;
+      }
+    }
+
+    return locale.isNotEmpty ? locale : '';
   }
 
   String _resolveLanguageLabel(BuildContext context, String code) {

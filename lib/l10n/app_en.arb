@@ -650,6 +650,40 @@
   "@sendOnEnterDescription": {
     "description": "Explanation of how the Send on Enter toggle behaves."
   },
+  "ttsSettings": "Text to Speech",
+  "@ttsSettings": {"description": "Section header for TTS-related customization options."},
+  "ttsVoice": "Voice",
+  "@ttsVoice": {"description": "Title for voice selection tile."},
+  "ttsSpeechRate": "Speech Rate",
+  "@ttsSpeechRate": {"description": "Title for speech rate slider."},
+  "ttsPitch": "Pitch",
+  "@ttsPitch": {"description": "Title for pitch slider."},
+  "ttsVolume": "Volume",
+  "@ttsVolume": {"description": "Title for volume slider."},
+  "ttsPreview": "Preview Voice",
+  "@ttsPreview": {"description": "Title for preview button."},
+  "ttsSystemDefault": "System Default",
+  "@ttsSystemDefault": {"description": "Label for system default voice option."},
+  "ttsSelectVoice": "Select Voice",
+  "@ttsSelectVoice": {"description": "Title for voice picker bottom sheet."},
+  "ttsPreviewText": "This is a preview of the selected voice.",
+  "@ttsPreviewText": {"description": "Sample text spoken during voice preview."},
+  "ttsNoVoicesAvailable": "No voices available",
+  "@ttsNoVoicesAvailable": {"description": "Error message when no TTS voices can be found."},
+  "ttsVoicesForLanguage": "{language} Voices",
+  "@ttsVoicesForLanguage": {
+    "description": "Section header for voices matching the app language",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "EN"
+      }
+    }
+  },
+  "ttsOtherVoices": "Other Languages",
+  "@ttsOtherVoices": {"description": "Section header for voices in other languages."},
+  "error": "Error",
+  "@error": {"description": "Generic error label."},
   "display": "Display",
   "@display": {"description": "Section header for visual and layout related settings."},
   "realtime": "Realtime",

@@ -893,6 +893,47 @@ class AppLocalizationsIt extends AppLocalizations {
       'Invio invia (tastiera software). Cmd/Ctrl+Invio disponibile';
 
   @override
+  String get ttsSettings => 'Sintesi vocale';
+
+  @override
+  String get ttsVoice => 'Voce';
+
+  @override
+  String get ttsSpeechRate => 'Velocità di sintesi vocale';
+
+  @override
+  String get ttsPitch => 'Tonalità';
+
+  @override
+  String get ttsVolume => 'Volume';
+
+  @override
+  String get ttsPreview => 'Anteprima voce';
+
+  @override
+  String get ttsSystemDefault => 'Predefinito del sistema';
+
+  @override
+  String get ttsSelectVoice => 'Seleziona voce';
+
+  @override
+  String get ttsPreviewText => 'Questa è un\'anteprima della voce selezionata.';
+
+  @override
+  String get ttsNoVoicesAvailable => 'Nessuna voce disponibile';
+
+  @override
+  String ttsVoicesForLanguage(String language) {
+    return 'Voci $language';
+  }
+
+  @override
+  String get ttsOtherVoices => 'Altre lingue';
+
+  @override
+  String get error => 'Errore';
+
+  @override
   String get display => 'Schermo';
 
   @override

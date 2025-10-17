@@ -47,7 +47,12 @@ class TextToSpeechService {
   }
 
   /// Initialize the native TTS engine lazily
-  Future<bool> initialize() async {
+  Future<bool> initialize({
+    String? voice,
+    double speechRate = 0.5,
+    double pitch = 1.0,
+    double volume = 1.0,
+  }) async {
     if (_initialized) {
       return _available;
     }
@@ -55,14 +60,14 @@ class TextToSpeechService {
     try {
       await _tts.awaitSpeakCompletion(false);
 
-      // Set volume to maximum
-      await _tts.setVolume(1.0);
+      // Set volume
+      await _tts.setVolume(volume);
 
-      // Set speech rate (1.0 is normal)
-      await _tts.setSpeechRate(0.5);
+      // Set speech rate
+      await _tts.setSpeechRate(speechRate);
 
-      // Set pitch (1.0 is normal)
-      await _tts.setPitch(1.0);
+      // Set pitch
+      await _tts.setPitch(pitch);
 
       if (!kIsWeb && Platform.isIOS) {
         await _tts.setSharedInstance(true);
@@ -74,7 +79,8 @@ class TextToSpeechService {
         ]);
       }
 
-      await _configurePreferredVoice();
+      // Set the voice (specific or default)
+      await _setVoiceByName(voice);
       _available = true;
     } catch (e) {
       _available = false;
@@ -138,6 +144,114 @@ class TextToSpeechService {
 
   Future<void> dispose() async {
     await stop();
+  }
+
+  /// Update TTS settings on-the-fly
+  Future<void> updateSettings({
+    String? voice,
+    double? speechRate,
+    double? pitch,
+    double? volume,
+  }) async {
+    if (!_initialized || !_available) {
+      return;
+    }
+
+    try {
+      if (volume != null) {
+        await _tts.setVolume(volume);
+      }
+      if (speechRate != null) {
+        await _tts.setSpeechRate(speechRate);
+      }
+      if (pitch != null) {
+        await _tts.setPitch(pitch);
+      }
+      // Set specific voice by name
+      await _setVoiceByName(voice);
+    } catch (e) {
+      _onError?.call(e.toString());
+    }
+  }
+
+  /// Set voice by name, or use system default if null
+  Future<void> _setVoiceByName(String? voiceName) async {
+    if (kIsWeb || (!Platform.isIOS && !Platform.isAndroid)) {
+      return;
+    }
+
+    try {
+      if (voiceName == null) {
+        // Use system default - reset voice configuration
+        _voiceConfigured = false;
+        await _configurePreferredVoice();
+        return;
+      }
+
+      // Get all available voices
+      final voicesRaw = await _tts.getVoices;
+      if (voicesRaw is! List) {
+        return;
+      }
+
+      // Find the voice by name
+      Map<String, dynamic>? targetVoice;
+      for (final entry in voicesRaw) {
+        if (entry is Map) {
+          final normalized = _normalizeVoiceEntry(entry);
+          final name = normalized['name'] as String?;
+          if (name == voiceName) {
+            targetVoice = normalized;
+            break;
+          }
+        }
+      }
+
+      // Set the voice if found
+      if (targetVoice != null) {
+        await _tts.setVoice(_voiceCommandFrom(targetVoice));
+        _voiceConfigured = true;
+      } else {
+        // Voice not found, fall back to default
+        _voiceConfigured = false;
+        await _configurePreferredVoice();
+      }
+    } catch (e) {
+      _onError?.call(e.toString());
+    }
+  }
+
+  /// Get available voices from the TTS engine
+  Future<List<Map<String, dynamic>>> getAvailableVoices() async {
+    if (!_initialized) {
+      await initialize();
+    }
+
+    if (!_available) {
+      return [];
+    }
+
+    try {
+      final voicesRaw = await _tts.getVoices;
+      if (voicesRaw is! List) {
+        return [];
+      }
+
+      final parsedVoices = <Map<String, dynamic>>[];
+      for (final entry in voicesRaw) {
+        if (entry is Map) {
+          final normalized = _normalizeVoiceEntry(entry);
+          if (normalized.isNotEmpty) {
+            parsedVoices.add(normalized);
+          }
+        }
+      }
+
+      return parsedVoices;
+    } catch (e) {
+      _onError?.call(e.toString());
+      return [];
+    }
   }
 
   Future<void> _configurePreferredVoice() async {

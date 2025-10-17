@@ -896,6 +896,48 @@ class AppLocalizationsDe extends AppLocalizations {
       'Enter sendet (Soft-Tastatur). Cmd/Ctrl+Enter ebenfalls verfügbar';
 
   @override
+  String get ttsSettings => 'Text zu Sprache';
+
+  @override
+  String get ttsVoice => 'Stimme';
+
+  @override
+  String get ttsSpeechRate => 'Sprechgeschwindigkeit';
+
+  @override
+  String get ttsPitch => 'Tonhöhe';
+
+  @override
+  String get ttsVolume => 'Lautstärke';
+
+  @override
+  String get ttsPreview => 'Stimme vorschau';
+
+  @override
+  String get ttsSystemDefault => 'Systemstandard';
+
+  @override
+  String get ttsSelectVoice => 'Stimme auswählen';
+
+  @override
+  String get ttsPreviewText =>
+      'Dies ist eine Vorschau der ausgewählten Stimme.';
+
+  @override
+  String get ttsNoVoicesAvailable => 'Keine Stimmen verfügbar';
+
+  @override
+  String ttsVoicesForLanguage(String language) {
+    return '$language-Stimmen';
+  }
+
+  @override
+  String get ttsOtherVoices => 'Andere Sprachen';
+
+  @override
+  String get error => 'Fehler';
+
+  @override
   String get display => 'Anzeige';
 
   @override

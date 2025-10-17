@@ -888,6 +888,47 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available';
 
   @override
+  String get ttsSettings => 'Text to Speech';
+
+  @override
+  String get ttsVoice => 'Voice';
+
+  @override
+  String get ttsSpeechRate => 'Speech Rate';
+
+  @override
+  String get ttsPitch => 'Pitch';
+
+  @override
+  String get ttsVolume => 'Volume';
+
+  @override
+  String get ttsPreview => 'Preview Voice';
+
+  @override
+  String get ttsSystemDefault => 'System Default';
+
+  @override
+  String get ttsSelectVoice => 'Select Voice';
+
+  @override
+  String get ttsPreviewText => 'This is a preview of the selected voice.';
+
+  @override
+  String get ttsNoVoicesAvailable => 'No voices available';
+
+  @override
+  String ttsVoicesForLanguage(String language) {
+    return '$language Voices';
+  }
+
+  @override
+  String get ttsOtherVoices => 'Other Languages';
+
+  @override
+  String get error => 'Error';
+
+  @override
   String get display => 'Display';
 
   @override
