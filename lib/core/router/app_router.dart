@@ -81,7 +81,8 @@ class RouterNotifier extends ChangeNotifier {
     if (!hasActiveServer) {
       // Allow auth-related routes while no server configured
       if (_isAuthLocation(location)) return null;
-      return Routes.serverConnection;
+      // Skip server connection page since server is pre-configured
+      return Routes.authentication;
     }
 
     final authState = ref.read(authNavigationStateProvider);

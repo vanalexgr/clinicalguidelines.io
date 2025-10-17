@@ -51,6 +51,13 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
       _urlController.text = activeServer.url;
       _allowSelfSignedCertificates = activeServer.allowSelfSignedCertificates;
     });
+    
+    // Automatically proceed to authentication since server is pre-configured
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _connectToServer();
+      }
+    });
   }
 
   @override
@@ -262,8 +269,14 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
                               const SizedBox(height: Spacing.xl),
                             ],
 
-                            // Server connection form
-                            _buildServerForm(),
+                            // Server connection form - hidden since server is pre-configured
+                            // _buildServerForm(),
+                            
+                            // Loading indicator
+                            const SizedBox(height: Spacing.xl),
+                            const Center(
+                              child: CircularProgressIndicator(),
+                            ),
                           ],
                         ),
                       ),
@@ -360,7 +373,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
     return Column(
       children: [
         Text(
-          AppLocalizations.of(context)!.connectToServer,
+          'Connecting to Clinical Guidelines Server',
           textAlign: TextAlign.center,
           style: context.conduitTheme.headingLarge?.copyWith(
             fontWeight: FontWeight.w600,
@@ -369,7 +382,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         ),
         const SizedBox(height: Spacing.sm),
         Text(
-          AppLocalizations.of(context)!.enterServerAddress,
+          'Please wait while we connect to the pre-configured server...',
           textAlign: TextAlign.center,
           style: context.conduitTheme.bodyMedium?.copyWith(
             color: context.conduitTheme.textSecondary,
@@ -746,16 +759,10 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
     return Padding(
       padding: const EdgeInsets.only(top: Spacing.lg),
       child: ConduitButton(
-        text: _isConnecting
-            ? AppLocalizations.of(context)!.connecting
-            : AppLocalizations.of(context)!.connectToServerButton,
-        icon: _isConnecting
-            ? null
-            : (Platform.isIOS
-                  ? CupertinoIcons.arrow_right
-                  : Icons.arrow_forward),
-        onPressed: _isConnecting ? null : _connectToServer,
-        isLoading: _isConnecting,
+        text: 'Connecting to Clinical Guidelines Server...',
+        icon: null,
+        onPressed: null,
+        isLoading: true,
         isFullWidth: true,
       ),
     );
