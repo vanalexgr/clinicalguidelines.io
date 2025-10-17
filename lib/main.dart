@@ -143,7 +143,7 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
       });
     }
 
-    queueInit(() => ref.read(authStateManagerProvider));
+    queueInit(() => ref.read(authStateManagerProvider.notifier));
     queueInit(
       () => ref.read(authApiIntegrationProvider),
       delay: const Duration(milliseconds: 16),
