@@ -687,7 +687,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToDeleteFolder => 'Failed to delete folder';
 
   @override
-  String get aboutApp => 'About App';
+  String get aboutApp => 'About';
 
   @override
   String get aboutAppSubtitle => 'Conduit information and links';
@@ -868,10 +868,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get appCustomization => 'App Customization';
+  String get appCustomization => 'Customization';
 
   @override
-  String get appCustomizationSubtitle => 'Personalize how names and UI display';
+  String get appCustomizationSubtitle =>
+      'Theme, language, voice, and quickpills';
 
   @override
   String get quickActionsDescription =>

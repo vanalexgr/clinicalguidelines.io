@@ -236,7 +236,7 @@
   "deleteFolderTitle": "Ordner löschen",
   "deleteFolderMessage": "Dieser Ordner und seine Zuordnungen werden entfernt.",
   "failedToDeleteFolder": "Ordner konnte nicht gelöscht werden",
-  "aboutApp": "Über die App",
+  "aboutApp": "Über",
   "aboutAppSubtitle": "Conduit Informationen und Links",
   "web": "Web",
   "imageGen": "Bild-Gen",
@@ -310,8 +310,8 @@
     "placeholders": {"duration": {"type": "String", "example": "3 s"}}
   }
   ,
-  "appCustomization": "App-Anpassung",
-  "appCustomizationSubtitle": "Personalisieren, wie Namen und UI angezeigt werden",
+  "appCustomization": "Anpassung",
+  "appCustomizationSubtitle": "Design, Sprache, Stimme und Quick Pills",
   "quickActionsDescription": "Wähle bis zu zwei Schnellzugriffe, die neben dem Eingabefeld angepinnt werden",
   "chatSettings": "Chat",
   "sendOnEnter": "Mit Enter senden",

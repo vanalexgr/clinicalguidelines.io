@@ -236,7 +236,7 @@
   "deleteFolderTitle": "Elimina cartella",
   "deleteFolderMessage": "Questa cartella e le sue associazioni verranno rimosse.",
   "failedToDeleteFolder": "Impossibile eliminare la cartella",
-  "aboutApp": "Informazioni sull’app",
+  "aboutApp": "Informazioni",
   "aboutAppSubtitle": "Informazioni e link di Conduit",
   "web": "Web",
   "imageGen": "Gen. immagini",
@@ -310,8 +310,8 @@
     "placeholders": {"duration": {"type": "String", "example": "3 s"}}
   }
   ,
-  "appCustomization": "Personalizzazione app",
-  "appCustomizationSubtitle": "Personalizza la visualizzazione dei nomi e dell'UI",
+  "appCustomization": "Personalizzazione",
+  "appCustomizationSubtitle": "Tema, lingua, voce e quickpills",
   "quickActionsDescription": "Scegli fino a due scorciatoie da fissare vicino al campo di input",
   "chatSettings": "Chat",
   "sendOnEnter": "Invia con Invio",

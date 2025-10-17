@@ -236,7 +236,7 @@
   "deleteFolderTitle": "Supprimer le dossier",
   "deleteFolderMessage": "Ce dossier et ses associations seront supprimés.",
   "failedToDeleteFolder": "Échec de la suppression du dossier",
-  "aboutApp": "À propos de l’application",
+  "aboutApp": "À propos",
   "aboutAppSubtitle": "Informations et liens Conduit",
   "web": "Web",
   "imageGen": "Gén. image",
@@ -310,8 +310,8 @@
     "placeholders": {"duration": {"type": "String", "example": "3 s"}}
   }
   ,
-  "appCustomization": "Personnalisation de l'app",
-  "appCustomizationSubtitle": "Personnalisez l'affichage des noms et de l'UI",
+  "appCustomization": "Personnalisation",
+  "appCustomizationSubtitle": "Thème, langue, voix et quickpills",
   "quickActionsDescription": "Choisissez jusqu'à deux raccourcis à épingler près du champ de saisie",
   "chatSettings": "Discussion",
   "sendOnEnter": "Envoyer avec Entrée",

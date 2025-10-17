@@ -697,7 +697,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get failedToDeleteFolder => 'Échec de la suppression du dossier';
 
   @override
-  String get aboutApp => 'À propos de l’application';
+  String get aboutApp => 'À propos';
 
   @override
   String get aboutAppSubtitle => 'Informations et liens Conduit';
@@ -883,11 +883,10 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get appCustomization => 'Personnalisation de l\'app';
+  String get appCustomization => 'Personnalisation';
 
   @override
-  String get appCustomizationSubtitle =>
-      'Personnalisez l\'affichage des noms et de l\'UI';
+  String get appCustomizationSubtitle => 'Thème, langue, voix et quickpills';
 
   @override
   String get quickActionsDescription =>

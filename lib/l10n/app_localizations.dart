@@ -1361,7 +1361,7 @@ abstract class AppLocalizations {
   /// Settings tile title to view app information.
   ///
   /// In en, this message translates to:
-  /// **'About App'**
+  /// **'About'**
   String get aboutApp;
 
   /// Subtitle/description for the About section.
@@ -1685,13 +1685,13 @@ abstract class AppLocalizations {
   /// Title of the customization settings page.
   ///
   /// In en, this message translates to:
-  /// **'App Customization'**
+  /// **'Customization'**
   String get appCustomization;
 
   /// Subtitle shown under App Customization tile and page header.
   ///
   /// In en, this message translates to:
-  /// **'Personalize how names and UI display'**
+  /// **'Theme, language, voice, and quickpills'**
   String get appCustomizationSubtitle;
 
   /// Helper text explaining quick action pill selection in customization.

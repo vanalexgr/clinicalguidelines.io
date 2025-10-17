@@ -163,17 +163,6 @@ class ProfilePage extends ConsumerWidget {
       _buildSupportOption(
         context,
         icon: UiUtils.platformIcon(
-          ios: CupertinoIcons.heart,
-          android: Icons.favorite_border,
-        ),
-        title: AppLocalizations.of(context)!.githubSponsorsTitle,
-        subtitle: AppLocalizations.of(context)!.githubSponsorsSubtitle,
-        url: _githubSponsorsUrl,
-        color: theme.success,
-      ),
-      _buildSupportOption(
-        context,
-        icon: UiUtils.platformIcon(
           ios: CupertinoIcons.gift,
           android: Icons.coffee,
         ),
@@ -181,6 +170,17 @@ class ProfilePage extends ConsumerWidget {
         subtitle: AppLocalizations.of(context)!.buyMeACoffeeSubtitle,
         url: _buyMeACoffeeUrl,
         color: theme.warning,
+      ),
+      _buildSupportOption(
+        context,
+        icon: UiUtils.platformIcon(
+          ios: CupertinoIcons.heart,
+          android: Icons.favorite_border,
+        ),
+        title: AppLocalizations.of(context)!.githubSponsorsTitle,
+        subtitle: AppLocalizations.of(context)!.githubSponsorsSubtitle,
+        url: _githubSponsorsUrl,
+        color: theme.success,
       ),
     ];
 

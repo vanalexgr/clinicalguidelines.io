@@ -692,7 +692,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get failedToDeleteFolder => 'Ordner konnte nicht gelöscht werden';
 
   @override
-  String get aboutApp => 'Über die App';
+  String get aboutApp => 'Über';
 
   @override
   String get aboutAppSubtitle => 'Conduit Informationen und Links';
@@ -875,11 +875,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get appCustomization => 'App-Anpassung';
+  String get appCustomization => 'Anpassung';
 
   @override
   String get appCustomizationSubtitle =>
-      'Personalisieren, wie Namen und UI angezeigt werden';
+      'Design, Sprache, Stimme und Quick Pills';
 
   @override
   String get quickActionsDescription =>

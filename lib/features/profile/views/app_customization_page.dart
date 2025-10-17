@@ -508,7 +508,10 @@ class AppCustomizationPage extends ConsumerWidget {
         _CustomizationTile(
           leading: _buildIconBadge(
             context,
-            Platform.isIOS ? CupertinoIcons.speaker_3 : Icons.record_voice_over,
+            UiUtils.platformIcon(
+              ios: CupertinoIcons.speaker_3,
+              android: Icons.record_voice_over,
+            ),
             color: theme.buttonPrimary,
           ),
           title: l10n.ttsVoice,
@@ -523,7 +526,10 @@ class AppCustomizationPage extends ConsumerWidget {
         _buildSliderTile(
           context,
           ref,
-          icon: Platform.isIOS ? CupertinoIcons.speedometer : Icons.speed,
+          icon: UiUtils.platformIcon(
+            ios: CupertinoIcons.speedometer,
+            android: Icons.speed,
+          ),
           title: l10n.ttsSpeechRate,
           value: settings.ttsSpeechRate,
           min: 0.25,
@@ -538,7 +544,10 @@ class AppCustomizationPage extends ConsumerWidget {
         _buildSliderTile(
           context,
           ref,
-          icon: Platform.isIOS ? CupertinoIcons.waveform : Icons.graphic_eq,
+          icon: UiUtils.platformIcon(
+            ios: CupertinoIcons.waveform,
+            android: Icons.graphic_eq,
+          ),
           title: l10n.ttsPitch,
           value: settings.ttsPitch,
           min: 0.5,
@@ -553,7 +562,10 @@ class AppCustomizationPage extends ConsumerWidget {
         _buildSliderTile(
           context,
           ref,
-          icon: Platform.isIOS ? CupertinoIcons.volume_up : Icons.volume_up,
+          icon: UiUtils.platformIcon(
+            ios: CupertinoIcons.volume_up,
+            android: Icons.volume_up,
+          ),
           title: l10n.ttsVolume,
           value: settings.ttsVolume,
           min: 0.0,
@@ -568,8 +580,11 @@ class AppCustomizationPage extends ConsumerWidget {
         _CustomizationTile(
           leading: _buildIconBadge(
             context,
-            Platform.isIOS ? CupertinoIcons.play_fill : Icons.play_arrow,
-            color: theme.buttonSecondary,
+            UiUtils.platformIcon(
+              ios: CupertinoIcons.play_fill,
+              android: Icons.play_arrow,
+            ),
+            color: theme.buttonPrimary,
           ),
           title: l10n.ttsPreview,
           subtitle: l10n.ttsPreviewText,
@@ -599,7 +614,7 @@ class AppCustomizationPage extends ConsumerWidget {
         children: [
           Row(
             children: [
-              _buildIconBadge(context, icon, color: theme.buttonSecondary),
+              _buildIconBadge(context, icon, color: theme.buttonPrimary),
               const SizedBox(width: Spacing.sm),
               Expanded(
                 child: Text(
@@ -746,10 +761,11 @@ class AppCustomizationPage extends ConsumerWidget {
                 // System Default Option
                 ListTile(
                   leading: Icon(
-                    Platform.isIOS
-                        ? CupertinoIcons.speaker_3
-                        : Icons.record_voice_over,
-                    color: theme.iconPrimary,
+                    UiUtils.platformIcon(
+                      ios: CupertinoIcons.speaker_3,
+                      android: Icons.record_voice_over,
+                    ),
+                    color: theme.textPrimary,
                   ),
                   title: Text(
                     l10n.ttsSystemDefault,
@@ -846,10 +862,11 @@ class AppCustomizationPage extends ConsumerWidget {
 
                       return ListTile(
                         leading: Icon(
-                          Platform.isIOS
-                              ? CupertinoIcons.person_fill
-                              : Icons.person,
-                          color: theme.iconSecondary,
+                          UiUtils.platformIcon(
+                            ios: CupertinoIcons.person_fill,
+                            android: Icons.person,
+                          ),
+                          color: theme.textPrimary,
                         ),
                         title: Text(
                           displayName,

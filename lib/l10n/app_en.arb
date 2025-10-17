@@ -501,7 +501,7 @@
   "@deleteFolderMessage": {"description": "Warning that deleting a folder will remove it and its associations."},
   "failedToDeleteFolder": "Failed to delete folder",
   "@failedToDeleteFolder": {"description": "Error notice when deleting a folder fails."},
-  "aboutApp": "About App",
+  "aboutApp": "About",
   "@aboutApp": {"description": "Settings tile title to view app information."},
   "aboutAppSubtitle": "Conduit information and links",
   "@aboutAppSubtitle": {"description": "Subtitle/description for the About section."},
@@ -636,9 +636,9 @@
     "placeholders": {"duration": {"type": "String", "example": "3s"}}
   }
   ,
-  "appCustomization": "App Customization",
+  "appCustomization": "Customization",
   "@appCustomization": {"description": "Title of the customization settings page."},
-  "appCustomizationSubtitle": "Personalize how names and UI display",
+  "appCustomizationSubtitle": "Theme, language, voice, and quickpills",
   "@appCustomizationSubtitle": {"description": "Subtitle shown under App Customization tile and page header."},
   "quickActionsDescription": "Pick up to two shortcuts to pin near the composer",
   "@quickActionsDescription": {"description": "Helper text explaining quick action pill selection in customization."},

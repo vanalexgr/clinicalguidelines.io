@@ -690,7 +690,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get failedToDeleteFolder => 'Impossibile eliminare la cartella';
 
   @override
-  String get aboutApp => 'Informazioni sull’app';
+  String get aboutApp => 'Informazioni';
 
   @override
   String get aboutAppSubtitle => 'Informazioni e link di Conduit';
@@ -872,11 +872,10 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get appCustomization => 'Personalizzazione app';
+  String get appCustomization => 'Personalizzazione';
 
   @override
-  String get appCustomizationSubtitle =>
-      'Personalizza la visualizzazione dei nomi e dell\'UI';
+  String get appCustomizationSubtitle => 'Tema, lingua, voce e quickpills';
 
   @override
   String get quickActionsDescription =>
