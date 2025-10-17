@@ -202,14 +202,9 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
 
   Widget _buildHeader() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        ConduitIconButton(
-          icon: Platform.isIOS ? CupertinoIcons.back : Icons.arrow_back,
-          onPressed: () => context.go(Routes.serverConnection),
-          tooltip: AppLocalizations.of(context)!.backToServerSetup,
-        ),
-        const Spacer(),
-        // Progress indicator (step 2 of 2)
+        // Progress indicator (step 1 of 1)
         Row(
           children: [
             Container(
@@ -220,19 +215,8 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
                 borderRadius: BorderRadius.circular(AppBorderRadius.round),
               ),
             ),
-            const SizedBox(width: Spacing.xs),
-            Container(
-              width: 24,
-              height: 4,
-              decoration: BoxDecoration(
-                color: context.conduitTheme.buttonPrimary,
-                borderRadius: BorderRadius.circular(AppBorderRadius.round),
-              ),
-            ),
           ],
         ),
-        const Spacer(),
-        const SizedBox(width: TouchTarget.minimum), // Balance the back button
       ],
     );
   }
@@ -248,7 +232,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         final url = cfg?.url;
         if (url != null && url.isNotEmpty) return Uri.parse(url).host;
       } catch (_) {}
-      return 'Server';
+      return 'Clinical Guidelines Server';
     }();
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -278,7 +262,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context)!.connectedToServer,
+                  'Connected to Clinical Guidelines Server',
                   style: context.conduitTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                     color: context.conduitTheme.success,
@@ -310,7 +294,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         ),
         const SizedBox(height: Spacing.lg),
         Text(
-          AppLocalizations.of(context)!.signIn,
+          'Welcome to Clinical Guidelines',
           textAlign: TextAlign.center,
           style: context.conduitTheme.headingLarge?.copyWith(
             fontWeight: FontWeight.w600,
@@ -319,7 +303,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         ),
         const SizedBox(height: Spacing.sm),
         Text(
-          AppLocalizations.of(context)!.enterCredentials,
+          'Please sign in to access the clinical guidelines server',
           textAlign: TextAlign.center,
           style: context.conduitTheme.bodyMedium?.copyWith(
             color: context.conduitTheme.textSecondary,

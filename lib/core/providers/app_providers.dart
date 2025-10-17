@@ -144,7 +144,24 @@ class AppLocale extends _$AppLocale {
 @Riverpod(keepAlive: true)
 Future<List<ServerConfig>> serverConfigs(Ref ref) async {
   final storage = ref.watch(optimizedStorageServiceProvider);
-  return storage.getServerConfigs();
+  final configs = await storage.getServerConfigs();
+  
+  // If no server configs exist, create and save the default server
+  if (configs.isEmpty) {
+    const defaultServerConfig = ServerConfig(
+      id: 'default-clinical-guidelines',
+      name: 'Clinical Guidelines Server',
+      url: 'https://chat.clinicalguidelines.io',
+      isActive: true,
+    );
+    
+    await storage.saveServerConfigs([defaultServerConfig]);
+    await storage.setActiveServerId(defaultServerConfig.id);
+    
+    return [defaultServerConfig];
+  }
+  
+  return configs;
 }
 
 @Riverpod(keepAlive: true)
@@ -153,7 +170,26 @@ Future<ServerConfig?> activeServer(Ref ref) async {
   final configs = await ref.watch(serverConfigsProvider.future);
   final activeId = await storage.getActiveServerId();
 
-  if (activeId == null || configs.isEmpty) return null;
+  // If no server configs exist, create and set the default server
+  if (configs.isEmpty) {
+    const defaultServerConfig = ServerConfig(
+      id: 'default-clinical-guidelines',
+      name: 'Clinical Guidelines Server',
+      url: 'https://chat.clinicalguidelines.io',
+      isActive: true,
+    );
+    
+    // Save the default server configuration
+    await storage.saveServerConfigs([defaultServerConfig]);
+    await storage.setActiveServerId(defaultServerConfig.id);
+    
+    // Invalidate providers to refresh with the new config
+    ref.invalidate(serverConfigsProvider);
+    
+    return defaultServerConfig;
+  }
+
+  if (activeId == null) return null;
 
   for (final config in configs) {
     if (config.id == activeId) {
