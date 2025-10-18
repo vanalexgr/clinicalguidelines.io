@@ -45,6 +45,7 @@ final _fileIdPattern = RegExp(r'/api/v1/files/([^/]+)/content');
 class AssistantMessageWidget extends ConsumerStatefulWidget {
   final dynamic message;
   final bool isStreaming;
+  final bool showFollowUps;
   final String? modelName;
   final String? modelIconUrl;
   final VoidCallback? onCopy;
@@ -56,6 +57,7 @@ class AssistantMessageWidget extends ConsumerStatefulWidget {
     super.key,
     required this.message,
     this.isStreaming = false,
+    this.showFollowUps = true,
     this.modelName,
     this.modelIconUrl,
     this.onCopy,
@@ -608,7 +610,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     final hasStatusTimeline = visibleStatusHistory.isNotEmpty;
     final hasCodeExecutions = widget.message.codeExecutions.isNotEmpty;
     final hasFollowUps =
-        widget.message.followUps.isNotEmpty && !widget.isStreaming;
+        widget.showFollowUps &&
+        widget.message.followUps.isNotEmpty &&
+        !widget.isStreaming;
     final hasSources = widget.message.sources.isNotEmpty;
 
     return Container(

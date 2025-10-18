@@ -869,6 +869,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 matchedModel,
               );
 
+              var hasUserBubbleBelow = false;
+              var hasAssistantBubbleBelow = false;
+              for (var i = index + 1; i < messages.length; i++) {
+                final role = messages[i].role;
+                if (role == 'user') {
+                  hasUserBubbleBelow = true;
+                  break;
+                }
+                if (role == 'assistant') {
+                  hasAssistantBubbleBelow = true;
+                  break;
+                }
+              }
+
+              final showFollowUps =
+                  !isUser && !hasUserBubbleBelow && !hasAssistantBubbleBelow;
+
               // Wrap message in selection container if in selection mode
               Widget messageWidget;
 
@@ -888,6 +905,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   key: ValueKey('assistant-${message.id}'),
                   message: message,
                   isStreaming: isStreaming,
+                  showFollowUps: showFollowUps,
                   modelName: displayModelName,
                   modelIconUrl: modelIconUrl,
                   onCopy: () => _copyMessage(message.content),
