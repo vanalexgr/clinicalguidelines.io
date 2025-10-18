@@ -172,7 +172,10 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
             child: Row(children: [Expanded(child: _buildSearchField(context))]),
           ),
           Expanded(child: _buildConversationList(context)),
-          Divider(height: 1, color: sidebarTheme.border),
+          Divider(
+            height: 1,
+            color: sidebarTheme.border.withValues(alpha: 0.28),
+          ),
           _buildBottomSection(context),
         ],
       ),
@@ -231,11 +234,17 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppBorderRadius.md),
-            borderSide: BorderSide(color: sidebarTheme.border, width: 1),
+            borderSide: BorderSide(
+              color: sidebarTheme.border.withValues(alpha: 0.28),
+              width: BorderWidth.thin,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppBorderRadius.md),
-            borderSide: BorderSide(color: sidebarTheme.ring, width: 1.2),
+            borderSide: BorderSide(
+              color: sidebarTheme.ring.withValues(alpha: 0.6),
+              width: BorderWidth.thin,
+            ),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: Spacing.md,
@@ -703,8 +712,8 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
             color: sidebarTheme.accent.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(AppBorderRadius.xs),
             border: Border.all(
-              color: sidebarTheme.border.withValues(alpha: 0.6),
-              width: BorderWidth.thin,
+              color: sidebarTheme.border.withValues(alpha: 0.35),
+              width: BorderWidth.micro,
             ),
           ),
           child: Text(
@@ -1467,8 +1476,8 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                 color: sidebarTheme.accent.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(AppBorderRadius.small),
                 border: Border.all(
-                  color: sidebarTheme.border.withValues(alpha: 0.6),
-                  width: BorderWidth.standard,
+                  color: sidebarTheme.border.withValues(alpha: 0.28),
+                  width: BorderWidth.thin,
                 ),
               ),
               child: Row(

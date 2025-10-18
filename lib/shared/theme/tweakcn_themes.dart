@@ -108,7 +108,8 @@ class TweakcnThemeDefinition {
 }
 
 Color mix(Color a, Color b, double amount) {
-  return Color.lerp(a, b, amount.clamp(0.0, 1.0)) ?? a;
+  // No-op for testing so downstream derivations stay at the source color.
+  return a;
 }
 
 class TweakcnThemes {
@@ -330,6 +331,161 @@ class TweakcnThemes {
     radius: 8,
   );
 
+  static final TweakcnThemeVariant _claudeLight = TweakcnThemeVariant(
+    background: const Color(0xFFFAF9F5),
+    foreground: const Color(0xFF3D3929),
+    card: const Color(0xFFFAF9F5),
+    cardForeground: const Color(0xFF141413),
+    popover: const Color(0xFFFFFFFF),
+    popoverForeground: const Color(0xFF28261B),
+    primary: const Color(0xFFC96442),
+    primaryForeground: const Color(0xFFFFFFFF),
+    secondary: const Color(0xFFE9E6DC),
+    secondaryForeground: const Color(0xFF535146),
+    muted: const Color(0xFFEDE9DE),
+    mutedForeground: const Color(0xFF83827D),
+    accent: const Color(0xFFE9E6DC),
+    accentForeground: const Color(0xFF28261B),
+    destructive: const Color(0xFF141413),
+    destructiveForeground: const Color(0xFFFFFFFF),
+    border: const Color(0xFFDAD9D4),
+    input: const Color(0xFFB4B2A7),
+    ring: const Color(0xFFC96442),
+    sidebarBackground: const Color(0xFFF5F4EE),
+    sidebarForeground: const Color(0xFF3D3D3A),
+    sidebarPrimary: const Color(0xFFC96442),
+    sidebarPrimaryForeground: const Color(0xFFFBFBFB),
+    sidebarAccent: const Color(0xFFE9E6DC),
+    sidebarAccentForeground: const Color(0xFF343434),
+    sidebarBorder: const Color(0xFFEBEBEB),
+    sidebarRing: const Color(0xFFB5B5B5),
+    success: const Color(0xFF4C7A63),
+    successForeground: const Color(0xFFFAF9F5),
+    warning: const Color(0xFFD4A645),
+    warningForeground: const Color(0xFF141413),
+    info: const Color(0xFF9C87F5),
+    infoForeground: const Color(0xFF141413),
+    radius: 8,
+    fontSans: const <String>[
+      'ui-sans-serif',
+      'system-ui',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      'Segoe UI',
+      'Roboto',
+      'Helvetica Neue',
+      'Arial',
+      'Noto Sans',
+      'sans-serif',
+      'Apple Color Emoji',
+      'Segoe UI Emoji',
+      'Segoe UI Symbol',
+      'Noto Color Emoji',
+    ],
+    fontSerif: const <String>[
+      'ui-serif',
+      'Georgia',
+      'Cambria',
+      'Times New Roman',
+      'Times',
+      'serif',
+    ],
+    fontMono: const <String>[
+      'ui-monospace',
+      'SFMono-Regular',
+      'Menlo',
+      'Monaco',
+      'Consolas',
+      'Liberation Mono',
+      'Courier New',
+      'monospace',
+    ],
+  );
+
+  static final TweakcnThemeVariant _claudeDark = TweakcnThemeVariant(
+    background: const Color(0xFF262624),
+    foreground: const Color(0xFFC3C0B6),
+    card: const Color(0xFF262624),
+    cardForeground: const Color(0xFFFAF9F5),
+    popover: const Color(0xFF30302E),
+    popoverForeground: const Color(0xFFE5E5E2),
+    primary: const Color(0xFFD97757),
+    primaryForeground: const Color(0xFFFFFFFF),
+    secondary: const Color(0xFFFAF9F5),
+    secondaryForeground: const Color(0xFF30302E),
+    muted: const Color(0xFF1B1B19),
+    mutedForeground: const Color(0xFFB7B5A9),
+    accent: const Color(0xFF1A1915),
+    accentForeground: const Color(0xFFF5F4EE),
+    destructive: const Color(0xFFEF4444),
+    destructiveForeground: const Color(0xFFFFFFFF),
+    border: const Color(0xFF3E3E38),
+    input: const Color(0xFF52514A),
+    ring: const Color(0xFFD97757),
+    sidebarBackground: const Color(0xFF1F1E1D),
+    sidebarForeground: const Color(0xFFC3C0B6),
+    sidebarPrimary: const Color(0xFF343434),
+    sidebarPrimaryForeground: const Color(0xFFFBFBFB),
+    sidebarAccent: const Color(0xFF0F0F0E),
+    sidebarAccentForeground: const Color(0xFFC3C0B6),
+    sidebarBorder: const Color(0xFFEBEBEB),
+    sidebarRing: const Color(0xFFB5B5B5),
+    success: const Color(0xFF6AA884),
+    successForeground: const Color(0xFF1B1B19),
+    warning: const Color(0xFFE0B456),
+    warningForeground: const Color(0xFF1B1B19),
+    info: const Color(0xFFB39CFF),
+    infoForeground: const Color(0xFF1B1B19),
+    radius: 8,
+    fontSans: const <String>[
+      'ui-sans-serif',
+      'system-ui',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      'Segoe UI',
+      'Roboto',
+      'Helvetica Neue',
+      'Arial',
+      'Noto Sans',
+      'sans-serif',
+      'Apple Color Emoji',
+      'Segoe UI Emoji',
+      'Segoe UI Symbol',
+      'Noto Color Emoji',
+    ],
+    fontSerif: const <String>[
+      'ui-serif',
+      'Georgia',
+      'Cambria',
+      'Times New Roman',
+      'Times',
+      'serif',
+    ],
+    fontMono: const <String>[
+      'ui-monospace',
+      'SFMono-Regular',
+      'Menlo',
+      'Monaco',
+      'Consolas',
+      'Liberation Mono',
+      'Courier New',
+      'monospace',
+    ],
+  );
+
+  static final TweakcnThemeDefinition claude = TweakcnThemeDefinition(
+    id: 'claude',
+    label: 'Claude',
+    description: 'Warm, tactile palette lifted from the Claude web client.',
+    light: _claudeLight,
+    dark: _claudeDark,
+    preview: const <Color>[
+      Color(0xFFC96442),
+      Color(0xFFE9E6DC),
+      Color(0xFF9C87F5),
+    ],
+  );
+
   static final TweakcnThemeDefinition t3Chat = TweakcnThemeDefinition(
     id: 't3_chat',
     label: 'T3 Chat',
@@ -356,7 +512,7 @@ class TweakcnThemes {
     ],
   );
 
-  static List<TweakcnThemeDefinition> all = [conduit, t3Chat];
+  static List<TweakcnThemeDefinition> all = [conduit, claude, t3Chat];
 
   static TweakcnThemeDefinition byId(String? id) {
     return all.firstWhere((theme) => theme.id == id, orElse: () => conduit);

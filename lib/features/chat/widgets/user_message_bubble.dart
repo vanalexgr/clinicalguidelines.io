@@ -499,11 +499,6 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
                           borderRadius: BorderRadius.circular(
                             AppBorderRadius.messageBubble,
                           ),
-                          border: Border.all(
-                            color: context.conduitTheme.chatBubbleUserBorder
-                                .withValues(alpha: 0.5),
-                            width: BorderWidth.standard,
-                          ),
                         ),
                         child: _isEditing
                             ? Focus(
