@@ -446,7 +446,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messageInputHint => 'Type your message';
 
   @override
-  String get messageHintText => 'Message...';
+  String get messageHintText => 'Ask Conduit';
 
   @override
   String get stopGenerating => 'Stop generating';

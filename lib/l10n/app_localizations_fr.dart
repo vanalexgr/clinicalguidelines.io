@@ -456,7 +456,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get messageInputHint => 'Saisissez votre message';
 
   @override
-  String get messageHintText => 'Message...';
+  String get messageHintText => 'Demander à Conduit';
 
   @override
   String get stopGenerating => 'Arrêter la génération';

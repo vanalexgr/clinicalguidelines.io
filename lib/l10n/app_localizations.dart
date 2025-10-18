@@ -905,7 +905,7 @@ abstract class AppLocalizations {
   /// Short placeholder text in the message input.
   ///
   /// In en, this message translates to:
-  /// **'Message...'**
+  /// **'Ask Conduit'**
   String get messageHintText;
 
   /// Action to stop the assistant's response generation.

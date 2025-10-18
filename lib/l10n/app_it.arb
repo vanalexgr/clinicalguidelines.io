@@ -142,7 +142,7 @@
   "voiceActionStart": "Avvia",
   "messageInputLabel": "Input messaggio",
   "messageInputHint": "Scrivi il tuo messaggio",
-  "messageHintText": "Messaggio...",
+  "messageHintText": "Chiedi a Conduit",
   "stopGenerating": "Interrompi generazione",
   "codeCopiedToClipboard": "Codice copiato negli appunti.",
   "send": "Invia",

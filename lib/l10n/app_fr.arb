@@ -142,7 +142,7 @@
   "voiceActionStart": "Démarrer",
   "messageInputLabel": "Saisie du message",
   "messageInputHint": "Saisissez votre message",
-  "messageHintText": "Message...",
+  "messageHintText": "Demander à Conduit",
   "stopGenerating": "Arrêter la génération",
   "codeCopiedToClipboard": "Code copié dans le presse-papiers.",
   "send": "Envoyer",

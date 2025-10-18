@@ -451,7 +451,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get messageInputHint => 'Nachricht eingeben';
 
   @override
-  String get messageHintText => 'Nachricht...';
+  String get messageHintText => 'Frag Conduit';
 
   @override
   String get stopGenerating => 'Generierung stoppen';

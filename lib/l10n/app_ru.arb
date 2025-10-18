@@ -141,7 +141,7 @@
   "voiceActionStart": "Начать",
   "messageInputLabel": "Ввод сообщения",
   "messageInputHint": "Введите ваше сообщение",
-  "messageHintText": "Сообщение...",
+  "messageHintText": "Спросите Conduit",
   "stopGenerating": "Остановить генерацию",
   "codeCopiedToClipboard": "Код скопирован в буфер обмена.",
   "send": "Отправить",

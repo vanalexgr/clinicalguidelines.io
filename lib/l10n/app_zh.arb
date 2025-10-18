@@ -141,7 +141,7 @@
   "voiceActionStart": "开始",
   "messageInputLabel": "消息输入",
   "messageInputHint": "输入您的消息",
-  "messageHintText": "消息...",
+  "messageHintText": "问 Conduit",
   "stopGenerating": "停止生成",
   "codeCopiedToClipboard": "代码已复制到剪贴板。",
   "send": "发送",

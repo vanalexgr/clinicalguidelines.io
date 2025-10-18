@@ -141,7 +141,7 @@
   "voiceActionStart": "Start",
   "messageInputLabel": "Berichtinvoer",
   "messageInputHint": "Typ je bericht",
-  "messageHintText": "Bericht...",
+  "messageHintText": "Vraag Conduit",
   "stopGenerating": "Stop met genereren",
   "codeCopiedToClipboard": "Code gekopieerd naar klembord.",
   "send": "Verzenden",

@@ -323,7 +323,7 @@
   "@messageInputLabel": {"description": "Accessibility label for the message input."},
   "messageInputHint": "Type your message",
   "@messageInputHint": {"description": "Hint shown in the message input field."},
-  "messageHintText": "Message...",
+  "messageHintText": "Ask Conduit",
   "@messageHintText": {"description": "Short placeholder text in the message input."},
   "stopGenerating": "Stop generating",
   "@stopGenerating": {"description": "Action to stop the assistant's response generation."},

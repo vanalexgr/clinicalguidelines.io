@@ -142,7 +142,7 @@
   "voiceActionStart": "Starten",
   "messageInputLabel": "Nachrichteneingabe",
   "messageInputHint": "Nachricht eingeben",
-  "messageHintText": "Nachricht...",
+  "messageHintText": "Frag Conduit",
   "stopGenerating": "Generierung stoppen",
   "codeCopiedToClipboard": "Code in die Zwischenablage kopiert.",
   "send": "Senden",
