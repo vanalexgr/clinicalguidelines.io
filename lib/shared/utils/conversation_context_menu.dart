@@ -57,13 +57,15 @@ Future<void> showConduitContextMenu({
                 isCompact: true,
                 leading: Icon(
                   Platform.isIOS ? action.cupertinoIcon : action.materialIcon,
-                  color: action.destructive ? theme.error : theme.iconPrimary,
+                  color: action.destructive ? Colors.red : theme.iconPrimary,
                   size: IconSize.modal,
                 ),
                 title: Text(
                   action.label,
                   style: AppTypography.standard.copyWith(
-                    color: action.destructive ? theme.error : theme.textPrimary,
+                    color: action.destructive
+                        ? Colors.red
+                        : theme.textPrimary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

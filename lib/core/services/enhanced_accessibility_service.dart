@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/semantics.dart';
-import '../../shared/theme/color_palettes.dart';
+import '../../shared/theme/tweakcn_themes.dart';
 import '../../shared/theme/theme_extensions.dart';
 
 /// Enhanced accessibility service for WCAG 2.2 AA compliance
@@ -349,7 +349,7 @@ class EnhancedAccessibilityService {
     return BoxDecoration(
       border: hasFocus
           ? Border.all(
-              color: focusColor ?? AppColorPalettes.auroraViolet.light.primary,
+              color: focusColor ?? TweakcnThemes.t3Chat.light.primary,
               width: borderWidth,
             )
           : null,

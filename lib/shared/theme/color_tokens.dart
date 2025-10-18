@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'color_palettes.dart';
+import 'tweakcn_themes.dart';
 
 /// Immutable set of semantic color tokens exposed through [ThemeExtension].
 ///
@@ -92,136 +92,118 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
   final Color codeText;
   final Color codeAccent;
 
-  factory AppColorTokens.light({AppColorPalette? palette}) {
-    return AppColorTokens._fromPalette(
-      palette ?? AppColorPalettes.auroraViolet,
+  factory AppColorTokens.light({TweakcnThemeDefinition? theme}) {
+    return AppColorTokens._fromTheme(
+      theme ?? TweakcnThemes.conduit,
       Brightness.light,
     );
   }
 
-  factory AppColorTokens.dark({AppColorPalette? palette}) {
-    return AppColorTokens._fromPalette(
-      palette ?? AppColorPalettes.auroraViolet,
+  factory AppColorTokens.dark({TweakcnThemeDefinition? theme}) {
+    return AppColorTokens._fromTheme(
+      theme ?? TweakcnThemes.conduit,
       Brightness.dark,
     );
   }
 
-  factory AppColorTokens._fromPalette(
-    AppColorPalette palette,
+  factory AppColorTokens._fromTheme(
+    TweakcnThemeDefinition theme,
     Brightness brightness,
   ) {
-    final AppPaletteTone tone = palette.toneFor(brightness);
-
+    final TweakcnThemeVariant variant = theme.variantFor(brightness);
     final bool isLight = brightness == Brightness.light;
 
-    final Color neutralTone00 = isLight
-        ? const Color(0xFFFFFFFF)
-        : const Color(0xFF0B0E14);
-    final Color neutralTone10 = isLight
-        ? const Color(0xFFF5F7FA)
-        : const Color(0xFF161B24);
-    final Color neutralTone20 = isLight
-        ? const Color(0xFFE6EAF1)
-        : const Color(0xFF1F2531);
-    final Color neutralTone40 = isLight
-        ? const Color(0xFFC5CCD9)
-        : const Color(0xFF343C4D);
-    final Color neutralTone60 = isLight
-        ? const Color(0xFF9099AC)
-        : const Color(0xFF4C566A);
-    final Color neutralTone80 = isLight
-        ? const Color(0xFF4A5161)
-        : const Color(0xFF8B95AA);
-    final Color neutralOnSurface = isLight
-        ? const Color(0xFF151920)
-        : const Color(0xFFE8ECF5);
-
-    final Color overlayWeak = isLight
-        ? const Color.fromRGBO(21, 25, 32, 0.08)
-        : const Color.fromRGBO(232, 236, 245, 0.08);
-    final Color overlayMedium = isLight
-        ? const Color.fromRGBO(21, 25, 32, 0.16)
-        : const Color.fromRGBO(232, 236, 245, 0.16);
-    final Color overlayStrong = isLight
-        ? const Color.fromRGBO(21, 25, 32, 0.32)
-        : const Color.fromRGBO(232, 236, 245, 0.48);
-
-    final ColorScheme seedScheme = ColorScheme.fromSeed(
-      seedColor: tone.primary,
-      brightness: brightness,
+    final Color neutralTone00 = variant.background;
+    final Color neutralTone20 = variant.card;
+    final Color neutralTone10 = mix(neutralTone00, neutralTone20, 0.5);
+    final Color neutralTone40 = variant.muted;
+    final Color neutralTone60 = mix(
+      variant.mutedForeground,
+      variant.foreground,
+      isLight ? 0.25 : 0.4,
+    );
+    final Color neutralTone80 = mix(
+      variant.foreground,
+      isLight ? Colors.black : Colors.white,
+      isLight ? 0.06 : 0.3,
+    );
+    final Color neutralOnSurface = _ensureContrast(
+      surface: neutralTone00,
+      foreground: variant.foreground,
+      minContrast: 4.5,
     );
 
-    final Color brandTone60 = seedScheme.primary;
-    final Color brandOn60 = _preferredOnColor(
-      background: brandTone60,
-      light: neutralTone00,
-      dark: neutralOnSurface,
+    final Color brandTone60 = variant.primary;
+    final Color brandOn60 = _ensureContrast(
+      surface: brandTone60,
+      foreground: variant.primaryForeground,
+    );
+    final Color brandTone90 = mix(
+      variant.primary,
+      neutralTone00,
+      isLight ? 0.7 : 0.3,
+    );
+    final Color brandOn90 = _ensureContrast(
+      surface: brandTone90,
+      foreground: brandOn60,
+    );
+    final Color brandTone40 = mix(
+      variant.primary,
+      neutralOnSurface,
+      isLight ? 0.35 : 0.55,
     );
 
-    final Color brandTone90 = seedScheme.primaryContainer;
-    final Color brandOn90 = _preferredOnColor(
-      background: brandTone90,
-      light: neutralTone00,
-      dark: neutralOnSurface,
+    final Color accentIndigo60 = variant.secondary;
+    final Color accentOnIndigo60 = _ensureContrast(
+      surface: accentIndigo60,
+      foreground: variant.secondaryForeground,
+    );
+    final Color accentTeal60 = variant.accent;
+    final Color accentGold60 = mix(
+      variant.accent,
+      isLight ? Colors.white : Colors.black,
+      isLight ? 0.18 : 0.24,
     );
 
-    final double brandShift = isLight ? 0.18 : -0.14;
-    final Color brandTone40 = _shiftLightness(brandTone60, brandShift);
-
-    final Color accentIndigo60 = tone.secondary;
-    final Color accentOnIndigo60 = _preferredOnColor(
-      background: accentIndigo60,
-      light: neutralTone00,
-      dark: neutralOnSurface,
+    final Color statusError60 = variant.destructive;
+    final Color statusOnError60 = _ensureContrast(
+      surface: statusError60,
+      foreground: variant.destructiveForeground,
+    );
+    final Color statusSuccess60 = variant.success;
+    final Color statusOnSuccess60 = _ensureContrast(
+      surface: statusSuccess60,
+      foreground: variant.successForeground,
+    );
+    final Color statusWarning60 = variant.warning;
+    final Color statusOnWarning60 = _ensureContrast(
+      surface: statusWarning60,
+      foreground: variant.warningForeground,
+    );
+    final Color statusInfo60 = variant.info;
+    final Color statusOnInfo60 = _ensureContrast(
+      surface: statusInfo60,
+      foreground: variant.infoForeground,
     );
 
-    final Color accentTeal60 = tone.accent;
-    final Color accentGold60 = isLight
-        ? const Color(0xFFFFB54A)
-        : const Color(0xFFFFC266);
-
-    final Color statusSuccess60 = isLight
-        ? const Color(0xFF0E9D58)
-        : const Color(0xFF23C179);
-    final Color statusOnSuccess60 = _preferredOnColor(
-      background: statusSuccess60,
-      light: neutralTone00,
-      dark: neutralOnSurface,
+    final Color overlayWeak = neutralOnSurface.withValues(
+      alpha: isLight ? 0.08 : 0.12,
+    );
+    final Color overlayMedium = neutralOnSurface.withValues(
+      alpha: isLight ? 0.16 : 0.2,
+    );
+    final Color overlayStrong = neutralOnSurface.withValues(
+      alpha: isLight ? 0.32 : 0.36,
     );
 
-    final Color statusWarning60 = isLight
-        ? const Color(0xFFDB7900)
-        : const Color(0xFFFF9800);
-    final Color statusOnWarning60 = _preferredOnColor(
-      background: statusWarning60,
-      light: neutralTone00,
-      dark: neutralOnSurface,
+    final Color codeBackground = mix(variant.muted, neutralTone00, 0.5);
+    final Color codeBorder = mix(variant.border, neutralTone40, 0.6);
+    final Color codeText = _ensureContrast(
+      surface: codeBackground,
+      foreground: neutralOnSurface,
+      minContrast: 4.5,
     );
-
-    final Color statusError60 = isLight
-        ? const Color(0xFFCE2C31)
-        : const Color(0xFFFF5F67);
-    final Color statusOnError60 = _preferredOnColor(
-      background: statusError60,
-      light: neutralTone00,
-      dark: neutralOnSurface,
-    );
-
-    final Color statusInfo60 = isLight
-        ? const Color(0xFF0174D3)
-        : const Color(0xFF4CA8FF);
-    final Color statusOnInfo60 = _preferredOnColor(
-      background: statusInfo60,
-      light: neutralTone00,
-      dark: neutralOnSurface,
-    );
-
-    final Color codeBackground = isLight ? neutralTone10 : neutralTone00;
-    final Color codeBorder = isLight ? neutralTone20 : neutralTone40;
-    final Color codeText = neutralOnSurface;
-    final Color codeAccent = isLight
-        ? Color.alphaBlend(brandTone60.withValues(alpha: 0.14), codeBackground)
-        : Color.alphaBlend(brandTone40.withValues(alpha: 0.24), codeBackground);
+    final Color codeAccent = mix(variant.accent, variant.primary, 0.4);
 
     return AppColorTokens(
       brightness: brightness,
@@ -406,7 +388,10 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
       secondary: accentIndigo60,
       onSecondary: accentOnIndigo60,
       tertiary: accentTeal60,
-      onTertiary: neutralTone00,
+      onTertiary: _ensureContrast(
+        surface: accentTeal60,
+        foreground: neutralTone00,
+      ),
       surface: neutralTone00,
       surfaceContainerLow: neutralTone10,
       surfaceContainerHighest: neutralTone20,
@@ -433,20 +418,24 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
         : AppColorTokens.light();
   }
 
-  static Color _shiftLightness(Color color, double amount) {
-    final HSLColor hsl = HSLColor.fromColor(color);
-    final double lightness = (hsl.lightness + amount).clamp(0.0, 1.0);
-    return hsl.withLightness(lightness).toColor();
-  }
-
-  static Color _preferredOnColor({
-    required Color background,
-    required Color light,
-    required Color dark,
+  static Color _ensureContrast({
+    required Color surface,
+    required Color foreground,
+    double minContrast = 4.5,
   }) {
-    final double lightContrast = _contrastRatio(background, light);
-    final double darkContrast = _contrastRatio(background, dark);
-    return lightContrast >= darkContrast ? light : dark;
+    if (_contrastRatio(surface, foreground) >= minContrast) {
+      return foreground;
+    }
+    final bool surfaceIsDark = surface.computeLuminance() < 0.5;
+    final Color target = surfaceIsDark ? Colors.white : Colors.black;
+    Color candidate = foreground;
+    for (var i = 0; i < 6; i++) {
+      candidate = Color.lerp(candidate, target, 0.3)!;
+      if (_contrastRatio(surface, candidate) >= minContrast) {
+        return candidate;
+      }
+    }
+    return target;
   }
 
   static double _contrastRatio(Color a, Color b) {

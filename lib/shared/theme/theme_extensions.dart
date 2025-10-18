@@ -2,806 +2,296 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 // Using system fonts; no GoogleFonts dependency required
-import 'color_palettes.dart';
+import 'tweakcn_themes.dart';
 import 'color_tokens.dart';
 
 /// Extended theme data for consistent styling across the app
 @immutable
 class ConduitThemeExtension extends ThemeExtension<ConduitThemeExtension> {
-  // Chat-specific colors
-  final Color chatBubbleUser;
-  final Color chatBubbleAssistant;
-  final Color chatBubbleUserText;
-  final Color chatBubbleAssistantText;
-  final Color chatBubbleUserBorder;
-  final Color chatBubbleAssistantBorder;
-
-  // Input and form colors
-  final Color inputBackground;
-  final Color inputBorder;
-  final Color inputBorderFocused;
-  final Color inputText;
-  final Color inputPlaceholder;
-  final Color inputError;
-
-  // Card and surface colors
-  final Color cardBackground;
-  final Color cardBorder;
-  final Color cardShadow;
-  final Color surfaceBackground;
-  final Color surfaceContainer;
-  final Color surfaceContainerHighest;
-
-  // Interactive element colors
-  final Color buttonPrimary;
-  final Color buttonPrimaryText;
-  final Color buttonSecondary;
-  final Color buttonSecondaryText;
-  final Color buttonDisabled;
-  final Color buttonDisabledText;
-
-  // Status and feedback colors
-  final Color success;
-  final Color successBackground;
-  final Color error;
-  final Color errorBackground;
-  final Color warning;
-  final Color warningBackground;
-  final Color info;
-  final Color infoBackground;
-
-  // Navigation and UI element colors
-  final Color dividerColor;
-  final Color navigationBackground;
-  final Color navigationSelected;
-  final Color navigationUnselected;
-  final Color navigationSelectedBackground;
-
-  // Loading and animation colors
-  final Color shimmerBase;
-  final Color shimmerHighlight;
-  final Color loadingIndicator;
-
-  // Markdown/code colors
-  final Color codeBackground;
-  final Color codeBorder;
-  final Color codeText;
-  final Color codeAccent;
-
-  // Text colors
-  final Color textPrimary;
-  final Color textSecondary;
-  final Color textTertiary;
-  final Color textInverse;
-  final Color textDisabled;
-
-  // Icon colors
-  final Color iconPrimary;
-  final Color iconSecondary;
-  final Color iconDisabled;
-  final Color iconInverse;
-
-  // Typography styles
-  final TextStyle? headingLarge;
-  final TextStyle? headingMedium;
-  final TextStyle? headingSmall;
-  final TextStyle? bodyLarge;
-  final TextStyle? bodyMedium;
-  final TextStyle? bodySmall;
-  final TextStyle? caption;
-  final TextStyle? label;
-  final TextStyle? code;
-
-  const ConduitThemeExtension({
-    // Chat-specific colors
-    required this.chatBubbleUser,
-    required this.chatBubbleAssistant,
-    required this.chatBubbleUserText,
-    required this.chatBubbleAssistantText,
-    required this.chatBubbleUserBorder,
-    required this.chatBubbleAssistantBorder,
-
-    // Input and form colors
-    required this.inputBackground,
-    required this.inputBorder,
-    required this.inputBorderFocused,
-    required this.inputText,
-    required this.inputPlaceholder,
-    required this.inputError,
-
-    // Card and surface colors
-    required this.cardBackground,
-    required this.cardBorder,
-    required this.cardShadow,
-    required this.surfaceBackground,
-    required this.surfaceContainer,
-    required this.surfaceContainerHighest,
-
-    // Interactive element colors
-    required this.buttonPrimary,
-    required this.buttonPrimaryText,
-    required this.buttonSecondary,
-    required this.buttonSecondaryText,
-    required this.buttonDisabled,
-    required this.buttonDisabledText,
-
-    // Status and feedback colors
-    required this.success,
-    required this.successBackground,
-    required this.error,
-    required this.errorBackground,
-    required this.warning,
-    required this.warningBackground,
-    required this.info,
-    required this.infoBackground,
-
-    // Navigation and UI element colors
-    required this.dividerColor,
-    required this.navigationBackground,
-    required this.navigationSelected,
-    required this.navigationUnselected,
-    required this.navigationSelectedBackground,
-
-    // Loading and animation colors
-    required this.shimmerBase,
-    required this.shimmerHighlight,
-    required this.loadingIndicator,
-
-    // Markdown/code colors
-    required this.codeBackground,
-    required this.codeBorder,
-    required this.codeText,
-    required this.codeAccent,
-
-    // Text colors
-    required this.textPrimary,
-    required this.textSecondary,
-    required this.textTertiary,
-    required this.textInverse,
-    required this.textDisabled,
-
-    // Icon colors
-    required this.iconPrimary,
-    required this.iconSecondary,
-    required this.iconDisabled,
-    required this.iconInverse,
-
-    // Typography styles
-    this.headingLarge,
-    this.headingMedium,
-    this.headingSmall,
-    this.bodyLarge,
-    this.bodyMedium,
-    this.bodySmall,
-    this.caption,
-    this.label,
-    this.code,
+  const ConduitThemeExtension._({
+    required this.tokens,
+    required this.variant,
+    required this.isDark,
+    required this.typography,
+    required this.surfaces,
+    required this.shadows,
+    required this.shapes,
   });
+
+  factory ConduitThemeExtension.create({
+    required TweakcnThemeDefinition theme,
+    required AppColorTokens tokens,
+    required Brightness brightness,
+    required TypographyThemeExtension typography,
+    required SurfaceThemeExtension surfaces,
+    required ShadowThemeExtension shadows,
+    required ShapeThemeExtension shapes,
+  }) {
+    return ConduitThemeExtension._(
+      tokens: tokens,
+      variant: theme.variantFor(brightness),
+      isDark: brightness == Brightness.dark,
+      typography: typography,
+      surfaces: surfaces,
+      shadows: shadows,
+      shapes: shapes,
+    );
+  }
+
+  final AppColorTokens tokens;
+  final TweakcnThemeVariant variant;
+  final bool isDark;
+  final TypographyThemeExtension typography;
+  final SurfaceThemeExtension surfaces;
+  final ShadowThemeExtension shadows;
+  final ShapeThemeExtension shapes;
+
+  Color get chatBubbleUser => variant.primary;
+  Color get chatBubbleAssistant =>
+      isDark ? tokens.neutralTone20 : tokens.neutralTone00;
+  Color get chatBubbleUserText => _onSurfaceColor(variant.primary);
+  Color get chatBubbleAssistantText => tokens.neutralOnSurface;
+  Color get chatBubbleUserBorder => variant.secondary;
+  Color get chatBubbleAssistantBorder =>
+      isDark ? tokens.neutralTone40 : tokens.neutralTone20;
+
+  Color get inputBackground =>
+      Color.lerp(surfaces.background, surfaces.input, isDark ? 0.35 : 0.75)!;
+  Color get inputBorder =>
+      Color.lerp(surfaces.border, surfaces.ring, isDark ? 0.4 : 0.2)!;
+  Color get inputBorderFocused => surfaces.ring;
+  Color get inputText => tokens.neutralOnSurface;
+  Color get inputPlaceholder =>
+      isDark ? tokens.neutralTone80 : tokens.neutralTone60;
+  Color get inputError => tokens.statusError60;
+
+  Color get cardBackground => surfaces.card;
+  Color get cardBorder => surfaces.border;
+  Color get cardShadow => shadows.shadowSm.first.color;
+  List<BoxShadow> get cardShadows => shadows.shadowSm;
+  List<BoxShadow> get popoverShadows => shadows.shadowLg;
+  List<BoxShadow> get overlayShadows => shadows.shadowXs;
+
+  Color get surfaceBackground => surfaces.background;
+  Color get surfaceContainer => surfaces.container;
+  Color get surfaceContainerHighest => surfaces.containerHighest;
+
+  Color get buttonPrimary => variant.primary;
+  Color get buttonPrimaryText => _onSurfaceColor(variant.primary);
+  Color get buttonSecondary => tokens.neutralTone20;
+  Color get buttonSecondaryText => tokens.neutralOnSurface;
+  Color get buttonDisabled => tokens.neutralTone40;
+  Color get buttonDisabledText =>
+      isDark ? tokens.neutralTone80 : tokens.neutralTone60;
+
+  StatusPalette get statusPalette => StatusPalette(
+    success: StatusColors(
+      base: tokens.statusSuccess60,
+      onBase: tokens.statusOnSuccess60,
+      background: _toneOverlay(tokens.statusSuccess60),
+      light: tokens.statusSuccess60,
+      dark: Color.alphaBlend(
+        tokens.statusSuccess60.withValues(alpha: 0.8),
+        tokens.neutralTone20,
+      ),
+    ),
+    warning: StatusColors(
+      base: tokens.statusWarning60,
+      onBase: tokens.statusOnWarning60,
+      background: _toneOverlay(tokens.statusWarning60),
+      light: tokens.statusWarning60,
+      dark: Color.alphaBlend(
+        tokens.statusWarning60.withValues(alpha: 0.8),
+        tokens.neutralTone20,
+      ),
+    ),
+    info: StatusColors(
+      base: tokens.statusInfo60,
+      onBase: tokens.statusOnInfo60,
+      background: _toneOverlay(tokens.statusInfo60),
+      light: tokens.statusInfo60,
+      dark: Color.alphaBlend(
+        tokens.statusInfo60.withValues(alpha: 0.8),
+        tokens.neutralTone20,
+      ),
+    ),
+    destructive: StatusColors(
+      base: tokens.statusError60,
+      onBase: tokens.statusOnError60,
+      background: _toneOverlay(tokens.statusError60),
+      light: tokens.statusError60,
+      dark: Color.alphaBlend(
+        tokens.statusError60.withValues(alpha: 0.8),
+        tokens.neutralTone20,
+      ),
+    ),
+  );
+
+  Color get success => statusPalette.success.base;
+  Color get successBackground => statusPalette.success.background;
+  Color get error => statusPalette.destructive.base;
+  Color get errorBackground => statusPalette.destructive.background;
+  Color get warning => statusPalette.warning.base;
+  Color get warningBackground => statusPalette.warning.background;
+  Color get info => statusPalette.info.base;
+  Color get infoBackground => statusPalette.info.background;
+
+  Color get dividerColor =>
+      isDark ? tokens.neutralTone40 : tokens.neutralTone20;
+  Color get navigationBackground =>
+      isDark ? tokens.neutralTone10 : tokens.neutralTone00;
+  Color get navigationSelected => variant.primary;
+  Color get navigationUnselected =>
+      isDark ? tokens.neutralTone80 : tokens.neutralTone60;
+  Color get navigationSelectedBackground =>
+      _overlay(tokens.overlayMedium, surface: navigationBackground);
+
+  Color get shimmerBase =>
+      _overlay(tokens.overlayWeak, surface: tokens.neutralTone10);
+  Color get shimmerHighlight => isDark
+      ? _overlay(tokens.overlayMedium, surface: tokens.neutralTone20)
+      : tokens.neutralTone00;
+  Color get loadingIndicator => variant.primary;
+
+  Color get codeBackground => tokens.codeBackground;
+  Color get codeBorder => tokens.codeBorder;
+  Color get codeText => tokens.codeText;
+  Color get codeAccent => tokens.codeAccent;
+
+  Color get textPrimary => tokens.neutralOnSurface;
+  Color get textSecondary => tokens.neutralTone80;
+  Color get textTertiary => tokens.neutralTone60;
+  Color get textInverse => tokens.neutralTone00;
+  Color get textDisabled =>
+      isDark ? tokens.neutralTone40 : tokens.neutralTone60;
+
+  Color get iconPrimary => tokens.neutralOnSurface;
+  Color get iconSecondary => tokens.neutralTone80;
+  Color get iconDisabled =>
+      isDark ? tokens.neutralTone40 : tokens.neutralTone60;
+  Color get iconInverse => tokens.neutralTone00;
+
+  double get radiusSm => shapes.radiusSm;
+  double get radiusMd => shapes.radiusMd;
+  double get radiusLg => shapes.radiusLg;
+  double get radiusXl => shapes.radiusXl;
+
+  Color get sidebarBackground => variant.sidebarBackground;
+  Color get sidebarForeground => variant.sidebarForeground;
+  Color get sidebarPrimary => variant.sidebarPrimary;
+  Color get sidebarPrimaryText => variant.sidebarPrimaryForeground;
+  Color get sidebarAccent => variant.sidebarAccent;
+  Color get sidebarAccentText => variant.sidebarAccentForeground;
+  Color get sidebarBorder => variant.sidebarBorder;
+  Color get sidebarRing => variant.sidebarRing;
+
+  TextStyle? get headingLarge => TextStyle(
+    fontSize: AppTypography.displaySmall,
+    fontWeight: FontWeight.w700,
+    color: tokens.neutralOnSurface,
+    height: 1.2,
+  );
+
+  TextStyle? get headingMedium => TextStyle(
+    fontSize: AppTypography.headlineLarge,
+    fontWeight: FontWeight.w600,
+    color: tokens.neutralOnSurface,
+    height: 1.3,
+  );
+
+  TextStyle? get headingSmall => TextStyle(
+    fontSize: AppTypography.headlineSmall,
+    fontWeight: FontWeight.w600,
+    color: tokens.neutralOnSurface,
+    height: 1.4,
+  );
+
+  TextStyle? get bodyLarge => TextStyle(
+    fontSize: AppTypography.bodyLarge,
+    fontWeight: FontWeight.w400,
+    color: tokens.neutralOnSurface,
+    height: 1.5,
+  );
+
+  TextStyle? get bodyMedium => TextStyle(
+    fontSize: AppTypography.bodyMedium,
+    fontWeight: FontWeight.w400,
+    color: tokens.neutralOnSurface,
+    height: 1.5,
+  );
+
+  TextStyle? get bodySmall => TextStyle(
+    fontSize: AppTypography.bodySmall,
+    fontWeight: FontWeight.w400,
+    color: isDark ? tokens.neutralTone80 : tokens.neutralTone60,
+    height: 1.4,
+  );
+
+  TextStyle? get caption => TextStyle(
+    fontSize: AppTypography.labelMedium,
+    fontWeight: FontWeight.w500,
+    color: isDark ? tokens.neutralTone80 : tokens.neutralTone60,
+    height: 1.3,
+    letterSpacing: 0.5,
+  );
+
+  TextStyle? get label => TextStyle(
+    fontSize: AppTypography.labelLarge,
+    fontWeight: FontWeight.w500,
+    color: tokens.neutralTone80,
+    height: 1.3,
+  );
+
+  TextStyle? get code => TextStyle(
+    fontSize: AppTypography.bodySmall,
+    fontWeight: FontWeight.w400,
+    color: tokens.neutralOnSurface,
+    height: 1.4,
+    fontFamily: typography.monospaceFont,
+    fontFamilyFallback: typography.monospaceFallback,
+  );
 
   @override
   ConduitThemeExtension copyWith({
-    // Chat-specific colors
-    Color? chatBubbleUser,
-    Color? chatBubbleAssistant,
-    Color? chatBubbleUserText,
-    Color? chatBubbleAssistantText,
-    Color? chatBubbleUserBorder,
-    Color? chatBubbleAssistantBorder,
-
-    // Input and form colors
-    Color? inputBackground,
-    Color? inputBorder,
-    Color? inputBorderFocused,
-    Color? inputText,
-    Color? inputPlaceholder,
-    Color? inputError,
-
-    // Card and surface colors
-    Color? cardBackground,
-    Color? cardBorder,
-    Color? cardShadow,
-    Color? surfaceBackground,
-    Color? surfaceContainer,
-    Color? surfaceContainerHighest,
-
-    // Interactive element colors
-    Color? buttonPrimary,
-    Color? buttonPrimaryText,
-    Color? buttonSecondary,
-    Color? buttonSecondaryText,
-    Color? buttonDisabled,
-    Color? buttonDisabledText,
-
-    // Status and feedback colors
-    Color? success,
-    Color? successBackground,
-    Color? error,
-    Color? errorBackground,
-    Color? warning,
-    Color? warningBackground,
-    Color? info,
-    Color? infoBackground,
-
-    // Navigation and UI element colors
-    Color? dividerColor,
-    Color? navigationBackground,
-    Color? navigationSelected,
-    Color? navigationUnselected,
-    Color? navigationSelectedBackground,
-
-    // Loading and animation colors
-    Color? shimmerBase,
-    Color? shimmerHighlight,
-    Color? loadingIndicator,
-
-    // Markdown/code colors
-    Color? codeBackground,
-    Color? codeBorder,
-    Color? codeText,
-    Color? codeAccent,
-
-    // Text colors
-    Color? textPrimary,
-    Color? textSecondary,
-    Color? textTertiary,
-    Color? textInverse,
-    Color? textDisabled,
-
-    // Icon colors
-    Color? iconPrimary,
-    Color? iconSecondary,
-    Color? iconDisabled,
-    Color? iconInverse,
-
-    // Typography styles
-    TextStyle? headingLarge,
-    TextStyle? headingMedium,
-    TextStyle? headingSmall,
-    TextStyle? bodyLarge,
-    TextStyle? bodyMedium,
-    TextStyle? bodySmall,
-    TextStyle? caption,
-    TextStyle? label,
-    TextStyle? code,
+    AppColorTokens? tokens,
+    TweakcnThemeVariant? variant,
+    bool? isDark,
+    TypographyThemeExtension? typography,
+    SurfaceThemeExtension? surfaces,
+    ShadowThemeExtension? shadows,
+    ShapeThemeExtension? shapes,
   }) {
-    return ConduitThemeExtension(
-      // Chat-specific colors
-      chatBubbleUser: chatBubbleUser ?? this.chatBubbleUser,
-      chatBubbleAssistant: chatBubbleAssistant ?? this.chatBubbleAssistant,
-      chatBubbleUserText: chatBubbleUserText ?? this.chatBubbleUserText,
-      chatBubbleAssistantText:
-          chatBubbleAssistantText ?? this.chatBubbleAssistantText,
-      chatBubbleUserBorder: chatBubbleUserBorder ?? this.chatBubbleUserBorder,
-      chatBubbleAssistantBorder:
-          chatBubbleAssistantBorder ?? this.chatBubbleAssistantBorder,
-
-      // Input and form colors
-      inputBackground: inputBackground ?? this.inputBackground,
-      inputBorder: inputBorder ?? this.inputBorder,
-      inputBorderFocused: inputBorderFocused ?? this.inputBorderFocused,
-      inputText: inputText ?? this.inputText,
-      inputPlaceholder: inputPlaceholder ?? this.inputPlaceholder,
-      inputError: inputError ?? this.inputError,
-
-      // Card and surface colors
-      cardBackground: cardBackground ?? this.cardBackground,
-      cardBorder: cardBorder ?? this.cardBorder,
-      cardShadow: cardShadow ?? this.cardShadow,
-      surfaceBackground: surfaceBackground ?? this.surfaceBackground,
-      surfaceContainer: surfaceContainer ?? this.surfaceContainer,
-      surfaceContainerHighest:
-          surfaceContainerHighest ?? this.surfaceContainerHighest,
-
-      // Interactive element colors
-      buttonPrimary: buttonPrimary ?? this.buttonPrimary,
-      buttonPrimaryText: buttonPrimaryText ?? this.buttonPrimaryText,
-      buttonSecondary: buttonSecondary ?? this.buttonSecondary,
-      buttonSecondaryText: buttonSecondaryText ?? this.buttonSecondaryText,
-      buttonDisabled: buttonDisabled ?? this.buttonDisabled,
-      buttonDisabledText: buttonDisabledText ?? this.buttonDisabledText,
-
-      // Status and feedback colors
-      success: success ?? this.success,
-      successBackground: successBackground ?? this.successBackground,
-      error: error ?? this.error,
-      errorBackground: errorBackground ?? this.errorBackground,
-      warning: warning ?? this.warning,
-      warningBackground: warningBackground ?? this.warningBackground,
-      info: info ?? this.info,
-      infoBackground: infoBackground ?? this.infoBackground,
-
-      // Navigation and UI element colors
-      dividerColor: dividerColor ?? this.dividerColor,
-      navigationBackground: navigationBackground ?? this.navigationBackground,
-      navigationSelected: navigationSelected ?? this.navigationSelected,
-      navigationUnselected: navigationUnselected ?? this.navigationUnselected,
-      navigationSelectedBackground:
-          navigationSelectedBackground ?? this.navigationSelectedBackground,
-
-      // Loading and animation colors
-      shimmerBase: shimmerBase ?? this.shimmerBase,
-      shimmerHighlight: shimmerHighlight ?? this.shimmerHighlight,
-      loadingIndicator: loadingIndicator ?? this.loadingIndicator,
-
-      // Markdown/code colors
-      codeBackground: codeBackground ?? this.codeBackground,
-      codeBorder: codeBorder ?? this.codeBorder,
-      codeText: codeText ?? this.codeText,
-      codeAccent: codeAccent ?? this.codeAccent,
-
-      // Text colors
-      textPrimary: textPrimary ?? this.textPrimary,
-      textSecondary: textSecondary ?? this.textSecondary,
-      textTertiary: textTertiary ?? this.textTertiary,
-      textInverse: textInverse ?? this.textInverse,
-      textDisabled: textDisabled ?? this.textDisabled,
-
-      // Icon colors
-      iconPrimary: iconPrimary ?? this.iconPrimary,
-      iconSecondary: iconSecondary ?? this.iconSecondary,
-      iconDisabled: iconDisabled ?? this.iconDisabled,
-      iconInverse: iconInverse ?? this.iconInverse,
-
-      // Typography styles
-      headingLarge: headingLarge ?? this.headingLarge,
-      headingMedium: headingMedium ?? this.headingMedium,
-      headingSmall: headingSmall ?? this.headingSmall,
-      bodyLarge: bodyLarge ?? this.bodyLarge,
-      bodyMedium: bodyMedium ?? this.bodyMedium,
-      bodySmall: bodySmall ?? this.bodySmall,
-      caption: caption ?? this.caption,
-      label: label ?? this.label,
-      code: code ?? this.code,
+    return ConduitThemeExtension._(
+      tokens: tokens ?? this.tokens,
+      variant: variant ?? this.variant,
+      isDark: isDark ?? this.isDark,
+      typography: typography ?? this.typography,
+      surfaces: surfaces ?? this.surfaces,
+      shadows: shadows ?? this.shadows,
+      shapes: shapes ?? this.shapes,
     );
   }
 
   @override
   ConduitThemeExtension lerp(
-    ThemeExtension<ConduitThemeExtension>? other,
+    covariant ThemeExtension<ConduitThemeExtension>? other,
     double t,
   ) {
-    if (other is! ConduitThemeExtension) {
-      return this;
-    }
-    return ConduitThemeExtension(
-      // Chat-specific colors
-      chatBubbleUser: Color.lerp(chatBubbleUser, other.chatBubbleUser, t)!,
-      chatBubbleAssistant: Color.lerp(
-        chatBubbleAssistant,
-        other.chatBubbleAssistant,
-        t,
-      )!,
-      chatBubbleUserText: Color.lerp(
-        chatBubbleUserText,
-        other.chatBubbleUserText,
-        t,
-      )!,
-      chatBubbleAssistantText: Color.lerp(
-        chatBubbleAssistantText,
-        other.chatBubbleAssistantText,
-        t,
-      )!,
-      chatBubbleUserBorder: Color.lerp(
-        chatBubbleUserBorder,
-        other.chatBubbleUserBorder,
-        t,
-      )!,
-      chatBubbleAssistantBorder: Color.lerp(
-        chatBubbleAssistantBorder,
-        other.chatBubbleAssistantBorder,
-        t,
-      )!,
-
-      // Input and form colors
-      inputBackground: Color.lerp(inputBackground, other.inputBackground, t)!,
-      inputBorder: Color.lerp(inputBorder, other.inputBorder, t)!,
-      inputBorderFocused: Color.lerp(
-        inputBorderFocused,
-        other.inputBorderFocused,
-        t,
-      )!,
-      inputText: Color.lerp(inputText, other.inputText, t)!,
-      inputPlaceholder: Color.lerp(
-        inputPlaceholder,
-        other.inputPlaceholder,
-        t,
-      )!,
-      inputError: Color.lerp(inputError, other.inputError, t)!,
-
-      // Card and surface colors
-      cardBackground: Color.lerp(cardBackground, other.cardBackground, t)!,
-      cardBorder: Color.lerp(cardBorder, other.cardBorder, t)!,
-      cardShadow: Color.lerp(cardShadow, other.cardShadow, t)!,
-      surfaceBackground: Color.lerp(
-        surfaceBackground,
-        other.surfaceBackground,
-        t,
-      )!,
-      surfaceContainer: Color.lerp(
-        surfaceContainer,
-        other.surfaceContainer,
-        t,
-      )!,
-      surfaceContainerHighest: Color.lerp(
-        surfaceContainerHighest,
-        other.surfaceContainerHighest,
-        t,
-      )!,
-
-      // Interactive element colors
-      buttonPrimary: Color.lerp(buttonPrimary, other.buttonPrimary, t)!,
-      buttonPrimaryText: Color.lerp(
-        buttonPrimaryText,
-        other.buttonPrimaryText,
-        t,
-      )!,
-      buttonSecondary: Color.lerp(buttonSecondary, other.buttonSecondary, t)!,
-      buttonSecondaryText: Color.lerp(
-        buttonSecondaryText,
-        other.buttonSecondaryText,
-        t,
-      )!,
-      buttonDisabled: Color.lerp(buttonDisabled, other.buttonDisabled, t)!,
-      buttonDisabledText: Color.lerp(
-        buttonDisabledText,
-        other.buttonDisabledText,
-        t,
-      )!,
-
-      // Status and feedback colors
-      success: Color.lerp(success, other.success, t)!,
-      successBackground: Color.lerp(
-        successBackground,
-        other.successBackground,
-        t,
-      )!,
-      error: Color.lerp(error, other.error, t)!,
-      errorBackground: Color.lerp(errorBackground, other.errorBackground, t)!,
-      warning: Color.lerp(warning, other.warning, t)!,
-      warningBackground: Color.lerp(
-        warningBackground,
-        other.warningBackground,
-        t,
-      )!,
-      info: Color.lerp(info, other.info, t)!,
-      infoBackground: Color.lerp(infoBackground, other.infoBackground, t)!,
-
-      // Navigation and UI element colors
-      dividerColor: Color.lerp(dividerColor, other.dividerColor, t)!,
-      navigationBackground: Color.lerp(
-        navigationBackground,
-        other.navigationBackground,
-        t,
-      )!,
-      navigationSelected: Color.lerp(
-        navigationSelected,
-        other.navigationSelected,
-        t,
-      )!,
-      navigationUnselected: Color.lerp(
-        navigationUnselected,
-        other.navigationUnselected,
-        t,
-      )!,
-      navigationSelectedBackground: Color.lerp(
-        navigationSelectedBackground,
-        other.navigationSelectedBackground,
-        t,
-      )!,
-
-      // Loading and animation colors
-      shimmerBase: Color.lerp(shimmerBase, other.shimmerBase, t)!,
-      shimmerHighlight: Color.lerp(
-        shimmerHighlight,
-        other.shimmerHighlight,
-        t,
-      )!,
-      loadingIndicator: Color.lerp(
-        loadingIndicator,
-        other.loadingIndicator,
-        t,
-      )!,
-      codeBackground: Color.lerp(codeBackground, other.codeBackground, t)!,
-      codeBorder: Color.lerp(codeBorder, other.codeBorder, t)!,
-      codeText: Color.lerp(codeText, other.codeText, t)!,
-      codeAccent: Color.lerp(codeAccent, other.codeAccent, t)!,
-
-      // Text colors
-      textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
-      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
-      textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
-      textInverse: Color.lerp(textInverse, other.textInverse, t)!,
-      textDisabled: Color.lerp(textDisabled, other.textDisabled, t)!,
-
-      // Icon colors
-      iconPrimary: Color.lerp(iconPrimary, other.iconPrimary, t)!,
-      iconSecondary: Color.lerp(iconSecondary, other.iconSecondary, t)!,
-      iconDisabled: Color.lerp(iconDisabled, other.iconDisabled, t)!,
-      iconInverse: Color.lerp(iconInverse, other.iconInverse, t)!,
-
-      // Typography styles
-      headingLarge: TextStyle.lerp(headingLarge, other.headingLarge, t),
-      headingMedium: TextStyle.lerp(headingMedium, other.headingMedium, t),
-      headingSmall: TextStyle.lerp(headingSmall, other.headingSmall, t),
-      bodyLarge: TextStyle.lerp(bodyLarge, other.bodyLarge, t),
-      bodyMedium: TextStyle.lerp(bodyMedium, other.bodyMedium, t),
-      bodySmall: TextStyle.lerp(bodySmall, other.bodySmall, t),
-      caption: TextStyle.lerp(caption, other.caption, t),
-      label: TextStyle.lerp(label, other.label, t),
-      code: TextStyle.lerp(code, other.code, t),
-    );
+    if (other is! ConduitThemeExtension) return this;
+    return t < 0.5 ? this : other;
   }
 
-  /// Dark theme extension derived from the active color palette.
-  static ConduitThemeExtension darkPalette({
-    required AppColorPalette palette,
-    required AppColorTokens tokens,
-  }) {
-    final darkTone = palette.dark;
-    final onPrimary = _onSurfaceColor(darkTone.primary, tokens);
-    Color blend(Color overlay, {Color? surface}) {
-      return Color.alphaBlend(overlay, surface ?? tokens.neutralTone10);
-    }
-
-    Color toneBackground(Color tone, {double opacity = 0.24}) {
-      return Color.alphaBlend(
-        tone.withValues(alpha: opacity),
-        tokens.neutralTone10,
-      );
-    }
-
-    return ConduitThemeExtension(
-      chatBubbleUser: darkTone.primary,
-      chatBubbleAssistant: tokens.neutralTone20,
-      chatBubbleUserText: onPrimary,
-      chatBubbleAssistantText: tokens.neutralOnSurface,
-      chatBubbleUserBorder: darkTone.secondary,
-      chatBubbleAssistantBorder: tokens.neutralTone40,
-      inputBackground: tokens.neutralTone20,
-      inputBorder: tokens.neutralTone40,
-      inputBorderFocused: darkTone.primary,
-      inputText: tokens.neutralOnSurface,
-      inputPlaceholder: tokens.neutralTone80,
-      inputError: tokens.statusError60,
-      cardBackground: tokens.neutralTone00,
-      cardBorder: tokens.neutralTone40,
-      cardShadow: blend(tokens.overlayWeak, surface: tokens.neutralTone00),
-      surfaceBackground: tokens.neutralTone10,
-      surfaceContainer: tokens.neutralTone00,
-      surfaceContainerHighest: tokens.neutralTone20,
-      buttonPrimary: darkTone.primary,
-      buttonPrimaryText: onPrimary,
-      buttonSecondary: tokens.neutralTone20,
-      buttonSecondaryText: tokens.neutralOnSurface,
-      buttonDisabled: tokens.neutralTone40,
-      buttonDisabledText: tokens.neutralTone80,
-      success: tokens.statusSuccess60,
-      successBackground: toneBackground(tokens.statusSuccess60),
-      error: tokens.statusError60,
-      errorBackground: toneBackground(tokens.statusError60),
-      warning: tokens.statusWarning60,
-      warningBackground: toneBackground(tokens.statusWarning60),
-      info: tokens.statusInfo60,
-      infoBackground: toneBackground(tokens.statusInfo60),
-      dividerColor: tokens.neutralTone40,
-      navigationBackground: tokens.neutralTone10,
-      navigationSelected: darkTone.primary,
-      navigationUnselected: tokens.neutralTone80,
-      navigationSelectedBackground: blend(
-        tokens.overlayMedium,
-        surface: tokens.neutralTone10,
-      ),
-      shimmerBase: blend(tokens.overlayWeak, surface: tokens.neutralTone10),
-      shimmerHighlight: blend(
-        tokens.overlayMedium,
-        surface: tokens.neutralTone20,
-      ),
-      loadingIndicator: darkTone.primary,
-      codeBackground: tokens.codeBackground,
-      codeBorder: tokens.codeBorder,
-      codeText: tokens.codeText,
-      codeAccent: tokens.codeAccent,
-      textPrimary: tokens.neutralOnSurface,
-      textSecondary: tokens.neutralTone80,
-      textTertiary: tokens.neutralTone60,
-      textInverse: tokens.neutralTone00,
-      textDisabled: tokens.neutralTone40,
-      iconPrimary: tokens.neutralOnSurface,
-      iconSecondary: tokens.neutralTone80,
-      iconDisabled: tokens.neutralTone40,
-      iconInverse: tokens.neutralTone00,
-      headingLarge: TextStyle(
-        fontSize: AppTypography.displaySmall,
-        fontWeight: FontWeight.w700,
-        color: tokens.neutralOnSurface,
-        height: 1.2,
-      ),
-      headingMedium: TextStyle(
-        fontSize: AppTypography.headlineLarge,
-        fontWeight: FontWeight.w600,
-        color: tokens.neutralOnSurface,
-        height: 1.3,
-      ),
-      headingSmall: TextStyle(
-        fontSize: AppTypography.headlineSmall,
-        fontWeight: FontWeight.w600,
-        color: tokens.neutralOnSurface,
-        height: 1.4,
-      ),
-      bodyLarge: TextStyle(
-        fontSize: AppTypography.bodyLarge,
-        fontWeight: FontWeight.w400,
-        color: tokens.neutralOnSurface,
-        height: 1.5,
-      ),
-      bodyMedium: TextStyle(
-        fontSize: AppTypography.bodyMedium,
-        fontWeight: FontWeight.w400,
-        color: tokens.neutralOnSurface,
-        height: 1.5,
-      ),
-      bodySmall: TextStyle(
-        fontSize: AppTypography.bodySmall,
-        fontWeight: FontWeight.w400,
-        color: tokens.neutralTone80,
-        height: 1.4,
-      ),
-      caption: TextStyle(
-        fontSize: AppTypography.labelMedium,
-        fontWeight: FontWeight.w500,
-        color: tokens.neutralTone80,
-        height: 1.3,
-        letterSpacing: 0.5,
-      ),
-      label: TextStyle(
-        fontSize: AppTypography.labelLarge,
-        fontWeight: FontWeight.w500,
-        color: tokens.neutralOnSurface,
-        height: 1.3,
-      ),
-      code: TextStyle(
-        fontSize: AppTypography.bodySmall,
-        fontWeight: FontWeight.w400,
-        color: tokens.neutralOnSurface,
-        height: 1.4,
-        fontFamily: AppTypography.monospaceFontFamily,
-      ),
-    );
+  Color _overlay(Color overlay, {Color? surface}) {
+    return Color.alphaBlend(overlay, surface ?? surfaceBackground);
   }
 
-  /// Light theme extension derived from the active color palette.
-  static ConduitThemeExtension lightPalette({
-    required AppColorPalette palette,
-    required AppColorTokens tokens,
-  }) {
-    final lightTone = palette.light;
-    final darkTone = palette.dark;
-    final onPrimary = _onSurfaceColor(lightTone.primary, tokens);
-    Color blend(Color overlay, {Color? surface}) {
-      return Color.alphaBlend(overlay, surface ?? tokens.neutralTone00);
-    }
-
-    Color toneBackground(Color tone, {double opacity = 0.12}) {
-      return Color.alphaBlend(
-        tone.withValues(alpha: opacity),
-        tokens.neutralTone00,
-      );
-    }
-
-    return ConduitThemeExtension(
-      chatBubbleUser: lightTone.primary,
-      chatBubbleAssistant: tokens.neutralTone00,
-      chatBubbleUserText: onPrimary,
-      chatBubbleAssistantText: tokens.neutralOnSurface,
-      chatBubbleUserBorder: darkTone.primary,
-      chatBubbleAssistantBorder: tokens.neutralTone20,
-      inputBackground: tokens.neutralTone00,
-      inputBorder: tokens.neutralTone20,
-      inputBorderFocused: lightTone.primary,
-      inputText: tokens.neutralOnSurface,
-      inputPlaceholder: tokens.neutralTone60,
-      inputError: tokens.statusError60,
-      cardBackground: tokens.neutralTone00,
-      cardBorder: tokens.neutralTone20,
-      cardShadow: blend(tokens.overlayWeak),
-      surfaceBackground: tokens.neutralTone10,
-      surfaceContainer: tokens.neutralTone00,
-      surfaceContainerHighest: tokens.neutralTone20,
-      buttonPrimary: lightTone.primary,
-      buttonPrimaryText: onPrimary,
-      buttonSecondary: tokens.neutralTone20,
-      buttonSecondaryText: tokens.neutralOnSurface,
-      buttonDisabled: tokens.neutralTone40,
-      buttonDisabledText: tokens.neutralTone60,
-      success: tokens.statusSuccess60,
-      successBackground: toneBackground(tokens.statusSuccess60),
-      error: tokens.statusError60,
-      errorBackground: toneBackground(tokens.statusError60),
-      warning: tokens.statusWarning60,
-      warningBackground: toneBackground(tokens.statusWarning60),
-      info: tokens.statusInfo60,
-      infoBackground: toneBackground(tokens.statusInfo60),
-      dividerColor: tokens.neutralTone20,
-      navigationBackground: tokens.neutralTone00,
-      navigationSelected: lightTone.primary,
-      navigationUnselected: tokens.neutralTone60,
-      navigationSelectedBackground: blend(tokens.overlayMedium),
-      shimmerBase: blend(tokens.overlayWeak, surface: tokens.neutralTone10),
-      shimmerHighlight: tokens.neutralTone00,
-      loadingIndicator: lightTone.primary,
-      codeBackground: tokens.codeBackground,
-      codeBorder: tokens.codeBorder,
-      codeText: tokens.codeText,
-      codeAccent: tokens.codeAccent,
-      textPrimary: tokens.neutralOnSurface,
-      textSecondary: tokens.neutralTone80,
-      textTertiary: tokens.neutralTone60,
-      textInverse: tokens.neutralTone00,
-      textDisabled: tokens.neutralTone60,
-      iconPrimary: tokens.neutralOnSurface,
-      iconSecondary: tokens.neutralTone80,
-      iconDisabled: tokens.neutralTone60,
-      iconInverse: tokens.neutralTone00,
-      headingLarge: TextStyle(
-        fontSize: AppTypography.displaySmall,
-        fontWeight: FontWeight.w700,
-        color: tokens.neutralOnSurface,
-        height: 1.2,
-      ),
-      headingMedium: TextStyle(
-        fontSize: AppTypography.headlineLarge,
-        fontWeight: FontWeight.w600,
-        color: tokens.neutralOnSurface,
-        height: 1.3,
-      ),
-      headingSmall: TextStyle(
-        fontSize: AppTypography.headlineSmall,
-        fontWeight: FontWeight.w600,
-        color: tokens.neutralOnSurface,
-        height: 1.4,
-      ),
-      bodyLarge: TextStyle(
-        fontSize: AppTypography.bodyLarge,
-        fontWeight: FontWeight.w400,
-        color: tokens.neutralOnSurface,
-        height: 1.5,
-      ),
-      bodyMedium: TextStyle(
-        fontSize: AppTypography.bodyMedium,
-        fontWeight: FontWeight.w400,
-        color: tokens.neutralOnSurface,
-        height: 1.5,
-      ),
-      bodySmall: TextStyle(
-        fontSize: AppTypography.bodySmall,
-        fontWeight: FontWeight.w400,
-        color: tokens.neutralTone60,
-        height: 1.4,
-      ),
-      caption: TextStyle(
-        fontSize: AppTypography.labelMedium,
-        fontWeight: FontWeight.w500,
-        color: tokens.neutralTone60,
-        height: 1.3,
-        letterSpacing: 0.5,
-      ),
-      label: TextStyle(
-        fontSize: AppTypography.labelLarge,
-        fontWeight: FontWeight.w500,
-        color: tokens.neutralTone80,
-        height: 1.3,
-      ),
-      code: TextStyle(
-        fontSize: AppTypography.bodySmall,
-        fontWeight: FontWeight.w400,
-        color: tokens.neutralOnSurface,
-        height: 1.4,
-        fontFamily: AppTypography.monospaceFontFamily,
-      ),
-    );
+  Color _toneOverlay(Color tone) {
+    final double alpha = isDark ? 0.24 : 0.12;
+    final Color base = isDark ? tokens.neutralTone10 : tokens.neutralTone00;
+    return Color.alphaBlend(tone.withValues(alpha: alpha), base);
   }
 
-  static Color _onSurfaceColor(Color background, AppColorTokens tokens) {
+  Color _onSurfaceColor(Color background) {
     final contrastOnLight = _contrastRatio(background, tokens.neutralTone00);
     final contrastOnDark = _contrastRatio(background, tokens.neutralOnSurface);
     return contrastOnLight >= contrastOnDark
@@ -826,13 +316,32 @@ extension ConduitThemeContext on BuildContext {
     if (extension != null) return extension;
     final palette =
         theme.extension<AppPaletteThemeExtension>()?.palette ??
-        AppColorPalettes.auroraViolet;
+        TweakcnThemes.t3Chat;
+    final TweakcnThemeVariant variant = palette.variantFor(theme.brightness);
     final tokens = theme.brightness == Brightness.dark
-        ? AppColorTokens.dark(palette: palette)
-        : AppColorTokens.light(palette: palette);
-    return theme.brightness == Brightness.dark
-        ? ConduitThemeExtension.darkPalette(palette: palette, tokens: tokens)
-        : ConduitThemeExtension.lightPalette(palette: palette, tokens: tokens);
+        ? AppColorTokens.dark(theme: palette)
+        : AppColorTokens.light(theme: palette);
+    final TypographyThemeExtension typography =
+        theme.extension<TypographyThemeExtension>() ??
+        TypographyThemeExtension.fromVariant(variant);
+    final SurfaceThemeExtension surfaces =
+        theme.extension<SurfaceThemeExtension>() ??
+        SurfaceThemeExtension.fromVariant(variant);
+    final ShadowThemeExtension shadows =
+        theme.extension<ShadowThemeExtension>() ??
+        ShadowThemeExtension.standard();
+    final ShapeThemeExtension shapes =
+        theme.extension<ShapeThemeExtension>() ??
+        ShapeThemeExtension.fromVariant(variant);
+    return ConduitThemeExtension.create(
+      theme: palette,
+      tokens: tokens,
+      brightness: theme.brightness,
+      typography: typography,
+      surfaces: surfaces,
+      shadows: shadows,
+      shapes: shapes,
+    );
   }
 }
 
@@ -843,18 +352,526 @@ extension ConduitColorTokensContext on BuildContext {
     if (tokens != null) return tokens;
     final palette =
         theme.extension<AppPaletteThemeExtension>()?.palette ??
-        AppColorPalettes.auroraViolet;
+        TweakcnThemes.t3Chat;
     return theme.brightness == Brightness.dark
-        ? AppColorTokens.dark(palette: palette)
-        : AppColorTokens.light(palette: palette);
+        ? AppColorTokens.dark(theme: palette)
+        : AppColorTokens.light(theme: palette);
   }
 }
 
 extension ConduitPaletteContext on BuildContext {
-  AppColorPalette get conduitPalette {
+  TweakcnThemeDefinition get conduitPalette {
     return Theme.of(this).extension<AppPaletteThemeExtension>()?.palette ??
-        AppColorPalettes.auroraViolet;
+        TweakcnThemes.t3Chat;
   }
+}
+
+extension SidebarThemeContext on BuildContext {
+  SidebarThemeExtension get sidebarTheme {
+    final theme = Theme.of(this);
+    final extension = theme.extension<SidebarThemeExtension>();
+    if (extension != null) return extension;
+    final palette =
+        theme.extension<AppPaletteThemeExtension>()?.palette ??
+        TweakcnThemes.t3Chat;
+    final TweakcnThemeVariant variant = palette.variantFor(theme.brightness);
+    return SidebarThemeExtension.fromVariant(variant);
+  }
+}
+
+@immutable
+class StatusColors {
+  const StatusColors({
+    required this.base,
+    required this.onBase,
+    required this.background,
+    required this.light,
+    required this.dark,
+  });
+
+  final Color base;
+  final Color onBase;
+  final Color background;
+  final Color light;
+  final Color dark;
+}
+
+@immutable
+class StatusPalette {
+  const StatusPalette({
+    required this.success,
+    required this.warning,
+    required this.info,
+    required this.destructive,
+  });
+
+  final StatusColors success;
+  final StatusColors warning;
+  final StatusColors info;
+  final StatusColors destructive;
+}
+
+@immutable
+class TypographyThemeExtension
+    extends ThemeExtension<TypographyThemeExtension> {
+  const TypographyThemeExtension({
+    required this.primaryFont,
+    required this.primaryFallback,
+    required this.serifFont,
+    required this.serifFallback,
+    required this.monospaceFont,
+    required this.monospaceFallback,
+  });
+
+  factory TypographyThemeExtension.fromVariant(TweakcnThemeVariant variant) {
+    final List<String> sansStack = _sanitizeFontStack(variant.fontSans);
+    final List<String> serifStack = _sanitizeFontStack(variant.fontSerif);
+    final List<String> monoStack = _sanitizeFontStack(variant.fontMono);
+
+    return TypographyThemeExtension(
+      primaryFont: _preferredFont(sansStack),
+      primaryFallback: _fallbackForStack(sansStack),
+      serifFont: _preferredFont(serifStack),
+      serifFallback: _fallbackForStack(serifStack),
+      monospaceFont: _preferredFont(monoStack),
+      monospaceFallback: _fallbackForStack(monoStack),
+    );
+  }
+
+  final String primaryFont;
+  final List<String> primaryFallback;
+  final String serifFont;
+  final List<String> serifFallback;
+  final String monospaceFont;
+  final List<String> monospaceFallback;
+
+  @override
+  TypographyThemeExtension copyWith({
+    String? primaryFont,
+    List<String>? primaryFallback,
+    String? serifFont,
+    List<String>? serifFallback,
+    String? monospaceFont,
+    List<String>? monospaceFallback,
+  }) {
+    return TypographyThemeExtension(
+      primaryFont: primaryFont ?? this.primaryFont,
+      primaryFallback: primaryFallback ?? this.primaryFallback,
+      serifFont: serifFont ?? this.serifFont,
+      serifFallback: serifFallback ?? this.serifFallback,
+      monospaceFont: monospaceFont ?? this.monospaceFont,
+      monospaceFallback: monospaceFallback ?? this.monospaceFallback,
+    );
+  }
+
+  @override
+  TypographyThemeExtension lerp(
+    covariant ThemeExtension<TypographyThemeExtension>? other,
+    double t,
+  ) {
+    if (other is! TypographyThemeExtension) return this;
+    return t < 0.5 ? this : other;
+  }
+}
+
+@immutable
+class SurfaceThemeExtension extends ThemeExtension<SurfaceThemeExtension> {
+  const SurfaceThemeExtension({
+    required this.background,
+    required this.container,
+    required this.containerHighest,
+    required this.card,
+    required this.cardForeground,
+    required this.popover,
+    required this.popoverForeground,
+    required this.muted,
+    required this.mutedForeground,
+    required this.border,
+    required this.ring,
+    required this.input,
+  });
+
+  factory SurfaceThemeExtension.fromVariant(TweakcnThemeVariant variant) {
+    return SurfaceThemeExtension(
+      background: variant.background,
+      container: Color.lerp(variant.background, variant.card, 0.5)!,
+      containerHighest: variant.card,
+      card: variant.card,
+      cardForeground: variant.cardForeground,
+      popover: variant.popover,
+      popoverForeground: variant.popoverForeground,
+      muted: variant.muted,
+      mutedForeground: variant.mutedForeground,
+      border: variant.border,
+      ring: variant.ring,
+      input: variant.input,
+    );
+  }
+
+  final Color background;
+  final Color container;
+  final Color containerHighest;
+  final Color card;
+  final Color cardForeground;
+  final Color popover;
+  final Color popoverForeground;
+  final Color muted;
+  final Color mutedForeground;
+  final Color border;
+  final Color ring;
+  final Color input;
+
+  @override
+  SurfaceThemeExtension copyWith({
+    Color? background,
+    Color? container,
+    Color? containerHighest,
+    Color? card,
+    Color? cardForeground,
+    Color? popover,
+    Color? popoverForeground,
+    Color? muted,
+    Color? mutedForeground,
+    Color? border,
+    Color? ring,
+    Color? input,
+  }) {
+    return SurfaceThemeExtension(
+      background: background ?? this.background,
+      container: container ?? this.container,
+      containerHighest: containerHighest ?? this.containerHighest,
+      card: card ?? this.card,
+      cardForeground: cardForeground ?? this.cardForeground,
+      popover: popover ?? this.popover,
+      popoverForeground: popoverForeground ?? this.popoverForeground,
+      muted: muted ?? this.muted,
+      mutedForeground: mutedForeground ?? this.mutedForeground,
+      border: border ?? this.border,
+      ring: ring ?? this.ring,
+      input: input ?? this.input,
+    );
+  }
+
+  @override
+  SurfaceThemeExtension lerp(
+    covariant ThemeExtension<SurfaceThemeExtension>? other,
+    double t,
+  ) {
+    if (other is! SurfaceThemeExtension) return this;
+    return t < 0.5 ? this : other;
+  }
+}
+
+@immutable
+class ShadowThemeExtension extends ThemeExtension<ShadowThemeExtension> {
+  const ShadowThemeExtension({
+    required this.shadow2Xs,
+    required this.shadowXs,
+    required this.shadowSm,
+    required this.shadow,
+    required this.shadowMd,
+    required this.shadowLg,
+    required this.shadowXl,
+    required this.shadow2Xl,
+  });
+
+  factory ShadowThemeExtension.standard() {
+    return ShadowThemeExtension(
+      shadow2Xs: _buildShadow(const <_ShadowSpec>[
+        _ShadowSpec(dx: 0, dy: 1, blur: 3, spread: 0, opacity: 0.05),
+      ]),
+      shadowXs: _buildShadow(const <_ShadowSpec>[
+        _ShadowSpec(dx: 0, dy: 1, blur: 3, spread: 0, opacity: 0.05),
+      ]),
+      shadowSm: _buildShadow(const <_ShadowSpec>[
+        _ShadowSpec(dx: 0, dy: 1, blur: 3, spread: 0, opacity: 0.10),
+        _ShadowSpec(dx: 0, dy: 1, blur: 2, spread: -1, opacity: 0.10),
+      ]),
+      shadow: _buildShadow(const <_ShadowSpec>[
+        _ShadowSpec(dx: 0, dy: 1, blur: 3, spread: 0, opacity: 0.10),
+        _ShadowSpec(dx: 0, dy: 1, blur: 2, spread: -1, opacity: 0.10),
+      ]),
+      shadowMd: _buildShadow(const <_ShadowSpec>[
+        _ShadowSpec(dx: 0, dy: 1, blur: 3, spread: 0, opacity: 0.10),
+        _ShadowSpec(dx: 0, dy: 2, blur: 4, spread: -1, opacity: 0.10),
+      ]),
+      shadowLg: _buildShadow(const <_ShadowSpec>[
+        _ShadowSpec(dx: 0, dy: 1, blur: 3, spread: 0, opacity: 0.10),
+        _ShadowSpec(dx: 0, dy: 4, blur: 6, spread: -1, opacity: 0.10),
+      ]),
+      shadowXl: _buildShadow(const <_ShadowSpec>[
+        _ShadowSpec(dx: 0, dy: 1, blur: 3, spread: 0, opacity: 0.10),
+        _ShadowSpec(dx: 0, dy: 8, blur: 10, spread: -1, opacity: 0.10),
+      ]),
+      shadow2Xl: _buildShadow(const <_ShadowSpec>[
+        _ShadowSpec(dx: 0, dy: 1, blur: 3, spread: 0, opacity: 0.25),
+      ]),
+    );
+  }
+
+  final List<BoxShadow> shadow2Xs;
+  final List<BoxShadow> shadowXs;
+  final List<BoxShadow> shadowSm;
+  final List<BoxShadow> shadow;
+  final List<BoxShadow> shadowMd;
+  final List<BoxShadow> shadowLg;
+  final List<BoxShadow> shadowXl;
+  final List<BoxShadow> shadow2Xl;
+
+  @override
+  ShadowThemeExtension copyWith({
+    List<BoxShadow>? shadow2Xs,
+    List<BoxShadow>? shadowXs,
+    List<BoxShadow>? shadowSm,
+    List<BoxShadow>? shadow,
+    List<BoxShadow>? shadowMd,
+    List<BoxShadow>? shadowLg,
+    List<BoxShadow>? shadowXl,
+    List<BoxShadow>? shadow2Xl,
+  }) {
+    return ShadowThemeExtension(
+      shadow2Xs: shadow2Xs ?? this.shadow2Xs,
+      shadowXs: shadowXs ?? this.shadowXs,
+      shadowSm: shadowSm ?? this.shadowSm,
+      shadow: shadow ?? this.shadow,
+      shadowMd: shadowMd ?? this.shadowMd,
+      shadowLg: shadowLg ?? this.shadowLg,
+      shadowXl: shadowXl ?? this.shadowXl,
+      shadow2Xl: shadow2Xl ?? this.shadow2Xl,
+    );
+  }
+
+  @override
+  ShadowThemeExtension lerp(
+    covariant ThemeExtension<ShadowThemeExtension>? other,
+    double t,
+  ) {
+    if (other is! ShadowThemeExtension) return this;
+    return t < 0.5 ? this : other;
+  }
+}
+
+@immutable
+class ShapeThemeExtension extends ThemeExtension<ShapeThemeExtension> {
+  const ShapeThemeExtension({
+    required this.radiusBase,
+    required this.radiusSm,
+    required this.radiusMd,
+    required this.radiusLg,
+    required this.radiusXl,
+  });
+
+  factory ShapeThemeExtension.fromVariant(TweakcnThemeVariant variant) {
+    final double base = variant.radius;
+    return ShapeThemeExtension(
+      radiusBase: base,
+      radiusSm: math.max(0, base - 4),
+      radiusMd: math.max(0, base - 2),
+      radiusLg: base,
+      radiusXl: base + 4,
+    );
+  }
+
+  final double radiusBase;
+  final double radiusSm;
+  final double radiusMd;
+  final double radiusLg;
+  final double radiusXl;
+
+  BorderRadius get small => BorderRadius.circular(radiusSm);
+  BorderRadius get medium => BorderRadius.circular(radiusMd);
+  BorderRadius get large => BorderRadius.circular(radiusLg);
+  BorderRadius get extraLarge => BorderRadius.circular(radiusXl);
+
+  @override
+  ShapeThemeExtension copyWith({
+    double? radiusBase,
+    double? radiusSm,
+    double? radiusMd,
+    double? radiusLg,
+    double? radiusXl,
+  }) {
+    return ShapeThemeExtension(
+      radiusBase: radiusBase ?? this.radiusBase,
+      radiusSm: radiusSm ?? this.radiusSm,
+      radiusMd: radiusMd ?? this.radiusMd,
+      radiusLg: radiusLg ?? this.radiusLg,
+      radiusXl: radiusXl ?? this.radiusXl,
+    );
+  }
+
+  @override
+  ShapeThemeExtension lerp(
+    covariant ThemeExtension<ShapeThemeExtension>? other,
+    double t,
+  ) {
+    if (other is! ShapeThemeExtension) return this;
+    return ShapeThemeExtension(
+      radiusBase: lerpDouble(radiusBase, other.radiusBase, t),
+      radiusSm: lerpDouble(radiusSm, other.radiusSm, t),
+      radiusMd: lerpDouble(radiusMd, other.radiusMd, t),
+      radiusLg: lerpDouble(radiusLg, other.radiusLg, t),
+      radiusXl: lerpDouble(radiusXl, other.radiusXl, t),
+    );
+  }
+
+  static double lerpDouble(double a, double b, double t) {
+    return a + (b - a) * t;
+  }
+}
+
+@immutable
+class SidebarThemeExtension extends ThemeExtension<SidebarThemeExtension> {
+  const SidebarThemeExtension({
+    required this.background,
+    required this.foreground,
+    required this.primary,
+    required this.primaryForeground,
+    required this.accent,
+    required this.accentForeground,
+    required this.border,
+    required this.ring,
+  });
+
+  factory SidebarThemeExtension.fromVariant(TweakcnThemeVariant variant) {
+    return SidebarThemeExtension(
+      background: variant.sidebarBackground,
+      foreground: variant.sidebarForeground,
+      primary: variant.sidebarPrimary,
+      primaryForeground: variant.sidebarPrimaryForeground,
+      accent: variant.sidebarAccent,
+      accentForeground: variant.sidebarAccentForeground,
+      border: variant.sidebarBorder,
+      ring: variant.sidebarRing,
+    );
+  }
+
+  final Color background;
+  final Color foreground;
+  final Color primary;
+  final Color primaryForeground;
+  final Color accent;
+  final Color accentForeground;
+  final Color border;
+  final Color ring;
+
+  @override
+  SidebarThemeExtension copyWith({
+    Color? background,
+    Color? foreground,
+    Color? primary,
+    Color? primaryForeground,
+    Color? accent,
+    Color? accentForeground,
+    Color? border,
+    Color? ring,
+  }) {
+    return SidebarThemeExtension(
+      background: background ?? this.background,
+      foreground: foreground ?? this.foreground,
+      primary: primary ?? this.primary,
+      primaryForeground: primaryForeground ?? this.primaryForeground,
+      accent: accent ?? this.accent,
+      accentForeground: accentForeground ?? this.accentForeground,
+      border: border ?? this.border,
+      ring: ring ?? this.ring,
+    );
+  }
+
+  @override
+  SidebarThemeExtension lerp(
+    covariant ThemeExtension<SidebarThemeExtension>? other,
+    double t,
+  ) {
+    if (other is! SidebarThemeExtension) return this;
+    return SidebarThemeExtension(
+      background: Color.lerp(background, other.background, t)!,
+      foreground: Color.lerp(foreground, other.foreground, t)!,
+      primary: Color.lerp(primary, other.primary, t)!,
+      primaryForeground: Color.lerp(
+        primaryForeground,
+        other.primaryForeground,
+        t,
+      )!,
+      accent: Color.lerp(accent, other.accent, t)!,
+      accentForeground: Color.lerp(
+        accentForeground,
+        other.accentForeground,
+        t,
+      )!,
+      border: Color.lerp(border, other.border, t)!,
+      ring: Color.lerp(ring, other.ring, t)!,
+    );
+  }
+}
+
+class _ShadowSpec {
+  const _ShadowSpec({
+    required this.dx,
+    required this.dy,
+    required this.blur,
+    required this.spread,
+    required this.opacity,
+  });
+
+  final double dx;
+  final double dy;
+  final double blur;
+  final double spread;
+  final double opacity;
+}
+
+List<BoxShadow> _buildShadow(List<_ShadowSpec> specs) {
+  return specs
+      .map(
+        (spec) => BoxShadow(
+          color: Colors.black.withValues(alpha: spec.opacity),
+          offset: Offset(spec.dx, spec.dy),
+          blurRadius: spec.blur,
+          spreadRadius: spec.spread,
+        ),
+      )
+      .toList(growable: false);
+}
+
+final Set<String> _genericFontFamilies = <String>{
+  'ui-sans-serif',
+  'system-ui',
+  '-apple-system',
+  'BlinkMacSystemFont',
+  'sans-serif',
+  'ui-serif',
+  'serif',
+  'ui-monospace',
+  'monospace',
+};
+
+List<String> _sanitizeFontStack(List<String> stack) {
+  final List<String> cleaned = <String>[];
+  for (final String raw in stack) {
+    final String trimmed = raw
+        .trim()
+        .replaceAll(RegExp("^[\"']"), '')
+        .replaceAll(RegExp("[\"']\$"), '');
+    if (trimmed.isEmpty) continue;
+    if (!cleaned.contains(trimmed)) cleaned.add(trimmed);
+  }
+  return cleaned;
+}
+
+String _preferredFont(List<String> stack) {
+  for (final String font in stack) {
+    if (!_genericFontFamilies.contains(font)) {
+      return font;
+    }
+  }
+  return stack.isNotEmpty ? stack.first : '';
+}
+
+List<String> _fallbackForStack(List<String> stack) {
+  if (stack.isEmpty) return const <String>[];
+  final String primary = _preferredFont(stack);
+  return stack.where((font) => font != primary).toList(growable: false);
 }
 
 /// Consistent spacing values - Enhanced for production with better hierarchy

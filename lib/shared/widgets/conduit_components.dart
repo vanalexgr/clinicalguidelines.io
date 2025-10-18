@@ -293,6 +293,8 @@ class ConduitCard extends StatelessWidget {
   final bool isSelected;
   final bool isElevated;
   final bool isCompact;
+  final Color? backgroundColor;
+  final Color? borderColor;
 
   const ConduitCard({
     super.key,
@@ -302,6 +304,8 @@ class ConduitCard extends StatelessWidget {
     this.isSelected = false,
     this.isElevated = false,
     this.isCompact = false,
+    this.backgroundColor,
+    this.borderColor,
   });
 
   @override
@@ -317,14 +321,14 @@ class ConduitCard extends StatelessWidget {
               ? context.conduitTheme.buttonPrimary.withValues(
                   alpha: Alpha.highlight,
                 )
-              : context.conduitTheme.cardBackground,
+              : backgroundColor ?? context.conduitTheme.cardBackground,
           borderRadius: BorderRadius.circular(AppBorderRadius.card),
           border: Border.all(
             color: isSelected
                 ? context.conduitTheme.buttonPrimary.withValues(
                     alpha: Alpha.standard,
                   )
-                : context.conduitTheme.cardBorder,
+                : borderColor ?? context.conduitTheme.cardBorder,
             width: BorderWidth.standard,
           ),
           boxShadow: isElevated ? ConduitShadows.card(context) : null,

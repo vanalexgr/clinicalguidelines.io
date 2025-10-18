@@ -1217,12 +1217,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       .set(false);
                 } catch (_) {}
               },
-              drawer: SafeArea(
-                top: true,
-                bottom: true,
-                left: false,
-                right: false,
-                child: const ChatsDrawer(),
+              drawer: Container(
+                color: context.sidebarTheme.background,
+                child: SafeArea(
+                  top: true,
+                  bottom: true,
+                  left: false,
+                  right: false,
+                  child: const ChatsDrawer(),
+                ),
               ),
               child: Scaffold(
                 backgroundColor: context.conduitTheme.surfaceBackground,

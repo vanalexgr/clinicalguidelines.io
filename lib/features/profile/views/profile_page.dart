@@ -79,7 +79,7 @@ class ProfilePage extends ConsumerWidget {
 
   Scaffold _buildScaffold(BuildContext context, {required Widget body}) {
     return Scaffold(
-      backgroundColor: context.conduitTheme.surfaceBackground,
+      backgroundColor: context.sidebarTheme.background,
       appBar: _buildAppBar(context),
       body: body,
     );
@@ -88,7 +88,7 @@ class ProfilePage extends ConsumerWidget {
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     final canPop = ModalRoute.of(context)?.canPop ?? false;
     return AppBar(
-      backgroundColor: context.conduitTheme.surfaceBackground,
+      backgroundColor: context.sidebarTheme.background,
       surfaceTintColor: Colors.transparent,
       elevation: Elevation.none,
       toolbarHeight: kToolbarHeight,
@@ -156,8 +156,10 @@ class ProfilePage extends ConsumerWidget {
   Widget _buildSupportSection(BuildContext context) {
     final theme = context.conduitTheme;
     final textTheme =
-        theme.bodySmall?.copyWith(color: theme.textSecondary) ??
-        TextStyle(color: theme.textSecondary);
+        theme.bodySmall?.copyWith(
+          color: theme.sidebarForeground.withValues(alpha: 0.75),
+        ) ??
+        TextStyle(color: theme.sidebarForeground.withValues(alpha: 0.75));
 
     final supportTiles = [
       _buildSupportOption(
@@ -189,7 +191,7 @@ class ProfilePage extends ConsumerWidget {
       children: [
         Text(
           AppLocalizations.of(context)!.supportConduit,
-          style: theme.headingSmall?.copyWith(color: theme.textPrimary),
+          style: theme.headingSmall?.copyWith(color: theme.sidebarForeground),
         ),
         const SizedBox(height: Spacing.xs),
         Text(
@@ -216,7 +218,6 @@ class ProfilePage extends ConsumerWidget {
     final theme = context.conduitTheme;
     return _ProfileSettingTile(
       onTap: () => _openExternalLink(context, url),
-      isDestructive: false,
       leading: _buildIconBadge(context, icon, color: color),
       title: title,
       subtitle: subtitle,
@@ -287,15 +288,14 @@ class ProfilePage extends ConsumerWidget {
 
     final email = extractEmail(user) ?? 'No email';
     final theme = context.conduitTheme;
-    final accent = theme.buttonPrimary;
 
     return Container(
       padding: const EdgeInsets.all(Spacing.md),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
+        color: theme.sidebarAccent.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(AppBorderRadius.large),
         border: Border.all(
-          color: accent.withValues(alpha: 0.15),
+          color: theme.sidebarBorder.withValues(alpha: 0.6),
           width: BorderWidth.thin,
         ),
       ),
@@ -314,7 +314,7 @@ class ProfilePage extends ConsumerWidget {
                     Text(
                       displayName,
                       style: theme.headingMedium?.copyWith(
-                        color: theme.textPrimary,
+                        color: theme.sidebarForeground,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -327,14 +327,18 @@ class ProfilePage extends ConsumerWidget {
                             android: Icons.mail_outline,
                           ),
                           size: IconSize.small,
-                          color: theme.textSecondary,
+                          color: theme.sidebarForeground.withValues(
+                            alpha: 0.75,
+                          ),
                         ),
                         const SizedBox(width: Spacing.xs),
                         Flexible(
                           child: Text(
                             email,
                             style: theme.bodySmall?.copyWith(
-                              color: theme.textSecondary,
+                              color: theme.sidebarForeground.withValues(
+                                alpha: 0.75,
+                              ),
                             ),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
@@ -377,7 +381,6 @@ class ProfilePage extends ConsumerWidget {
         title: AppLocalizations.of(context)!.signOut,
         subtitle: AppLocalizations.of(context)!.endYourSession,
         onTap: () => _signOut(context, ref),
-        isDestructive: true,
         showChevron: false,
       ),
     ];
@@ -399,14 +402,12 @@ class ProfilePage extends ConsumerWidget {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-    bool isDestructive = false,
     bool showChevron = true,
   }) {
     final theme = context.conduitTheme;
-    final color = isDestructive ? theme.error : theme.buttonPrimary;
+    final color = theme.buttonPrimary;
     return _ProfileSettingTile(
       onTap: onTap,
-      isDestructive: isDestructive,
       leading: _buildIconBadge(context, icon, color: color),
       title: title,
       subtitle: subtitle,
@@ -456,7 +457,7 @@ class ProfilePage extends ConsumerWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: theme.surfaceBackground.withValues(alpha: 0.85),
+              color: theme.sidebarAccent.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(AppBorderRadius.small),
               border: Border.all(
                 color: theme.cardBorder,
@@ -518,11 +519,10 @@ class ProfilePage extends ConsumerWidget {
             ios: CupertinoIcons.exclamationmark_triangle,
             android: Icons.error_outline,
           ),
-          color: context.conduitTheme.error,
+          color: Colors.red,
         ),
         title: AppLocalizations.of(context)!.defaultModel,
         subtitle: AppLocalizations.of(context)!.failedToLoadModels,
-        isDestructive: true,
         showChevron: false,
         onTap: () => ref.invalidate(modelsProvider),
         trailing: IconButton(
@@ -533,7 +533,7 @@ class ProfilePage extends ConsumerWidget {
               ios: CupertinoIcons.refresh,
               android: Icons.refresh,
             ),
-            color: context.conduitTheme.error,
+            color: Colors.red,
             size: IconSize.small,
           ),
         ),
@@ -589,11 +589,11 @@ class ProfilePage extends ConsumerWidget {
         context: context,
         builder: (ctx) {
           return AlertDialog(
-            backgroundColor: ctx.conduitTheme.surfaceBackground,
+            backgroundColor: ctx.sidebarTheme.background,
             title: Text(
               AppLocalizations.of(ctx)!.aboutConduit,
               style: ctx.conduitTheme.headingSmall?.copyWith(
-                color: ctx.conduitTheme.textPrimary,
+                color: ctx.sidebarTheme.foreground,
               ),
             ),
             content: Column(
@@ -605,7 +605,7 @@ class ProfilePage extends ConsumerWidget {
                     ctx,
                   )!.versionLabel(info.version, info.buildNumber),
                   style: ctx.conduitTheme.bodyMedium?.copyWith(
-                    color: ctx.conduitTheme.textSecondary,
+                    color: ctx.sidebarTheme.foreground.withValues(alpha: 0.75),
                   ),
                 ),
                 const SizedBox(height: Spacing.md),
@@ -704,7 +704,6 @@ class _ProfileSettingTile extends StatelessWidget {
     required this.subtitle,
     this.onTap,
     this.trailing,
-    this.isDestructive = false,
     this.showChevron = true,
   });
 
@@ -713,16 +712,13 @@ class _ProfileSettingTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback? onTap;
   final Widget? trailing;
-  final bool isDestructive;
   final bool showChevron;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.conduitTheme;
-    final textColor = isDestructive ? theme.error : theme.textPrimary;
-    final subtitleColor = isDestructive
-        ? theme.error.withValues(alpha: 0.85)
-        : theme.textSecondary;
+    final textColor = theme.sidebarForeground;
+    final subtitleColor = theme.sidebarForeground.withValues(alpha: 0.75);
 
     return ConduitCard(
       padding: const EdgeInsets.all(Spacing.md),
@@ -888,7 +884,7 @@ class _DefaultModelBottomSheetState
           builder: (context, scrollController) {
             return Container(
               decoration: BoxDecoration(
-                color: context.conduitTheme.surfaceBackground,
+                color: context.sidebarTheme.background,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(AppBorderRadius.bottomSheet),
                 ),
@@ -1010,8 +1006,9 @@ class _DefaultModelBottomSheetState
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: context.conduitTheme.surfaceBackground
-                                  .withValues(alpha: 0.6),
+                              color: context.sidebarTheme.background.withValues(
+                                alpha: 0.6,
+                              ),
                               borderRadius: BorderRadius.circular(
                                 AppBorderRadius.xs,
                               ),
@@ -1141,7 +1138,7 @@ class _DefaultModelBottomSheetState
         decoration: BoxDecoration(
           color: isSelected
               ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.1)
-              : context.conduitTheme.surfaceBackground.withValues(alpha: 0.05),
+              : context.sidebarTheme.background.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(AppBorderRadius.small),
           border: Border.all(
             color: isSelected

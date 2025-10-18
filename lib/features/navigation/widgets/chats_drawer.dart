@@ -152,10 +152,13 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   @override
   Widget build(BuildContext context) {
     // Bottom section now only shows navigation actions
-    final theme = context.conduitTheme;
+    final sidebarTheme = context.sidebarTheme;
 
     return Container(
-      color: theme.surfaceBackground,
+      decoration: BoxDecoration(
+        color: sidebarTheme.background,
+        border: Border(right: BorderSide(color: sidebarTheme.border)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -169,7 +172,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
             child: Row(children: [Expanded(child: _buildSearchField(context))]),
           ),
           Expanded(child: _buildConversationList(context)),
-          Divider(height: 1, color: theme.dividerColor),
+          Divider(height: 1, color: sidebarTheme.border),
           _buildBottomSection(context),
         ],
       ),
@@ -177,23 +180,23 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   }
 
   Widget _buildSearchField(BuildContext context) {
-    final theme = context.conduitTheme;
+    final sidebarTheme = context.sidebarTheme;
     return Material(
       color: Colors.transparent,
       child: TextField(
         controller: _searchController,
         focusNode: _searchFocusNode,
         onChanged: (_) => _onSearchChanged(),
-        style: AppTypography.standard.copyWith(color: theme.inputText),
+        style: AppTypography.standard.copyWith(color: sidebarTheme.foreground),
         decoration: InputDecoration(
           isDense: true,
           hintText: AppLocalizations.of(context)!.searchConversations,
           hintStyle: AppTypography.standard.copyWith(
-            color: theme.inputPlaceholder,
+            color: sidebarTheme.foreground.withValues(alpha: 0.6),
           ),
           prefixIcon: Icon(
             Platform.isIOS ? CupertinoIcons.search : Icons.search,
-            color: theme.iconSecondary,
+            color: sidebarTheme.foreground.withValues(alpha: 0.7),
             size: IconSize.input,
           ),
           prefixIconConstraints: const BoxConstraints(
@@ -211,7 +214,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                     Platform.isIOS
                         ? CupertinoIcons.clear_circled_solid
                         : Icons.clear,
-                    color: theme.iconSecondary,
+                    color: sidebarTheme.foreground.withValues(alpha: 0.7),
                     size: IconSize.input,
                   ),
                 )
@@ -221,18 +224,18 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
             minHeight: TouchTarget.minimum,
           ),
           filled: true,
-          fillColor: theme.inputBackground,
+          fillColor: sidebarTheme.accent.withValues(alpha: 0.9),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppBorderRadius.md),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppBorderRadius.md),
-            borderSide: BorderSide(color: theme.inputBorder, width: 1),
+            borderSide: BorderSide(color: sidebarTheme.border, width: 1),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppBorderRadius.md),
-            borderSide: BorderSide(color: theme.buttonPrimary, width: 1),
+            borderSide: BorderSide(color: sidebarTheme.ring, width: 1.2),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: Spacing.md,
@@ -673,7 +676,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           child: Text(
             'Search failed',
             style: AppTypography.bodyMediumStyle.copyWith(
-              color: theme.textSecondary,
+              color: context.sidebarTheme.foreground.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -682,13 +685,13 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   }
 
   Widget _buildSectionHeader(String title, int count) {
-    final theme = context.conduitTheme;
+    final sidebarTheme = context.sidebarTheme;
     return Row(
       children: [
         Text(
           title,
           style: AppTypography.labelStyle.copyWith(
-            color: theme.textSecondary,
+            color: sidebarTheme.foreground.withValues(alpha: 0.9),
             fontWeight: FontWeight.w600,
             decoration: TextDecoration.none,
           ),
@@ -697,17 +700,17 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.4),
+            color: sidebarTheme.accent.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(AppBorderRadius.xs),
             border: Border.all(
-              color: theme.dividerColor.withValues(alpha: 0.5),
+              color: sidebarTheme.border.withValues(alpha: 0.6),
               width: BorderWidth.thin,
             ),
           ),
           child: Text(
             '$count',
             style: AppTypography.tiny.copyWith(
-              color: theme.textSecondary,
+              color: sidebarTheme.foreground.withValues(alpha: 0.8),
               decoration: TextDecoration.none,
             ),
           ),
@@ -1432,6 +1435,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
 
   Widget _buildBottomSection(BuildContext context) {
     final theme = context.conduitTheme;
+    final sidebarTheme = context.sidebarTheme;
     final currentUserAsync = ref.watch(currentUserProvider);
     final userFromProfile = currentUserAsync.maybeWhen(
       data: (u) => u,
@@ -1460,10 +1464,10 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
             Container(
               padding: const EdgeInsets.all(Spacing.sm),
               decoration: BoxDecoration(
-                color: theme.surfaceContainer.withValues(alpha: 0.3),
+                color: sidebarTheme.accent.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(AppBorderRadius.small),
                 border: Border.all(
-                  color: theme.dividerColor.withValues(alpha: 0.5),
+                  color: sidebarTheme.border.withValues(alpha: 0.6),
                   width: BorderWidth.standard,
                 ),
               ),
@@ -1497,7 +1501,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.bodySmallStyle.copyWith(
-                        color: theme.textPrimary,
+                        color: sidebarTheme.foreground,
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.none,
                       ),
@@ -1514,7 +1518,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                       Platform.isIOS
                           ? CupertinoIcons.settings
                           : Icons.settings_rounded,
-                      color: theme.iconSecondary,
+                      color: sidebarTheme.foreground.withValues(alpha: 0.8),
                       size: IconSize.medium,
                     ),
                   ),

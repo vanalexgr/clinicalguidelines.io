@@ -3,7 +3,7 @@ import '../theme/theme_extensions.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:io' show Platform;
 import '../theme/color_tokens.dart';
-import '../theme/color_palettes.dart';
+import '../theme/tweakcn_themes.dart';
 
 /// Centralized service for consistent brand identity throughout the app
 /// Uses the hub icon as the primary brand element
@@ -27,7 +27,7 @@ class BrandService {
   }) {
     final palette = _resolvePalette(context);
     final resolvedBrightness = brightness ?? _resolveBrightness(context);
-    return palette.primaryFor(resolvedBrightness);
+    return palette.variantFor(resolvedBrightness).primary;
   }
 
   static Color secondaryBrandColor({
@@ -36,7 +36,7 @@ class BrandService {
   }) {
     final palette = _resolvePalette(context);
     final resolvedBrightness = brightness ?? _resolveBrightness(context);
-    return palette.secondaryFor(resolvedBrightness);
+    return palette.variantFor(resolvedBrightness).secondary;
   }
 
   static Color accentBrandColor({
@@ -45,7 +45,7 @@ class BrandService {
   }) {
     final palette = _resolvePalette(context);
     final resolvedBrightness = brightness ?? _resolveBrightness(context);
-    return palette.accentFor(resolvedBrightness);
+    return palette.variantFor(resolvedBrightness).accent;
   }
 
   /// Creates a branded icon with consistent styling
@@ -327,12 +327,12 @@ class BrandService {
     );
   }
 
-  static AppColorPalette _resolvePalette(BuildContext? context) {
+  static TweakcnThemeDefinition _resolvePalette(BuildContext? context) {
     if (context == null) {
-      return AppColorPalettes.auroraViolet;
+      return TweakcnThemes.t3Chat;
     }
     final extension = Theme.of(context).extension<AppPaletteThemeExtension>();
-    return extension?.palette ?? AppColorPalettes.auroraViolet;
+    return extension?.palette ?? TweakcnThemes.t3Chat;
   }
 
   static Brightness _resolveBrightness(BuildContext? context) {
@@ -343,7 +343,7 @@ class BrandService {
     final palette = _resolvePalette(context);
     final brightness = _resolveBrightness(context);
     return brightness == Brightness.dark
-        ? AppColorTokens.dark(palette: palette)
-        : AppColorTokens.light(palette: palette);
+        ? AppColorTokens.dark(theme: palette)
+        : AppColorTokens.light(theme: palette);
   }
 }

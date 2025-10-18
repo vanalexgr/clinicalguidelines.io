@@ -25,7 +25,7 @@ import '../services/optimized_storage_service.dart';
 import '../services/socket_service.dart';
 import '../utils/debug_logger.dart';
 import '../models/socket_event.dart';
-import '../../shared/theme/color_palettes.dart';
+import '../../shared/theme/tweakcn_themes.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../features/tools/providers/tools_providers.dart';
 
@@ -88,14 +88,14 @@ class AppThemePalette extends _$AppThemePalette {
   late final OptimizedStorageService _storage;
 
   @override
-  AppColorPalette build() {
+  TweakcnThemeDefinition build() {
     _storage = ref.watch(optimizedStorageServiceProvider);
     final storedId = _storage.getThemePaletteId();
-    return AppColorPalettes.byId(storedId);
+    return TweakcnThemes.byId(storedId);
   }
 
   Future<void> setPalette(String paletteId) async {
-    final palette = AppColorPalettes.byId(paletteId);
+    final palette = TweakcnThemes.byId(paletteId);
     state = palette;
     await _storage.setThemePaletteId(palette.id);
   }

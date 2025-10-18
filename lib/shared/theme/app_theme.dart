@@ -4,252 +4,248 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'theme_extensions.dart';
-import 'color_palettes.dart';
+import 'tweakcn_themes.dart';
 import 'color_tokens.dart';
 
 class AppTheme {
-  // Enhanced neutral palette for better contrast (WCAG AA compliant)
-  static const Color neutral900 = Color(0xFF0B0E14);
-  static const Color neutral800 = Color(0xFF161B24);
-  static const Color neutral700 = Color(0xFF1F2531);
-  static const Color neutral600 = Color(0xFF343C4D);
-  static const Color neutral500 = Color(0xFF4A5161);
-  static const Color neutral400 = Color(0xFF9099AC);
-  static const Color neutral300 = Color(0xFFC5CCD9);
-  static const Color neutral200 = Color(0xFFE6EAF1);
-  static const Color neutral100 = Color(0xFFF5F7FA);
-  static const Color neutral50 = Color(0xFFFFFFFF);
-
-  // Semantic colors derived from the token specification
-  static const Color error = Color(0xFFCE2C31);
-  static const Color errorDark = Color(0xFFFF5F67);
-  static const Color success = Color(0xFF0E9D58);
-  static const Color successDark = Color(0xFF23C179);
-  static const Color warning = Color(0xFFDB7900);
-  static const Color warningDark = Color(0xFFFF9800);
-  static const Color info = Color(0xFF0174D3);
-  static const Color infoDark = Color(0xFF4CA8FF);
-
-  static ThemeData light(AppColorPalette palette) {
-    final lightTone = palette.light;
-    final tokens = AppColorTokens.light(palette: palette);
-    final colorScheme = tokens.toColorScheme().copyWith(
-      primary: lightTone.primary,
-      onPrimary: _pickOnColor(lightTone.primary, tokens),
-      secondary: lightTone.secondary,
-      onSecondary: _pickOnColor(lightTone.secondary, tokens),
-      tertiary: lightTone.accent,
-      onTertiary: _pickOnColor(lightTone.accent, tokens),
-      surfaceTint: lightTone.primary,
-    );
-
-    return ThemeData(
-      useMaterial3: true,
+  static ThemeData light(TweakcnThemeDefinition theme) {
+    final tokens = AppColorTokens.light(theme: theme);
+    return _buildTheme(
+      theme: theme,
+      tokens: tokens,
       brightness: Brightness.light,
-      colorScheme: colorScheme,
-      pageTransitionsTheme: _pageTransitionsTheme,
-      splashFactory: NoSplash.splashFactory,
-      scaffoldBackgroundColor: tokens.neutralTone10,
-      appBarTheme: AppBarTheme(
-        centerTitle: true,
-        elevation: Elevation.none,
-        backgroundColor: Colors.transparent,
-        foregroundColor: tokens.neutralOnSurface,
-      ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: tokens.neutralTone00,
-        modalBackgroundColor: tokens.neutralTone00,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.modal),
-        ),
-        showDragHandle: false,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.lg,
-            vertical: Spacing.xs,
-          ),
-          backgroundColor: lightTone.primary,
-          foregroundColor: _pickOnColor(lightTone.primary, tokens),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          ),
-        ),
-      ),
-      cardTheme: CardThemeData(
-        elevation: Elevation.none,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.lg),
-          side: BorderSide(color: tokens.neutralTone20),
-        ),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Color.alphaBlend(
-          tokens.overlayStrong,
-          tokens.neutralOnSurface,
-        ),
-        contentTextStyle: TextStyle(
-          color: tokens.neutralTone00,
-          fontSize: AppTypography.bodyMedium,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.snackbar),
-        ),
-        elevation: Elevation.high,
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: tokens.neutralTone00,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide(color: lightTone.primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide(color: tokens.statusError60, width: 1),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: Spacing.md,
-          vertical: Spacing.sm,
-        ),
-      ),
-      textTheme: ThemeData.light().textTheme,
-      extensions: <ThemeExtension<dynamic>>[
-        tokens,
-        ConduitThemeExtension.lightPalette(palette: palette, tokens: tokens),
-        AppPaletteThemeExtension(palette: palette),
-      ],
     );
   }
 
-  static ThemeData dark(AppColorPalette palette) {
-    final darkTone = palette.dark;
-    final tokens = AppColorTokens.dark(palette: palette);
-    final colorScheme = tokens.toColorScheme().copyWith(
-      primary: darkTone.primary,
-      onPrimary: _pickOnColor(darkTone.primary, tokens),
-      secondary: darkTone.secondary,
-      onSecondary: _pickOnColor(darkTone.secondary, tokens),
-      tertiary: darkTone.accent,
-      onTertiary: _pickOnColor(darkTone.accent, tokens),
-      surfaceTint: darkTone.primary,
-    );
-
-    return ThemeData(
-      useMaterial3: true,
+  static ThemeData dark(TweakcnThemeDefinition theme) {
+    final tokens = AppColorTokens.dark(theme: theme);
+    return _buildTheme(
+      theme: theme,
+      tokens: tokens,
       brightness: Brightness.dark,
-      colorScheme: colorScheme,
-      scaffoldBackgroundColor: tokens.neutralTone10,
-      pageTransitionsTheme: _pageTransitionsTheme,
-      splashFactory: NoSplash.splashFactory,
-      appBarTheme: AppBarTheme(
-        centerTitle: true,
-        elevation: Elevation.none,
-        backgroundColor: Colors.transparent,
-        foregroundColor: tokens.neutralOnSurface,
-      ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: tokens.neutralTone00,
-        modalBackgroundColor: tokens.neutralTone00,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.modal),
-        ),
-        showDragHandle: false,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.lg,
-            vertical: Spacing.xs,
-          ),
-          backgroundColor: darkTone.primary,
-          foregroundColor: _pickOnColor(darkTone.primary, tokens),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          ),
-        ),
-      ),
-      cardTheme: CardThemeData(
-        elevation: Elevation.none,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.lg),
-          side: BorderSide(color: tokens.neutralTone40),
-        ),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Color.alphaBlend(
-          tokens.overlayStrong,
-          tokens.neutralTone20,
-        ),
-        contentTextStyle: TextStyle(
-          color: tokens.neutralOnSurface,
-          fontSize: AppTypography.bodyMedium,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.snackbar),
-        ),
-        elevation: Elevation.high,
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: tokens.neutralTone20,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide(color: tokens.neutralTone40, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide(color: tokens.neutralTone40, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide(color: darkTone.primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.md),
-          borderSide: BorderSide(color: tokens.statusError60, width: 1),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: Spacing.md,
-          vertical: Spacing.sm,
-        ),
-      ),
-      textTheme: ThemeData.dark().textTheme,
-      extensions: <ThemeExtension<dynamic>>[
-        tokens,
-        ConduitThemeExtension.darkPalette(palette: palette, tokens: tokens),
-        AppPaletteThemeExtension(palette: palette),
-      ],
     );
   }
 
   static CupertinoThemeData cupertinoTheme(
     BuildContext context,
-    AppColorPalette palette,
+    TweakcnThemeDefinition theme,
   ) {
     final brightness = Theme.of(context).brightness;
-    final tone = palette.toneFor(brightness);
+    final variant = theme.variantFor(brightness);
     final tokens = brightness == Brightness.dark
-        ? AppColorTokens.dark(palette: palette)
-        : AppColorTokens.light(palette: palette);
+        ? AppColorTokens.dark(theme: theme)
+        : AppColorTokens.light(theme: theme);
     return CupertinoThemeData(
       brightness: brightness,
-      primaryColor: tone.primary,
+      primaryColor: variant.primary,
       scaffoldBackgroundColor: tokens.neutralTone10,
       barBackgroundColor: tokens.neutralTone10,
+    );
+  }
+
+  static ThemeData _buildTheme({
+    required TweakcnThemeDefinition theme,
+    required AppColorTokens tokens,
+    required Brightness brightness,
+  }) {
+    final variant = theme.variantFor(brightness);
+    final isDark = brightness == Brightness.dark;
+    final typography = TypographyThemeExtension.fromVariant(variant);
+    final surfaces = SurfaceThemeExtension.fromVariant(variant);
+    final shadows = ShadowThemeExtension.standard();
+    final shapes = ShapeThemeExtension.fromVariant(variant);
+    final sidebar = SidebarThemeExtension.fromVariant(variant);
+    final conduitExtension = ConduitThemeExtension.create(
+      theme: theme,
+      tokens: tokens,
+      brightness: brightness,
+      typography: typography,
+      surfaces: surfaces,
+      shadows: shadows,
+      shapes: shapes,
+    );
+    final colorScheme = tokens.toColorScheme().copyWith(
+      primary: variant.primary,
+      onPrimary: _pickOnColor(variant.primary, tokens),
+      secondary: variant.secondary,
+      onSecondary: _pickOnColor(variant.secondary, tokens),
+      tertiary: variant.accent,
+      onTertiary: _pickOnColor(variant.accent, tokens),
+      surfaceTint: variant.primary,
+    );
+
+    final OutlineInputBorder baseInputBorder = OutlineInputBorder(
+      borderRadius: shapes.medium,
+      borderSide: BorderSide(
+        color: isDark
+            ? Color.lerp(surfaces.border, surfaces.input, 0.6)!
+            : Color.lerp(surfaces.border, surfaces.input, 0.4)!,
+        width: 1,
+      ),
+    );
+
+    final TextTheme baseTextTheme = brightness == Brightness.dark
+        ? ThemeData.dark().textTheme
+        : ThemeData.light().textTheme;
+    final TextTheme textTheme = baseTextTheme.apply(
+      fontFamily: typography.primaryFont.isEmpty
+          ? null
+          : typography.primaryFont,
+      fontFamilyFallback: typography.primaryFallback.isEmpty
+          ? null
+          : typography.primaryFallback,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      fontFamily: typography.primaryFont.isEmpty
+          ? null
+          : typography.primaryFont,
+      fontFamilyFallback: typography.primaryFallback.isEmpty
+          ? null
+          : typography.primaryFallback,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: surfaces.background,
+      canvasColor: surfaces.background,
+      pageTransitionsTheme: _pageTransitionsTheme,
+      splashFactory: NoSplash.splashFactory,
+      appBarTheme: AppBarTheme(
+        centerTitle: true,
+        elevation: Elevation.none,
+        backgroundColor: surfaces.background,
+        foregroundColor: tokens.neutralOnSurface,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surfaces.card,
+        modalBackgroundColor: surfaces.card,
+        surfaceTintColor: surfaces.card,
+        shape: RoundedRectangleBorder(borderRadius: shapes.extraLarge),
+        showDragHandle: false,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.lg,
+            vertical: Spacing.xs,
+          ),
+          backgroundColor: variant.primary,
+          foregroundColor: _pickOnColor(variant.primary, tokens),
+          shape: RoundedRectangleBorder(borderRadius: shapes.medium),
+          elevation: Elevation.low,
+          shadowColor: shadows.shadowSm.first.color,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: surfaces.card,
+        elevation: Elevation.low,
+        shape: RoundedRectangleBorder(
+          borderRadius: shapes.large,
+          side: BorderSide(color: surfaces.border),
+        ),
+        shadowColor: shadows.shadowSm.first.color,
+        surfaceTintColor: Colors.transparent,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: conduitExtension.statusPalette.info.base,
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: conduitExtension.statusPalette.info.onBase,
+        ),
+        actionTextColor: conduitExtension.statusPalette.info.onBase,
+        shape: RoundedRectangleBorder(borderRadius: shapes.medium),
+        elevation: Elevation.low,
+        insetPadding: const EdgeInsets.all(Spacing.md),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: conduitExtension.inputBackground,
+        focusColor: surfaces.ring,
+        hoverColor: Color.alphaBlend(
+          shadows.shadowXs.first.color,
+          conduitExtension.inputBackground,
+        ),
+        border: baseInputBorder,
+        enabledBorder: baseInputBorder,
+        focusedBorder: baseInputBorder.copyWith(
+          borderSide: BorderSide(color: surfaces.ring, width: 2),
+        ),
+        errorBorder: baseInputBorder.copyWith(
+          borderSide: BorderSide(color: tokens.statusError60, width: 1),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: Spacing.md,
+          vertical: Spacing.sm,
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: shapes.medium),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.sm,
+          vertical: Spacing.xs,
+        ),
+        backgroundColor: Color.lerp(surfaces.card, surfaces.muted, 0.4)!,
+        disabledColor: Color.alphaBlend(
+          shadows.shadowXs.first.color,
+          surfaces.card,
+        ),
+        selectedColor: conduitExtension.statusPalette.success.background,
+        secondarySelectedColor: conduitExtension.statusPalette.info.background,
+        shadowColor: shadows.shadowSm.first.color,
+        selectedShadowColor: shadows.shadowSm.first.color,
+        brightness: brightness,
+        labelStyle: textTheme.bodySmall?.copyWith(
+          color: tokens.neutralOnSurface,
+        ),
+        secondaryLabelStyle: textTheme.bodySmall?.copyWith(
+          color: conduitExtension.statusPalette.info.onBase,
+        ),
+        side: BorderSide(color: surfaces.border),
+      ),
+      badgeTheme: BadgeThemeData(
+        backgroundColor: conduitExtension.statusPalette.info.base,
+        textColor: conduitExtension.statusPalette.info.onBase,
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.xs,
+          vertical: Spacing.xxs,
+        ),
+        largeSize: 24,
+        smallSize: 18,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surfaces.popover,
+        surfaceTintColor: Colors.transparent,
+        elevation: Elevation.medium,
+        shadowColor: shadows.shadowLg.first.color,
+        shape: RoundedRectangleBorder(borderRadius: shapes.large),
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: surfaces.popoverForeground,
+        ),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: tokens.neutralOnSurface,
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        shape: RoundedRectangleBorder(borderRadius: shapes.medium),
+        tileColor: Color.lerp(surfaces.card, surfaces.muted, 0.25),
+        selectedTileColor: Color.alphaBlend(
+          conduitExtension.statusPalette.info.background,
+          surfaces.card,
+        ),
+        iconColor: tokens.neutralTone80,
+        textColor: tokens.neutralOnSurface,
+      ),
+      textTheme: textTheme,
+      extensions: <ThemeExtension<dynamic>>[
+        tokens,
+        typography,
+        surfaces,
+        shadows,
+        shapes,
+        sidebar,
+        conduitExtension,
+        AppPaletteThemeExtension(palette: theme),
+      ],
     );
   }
 

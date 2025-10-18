@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/settings_service.dart';
 import '../../../shared/theme/theme_extensions.dart';
-import '../../../shared/theme/color_palettes.dart';
+import '../../../shared/theme/tweakcn_themes.dart';
 import '../../tools/providers/tools_providers.dart';
 import '../../../core/models/tool.dart';
 import '../../../shared/widgets/conduit_components.dart';
@@ -38,10 +38,10 @@ class AppCustomizationPage extends ConsumerWidget {
     final locale = ref.watch(appLocaleProvider);
     final currentLanguageCode = locale?.languageCode ?? 'system';
     final languageLabel = _resolveLanguageLabel(context, currentLanguageCode);
-    final activePalette = ref.watch(appThemePaletteProvider);
+    final activeTheme = ref.watch(appThemePaletteProvider);
 
     return Scaffold(
-      backgroundColor: context.conduitTheme.surfaceBackground,
+      backgroundColor: context.sidebarTheme.background,
       appBar: _buildAppBar(context),
       body: SafeArea(
         child: ListView(
@@ -61,7 +61,7 @@ class AppCustomizationPage extends ConsumerWidget {
               currentLanguageCode,
               languageLabel,
               settings,
-              activePalette,
+              activeTheme,
             ),
             const SizedBox(height: Spacing.xl),
             _buildQuickPillsSection(context, ref, settings),
@@ -78,7 +78,7 @@ class AppCustomizationPage extends ConsumerWidget {
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     final canPop = ModalRoute.of(context)?.canPop ?? false;
     return AppBar(
-      backgroundColor: context.conduitTheme.surfaceBackground,
+      backgroundColor: context.sidebarTheme.background,
       surfaceTintColor: Colors.transparent,
       elevation: Elevation.none,
       toolbarHeight: kToolbarHeight,
@@ -116,7 +116,7 @@ class AppCustomizationPage extends ConsumerWidget {
     String currentLanguageCode,
     String languageLabel,
     AppSettings settings,
-    AppColorPalette palette,
+    TweakcnThemeDefinition activeTheme,
   ) {
     final theme = context.conduitTheme;
 
@@ -126,13 +126,13 @@ class AppCustomizationPage extends ConsumerWidget {
         Text(
           AppLocalizations.of(context)!.display,
           style:
-              theme.headingSmall?.copyWith(color: theme.textPrimary) ??
-              TextStyle(color: theme.textPrimary, fontSize: 18),
+              theme.headingSmall?.copyWith(color: theme.sidebarForeground) ??
+              TextStyle(color: theme.sidebarForeground, fontSize: 18),
         ),
         const SizedBox(height: Spacing.sm),
         _buildThemeSelector(context, ref, themeMode, themeDescription),
         const SizedBox(height: Spacing.md),
-        _buildPaletteSelector(context, ref, palette),
+        _buildPaletteSelector(context, ref, activeTheme),
         const SizedBox(height: Spacing.md),
         _CustomizationTile(
           leading: _buildIconBadge(
@@ -196,7 +196,7 @@ class AppCustomizationPage extends ConsumerWidget {
                     Text(
                       AppLocalizations.of(context)!.darkMode,
                       style: theme.bodyMedium?.copyWith(
-                        color: theme.textPrimary,
+                        color: theme.sidebarForeground,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -204,7 +204,7 @@ class AppCustomizationPage extends ConsumerWidget {
                     Text(
                       themeDescription,
                       style: theme.bodySmall?.copyWith(
-                        color: theme.textSecondary,
+                        color: theme.sidebarForeground.withValues(alpha: 0.75),
                       ),
                     ),
                   ],
@@ -260,10 +260,10 @@ class AppCustomizationPage extends ConsumerWidget {
   Widget _buildPaletteSelector(
     BuildContext context,
     WidgetRef ref,
-    AppColorPalette activePalette,
+    TweakcnThemeDefinition activeTheme,
   ) {
     final theme = context.conduitTheme;
-    final palettes = AppColorPalettes.all;
+    final palettes = TweakcnThemes.all;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,17 +272,22 @@ class AppCustomizationPage extends ConsumerWidget {
           AppLocalizations.of(context)!.themePalette,
           style:
               theme.bodyLarge?.copyWith(
-                color: theme.textPrimary,
+                color: theme.sidebarForeground,
                 fontWeight: FontWeight.w600,
               ) ??
-              TextStyle(color: theme.textPrimary, fontWeight: FontWeight.w600),
+              TextStyle(
+                color: theme.sidebarForeground,
+                fontWeight: FontWeight.w600,
+              ),
         ),
         const SizedBox(height: Spacing.xs),
         Text(
           AppLocalizations.of(context)!.themePaletteDescription,
           style:
-              theme.bodySmall?.copyWith(color: theme.textSecondary) ??
-              TextStyle(color: theme.textSecondary),
+              theme.bodySmall?.copyWith(
+                color: theme.sidebarForeground.withValues(alpha: 0.75),
+              ) ??
+              TextStyle(color: theme.sidebarForeground.withValues(alpha: 0.75)),
         ),
         const SizedBox(height: Spacing.sm),
         ConduitCard(
@@ -291,8 +296,8 @@ class AppCustomizationPage extends ConsumerWidget {
             children: [
               for (final palette in palettes)
                 _PaletteOption(
-                  palette: palette,
-                  activeId: activePalette.id,
+                  themeDefinition: palette,
+                  activeId: activeTheme.id,
                   onSelect: () => ref
                       .read(appThemePaletteProvider.notifier)
                       .setPalette(palette.id),
@@ -378,8 +383,8 @@ class AppCustomizationPage extends ConsumerWidget {
         Text(
           AppLocalizations.of(context)!.onboardQuickTitle,
           style:
-              theme.headingSmall?.copyWith(color: theme.textPrimary) ??
-              TextStyle(color: theme.textPrimary, fontSize: 18),
+              theme.headingSmall?.copyWith(color: theme.sidebarForeground) ??
+              TextStyle(color: theme.sidebarForeground, fontSize: 18),
         ),
         const SizedBox(height: Spacing.sm),
         ConduitCard(
@@ -403,7 +408,7 @@ class AppCustomizationPage extends ConsumerWidget {
                     child: Text(
                       AppLocalizations.of(context)!.quickActionsDescription,
                       style: theme.bodySmall?.copyWith(
-                        color: theme.textSecondary,
+                        color: theme.sidebarForeground.withValues(alpha: 0.75),
                       ),
                     ),
                   ),
@@ -461,8 +466,8 @@ class AppCustomizationPage extends ConsumerWidget {
         Text(
           l10n.chatSettings,
           style:
-              theme.headingSmall?.copyWith(color: theme.textPrimary) ??
-              TextStyle(color: theme.textPrimary, fontSize: 18),
+              theme.headingSmall?.copyWith(color: theme.sidebarForeground) ??
+              TextStyle(color: theme.sidebarForeground, fontSize: 18),
         ),
         const SizedBox(height: Spacing.sm),
         _CustomizationTile(
@@ -500,8 +505,8 @@ class AppCustomizationPage extends ConsumerWidget {
         Text(
           l10n.ttsSettings,
           style:
-              theme.headingSmall?.copyWith(color: theme.textPrimary) ??
-              TextStyle(color: theme.textPrimary, fontSize: 18),
+              theme.headingSmall?.copyWith(color: theme.sidebarForeground) ??
+              TextStyle(color: theme.sidebarForeground, fontSize: 18),
         ),
         const SizedBox(height: Spacing.sm),
         // Voice Selection
@@ -621,20 +626,23 @@ class AppCustomizationPage extends ConsumerWidget {
                   title,
                   style:
                       theme.bodyMedium?.copyWith(
-                        color: theme.textPrimary,
+                        color: theme.sidebarForeground,
                         fontWeight: FontWeight.w500,
                       ) ??
-                      TextStyle(color: theme.textPrimary, fontSize: 14),
+                      TextStyle(color: theme.sidebarForeground, fontSize: 14),
                 ),
               ),
               Text(
                 label,
                 style:
                     theme.bodyMedium?.copyWith(
-                      color: theme.textSecondary,
+                      color: theme.sidebarForeground.withValues(alpha: 0.75),
                       fontWeight: FontWeight.w500,
                     ) ??
-                    TextStyle(color: theme.textSecondary, fontSize: 14),
+                    TextStyle(
+                      color: theme.sidebarForeground.withValues(alpha: 0.75),
+                      fontSize: 14,
+                    ),
               ),
             ],
           ),
@@ -718,7 +726,7 @@ class AppCustomizationPage extends ConsumerWidget {
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: theme.surfaceBackground,
+      backgroundColor: theme.sidebarBackground,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -741,10 +749,10 @@ class AppCustomizationPage extends ConsumerWidget {
                         l10n.ttsSelectVoice,
                         style:
                             theme.headingSmall?.copyWith(
-                              color: theme.textPrimary,
+                              color: theme.sidebarForeground,
                             ) ??
                             TextStyle(
-                              color: theme.textPrimary,
+                              color: theme.sidebarForeground,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -765,18 +773,18 @@ class AppCustomizationPage extends ConsumerWidget {
                       ios: CupertinoIcons.speaker_3,
                       android: Icons.record_voice_over,
                     ),
-                    color: theme.textPrimary,
+                    color: theme.sidebarForeground,
                   ),
                   title: Text(
                     l10n.ttsSystemDefault,
                     style:
                         theme.bodyMedium?.copyWith(
-                          color: theme.textPrimary,
+                          color: theme.sidebarForeground,
                           fontWeight: settings.ttsVoice == null
                               ? FontWeight.bold
                               : FontWeight.normal,
                         ) ??
-                        TextStyle(color: theme.textPrimary),
+                        TextStyle(color: theme.sidebarForeground),
                   ),
                   trailing: settings.ttsVoice == null
                       ? Icon(Icons.check, color: theme.buttonPrimary)
@@ -809,11 +817,15 @@ class AppCustomizationPage extends ConsumerWidget {
                             ),
                             style:
                                 theme.bodySmall?.copyWith(
-                                  color: theme.textSecondary,
+                                  color: theme.sidebarForeground.withValues(
+                                    alpha: 0.75,
+                                  ),
                                   fontWeight: FontWeight.bold,
                                 ) ??
                                 TextStyle(
-                                  color: theme.textSecondary,
+                                  color: theme.sidebarForeground.withValues(
+                                    alpha: 0.75,
+                                  ),
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -831,11 +843,15 @@ class AppCustomizationPage extends ConsumerWidget {
                             l10n.ttsOtherVoices,
                             style:
                                 theme.bodySmall?.copyWith(
-                                  color: theme.textSecondary,
+                                  color: theme.sidebarForeground.withValues(
+                                    alpha: 0.75,
+                                  ),
                                   fontWeight: FontWeight.bold,
                                 ) ??
                                 TextStyle(
-                                  color: theme.textSecondary,
+                                  color: theme.sidebarForeground.withValues(
+                                    alpha: 0.75,
+                                  ),
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -866,28 +882,32 @@ class AppCustomizationPage extends ConsumerWidget {
                             ios: CupertinoIcons.person_fill,
                             android: Icons.person,
                           ),
-                          color: theme.textPrimary,
+                          color: theme.sidebarForeground,
                         ),
                         title: Text(
                           displayName,
                           style:
                               theme.bodyMedium?.copyWith(
-                                color: theme.textPrimary,
+                                color: theme.sidebarForeground,
                                 fontWeight: isSelected
                                     ? FontWeight.bold
                                     : FontWeight.normal,
                               ) ??
-                              TextStyle(color: theme.textPrimary),
+                              TextStyle(color: theme.sidebarForeground),
                         ),
                         subtitle: subtitle.isNotEmpty
                             ? Text(
                                 subtitle,
                                 style:
                                     theme.bodySmall?.copyWith(
-                                      color: theme.textSecondary,
+                                      color: theme.sidebarForeground.withValues(
+                                        alpha: 0.75,
+                                      ),
                                     ) ??
                                     TextStyle(
-                                      color: theme.textSecondary,
+                                      color: theme.sidebarForeground.withValues(
+                                        alpha: 0.75,
+                                      ),
                                       fontSize: 12,
                                     ),
                               )
@@ -1162,7 +1182,7 @@ class AppCustomizationPage extends ConsumerWidget {
       isScrollControlled: true,
       builder: (context) => Container(
         decoration: BoxDecoration(
-          color: context.conduitTheme.surfaceBackground,
+          color: context.sidebarTheme.background,
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppBorderRadius.modal),
           ),
@@ -1230,26 +1250,20 @@ class AppCustomizationPage extends ConsumerWidget {
 
 class _PaletteOption extends StatelessWidget {
   const _PaletteOption({
-    required this.palette,
+    required this.themeDefinition,
     required this.activeId,
     required this.onSelect,
   });
 
-  final AppColorPalette palette;
+  final TweakcnThemeDefinition themeDefinition;
   final String activeId;
   final VoidCallback onSelect;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.conduitTheme;
-    final isSelected = palette.id == activeId;
-    final previewColors =
-        palette.preview ??
-        <Color>[
-          palette.light.primary,
-          palette.light.secondary,
-          palette.dark.primary,
-        ];
+    final isSelected = themeDefinition.id == activeId;
+    final previewColors = themeDefinition.preview;
 
     return InkWell(
       onTap: onSelect,
@@ -1274,9 +1288,9 @@ class _PaletteOption extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          palette.label,
+                          themeDefinition.label,
                           style: theme.bodyMedium?.copyWith(
-                            color: theme.textPrimary,
+                            color: theme.sidebarForeground,
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.w500,
@@ -1297,10 +1311,18 @@ class _PaletteOption extends StatelessWidget {
                   ),
                   const SizedBox(height: Spacing.xxs),
                   Text(
-                    palette.description,
+                    themeDefinition.description,
                     style:
-                        theme.bodySmall?.copyWith(color: theme.textSecondary) ??
-                        TextStyle(color: theme.textSecondary),
+                        theme.bodySmall?.copyWith(
+                          color: theme.sidebarForeground.withValues(
+                            alpha: 0.75,
+                          ),
+                        ) ??
+                        TextStyle(
+                          color: theme.sidebarForeground.withValues(
+                            alpha: 0.75,
+                          ),
+                        ),
                   ),
                   const SizedBox(height: Spacing.xs),
                   Row(
@@ -1378,14 +1400,16 @@ class _CustomizationTile extends StatelessWidget {
                 Text(
                   title,
                   style: theme.bodyMedium?.copyWith(
-                    color: theme.textPrimary,
+                    color: theme.sidebarForeground,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: Spacing.xs),
                 Text(
                   subtitle,
-                  style: theme.bodySmall?.copyWith(color: theme.textSecondary),
+                  style: theme.bodySmall?.copyWith(
+                    color: theme.sidebarForeground.withValues(alpha: 0.75),
+                  ),
                 ),
               ],
             ),
