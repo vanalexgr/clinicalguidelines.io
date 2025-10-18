@@ -802,9 +802,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                     minHeight: TouchTarget.input,
                   ),
                   decoration: BoxDecoration(
-                    color: brightness == Brightness.dark
-                        ? composerSurface.withValues(alpha: 0.9)
-                        : context.conduitTheme.surfaceContainer,
+                    color: composerSurface.withValues(
+                      alpha: brightness == Brightness.dark ? 0.9 : 0.2,
+                    ),
                     borderRadius: BorderRadius.circular(AppBorderRadius.round),
                     border: Border.all(
                       color: outlineColor.withValues(
@@ -812,37 +812,28 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                       ),
                       width: BorderWidth.micro,
                     ),
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(
-                        color: shellShadowColor.withValues(
-                          alpha: brightness == Brightness.dark ? 0.4 : 0.22,
-                        ),
-                        blurRadius: 24,
-                        spreadRadius: -6,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
                   ),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: _buildComposerTextField(
-                      brightness: brightness,
-                      sendOnEnter: sendOnEnter,
-                      placeholderBase: placeholderBase,
-                      placeholderFocused: placeholderFocused,
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: Spacing.xs,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildComposerTextField(
+                          brightness: brightness,
+                          sendOnEnter: sendOnEnter,
+                          placeholderBase: placeholderBase,
+                          placeholderFocused: placeholderFocused,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: Spacing.xs,
+                          ),
+                          isActive: isActive,
+                        ),
                       ),
-                      isActive: isActive,
-                    ),
+                      if (!_hasText && voiceAvailable && !isGenerating)
+                        _buildInlineMicIcon(voiceAvailable),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(width: Spacing.sm),
-              if (!_hasText && voiceAvailable && !isGenerating)
-                _buildMicButton(voiceAvailable),
-              if (!_hasText && voiceAvailable && !isGenerating)
-                const SizedBox(width: Spacing.sm),
               _buildPrimaryButton(
                 _hasText,
                 isGenerating,
@@ -1199,7 +1190,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
 
     const double iconSize = IconSize.large;
     const double buttonSize = TouchTarget.minimum;
-    final Brightness brightness = Theme.of(context).brightness;
     final bool isActive = activeColor != null;
 
     final Color iconColor = !enabled
@@ -1207,9 +1197,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         : (activeColor ??
               context.conduitTheme.textPrimary.withValues(alpha: Alpha.strong));
 
-    final Color baseBackground = brightness == Brightness.dark
-        ? context.conduitTheme.surfaceContainerHighest.withValues(alpha: 0.7)
-        : context.conduitTheme.surfaceContainerHighest;
+    final Brightness brightness = Theme.of(context).brightness;
+    final Color baseBackground = context.conduitTheme.inputBackground
+        .withValues(alpha: brightness == Brightness.dark ? 0.9 : 0.2);
     final Color backgroundColor = !enabled
         ? baseBackground.withValues(alpha: Alpha.disabled)
         : isActive
@@ -1218,14 +1208,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final Color borderColor = isActive
         ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.6)
         : context.conduitTheme.cardBorder.withValues(alpha: 0.45);
-    final BoxShadow buttonShadow = BoxShadow(
-      color: context.conduitTheme.cardShadow.withValues(
-        alpha: brightness == Brightness.dark ? 0.36 : 0.18,
-      ),
-      blurRadius: 18,
-      spreadRadius: -6,
-      offset: const Offset(0, 8),
-    );
 
     return Tooltip(
       message: tooltip,
@@ -1250,7 +1232,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(AppBorderRadius.round),
                 border: Border.all(color: borderColor, width: BorderWidth.thin),
-                boxShadow: enabled ? <BoxShadow>[buttonShadow] : const [],
               ),
               child: Center(
                 child: Icon(icon, size: iconSize, color: iconColor),
@@ -1295,6 +1276,34 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                             )),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInlineMicIcon(bool voiceAvailable) {
+    final bool enabledMic = widget.enabled && voiceAvailable;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppBorderRadius.circular),
+        onTap: enabledMic
+            ? () {
+                HapticFeedback.selectionClick();
+                _toggleVoice();
+              }
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(Spacing.xs),
+          child: Icon(
+            Platform.isIOS ? CupertinoIcons.mic : Icons.mic,
+            size: IconSize.medium,
+            color: _isRecording
+                ? context.conduitTheme.buttonPrimary
+                : context.conduitTheme.textSecondary.withValues(
+                    alpha: enabledMic ? Alpha.strong : Alpha.disabled,
+                  ),
           ),
         ),
       ),
