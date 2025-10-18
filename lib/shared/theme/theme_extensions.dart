@@ -905,7 +905,7 @@ class Spacing {
   static const double extraSpacious = 32.0;
 
   // Specific component spacing with better consistency
-  static const double chatBubblePadding = 16.0;
+  static const double chatBubblePadding = 12.0;
   static const double actionButtonPadding = 12.0;
   static const double floatingButtonPadding = 16.0;
   static const double bottomSheetPadding = 24.0;
@@ -949,7 +949,7 @@ class AppBorderRadius {
   static const double card = 16.0;
   static const double input = 12.0;
   static const double modal = 20.0;
-  static const double messageBubble = 18.0;
+  static const double messageBubble = 12.0;
   static const double navigation = 12.0;
   static const double avatar = 50.0;
   static const double badge = 20.0;
