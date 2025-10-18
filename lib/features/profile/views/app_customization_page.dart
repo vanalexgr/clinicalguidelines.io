@@ -526,7 +526,7 @@ class AppCustomizationPage extends ConsumerWidget {
           ),
           onTap: () => _showVoicePickerSheet(context, ref, settings),
         ),
-        const SizedBox(height: Spacing.xs),
+        const SizedBox(height: Spacing.md),
         // Speech Rate Slider
         _buildSliderTile(
           context,
@@ -544,7 +544,7 @@ class AppCustomizationPage extends ConsumerWidget {
           onChanged: (value) =>
               ref.read(appSettingsProvider.notifier).setTtsSpeechRate(value),
         ),
-        const SizedBox(height: Spacing.xs),
+        const SizedBox(height: Spacing.md),
         // Pitch Slider
         _buildSliderTile(
           context,
@@ -562,7 +562,7 @@ class AppCustomizationPage extends ConsumerWidget {
           onChanged: (value) =>
               ref.read(appSettingsProvider.notifier).setTtsPitch(value),
         ),
-        const SizedBox(height: Spacing.xs),
+        const SizedBox(height: Spacing.md),
         // Volume Slider
         _buildSliderTile(
           context,
@@ -580,7 +580,7 @@ class AppCustomizationPage extends ConsumerWidget {
           onChanged: (value) =>
               ref.read(appSettingsProvider.notifier).setTtsVolume(value),
         ),
-        const SizedBox(height: Spacing.xs),
+        const SizedBox(height: Spacing.md),
         // Preview Button
         _CustomizationTile(
           leading: _buildIconBadge(
