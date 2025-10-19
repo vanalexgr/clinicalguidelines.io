@@ -649,7 +649,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final Color composerBackground = brightness == Brightness.dark
         ? composerSurface.withValues(alpha: 0.78)
         : context.conduitTheme.surfaceContainerHighest;
-    final Color placeholderBase = context.conduitTheme.inputPlaceholder;
+    final Color placeholderBase = context.conduitTheme.inputText.withValues(
+      alpha: 0.64,
+    );
     final Color placeholderFocused = context.conduitTheme.inputText.withValues(
       alpha: 0.64,
     );
