@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -18,6 +18,28 @@ import '../../../core/utils/debug_logger.dart';
 final _globalImageCache = <String, String>{};
 final _globalLoadingStates = <String, bool>{};
 final _globalErrorStates = <String, String>{};
+final _globalImageBytesCache = <String, Uint8List>{};
+final _base64WhitespacePattern = RegExp(r'\s');
+
+Future<Uint8List> _decodeImageDataAsync(String data) async {
+  if (kIsWeb) {
+    return _decodeImageData(data);
+  }
+  return compute(_decodeImageData, data);
+}
+
+Uint8List _decodeImageData(String data) {
+  var payload = data;
+  if (payload.startsWith('data:')) {
+    final commaIndex = payload.indexOf(',');
+    if (commaIndex == -1) {
+      throw FormatException('Invalid data URI');
+    }
+    payload = payload.substring(commaIndex + 1);
+  }
+  payload = payload.replaceAll(_base64WhitespacePattern, '');
+  return base64.decode(payload);
+}
 
 class EnhancedImageAttachment extends ConsumerStatefulWidget {
   final String attachmentId;
@@ -46,8 +68,11 @@ class _EnhancedImageAttachmentState
     extends ConsumerState<EnhancedImageAttachment>
     with AutomaticKeepAliveClientMixin {
   String? _cachedImageData;
+  Uint8List? _cachedBytes;
   bool _isLoading = true;
   String? _errorMessage;
+  bool _isDecoding = false;
+  late final String _heroTag;
   // Removed unused animation and state flags
 
   @override
@@ -56,6 +81,7 @@ class _EnhancedImageAttachmentState
   @override
   void initState() {
     super.initState();
+    _heroTag = 'image_${widget.attachmentId}_${identityHashCode(this)}';
     // Defer loading until after first frame to avoid accessing inherited widgets
     // (e.g., Localizations) during initState
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -71,71 +97,75 @@ class _EnhancedImageAttachmentState
 
   Future<void> _loadImage() async {
     final l10n = AppLocalizations.of(context)!;
-    // Check global cache first
+    final cachedError = _globalErrorStates[widget.attachmentId];
+    if (cachedError != null) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = cachedError;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     if (_globalImageCache.containsKey(widget.attachmentId)) {
+      final cachedData = _globalImageCache[widget.attachmentId]!;
+      final cachedBytes = _globalImageBytesCache[widget.attachmentId];
       if (mounted) {
         setState(() {
-          _cachedImageData = _globalImageCache[widget.attachmentId];
+          _cachedImageData = cachedData;
+          _cachedBytes = cachedBytes;
+          _isLoading = cachedBytes == null && !_isRemoteContent(cachedData);
+        });
+      }
+      if (cachedBytes == null && !_isRemoteContent(cachedData)) {
+        await _decodeAndAssign(cachedData, l10n);
+      } else if (mounted) {
+        setState(() {
           _isLoading = false;
         });
       }
       return;
     }
 
-    // Check if there was a previous error
-    if (_globalErrorStates.containsKey(widget.attachmentId)) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = _globalErrorStates[widget.attachmentId];
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    // Set loading state
     _globalLoadingStates[widget.attachmentId] = true;
 
-    // Check if this is already a data URL or base64 image
-    if (widget.attachmentId.startsWith('data:') ||
-        widget.attachmentId.startsWith('http')) {
-      _globalImageCache[widget.attachmentId] = widget.attachmentId;
-      _globalLoadingStates[widget.attachmentId] = false;
+    final attachmentId = widget.attachmentId;
+
+    if (attachmentId.startsWith('data:') || attachmentId.startsWith('http')) {
+      _globalImageCache[attachmentId] = attachmentId;
+      _globalLoadingStates[attachmentId] = false;
+      final cachedBytes = _globalImageBytesCache[attachmentId];
       if (mounted) {
         setState(() {
-          _cachedImageData = widget.attachmentId;
-          _isLoading = false;
+          _cachedImageData = attachmentId;
+          _cachedBytes = cachedBytes;
+          _isLoading = cachedBytes == null && !_isRemoteContent(attachmentId);
         });
+      }
+      if (!_isRemoteContent(attachmentId) && cachedBytes == null) {
+        await _decodeAndAssign(attachmentId, l10n);
       }
       return;
     }
 
-    // Check if this is a relative URL that needs base URL prepending
-    if (widget.attachmentId.startsWith('/')) {
-      // This is a relative URL, prepend the base URL
+    if (attachmentId.startsWith('/')) {
       final api = ref.read(apiServiceProvider);
       if (api != null) {
-        final fullUrl = api.baseUrl + widget.attachmentId;
-        _globalImageCache[widget.attachmentId] = fullUrl;
-        _globalLoadingStates[widget.attachmentId] = false;
+        final fullUrl = api.baseUrl + attachmentId;
+        _globalImageCache[attachmentId] = fullUrl;
+        _globalLoadingStates[attachmentId] = false;
         if (mounted) {
           setState(() {
             _cachedImageData = fullUrl;
+            _cachedBytes = null;
             _isLoading = false;
           });
         }
         return;
       } else {
-        // If API service is not available, show error
         final error = l10n.unableToLoadImage;
-        _globalErrorStates[widget.attachmentId] = error;
-        _globalLoadingStates[widget.attachmentId] = false;
-        if (mounted) {
-          setState(() {
-            _errorMessage = error;
-            _isLoading = false;
-          });
-        }
+        _cacheError(error);
         return;
       }
     }
@@ -143,68 +173,95 @@ class _EnhancedImageAttachmentState
     final api = ref.read(apiServiceProvider);
     if (api == null) {
       final error = l10n.apiUnavailable;
-      _globalErrorStates[widget.attachmentId] = error;
-      _globalLoadingStates[widget.attachmentId] = false;
-      if (mounted) {
-        setState(() {
-          _errorMessage = error;
-          _isLoading = false;
-        });
-      }
+      _cacheError(error);
       return;
     }
 
     try {
-      // Get file info to check if it's an image
-      final fileInfo = await api.getFileInfo(widget.attachmentId);
+      final fileInfo = await api.getFileInfo(attachmentId);
       final fileName = _extractFileName(fileInfo);
       final ext = fileName.toLowerCase().split('.').last;
 
       if (!['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].contains(ext)) {
         final error = l10n.notAnImageFile(fileName);
-        _globalErrorStates[widget.attachmentId] = error;
-        _globalLoadingStates[widget.attachmentId] = false;
+        _cacheError(error);
+        return;
+      }
+
+      final fileContent = await api.getFileContent(attachmentId);
+
+      _globalImageCache[attachmentId] = fileContent;
+      _globalLoadingStates[attachmentId] = false;
+
+      if (_globalImageCache.length > 50) {
+        final firstKey = _globalImageCache.keys.first;
+        _globalImageCache.remove(firstKey);
+        _globalLoadingStates.remove(firstKey);
+        _globalErrorStates.remove(firstKey);
+        _globalImageBytesCache.remove(firstKey);
+      }
+
+      if (mounted) {
+        setState(() {
+          _cachedImageData = fileContent;
+          _cachedBytes = null;
+          _isLoading = !_isRemoteContent(fileContent);
+        });
+      }
+
+      if (_isRemoteContent(fileContent)) {
         if (mounted) {
           setState(() {
-            _errorMessage = error;
             _isLoading = false;
           });
         }
         return;
       }
 
-      // Get the image content
-      final fileContent = await api.getFileContent(widget.attachmentId);
-
-      // Cache globally
-      _globalImageCache[widget.attachmentId] = fileContent;
-      _globalLoadingStates[widget.attachmentId] = false;
-
-      // Limit cache size
-      if (_globalImageCache.length > 50) {
-        final firstKey = _globalImageCache.keys.first;
-        _globalImageCache.remove(firstKey);
-        _globalLoadingStates.remove(firstKey);
-        _globalErrorStates.remove(firstKey);
-      }
-
-      if (mounted) {
-        setState(() {
-          _cachedImageData = fileContent;
-          _isLoading = false;
-        });
-      }
+      await _decodeAndAssign(fileContent, l10n);
     } catch (e) {
       final error = l10n.failedToLoadImage(e.toString());
-      _globalErrorStates[widget.attachmentId] = error;
-      _globalLoadingStates[widget.attachmentId] = false;
-      if (mounted) {
-        setState(() {
-          _errorMessage = error;
-          _isLoading = false;
-        });
-      }
+      _cacheError(error);
     }
+  }
+
+  bool _isRemoteContent(String data) => data.startsWith('http');
+
+  Future<void> _decodeAndAssign(String data, AppLocalizations l10n) async {
+    if (_isDecoding) return;
+    _isDecoding = true;
+    try {
+      final bytes = await _decodeImageDataAsync(data);
+      _globalImageBytesCache[widget.attachmentId] = bytes;
+      if (!mounted) return;
+      setState(() {
+        _cachedBytes = bytes;
+        _isLoading = false;
+      });
+    } on FormatException {
+      final error = l10n.invalidImageFormat;
+      _cacheError(error);
+    } catch (_) {
+      final error = l10n.failedToDecodeImage;
+      _cacheError(error);
+    } finally {
+      _isDecoding = false;
+    }
+  }
+
+  void _cacheError(String error) {
+    _globalErrorStates[widget.attachmentId] = error;
+    _globalLoadingStates[widget.attachmentId] = false;
+    _globalImageCache.remove(widget.attachmentId);
+    _globalImageBytesCache.remove(widget.attachmentId);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _errorMessage = error;
+      _cachedBytes = null;
+      _isLoading = false;
+    });
   }
 
   String _extractFileName(Map<String, dynamic> fileInfo) {
@@ -380,8 +437,12 @@ class _EnhancedImageAttachmentState
       imageUrl: _cachedImageData!,
       fit: BoxFit.cover,
       httpHeaders: headers.isNotEmpty ? headers : null,
-      fadeInDuration: const Duration(milliseconds: 200),
-      fadeOutDuration: const Duration(milliseconds: 200),
+      fadeInDuration: widget.disableAnimation
+          ? Duration.zero
+          : const Duration(milliseconds: 200),
+      fadeOutDuration: widget.disableAnimation
+          ? Duration.zero
+          : const Duration(milliseconds: 200),
       placeholder: (context, url) => Container(
         constraints: widget.constraints,
         decoration: BoxDecoration(
@@ -399,37 +460,23 @@ class _EnhancedImageAttachmentState
   }
 
   Widget _buildBase64Image() {
-    try {
-      // Extract base64 data from data URL if needed
-      String actualBase64;
-      if (_cachedImageData!.startsWith('data:')) {
-        final commaIndex = _cachedImageData!.indexOf(',');
-        if (commaIndex != -1) {
-          actualBase64 = _cachedImageData!.substring(commaIndex + 1);
-        } else {
-          throw Exception(AppLocalizations.of(context)!.invalidDataUrl);
-        }
-      } else {
-        actualBase64 = _cachedImageData!;
-      }
-
-      final imageBytes = base64.decode(actualBase64);
-      final imageWidget = Image.memory(
-        key: ValueKey('image_${widget.attachmentId}'),
-        imageBytes,
-        fit: BoxFit.cover,
-        gaplessPlayback: true, // Prevents flashing during rebuilds
-        errorBuilder: (context, error, stackTrace) {
-          _errorMessage = AppLocalizations.of(context)!.failedToDecodeImage;
-          return _buildErrorState();
-        },
-      );
-
-      return _wrapImage(imageWidget);
-    } catch (e) {
-      _errorMessage = AppLocalizations.of(context)!.invalidImageFormat;
-      return _buildErrorState();
+    final bytes = _cachedBytes;
+    if (bytes == null) {
+      return _buildLoadingState();
     }
+
+    final imageWidget = Image.memory(
+      key: ValueKey('image_${widget.attachmentId}'),
+      bytes,
+      fit: BoxFit.cover,
+      gaplessPlayback: true, // Prevents flashing during rebuilds
+      errorBuilder: (context, error, stackTrace) {
+        _errorMessage = AppLocalizations.of(context)!.failedToDecodeImage;
+        return _buildErrorState();
+      },
+    );
+
+    return _wrapImage(imageWidget);
   }
 
   Widget _wrapImage(Widget imageWidget) {
@@ -458,8 +505,7 @@ class _EnhancedImageAttachmentState
           child: InkWell(
             onTap: widget.onTap ?? () => _showFullScreenImage(context),
             child: Hero(
-              tag:
-                  'image_${widget.attachmentId}_${DateTime.now().millisecondsSinceEpoch}',
+              tag: _heroTag,
               flightShuttleBuilder:
                   (
                     flightContext,
@@ -490,10 +536,8 @@ class _EnhancedImageAttachmentState
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (context) => FullScreenImageViewer(
-          imageData: _cachedImageData!,
-          tag: 'image_${widget.attachmentId}',
-        ),
+        builder: (context) =>
+            FullScreenImageViewer(imageData: _cachedImageData!, tag: _heroTag),
       ),
     );
   }
