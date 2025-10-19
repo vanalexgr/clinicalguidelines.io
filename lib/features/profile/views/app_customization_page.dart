@@ -53,22 +53,26 @@ class AppCustomizationPage extends ConsumerWidget {
             vertical: Spacing.pagePadding,
           ),
           children: [
-            _buildDisplaySection(
+            _buildThemesDropdownSection(
               context,
               ref,
               themeMode,
               themeDescription,
+              activeTheme,
+            ),
+            const SizedBox(height: Spacing.xl),
+            _buildLanguageSection(
+              context,
+              ref,
               currentLanguageCode,
               languageLabel,
-              settings,
-              activeTheme,
             ),
             const SizedBox(height: Spacing.xl),
             _buildQuickPillsSection(context, ref, settings),
             const SizedBox(height: Spacing.xl),
-            _buildChatSection(context, ref, settings),
+            _buildTtsDropdownSection(context, ref, settings),
             const SizedBox(height: Spacing.xl),
-            _buildTtsSection(context, ref, settings),
+            _buildChatSection(context, ref, settings),
           ],
         ),
       ),
@@ -108,14 +112,11 @@ class AppCustomizationPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildDisplaySection(
+  Widget _buildThemesDropdownSection(
     BuildContext context,
     WidgetRef ref,
     ThemeMode themeMode,
     String themeDescription,
-    String currentLanguageCode,
-    String languageLabel,
-    AppSettings settings,
     TweakcnThemeDefinition activeTheme,
   ) {
     final theme = context.conduitTheme;
@@ -130,10 +131,75 @@ class AppCustomizationPage extends ConsumerWidget {
               TextStyle(color: theme.sidebarForeground, fontSize: 18),
         ),
         const SizedBox(height: Spacing.sm),
-        _buildThemeSelector(context, ref, themeMode, themeDescription),
+        _ExpandableCard(
+          title: AppLocalizations.of(context)!.darkMode,
+          subtitle: themeDescription,
+          icon: UiUtils.platformIcon(
+            ios: CupertinoIcons.moon_stars,
+            android: Icons.dark_mode,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: Spacing.sm,
+                runSpacing: Spacing.sm,
+                children: [
+                  _buildThemeChip(
+                    context,
+                    ref,
+                    mode: ThemeMode.system,
+                    isSelected: themeMode == ThemeMode.system,
+                    label: AppLocalizations.of(context)!.system,
+                    icon: UiUtils.platformIcon(
+                      ios: CupertinoIcons.sparkles,
+                      android: Icons.auto_mode,
+                    ),
+                  ),
+                  _buildThemeChip(
+                    context,
+                    ref,
+                    mode: ThemeMode.light,
+                    isSelected: themeMode == ThemeMode.light,
+                    label: AppLocalizations.of(context)!.themeLight,
+                    icon: UiUtils.platformIcon(
+                      ios: CupertinoIcons.sun_max,
+                      android: Icons.light_mode,
+                    ),
+                  ),
+                  _buildThemeChip(
+                    context,
+                    ref,
+                    mode: ThemeMode.dark,
+                    isSelected: themeMode == ThemeMode.dark,
+                    label: AppLocalizations.of(context)!.themeDark,
+                    icon: UiUtils.platformIcon(
+                      ios: CupertinoIcons.moon_fill,
+                      android: Icons.dark_mode,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: Spacing.md),
         _buildPaletteSelector(context, ref, activeTheme),
-        const SizedBox(height: Spacing.md),
+      ],
+    );
+  }
+
+  Widget _buildLanguageSection(
+    BuildContext context,
+    WidgetRef ref,
+    String currentLanguageCode,
+    String languageLabel,
+  ) {
+    final theme = context.conduitTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         _CustomizationTile(
           leading: _buildIconBadge(
             context,
@@ -164,148 +230,33 @@ class AppCustomizationPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildThemeSelector(
-    BuildContext context,
-    WidgetRef ref,
-    ThemeMode themeMode,
-    String themeDescription,
-  ) {
-    final theme = context.conduitTheme;
-
-    return ConduitCard(
-      padding: const EdgeInsets.all(Spacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildIconBadge(
-                context,
-                UiUtils.platformIcon(
-                  ios: CupertinoIcons.moon_stars,
-                  android: Icons.dark_mode,
-                ),
-                color: theme.buttonPrimary,
-              ),
-              const SizedBox(width: Spacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)!.darkMode,
-                      style: theme.bodyMedium?.copyWith(
-                        color: theme.sidebarForeground,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: Spacing.xs),
-                    Text(
-                      themeDescription,
-                      style: theme.bodySmall?.copyWith(
-                        color: theme.sidebarForeground.withValues(alpha: 0.75),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Spacing.md),
-          Wrap(
-            spacing: Spacing.sm,
-            runSpacing: Spacing.sm,
-            children: [
-              _buildThemeChip(
-                context,
-                ref,
-                mode: ThemeMode.system,
-                isSelected: themeMode == ThemeMode.system,
-                label: AppLocalizations.of(context)!.system,
-                icon: UiUtils.platformIcon(
-                  ios: CupertinoIcons.sparkles,
-                  android: Icons.auto_mode,
-                ),
-              ),
-              _buildThemeChip(
-                context,
-                ref,
-                mode: ThemeMode.light,
-                isSelected: themeMode == ThemeMode.light,
-                label: AppLocalizations.of(context)!.themeLight,
-                icon: UiUtils.platformIcon(
-                  ios: CupertinoIcons.sun_max,
-                  android: Icons.light_mode,
-                ),
-              ),
-              _buildThemeChip(
-                context,
-                ref,
-                mode: ThemeMode.dark,
-                isSelected: themeMode == ThemeMode.dark,
-                label: AppLocalizations.of(context)!.themeDark,
-                icon: UiUtils.platformIcon(
-                  ios: CupertinoIcons.moon_fill,
-                  android: Icons.dark_mode,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPaletteSelector(
     BuildContext context,
     WidgetRef ref,
     TweakcnThemeDefinition activeTheme,
   ) {
-    final theme = context.conduitTheme;
     final palettes = TweakcnThemes.all;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)!.themePalette,
-          style:
-              theme.bodyLarge?.copyWith(
-                color: theme.sidebarForeground,
-                fontWeight: FontWeight.w600,
-              ) ??
-              TextStyle(
-                color: theme.sidebarForeground,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: Spacing.xs),
-        Text(
-          AppLocalizations.of(context)!.themePaletteDescription,
-          style:
-              theme.bodySmall?.copyWith(
-                color: theme.sidebarForeground.withValues(alpha: 0.75),
-              ) ??
-              TextStyle(color: theme.sidebarForeground.withValues(alpha: 0.75)),
-        ),
-        const SizedBox(height: Spacing.sm),
-        ConduitCard(
-          padding: const EdgeInsets.all(Spacing.md),
-          child: Column(
-            children: [
-              for (final palette in palettes)
-                _PaletteOption(
-                  themeDefinition: palette,
-                  activeId: activeTheme.id,
-                  onSelect: () => ref
-                      .read(appThemePaletteProvider.notifier)
-                      .setPalette(palette.id),
-                ),
-            ],
-          ),
-        ),
-      ],
+    return _ExpandableCard(
+      title: AppLocalizations.of(context)!.themePalette,
+      subtitle: activeTheme.label,
+      icon: UiUtils.platformIcon(
+        ios: CupertinoIcons.square_fill_on_square_fill,
+        android: Icons.palette,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final palette in palettes)
+            _PaletteOption(
+              themeDefinition: palette,
+              activeId: activeTheme.id,
+              onSelect: () => ref
+                  .read(appThemePaletteProvider.notifier)
+                  .setPalette(palette.id),
+            ),
+        ],
+      ),
     );
   }
 
@@ -377,58 +328,50 @@ class AppCustomizationPage extends ConsumerWidget {
       }).toList();
     }
 
+    final l10n = AppLocalizations.of(context)!;
+    final selectedCountText = selectedCount == 0
+        ? 'No actions'
+        : '$selectedCount action${selectedCount == 1 ? '' : 's'} selected';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          AppLocalizations.of(context)!.onboardQuickTitle,
+          l10n.onboardQuickTitle,
           style:
               theme.headingSmall?.copyWith(color: theme.sidebarForeground) ??
               TextStyle(color: theme.sidebarForeground, fontSize: 18),
         ),
         const SizedBox(height: Spacing.sm),
-        ConduitCard(
-          padding: const EdgeInsets.all(Spacing.md),
+        _ExpandableCard(
+          title: l10n.quickActionsDescription,
+          subtitle: selectedCountText,
+          icon: UiUtils.platformIcon(
+            ios: CupertinoIcons.bolt,
+            android: Icons.flash_on,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildIconBadge(
-                    context,
-                    UiUtils.platformIcon(
-                      ios: CupertinoIcons.bolt,
-                      android: Icons.flash_on,
-                    ),
-                    color: theme.buttonPrimary,
-                  ),
-                  const SizedBox(width: Spacing.md),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context)!.quickActionsDescription,
-                      style: theme.bodySmall?.copyWith(
-                        color: theme.sidebarForeground.withValues(alpha: 0.75),
-                      ),
+              if (selected.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Spacing.md),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => ref
+                          .read(appSettingsProvider.notifier)
+                          .setQuickPills(const []),
+                      child: Text(l10n.clear),
                     ),
                   ),
-                  TextButton(
-                    onPressed: selected.isEmpty
-                        ? null
-                        : () => ref
-                              .read(appSettingsProvider.notifier)
-                              .setQuickPills(const []),
-                    child: Text(AppLocalizations.of(context)!.clear),
-                  ),
-                ],
-              ),
-              const SizedBox(height: Spacing.md),
+                ),
               Wrap(
                 spacing: Spacing.sm,
                 runSpacing: Spacing.sm,
                 children: [
                   ConduitChip(
-                    label: AppLocalizations.of(context)!.web,
+                    label: l10n.web,
                     icon: Platform.isIOS ? CupertinoIcons.search : Icons.search,
                     isSelected: selected.contains('web'),
                     onTap: (selectedCount < 2 || selected.contains('web'))
@@ -436,7 +379,7 @@ class AppCustomizationPage extends ConsumerWidget {
                         : null,
                   ),
                   ConduitChip(
-                    label: AppLocalizations.of(context)!.imageGen,
+                    label: l10n.imageGen,
                     icon: Platform.isIOS ? CupertinoIcons.photo : Icons.image,
                     isSelected: selected.contains('image'),
                     onTap: (selectedCount < 2 || selected.contains('image'))
@@ -492,7 +435,7 @@ class AppCustomizationPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildTtsSection(
+  Widget _buildTtsDropdownSection(
     BuildContext context,
     WidgetRef ref,
     AppSettings settings,
@@ -509,91 +452,108 @@ class AppCustomizationPage extends ConsumerWidget {
               TextStyle(color: theme.sidebarForeground, fontSize: 18),
         ),
         const SizedBox(height: Spacing.sm),
-        // Voice Selection
-        _CustomizationTile(
-          leading: _buildIconBadge(
-            context,
-            UiUtils.platformIcon(
-              ios: CupertinoIcons.speaker_3,
-              android: Icons.record_voice_over,
-            ),
-            color: theme.buttonPrimary,
-          ),
+        _ExpandableCard(
           title: l10n.ttsVoice,
           subtitle: _getDisplayVoiceName(
             settings.ttsVoice,
             l10n.ttsSystemDefault,
           ),
-          onTap: () => _showVoicePickerSheet(context, ref, settings),
-        ),
-        const SizedBox(height: Spacing.md),
-        // Speech Rate Slider
-        _buildSliderTile(
-          context,
-          ref,
           icon: UiUtils.platformIcon(
-            ios: CupertinoIcons.speedometer,
-            android: Icons.speed,
+            ios: CupertinoIcons.speaker_3,
+            android: Icons.record_voice_over,
           ),
-          title: l10n.ttsSpeechRate,
-          value: settings.ttsSpeechRate,
-          min: 0.25,
-          max: 2.0,
-          divisions: 7,
-          label: '${(settings.ttsSpeechRate * 100).round()}%',
-          onChanged: (value) =>
-              ref.read(appSettingsProvider.notifier).setTtsSpeechRate(value),
-        ),
-        const SizedBox(height: Spacing.md),
-        // Pitch Slider
-        _buildSliderTile(
-          context,
-          ref,
-          icon: UiUtils.platformIcon(
-            ios: CupertinoIcons.waveform,
-            android: Icons.graphic_eq,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Voice Selection
+              _CustomizationTile(
+                leading: _buildIconBadge(
+                  context,
+                  UiUtils.platformIcon(
+                    ios: CupertinoIcons.speaker_3,
+                    android: Icons.record_voice_over,
+                  ),
+                  color: theme.buttonPrimary,
+                ),
+                title: l10n.ttsVoice,
+                subtitle: _getDisplayVoiceName(
+                  settings.ttsVoice,
+                  l10n.ttsSystemDefault,
+                ),
+                onTap: () => _showVoicePickerSheet(context, ref, settings),
+              ),
+              const SizedBox(height: Spacing.md),
+              // Speech Rate Slider
+              _buildSliderTile(
+                context,
+                ref,
+                icon: UiUtils.platformIcon(
+                  ios: CupertinoIcons.speedometer,
+                  android: Icons.speed,
+                ),
+                title: l10n.ttsSpeechRate,
+                value: settings.ttsSpeechRate,
+                min: 0.25,
+                max: 2.0,
+                divisions: 7,
+                label: '${(settings.ttsSpeechRate * 100).round()}%',
+                onChanged: (value) => ref
+                    .read(appSettingsProvider.notifier)
+                    .setTtsSpeechRate(value),
+              ),
+              const SizedBox(height: Spacing.md),
+              // Pitch Slider
+              _buildSliderTile(
+                context,
+                ref,
+                icon: UiUtils.platformIcon(
+                  ios: CupertinoIcons.waveform,
+                  android: Icons.graphic_eq,
+                ),
+                title: l10n.ttsPitch,
+                value: settings.ttsPitch,
+                min: 0.5,
+                max: 2.0,
+                divisions: 6,
+                label: settings.ttsPitch.toStringAsFixed(1),
+                onChanged: (value) =>
+                    ref.read(appSettingsProvider.notifier).setTtsPitch(value),
+              ),
+              const SizedBox(height: Spacing.md),
+              // Volume Slider
+              _buildSliderTile(
+                context,
+                ref,
+                icon: UiUtils.platformIcon(
+                  ios: CupertinoIcons.volume_up,
+                  android: Icons.volume_up,
+                ),
+                title: l10n.ttsVolume,
+                value: settings.ttsVolume,
+                min: 0.0,
+                max: 1.0,
+                divisions: 10,
+                label: '${(settings.ttsVolume * 100).round()}%',
+                onChanged: (value) =>
+                    ref.read(appSettingsProvider.notifier).setTtsVolume(value),
+              ),
+              const SizedBox(height: Spacing.md),
+              // Preview Button
+              _CustomizationTile(
+                leading: _buildIconBadge(
+                  context,
+                  UiUtils.platformIcon(
+                    ios: CupertinoIcons.play_fill,
+                    android: Icons.play_arrow,
+                  ),
+                  color: theme.buttonPrimary,
+                ),
+                title: l10n.ttsPreview,
+                subtitle: l10n.ttsPreviewText,
+                onTap: () => _previewTtsVoice(context, ref),
+              ),
+            ],
           ),
-          title: l10n.ttsPitch,
-          value: settings.ttsPitch,
-          min: 0.5,
-          max: 2.0,
-          divisions: 6,
-          label: settings.ttsPitch.toStringAsFixed(1),
-          onChanged: (value) =>
-              ref.read(appSettingsProvider.notifier).setTtsPitch(value),
-        ),
-        const SizedBox(height: Spacing.md),
-        // Volume Slider
-        _buildSliderTile(
-          context,
-          ref,
-          icon: UiUtils.platformIcon(
-            ios: CupertinoIcons.volume_up,
-            android: Icons.volume_up,
-          ),
-          title: l10n.ttsVolume,
-          value: settings.ttsVolume,
-          min: 0.0,
-          max: 1.0,
-          divisions: 10,
-          label: '${(settings.ttsVolume * 100).round()}%',
-          onChanged: (value) =>
-              ref.read(appSettingsProvider.notifier).setTtsVolume(value),
-        ),
-        const SizedBox(height: Spacing.md),
-        // Preview Button
-        _CustomizationTile(
-          leading: _buildIconBadge(
-            context,
-            UiUtils.platformIcon(
-              ios: CupertinoIcons.play_fill,
-              android: Icons.play_arrow,
-            ),
-            color: theme.buttonPrimary,
-          ),
-          title: l10n.ttsPreview,
-          subtitle: l10n.ttsPreviewText,
-          onTap: () => _previewTtsVoice(context, ref),
         ),
       ],
     );
@@ -1426,6 +1386,150 @@ class _CustomizationTile extends StatelessWidget {
               ),
               color: theme.iconSecondary,
               size: IconSize.small,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Expandable card widget for collapsible settings sections.
+class _ExpandableCard extends StatefulWidget {
+  const _ExpandableCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  State<_ExpandableCard> createState() => _ExpandableCardState();
+}
+
+class _ExpandableCardState extends State<_ExpandableCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _rotationAnimation;
+  bool _isExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _rotationAnimation = Tween<double>(begin: 0, end: 0.5).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+    if (_isExpanded) {
+      _animationController.forward();
+    } else {
+      _animationController.reverse();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.conduitTheme;
+
+    return ConduitCard(
+      padding: EdgeInsets.zero,
+      onTap: _toggle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(Spacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Icon badge
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: theme.buttonPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppBorderRadius.small),
+                    border: Border.all(
+                      color: theme.buttonPrimary.withValues(alpha: 0.2),
+                      width: BorderWidth.thin,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    widget.icon,
+                    color: theme.buttonPrimary,
+                    size: IconSize.medium,
+                  ),
+                ),
+                const SizedBox(width: Spacing.md),
+                // Title and subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title,
+                        style: theme.bodyMedium?.copyWith(
+                          color: theme.sidebarForeground,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: Spacing.xs),
+                      Text(
+                        widget.subtitle,
+                        style: theme.bodySmall?.copyWith(
+                          color: theme.sidebarForeground.withValues(
+                            alpha: 0.75,
+                          ),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Spacing.sm),
+                // Expand/collapse icon
+                RotationTransition(
+                  turns: _rotationAnimation,
+                  child: Icon(
+                    UiUtils.platformIcon(
+                      ios: CupertinoIcons.chevron_down,
+                      android: Icons.expand_more,
+                    ),
+                    color: theme.iconSecondary,
+                    size: IconSize.small,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Expandable content
+          if (_isExpanded) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(Spacing.md),
+              child: widget.child,
             ),
           ],
         ],
