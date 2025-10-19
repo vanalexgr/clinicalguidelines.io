@@ -1339,6 +1339,21 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(radius),
+            overlayColor: WidgetStateProperty.resolveWith<Color>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.pressed)) {
+                return context.conduitTheme.error.withValues(
+                  alpha: Alpha.buttonPressed,
+                );
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return context.conduitTheme.error.withValues(
+                  alpha: Alpha.hover,
+                );
+              }
+              return Colors.transparent;
+            }),
             onTap: () {
               HapticFeedback.lightImpact();
               stopGeneration();
@@ -1357,7 +1372,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 child: Icon(
                   Platform.isIOS ? CupertinoIcons.stop_fill : Icons.stop,
                   size: IconSize.large,
-                  color: context.conduitTheme.error,
+                  color: context.conduitTheme.buttonPrimaryText,
                 ),
               ),
             ),
