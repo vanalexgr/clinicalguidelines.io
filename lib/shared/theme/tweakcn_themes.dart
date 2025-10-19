@@ -482,7 +482,7 @@ class TweakcnThemes {
     preview: const <Color>[
       Color(0xFFC96442),
       Color(0xFFE9E6DC),
-      Color(0xFF9C87F5),
+      Color(0xFF1A1915),
     ],
   );
 
@@ -508,7 +508,7 @@ class TweakcnThemes {
     preview: const <Color>[
       Color(0xFFA1A1AA),
       Color(0xFFF4F4F5),
-      Color(0xFF2563EB),
+      Color(0xFF404040),
     ],
   );
 

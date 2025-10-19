@@ -107,6 +107,10 @@ class TaskWorker {
             QueuedAttachmentStatus.failed => FileUploadStatus.failed,
             QueuedAttachmentStatus.cancelled => FileUploadStatus.failed,
           };
+          const imageExts = <String>{'.jpg', '.jpeg', '.png', '.gif', '.webp'};
+          final lowerName = task.fileName.toLowerCase();
+          final bool isImage =
+              existing.isImage ?? imageExts.any(lowerName.endsWith);
           final newState = FileUploadState(
             file: File(task.filePath),
             fileName: task.fileName,
@@ -117,6 +121,7 @@ class TaskWorker {
             status: status,
             fileId: entry.fileId ?? existing.fileId,
             error: entry.lastError,
+            isImage: isImage,
           );
           _ref
               .read(attachedFilesProvider.notifier)
@@ -260,6 +265,7 @@ class TaskWorker {
           progress: 0.0,
           status: FileUploadStatus.uploading,
           fileId: existing.fileId,
+          isImage: existing.isImage ?? true,
         );
         _ref
             .read(attachedFilesProvider.notifier)

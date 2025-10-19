@@ -127,6 +127,43 @@ class TaskQueueNotifier extends Notifier<List<OutboundTask>> {
     await _save();
   }
 
+  Future<void> cancelUploadsForFile(String filePath) async {
+    bool updated = false;
+    state = [
+      for (final task in state)
+        task.maybeMap(
+          uploadMedia: (upload) {
+            if ((upload.status == TaskStatus.queued ||
+                    upload.status == TaskStatus.running) &&
+                upload.filePath == filePath) {
+              updated = true;
+              return upload.copyWith(
+                status: TaskStatus.cancelled,
+                completedAt: DateTime.now(),
+              );
+            }
+            return upload;
+          },
+          imageToDataUrl: (image) {
+            if ((image.status == TaskStatus.queued ||
+                    image.status == TaskStatus.running) &&
+                image.filePath == filePath) {
+              updated = true;
+              return image.copyWith(
+                status: TaskStatus.cancelled,
+                completedAt: DateTime.now(),
+              );
+            }
+            return image;
+          },
+          orElse: () => task,
+        ),
+    ];
+    if (updated) {
+      await _save();
+    }
+  }
+
   Future<void> cancelByConversation(String conversationId) async {
     state = [
       for (final t in state)

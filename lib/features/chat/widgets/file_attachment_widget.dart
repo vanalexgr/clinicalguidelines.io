@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 import 'package:conduit/l10n/app_localizations.dart';
 import '../services/file_attachment_service.dart';
+import '../../../shared/services/tasks/task_queue.dart';
 import '../../../shared/widgets/loading_states.dart';
+
+const Set<String> _previewableImageExtensions = <String>{
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+};
 
 class FileAttachmentWidget extends ConsumerWidget {
   const FileAttachmentWidget({super.key});
@@ -58,6 +67,9 @@ class _FileAttachmentCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final bool canPreview = _canPreviewImage();
+    final Widget removeButton = _buildRemoveButton(context, ref);
+
     return Container(
       width: 140,
       padding: const EdgeInsets.all(Spacing.sm),
@@ -72,14 +84,19 @@ class _FileAttachmentCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(fileState.fileIcon, style: const TextStyle(fontSize: 20)),
-              const Spacer(),
-              _buildStatusIcon(context),
-            ],
-          ),
-          const SizedBox(height: Spacing.xs),
+          if (canPreview) ...[
+            _buildImagePreview(context, removeButton),
+            const SizedBox(height: Spacing.sm),
+          ] else ...[
+            Row(
+              children: [
+                _buildStatusIcon(context),
+                const Spacer(),
+                removeButton,
+              ],
+            ),
+            const SizedBox(height: Spacing.xs),
+          ],
           Text(
             fileState.fileName,
             style: TextStyle(
@@ -154,6 +171,50 @@ class _FileAttachmentCard extends ConsumerWidget {
     }
   }
 
+  Widget _buildRemoveButton(BuildContext context, WidgetRef ref) {
+    final String tooltip = MaterialLocalizations.of(
+      context,
+    ).deleteButtonTooltip;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _removeAttachment(ref),
+          child: Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: context.conduitTheme.cardBackground.withValues(
+                alpha: 0.85,
+              ),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: context.conduitTheme.cardBorder.withValues(alpha: 0.6),
+                width: BorderWidth.thin,
+              ),
+            ),
+            child: Icon(
+              Platform.isIOS ? CupertinoIcons.xmark : Icons.close,
+              size: 14,
+              color: context.conduitTheme.textPrimary.withValues(alpha: 0.8),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _removeAttachment(WidgetRef ref) {
+    ref.read(attachedFilesProvider.notifier).removeFile(fileState.file.path);
+    ref
+        .read(taskQueueProvider.notifier)
+        .cancelUploadsForFile(fileState.file.path);
+  }
+
   Widget _buildProgressBar(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppBorderRadius.xs),
@@ -181,6 +242,88 @@ class _FileAttachmentCard extends ConsumerWidget {
       case FileUploadStatus.failed:
         return context.conduitTheme.error.withValues(alpha: 0.3);
     }
+  }
+
+  bool _canPreviewImage() {
+    if (fileState.isImage != null) {
+      return fileState.isImage!;
+    }
+    final String lowerName = fileState.fileName.toLowerCase();
+    return _previewableImageExtensions.any(lowerName.endsWith);
+  }
+
+  Widget _buildImagePreview(BuildContext context, Widget removeButton) {
+    final File file = fileState.file;
+    final bool fileExists = file.existsSync();
+    final Widget basePreview = fileExists
+        ? Image.file(
+            file,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (context, error, stackTrace) =>
+                _buildPreviewPlaceholderContent(context),
+          )
+        : _buildPreviewPlaceholderContent(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppBorderRadius.xs),
+        border: Border.all(
+          color: context.conduitTheme.cardBorder,
+          width: BorderWidth.thin,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppBorderRadius.xs),
+        child: AspectRatio(
+          aspectRatio: 4 / 3,
+          child: Stack(
+            children: [
+              Positioned.fill(child: basePreview),
+              if (fileState.status == FileUploadStatus.uploading)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.conduitTheme.cardBackground.withValues(
+                        alpha: 0.35,
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned(
+                top: Spacing.xs,
+                right: Spacing.xs,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: context.conduitTheme.cardBackground.withValues(
+                      alpha: 0.85,
+                    ),
+                    borderRadius: BorderRadius.circular(AppBorderRadius.xs),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: _buildStatusIcon(context),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: Spacing.xs,
+                left: Spacing.xs,
+                child: removeButton,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewPlaceholderContent(BuildContext context) {
+    return Container(
+      color: context.conduitTheme.textPrimary.withValues(alpha: 0.08),
+      alignment: Alignment.center,
+      child: Text(fileState.fileIcon, style: const TextStyle(fontSize: 26)),
+    );
   }
 }
 

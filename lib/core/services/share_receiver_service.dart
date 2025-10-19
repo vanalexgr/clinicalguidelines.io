@@ -175,21 +175,26 @@ Future<void> _processPayload(Ref ref, SharedPayload payload) async {
       final svc = ref.read(fileAttachmentServiceProvider);
       if (svc != null) {
         // Add files to attachment list and kick off uploads, mirroring UI flow
-        final files = payload.filePaths.map((p) => File(p)).toList();
-        if (files.isNotEmpty) {
-          ref.read(attachedFilesProvider.notifier).addFiles(files);
+        final attachments = payload.filePaths
+            .map(
+              (p) =>
+                  LocalAttachment(file: File(p), displayName: path.basename(p)),
+            )
+            .toList();
+        if (attachments.isNotEmpty) {
+          ref.read(attachedFilesProvider.notifier).addFiles(attachments);
 
           // Enqueue uploads via task queue to unify progress + retry
           final activeConv = ref.read(activeConversationProvider);
-          for (final file in files) {
+          for (final attachment in attachments) {
             try {
               await ref
                   .read(taskQueueProvider.notifier)
                   .enqueueUploadMedia(
                     conversationId: activeConv?.id,
-                    filePath: file.path,
-                    fileName: path.basename(file.path),
-                    fileSize: await file.length(),
+                    filePath: attachment.file.path,
+                    fileName: attachment.displayName,
+                    fileSize: await attachment.file.length(),
                   );
             } catch (_) {}
           }

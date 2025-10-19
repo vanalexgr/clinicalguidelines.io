@@ -10,6 +10,62 @@ import '../../../core/services/api_service.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/debug_logger.dart';
 
+String _deriveDisplayName({
+  required String? preferredName,
+  required String filePath,
+  String fallbackPrefix = 'attachment',
+}) {
+  final String candidate =
+      (preferredName != null && preferredName.trim().isNotEmpty)
+      ? preferredName.trim()
+      : path.basename(filePath);
+
+  final String pathExt = path.extension(filePath);
+  final String candidateExt = path.extension(candidate);
+  final String extension = (candidateExt.isNotEmpty ? candidateExt : pathExt)
+      .toLowerCase();
+
+  if (candidate.toLowerCase().startsWith('image_picker')) {
+    return _timestampedName(prefix: fallbackPrefix, extension: extension);
+  }
+
+  if (candidate.isEmpty) {
+    return _timestampedName(prefix: fallbackPrefix, extension: extension);
+  }
+
+  return candidate;
+}
+
+String _timestampedName({required String prefix, required String extension}) {
+  final DateTime now = DateTime.now();
+  String two(int value) => value.toString().padLeft(2, '0');
+  final String ext = extension.isNotEmpty ? extension : '.jpg';
+  final String timestamp =
+      '${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}${two(now.second)}';
+  return '${prefix}_$timestamp$ext';
+}
+
+/// Represents a locally selected attachment with a user-facing display name.
+class LocalAttachment {
+  LocalAttachment({required this.file, required this.displayName});
+
+  final File file;
+  final String displayName;
+
+  int get sizeInBytes => file.lengthSync();
+
+  String get extension {
+    final fromName = path.extension(displayName);
+    if (fromName.isNotEmpty) {
+      return fromName.toLowerCase();
+    }
+    return path.extension(file.path).toLowerCase();
+  }
+
+  bool get isImage =>
+      <String>{'.jpg', '.jpeg', '.png', '.gif', '.webp'}.contains(extension);
+}
+
 class FileAttachmentService {
   final ApiService _apiService;
   final ImagePicker _imagePicker = ImagePicker();
@@ -17,7 +73,7 @@ class FileAttachmentService {
   FileAttachmentService(this._apiService);
 
   // Pick files from device
-  Future<List<File>> pickFiles({
+  Future<List<LocalAttachment>> pickFiles({
     bool allowMultiple = true,
     List<String>? allowedExtensions,
   }) async {
@@ -32,17 +88,51 @@ class FileAttachmentService {
         return [];
       }
 
-      return result.files
-          .where((file) => file.path != null)
-          .map((file) => File(file.path!))
-          .toList();
+      return result.files.where((file) => file.path != null).map((file) {
+        final displayName = _deriveDisplayName(
+          preferredName: file.name,
+          filePath: file.path!,
+          fallbackPrefix: 'attachment',
+        );
+        return LocalAttachment(
+          file: File(file.path!),
+          displayName: displayName,
+        );
+      }).toList();
     } catch (e) {
       throw Exception('Failed to pick files: $e');
     }
   }
 
   // Pick image from gallery
-  Future<File?> pickImage() async {
+  Future<LocalAttachment?> pickImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        type: FileType.image,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final platformFile = result.files.first;
+        if (platformFile.path != null) {
+          final displayName = _deriveDisplayName(
+            preferredName: platformFile.name,
+            filePath: platformFile.path!,
+            fallbackPrefix: 'photo',
+          );
+          return LocalAttachment(
+            file: File(platformFile.path!),
+            displayName: displayName,
+          );
+        }
+      }
+    } catch (e) {
+      DebugLogger.log(
+        'FilePicker image failed: $e',
+        scope: 'attachments/image',
+      );
+    }
+
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -50,14 +140,20 @@ class FileAttachmentService {
       );
 
       if (image == null) return null;
-      return File(image.path);
+      final file = File(image.path);
+      final displayName = _deriveDisplayName(
+        preferredName: image.name,
+        filePath: image.path,
+        fallbackPrefix: 'photo',
+      );
+      return LocalAttachment(file: file, displayName: displayName);
     } catch (e) {
       throw Exception('Failed to pick image: $e');
     }
   }
 
   // Take photo from camera
-  Future<File?> takePhoto() async {
+  Future<LocalAttachment?> takePhoto() async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
@@ -65,7 +161,13 @@ class FileAttachmentService {
       );
 
       if (photo == null) return null;
-      return File(photo.path);
+      final file = File(photo.path);
+      final displayName = _deriveDisplayName(
+        preferredName: photo.name,
+        filePath: photo.path,
+        fallbackPrefix: 'photo',
+      );
+      return LocalAttachment(file: file, displayName: displayName);
     } catch (e) {
       throw Exception('Failed to take photo: $e');
     }
@@ -199,15 +301,21 @@ class FileAttachmentService {
   }
 
   // Upload file with progress tracking
-  Stream<FileUploadState> uploadFile(File file) async* {
+  Stream<FileUploadState> uploadFile(LocalAttachment attachment) async* {
     DebugLogger.log(
       'upload-start',
       scope: 'attachments/file',
-      data: {'path': file.path},
+      data: {
+        'path': attachment.file.path,
+        'displayName': attachment.displayName,
+      },
     );
     try {
-      final fileName = path.basename(file.path);
+      final file = attachment.file;
+      final fileName = attachment.displayName;
       final fileSize = await file.length();
+      final ext = path.extension(fileName).toLowerCase();
+      final isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].contains(ext);
 
       DebugLogger.log(
         'file-details',
@@ -221,17 +329,8 @@ class FileAttachmentService {
         fileSize: fileSize,
         progress: 0.0,
         status: FileUploadStatus.uploading,
+        isImage: isImage,
       );
-
-      // Check if this is an image file
-      final ext = path.extension(fileName).toLowerCase();
-      final isImage = [
-        'jpg',
-        'jpeg',
-        'png',
-        'gif',
-        'webp',
-      ].contains(ext.substring(1));
 
       // Upload ALL files (including images) to server for consistency with web client
       DebugLogger.log('upload-progress', scope: 'attachments/file');
@@ -253,8 +352,11 @@ class FileAttachmentService {
       );
     } catch (e) {
       DebugLogger.error('upload-failed', scope: 'attachments/file', error: e);
-      final fileName = path.basename(file.path);
+      final file = attachment.file;
+      final fileName = attachment.displayName;
       final fileSize = await file.length();
+      final ext = path.extension(fileName).toLowerCase();
+      final isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].contains(ext);
 
       yield FileUploadState(
         file: file,
@@ -263,18 +365,21 @@ class FileAttachmentService {
         progress: 0.0,
         status: FileUploadStatus.failed,
         error: e.toString(),
+        isImage: isImage,
       );
     }
   }
 
   // Upload multiple files
-  Stream<List<FileUploadState>> uploadMultipleFiles(List<File> files) async* {
+  Stream<List<FileUploadState>> uploadMultipleFiles(
+    List<LocalAttachment> attachments,
+  ) async* {
     final states = <String, FileUploadState>{};
 
-    for (final file in files) {
-      final uploadStream = uploadFile(file);
+    for (final attachment in attachments) {
+      final uploadStream = uploadFile(attachment);
       await for (final state in uploadStream) {
-        states[file.path] = state;
+        states[attachment.file.path] = state;
         yield states.values.toList();
       }
     }
@@ -386,8 +491,7 @@ enum FileUploadStatus { pending, uploading, completed, failed }
 class MockFileAttachmentService {
   final ImagePicker _imagePicker = ImagePicker();
 
-  // Reuse the same methods from parent class
-  Future<List<File>> pickFiles({
+  Future<List<LocalAttachment>> pickFiles({
     bool allowMultiple = true,
     List<String>? allowedExtensions,
   }) async {
@@ -402,48 +506,73 @@ class MockFileAttachmentService {
         return [];
       }
 
-      return result.files
-          .where((file) => file.path != null)
-          .map((file) => File(file.path!))
-          .toList();
+      return result.files.where((file) => file.path != null).map((file) {
+        final displayName = _deriveDisplayName(
+          preferredName: file.name,
+          filePath: file.path!,
+          fallbackPrefix: 'attachment',
+        );
+        return LocalAttachment(
+          file: File(file.path!),
+          displayName: displayName,
+        );
+      }).toList();
     } catch (e) {
       throw Exception('Failed to pick files: $e');
     }
   }
 
-  Future<File?> pickImage() async {
+  Future<LocalAttachment?> pickImage() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
       );
-      return image != null ? File(image.path) : null;
+      if (image == null) return null;
+      final file = File(image.path);
+      final displayName = _deriveDisplayName(
+        preferredName: image.name,
+        filePath: image.path,
+        fallbackPrefix: 'photo',
+      );
+      return LocalAttachment(file: file, displayName: displayName);
     } catch (e) {
       throw Exception('Failed to pick image: $e');
     }
   }
 
-  Future<File?> takePhoto() async {
+  Future<LocalAttachment?> takePhoto() async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
       );
-      return photo != null ? File(photo.path) : null;
+      if (photo == null) return null;
+      final file = File(photo.path);
+      final displayName = _deriveDisplayName(
+        preferredName: photo.name,
+        filePath: photo.path,
+        fallbackPrefix: 'photo',
+      );
+      return LocalAttachment(file: file, displayName: displayName);
     } catch (e) {
       throw Exception('Failed to take photo: $e');
     }
   }
 
   // Mock upload file with progress tracking
-  Stream<FileUploadState> uploadFile(File file) async* {
+  Stream<FileUploadState> uploadFile(LocalAttachment attachment) async* {
     DebugLogger.log(
       'mock-upload',
       scope: 'attachments/mock',
-      data: {'path': file.path},
+      data: {
+        'path': attachment.file.path,
+        'displayName': attachment.displayName,
+      },
     );
 
-    final fileName = path.basename(file.path);
+    final file = attachment.file;
+    final fileName = attachment.displayName;
     final fileSize = await file.length();
 
     // Yield initial state
@@ -453,6 +582,7 @@ class MockFileAttachmentService {
       fileSize: fileSize,
       progress: 0.0,
       status: FileUploadStatus.uploading,
+      isImage: attachment.isImage,
     );
 
     // Simulate upload progress
@@ -464,6 +594,7 @@ class MockFileAttachmentService {
         fileSize: fileSize,
         progress: i / 10,
         status: FileUploadStatus.uploading,
+        isImage: attachment.isImage,
       );
     }
 
@@ -475,28 +606,26 @@ class MockFileAttachmentService {
       progress: 1.0,
       status: FileUploadStatus.completed,
       fileId: 'mock_file_${DateTime.now().millisecondsSinceEpoch}',
+      isImage: attachment.isImage,
     );
 
     DebugLogger.log('mock-complete', scope: 'attachments/mock');
   }
 
   Future<List<String>> uploadFiles(
-    List<File> files, {
+    List<LocalAttachment> attachments, {
     Function(int, int)? onProgress,
     required String conversationId,
   }) async {
-    // Simulate upload progress for reviewer mode
     final uploadIds = <String>[];
 
-    for (int i = 0; i < files.length; i++) {
+    for (int i = 0; i < attachments.length; i++) {
       if (onProgress != null) {
-        // Simulate progress
         for (int j = 0; j <= 100; j += 10) {
           await Future.delayed(const Duration(milliseconds: 50));
           onProgress(i, j);
         }
       }
-      // Generate mock upload ID
       uploadIds.add('mock_upload_${DateTime.now().millisecondsSinceEpoch}_$i');
     }
 
@@ -522,15 +651,16 @@ class AttachedFilesNotifier extends Notifier<List<FileUploadState>> {
   @override
   List<FileUploadState> build() => [];
 
-  void addFiles(List<File> files) {
-    final newStates = files
+  void addFiles(List<LocalAttachment> attachments) {
+    final newStates = attachments
         .map(
-          (file) => FileUploadState(
-            file: file,
-            fileName: path.basename(file.path),
-            fileSize: file.lengthSync(),
+          (attachment) => FileUploadState(
+            file: attachment.file,
+            fileName: attachment.displayName,
+            fileSize: attachment.sizeInBytes,
             progress: 0.0,
             status: FileUploadStatus.pending,
+            isImage: attachment.isImage,
           ),
         )
         .toList();

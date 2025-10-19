@@ -26,7 +26,6 @@ import '../widgets/file_attachment_widget.dart';
 import '../services/voice_input_service.dart';
 import '../services/file_attachment_service.dart';
 import 'voice_call_page.dart';
-import 'package:path/path.dart' as path;
 import '../../../shared/services/tasks/task_queue.dart';
 import '../../tools/providers/tools_providers.dart';
 import '../../../core/models/chat_message.dart';
@@ -390,19 +389,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     try {
-      final files = await fileService.pickFiles();
-      if (files.isEmpty) return;
+      final attachments = await fileService.pickFiles();
+      if (attachments.isEmpty) return;
 
       // Validate file count
       final currentFiles = ref.read(attachedFilesProvider);
-      if (!validateFileCount(currentFiles.length, files.length, 10)) {
+      if (!validateFileCount(currentFiles.length, attachments.length, 10)) {
         if (!mounted) return;
         return;
       }
 
       // Validate file sizes
-      for (final file in files) {
-        final fileSize = await file.length();
+      for (final attachment in attachments) {
+        final fileSize = await attachment.file.length();
         if (!validateFileSize(fileSize, 20)) {
           if (!mounted) return;
           return;
@@ -410,19 +409,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
 
       // Add files to the attachment list
-      ref.read(attachedFilesProvider.notifier).addFiles(files);
+      ref.read(attachedFilesProvider.notifier).addFiles(attachments);
 
       // Enqueue uploads via task queue for unified retry/progress
       final activeConv = ref.read(activeConversationProvider);
-      for (final file in files) {
+      for (final attachment in attachments) {
         try {
           await ref
               .read(taskQueueProvider.notifier)
               .enqueueUploadMedia(
                 conversationId: activeConv?.id,
-                filePath: file.path,
-                fileName: path.basename(file.path),
-                fileSize: await file.length(),
+                filePath: attachment.file.path,
+                fileName: attachment.displayName,
+                fileSize: await attachment.file.length(),
               );
         } catch (e) {
           if (!mounted) return;
@@ -459,16 +458,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     try {
       DebugLogger.log('Picking image...', scope: 'chat/page');
-      final image = fromCamera
+      final attachment = fromCamera
           ? await fileService.takePhoto()
           : await fileService.pickImage();
-      if (image == null) {
+      if (attachment == null) {
         DebugLogger.log('No image selected', scope: 'chat/page');
         return;
       }
 
-      DebugLogger.log('Image selected: ${image.path}', scope: 'chat/page');
-      final imageSize = await image.length();
+      DebugLogger.log(
+        'Image selected: ${attachment.file.path}',
+        scope: 'chat/page',
+      );
+      DebugLogger.log(
+        'Image display name: ${attachment.displayName}',
+        scope: 'chat/page',
+      );
+      final imageSize = await attachment.file.length();
       DebugLogger.log('Image size: $imageSize bytes', scope: 'chat/page');
 
       // Validate file size (default 20MB limit like OpenWebUI)
@@ -485,7 +491,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
 
       // Add image to the attachment list
-      ref.read(attachedFilesProvider.notifier).addFiles([image]);
+      ref.read(attachedFilesProvider.notifier).addFiles([attachment]);
       DebugLogger.log('Image added to attachment list', scope: 'chat/page');
 
       // Enqueue upload via task queue for unified retry/progress
@@ -496,8 +502,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             .read(taskQueueProvider.notifier)
             .enqueueUploadMedia(
               conversationId: activeConv?.id,
-              filePath: image.path,
-              fileName: path.basename(image.path),
+              filePath: attachment.file.path,
+              fileName: attachment.displayName,
               fileSize: imageSize,
             );
       } catch (e) {
