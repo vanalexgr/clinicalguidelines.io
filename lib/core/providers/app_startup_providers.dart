@@ -14,6 +14,7 @@ import '../services/background_streaming_handler.dart';
 import '../services/persistent_streaming_service.dart';
 import '../services/socket_service.dart';
 import '../../features/onboarding/views/onboarding_sheet.dart';
+import '../../features/chat/providers/chat_providers.dart';
 import '../../shared/theme/theme_extensions.dart';
 import '../services/connectivity_service.dart';
 import '../utils/debug_logger.dart';
@@ -534,8 +535,16 @@ Future<void> _maybeShowOnboarding(Ref ref) async {
       final navContext = NavigationService.navigatorKey.currentContext;
       if (navContext == null) return;
 
+      try {
+        ref.read(composerAutofocusEnabledProvider.notifier).set(false);
+      } catch (_) {}
+      try {
+        FocusManager.instance.primaryFocus?.unfocus();
+        SystemChannels.textInput.invokeMethod('TextInput.hide');
+      } catch (_) {}
+
       // Show onboarding sheet
-      showModalBottomSheet(
+      final sheetFuture = showModalBottomSheet(
         context: navContext,
         backgroundColor: Colors.transparent,
         isScrollControlled: true,
@@ -550,6 +559,11 @@ Future<void> _maybeShowOnboarding(Ref ref) async {
           child: const OnboardingSheet(),
         ),
       );
+      sheetFuture.whenComplete(() {
+        try {
+          ref.read(composerAutofocusEnabledProvider.notifier).set(true);
+        } catch (_) {}
+      });
 
       await storage.setOnboardingSeen(true);
     });

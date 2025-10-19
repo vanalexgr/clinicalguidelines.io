@@ -62,7 +62,7 @@ class ConduitThemeExtension extends ThemeExtension<ConduitThemeExtension> {
   Color get inputBorderFocused => surfaces.ring;
   Color get inputText => tokens.neutralOnSurface;
   Color get inputPlaceholder =>
-      isDark ? tokens.neutralTone80 : tokens.neutralTone60;
+      isDark ? tokens.neutralTone60 : tokens.neutralTone60;
   Color get inputError => tokens.statusError60;
 
   Color get cardBackground => surfaces.card;

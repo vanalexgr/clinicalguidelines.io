@@ -190,6 +190,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _showOnboarding() {
+    try {
+      ref.read(composerAutofocusEnabledProvider.notifier).set(false);
+    } catch (_) {}
+    try {
+      FocusManager.instance.primaryFocus?.unfocus();
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    } catch (_) {}
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -204,7 +212,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ),
         child: const OnboardingSheet(),
       ),
-    );
+    ).whenComplete(() {
+      if (!mounted) return;
+      try {
+        ref.read(composerAutofocusEnabledProvider.notifier).set(true);
+      } catch (_) {}
+    });
   }
 
   Future<void> _checkAndLoadDemoConversation() async {
