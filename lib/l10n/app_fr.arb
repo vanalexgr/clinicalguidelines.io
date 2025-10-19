@@ -312,7 +312,7 @@
   ,
   "appCustomization": "Personnalisation",
   "appCustomizationSubtitle": "Thème, langue, voix et quickpills",
-  "quickActionsDescription": "Choisissez jusqu'à deux raccourcis à épingler près du champ de saisie",
+  "quickActionsDescription": "Raccourcis dans le chat",
   "chatSettings": "Discussion",
   "sendOnEnter": "Envoyer avec Entrée",
   "sendOnEnterDescription": "Entrée envoie (clavier logiciel). Cmd/Ctrl+Entrée aussi disponible",

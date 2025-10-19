@@ -878,8 +878,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get appCustomizationSubtitle => 'Tema, lingua, voce e quickpills';
 
   @override
-  String get quickActionsDescription =>
-      'Scegli fino a due scorciatoie da fissare vicino al campo di input';
+  String get quickActionsDescription => 'Scorciatoie nella chat';
 
   @override
   String get chatSettings => 'Chat';

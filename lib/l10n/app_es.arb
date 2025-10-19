@@ -305,7 +305,7 @@
   },
   "appCustomization": "Personalización",
   "appCustomizationSubtitle": "Tema, idioma, voz y quickpills",
-  "quickActionsDescription": "Elige hasta dos accesos directos para anclar cerca del compositor",
+  "quickActionsDescription": "Accesos directos en chat",
   "chatSettings": "Conversación",
   "sendOnEnter": "Enviar con Enter",
   "sendOnEnterDescription": "Enter envía (teclado virtual). Cmd/Ctrl+Enter también disponible",

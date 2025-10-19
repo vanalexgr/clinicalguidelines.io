@@ -59,16 +59,15 @@ class AppCustomizationPage extends ConsumerWidget {
               themeMode,
               themeDescription,
               activeTheme,
+              settings,
             ),
-            const SizedBox(height: Spacing.xl),
+            const SizedBox(height: Spacing.md),
             _buildLanguageSection(
               context,
               ref,
               currentLanguageCode,
               languageLabel,
             ),
-            const SizedBox(height: Spacing.xl),
-            _buildQuickPillsSection(context, ref, settings),
             const SizedBox(height: Spacing.xl),
             _buildTtsDropdownSection(context, ref, settings),
             const SizedBox(height: Spacing.xl),
@@ -118,6 +117,7 @@ class AppCustomizationPage extends ConsumerWidget {
     ThemeMode themeMode,
     String themeDescription,
     TweakcnThemeDefinition activeTheme,
+    AppSettings settings,
   ) {
     final theme = context.conduitTheme;
 
@@ -185,6 +185,8 @@ class AppCustomizationPage extends ConsumerWidget {
         ),
         const SizedBox(height: Spacing.md),
         _buildPaletteSelector(context, ref, activeTheme),
+        const SizedBox(height: Spacing.md),
+        _buildQuickPillsSection(context, ref, settings),
       ],
     );
   }
@@ -281,7 +283,6 @@ class AppCustomizationPage extends ConsumerWidget {
     WidgetRef ref,
     AppSettings settings,
   ) {
-    final theme = context.conduitTheme;
     final selectedRaw = ref.watch(
       appSettingsProvider.select((s) => s.quickPills),
     );
@@ -333,66 +334,54 @@ class AppCustomizationPage extends ConsumerWidget {
         ? 'No actions'
         : '$selectedCount action${selectedCount == 1 ? '' : 's'} selected';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.onboardQuickTitle,
-          style:
-              theme.headingSmall?.copyWith(color: theme.sidebarForeground) ??
-              TextStyle(color: theme.sidebarForeground, fontSize: 18),
-        ),
-        const SizedBox(height: Spacing.sm),
-        _ExpandableCard(
-          title: l10n.quickActionsDescription,
-          subtitle: selectedCountText,
-          icon: UiUtils.platformIcon(
-            ios: CupertinoIcons.bolt,
-            android: Icons.flash_on,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (selected.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Spacing.md),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => ref
-                          .read(appSettingsProvider.notifier)
-                          .setQuickPills(const []),
-                      child: Text(l10n.clear),
-                    ),
-                  ),
+    return _ExpandableCard(
+      title: l10n.quickActionsDescription,
+      subtitle: selectedCountText,
+      icon: UiUtils.platformIcon(
+        ios: CupertinoIcons.bolt,
+        android: Icons.flash_on,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (selected.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Spacing.md),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => ref
+                      .read(appSettingsProvider.notifier)
+                      .setQuickPills(const []),
+                  child: Text(l10n.clear),
                 ),
-              Wrap(
-                spacing: Spacing.sm,
-                runSpacing: Spacing.sm,
-                children: [
-                  ConduitChip(
-                    label: l10n.web,
-                    icon: Platform.isIOS ? CupertinoIcons.search : Icons.search,
-                    isSelected: selected.contains('web'),
-                    onTap: (selectedCount < 2 || selected.contains('web'))
-                        ? () => toggle('web')
-                        : null,
-                  ),
-                  ConduitChip(
-                    label: l10n.imageGen,
-                    icon: Platform.isIOS ? CupertinoIcons.photo : Icons.image,
-                    isSelected: selected.contains('image'),
-                    onTap: (selectedCount < 2 || selected.contains('image'))
-                        ? () => toggle('image')
-                        : null,
-                  ),
-                  ...buildToolChips(),
-                ],
               ),
+            ),
+          Wrap(
+            spacing: Spacing.sm,
+            runSpacing: Spacing.sm,
+            children: [
+              ConduitChip(
+                label: l10n.web,
+                icon: Platform.isIOS ? CupertinoIcons.search : Icons.search,
+                isSelected: selected.contains('web'),
+                onTap: (selectedCount < 2 || selected.contains('web'))
+                    ? () => toggle('web')
+                    : null,
+              ),
+              ConduitChip(
+                label: l10n.imageGen,
+                icon: Platform.isIOS ? CupertinoIcons.photo : Icons.image,
+                isSelected: selected.contains('image'),
+                onTap: (selectedCount < 2 || selected.contains('image'))
+                    ? () => toggle('image')
+                    : null,
+              ),
+              ...buildToolChips(),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

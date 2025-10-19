@@ -640,7 +640,7 @@
   "@appCustomization": {"description": "Title of the customization settings page."},
   "appCustomizationSubtitle": "Theme, language, voice, and quickpills",
   "@appCustomizationSubtitle": {"description": "Subtitle shown under App Customization tile and page header."},
-  "quickActionsDescription": "Pick up to two shortcuts to pin near the composer",
+  "quickActionsDescription": "Quickpills in chat",
   "@quickActionsDescription": {"description": "Helper text explaining quick action pill selection in customization."},
   "chatSettings": "Chat",
   "@chatSettings": {"description": "Section header for chat-related customization options."},

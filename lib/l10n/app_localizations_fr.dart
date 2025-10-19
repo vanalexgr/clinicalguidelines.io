@@ -889,8 +889,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get appCustomizationSubtitle => 'Thème, langue, voix et quickpills';
 
   @override
-  String get quickActionsDescription =>
-      'Choisissez jusqu\'à deux raccourcis à épingler près du champ de saisie';
+  String get quickActionsDescription => 'Raccourcis dans le chat';
 
   @override
   String get chatSettings => 'Discussion';

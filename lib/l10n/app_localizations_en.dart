@@ -875,8 +875,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Theme, language, voice, and quickpills';
 
   @override
-  String get quickActionsDescription =>
-      'Pick up to two shortcuts to pin near the composer';
+  String get quickActionsDescription => 'Quickpills in chat';
 
   @override
   String get chatSettings => 'Chat';

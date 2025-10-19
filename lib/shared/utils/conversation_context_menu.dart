@@ -63,9 +63,7 @@ Future<void> showConduitContextMenu({
                 title: Text(
                   action.label,
                   style: AppTypography.standard.copyWith(
-                    color: action.destructive
-                        ? Colors.red
-                        : theme.textPrimary,
+                    color: action.destructive ? Colors.red : theme.textPrimary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

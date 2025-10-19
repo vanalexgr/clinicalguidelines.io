@@ -305,7 +305,7 @@
   },
   "appCustomization": "自定义",
   "appCustomizationSubtitle": "主题、语言、语音和 quickpills",
-  "quickActionsDescription": "选择最多两个快捷方式以固定在撰写器附近",
+  "quickActionsDescription": "聊天快捷方式",
   "chatSettings": "对话",
   "sendOnEnter": "回车发送",
   "sendOnEnterDescription": "回车发送（软键盘）。Cmd/Ctrl+Enter 也可用",

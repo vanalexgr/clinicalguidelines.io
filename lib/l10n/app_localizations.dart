@@ -1697,7 +1697,7 @@ abstract class AppLocalizations {
   /// Helper text explaining quick action pill selection in customization.
   ///
   /// In en, this message translates to:
-  /// **'Pick up to two shortcuts to pin near the composer'**
+  /// **'Quickpills in chat'**
   String get quickActionsDescription;
 
   /// Section header for chat-related customization options.

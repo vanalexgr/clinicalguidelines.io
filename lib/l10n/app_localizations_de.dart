@@ -882,8 +882,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Design, Sprache, Stimme und Quick Pills';
 
   @override
-  String get quickActionsDescription =>
-      'Wähle bis zu zwei Schnellzugriffe, die neben dem Eingabefeld angepinnt werden';
+  String get quickActionsDescription => 'Schnellzugriffe im Chat';
 
   @override
   String get chatSettings => 'Chat';

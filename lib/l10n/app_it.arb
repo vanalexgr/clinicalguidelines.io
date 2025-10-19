@@ -312,7 +312,7 @@
   ,
   "appCustomization": "Personalizzazione",
   "appCustomizationSubtitle": "Tema, lingua, voce e quickpills",
-  "quickActionsDescription": "Scegli fino a due scorciatoie da fissare vicino al campo di input",
+  "quickActionsDescription": "Scorciatoie nella chat",
   "chatSettings": "Chat",
   "sendOnEnter": "Invia con Invio",
   "sendOnEnterDescription": "Invio invia (tastiera software). Cmd/Ctrl+Invio disponibile",

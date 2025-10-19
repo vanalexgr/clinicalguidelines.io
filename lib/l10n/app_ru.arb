@@ -305,7 +305,7 @@
   },
   "appCustomization": "Настройка",
   "appCustomizationSubtitle": "Тема, язык, голос и quickpills",
-  "quickActionsDescription": "Выберите до двух ярлыков для закрепления рядом с полем ввода",
+  "quickActionsDescription": "Быстрые клавиши в чате",
   "chatSettings": "Чат",
   "sendOnEnter": "Отправка по Enter",
   "sendOnEnterDescription": "Enter отправляет (программная клавиатура). Также доступно Cmd/Ctrl+Enter",

@@ -305,7 +305,7 @@
   },
   "appCustomization": "Aanpassing",
   "appCustomizationSubtitle": "Thema, taal, stem en quickpills",
-  "quickActionsDescription": "Kies maximaal twee snelkoppelingen om vast te pinnen bij de composer",
+  "quickActionsDescription": "Snelkoppelingen in chat",
   "chatSettings": "Chat",
   "sendOnEnter": "Verzenden met Enter",
   "sendOnEnterDescription": "Enter verzendt (softtoetsenbord). Cmd/Ctrl+Enter ook beschikbaar",

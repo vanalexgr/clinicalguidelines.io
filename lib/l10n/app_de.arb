@@ -312,7 +312,7 @@
   ,
   "appCustomization": "Anpassung",
   "appCustomizationSubtitle": "Design, Sprache, Stimme und Quick Pills",
-  "quickActionsDescription": "Wähle bis zu zwei Schnellzugriffe, die neben dem Eingabefeld angepinnt werden",
+  "quickActionsDescription": "Schnellzugriffe im Chat",
   "chatSettings": "Chat",
   "sendOnEnter": "Mit Enter senden",
   "sendOnEnterDescription": "Enter sendet (Soft-Tastatur). Cmd/Ctrl+Enter ebenfalls verfügbar",
