@@ -385,7 +385,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                           style: TextStyle(
                             fontSize: AppTypography.bodySmall,
                             color: theme.textSecondary,
-                            fontFamily: 'monospace',
+                            fontFamily: AppTypography.monospaceFontFamily,
                             height: 1.35,
                           ),
                         ),
@@ -407,7 +407,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                           style: TextStyle(
                             fontSize: AppTypography.bodySmall,
                             color: theme.textSecondary,
-                            fontFamily: 'monospace',
+                            fontFamily: AppTypography.monospaceFontFamily,
                             height: 1.35,
                           ),
                         ),
@@ -1207,7 +1207,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                     style: TextStyle(
                       fontSize: AppTypography.bodySmall,
                       color: theme.textSecondary,
-                      fontFamily: 'monospace',
+                      fontFamily: AppTypography.monospaceFontFamily,
                       height: 1.4,
                     ),
                   ),
@@ -1994,7 +1994,7 @@ class CodeExecutionListView extends StatelessWidget {
                       child: SelectableText(
                         execution.code!,
                         style: const TextStyle(
-                          fontFamily: 'monospace',
+                          fontFamily: AppTypography.monospaceFontFamily,
                           height: 1.4,
                         ),
                       ),
