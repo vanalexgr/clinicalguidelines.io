@@ -7,10 +7,10 @@
 
 
 <a href="https://play.google.com/store/apps/details?id=app.cogwheel.conduit">
-<img src="store-badges/google.webp" alt="Get it on Google Play" style="height:56px;"/>
+<img src="docs/store-badges/google.webp" alt="Get it on Google Play" style="height:56px;"/>
 </a>
 <a href="https://apps.apple.com/us/app/conduit-open-webui-client/id6749840287">
-<img src="store-badges/apple.webp" alt="Download on the App Store" style="height:56px;"/>
+<img src="docs/store-badges/apple.webp" alt="Download on the App Store" style="height:56px;"/>
 </a>
 
 </div>
@@ -18,7 +18,7 @@
 <br>
 
 <div align="center">
-<img src="docs/conduit-demo.gif" alt="Conduit Demo" style="height:600px;"/>
+<img src="docs/screenshots/conduit-demo.gif" alt="Conduit Demo" style="height:600px;"/>
 </div>
 
 <br>
@@ -49,7 +49,7 @@ Conduit is an open-source, cross-platform mobile application for Open-WebUI, pro
 ```bash
 git clone https://github.com/cogwheel0/conduit && cd conduit
 flutter pub get
-flutter pub run build_runner build --delete-conflicting-outputs
+dart run build_runner build --delete-conflicting-outputs
 flutter run -d ios   # or: -d android
 ```
 
@@ -80,7 +80,7 @@ Conduit supports multiple authentication flows when connecting to your Open‑We
 
 | | | | |
 | --- | --- | --- | --- |
-| <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/2_en-US.png" alt="Screenshot 2" width="200" /> | <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/3_en-US.png" alt="Screenshot 3" width="200" /> | <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/4_en-US.png" alt="Screenshot 4" width="200" /> | <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/5_en-US.png" alt="Screenshot 5" width="200" /> |
+| <img src="docs/screenshots/1.png" alt="Chat" width="200" /> | <img src="docs/screenshots/2.png" alt="Model Selector" width="200" /> | <img src="docs/screenshots/3.png" alt="Chat Drawer" width="200" /> | <img src="docs/screenshots/4.png" alt="Settings" width="200" /> |
 
 ## Requirements
 
@@ -104,7 +104,7 @@ flutter pub get
 
 3. Generate code:
 ```bash
-flutter pub run build_runner build --delete-conflicting-outputs
+dart run build_runner build --delete-conflicting-outputs
 ```
 
 4. Run the app:
