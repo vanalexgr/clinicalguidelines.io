@@ -19,6 +19,11 @@ class TextToSpeechService {
   bool _initialized = false;
   bool _available = false;
   bool _voiceConfigured = false;
+  int _session = 0; // increments to cancel in-flight work
+  final List<Uint8List> _buffered = <Uint8List>[]; // server chunks
+  int _expectedChunks = 0;
+  int _currentIndex = -1;
+  bool _waitingNext = false;
 
   VoidCallback? _onStart;
   VoidCallback? _onComplete;
@@ -32,7 +37,7 @@ class TextToSpeechService {
 
   TextToSpeechService({ApiService? api}) : _api = api {
     // Wire minimal player events to callbacks
-    _player.onPlayerComplete.listen((_) => _handleComplete());
+    _player.onPlayerComplete.listen((_) => _onAudioComplete());
     _player.onPlayerStateChanged.listen((s) {
       if (s == PlayerState.playing) _handleStart();
     });
@@ -120,26 +125,11 @@ class TextToSpeechService {
     }
 
     if (_engine == TtsEngine.server && _api != null) {
-      // Server-backed TTS path
+      // Server-backed TTS with sentence chunking & queued playback
       try {
-        final effectiveVoice =
-            (_preferredVoice == null || _preferredVoice!.trim().isEmpty)
-            ? 'alloy'
-            : _preferredVoice!;
-
-        final bytes = await _api.generateSpeech(
-          text: text,
-          voice: effectiveVoice,
-        );
-        if (bytes.isEmpty) {
-          throw Exception('Empty audio response');
-        }
-        await _player.stop();
-        final data = Uint8List.fromList(bytes);
-        await _player.play(BytesSource(data));
+        await _startServerChunkedPlayback(text);
       } catch (e) {
         _onError?.call(e.toString());
-        // Fallback to device TTS on failure
         await _speakOnDevice(text);
       }
       return;
@@ -182,6 +172,12 @@ class TextToSpeechService {
     }
 
     try {
+      // Cancel any in-flight server work
+      _session++;
+      _buffered.clear();
+      _expectedChunks = 0;
+      _currentIndex = -1;
+      _waitingNext = false;
       if (_engine == TtsEngine.server) {
         await _player.stop();
       } else {
@@ -339,6 +335,149 @@ class TextToSpeechService {
       _onError?.call(e.toString());
       return [];
     }
+  }
+
+  // ===== Server chunked playback =====
+
+  Future<void> _startServerChunkedPlayback(String text) async {
+    final effectiveVoice =
+        (_preferredVoice == null || _preferredVoice!.trim().isEmpty)
+        ? 'alloy'
+        : _preferredVoice!;
+
+    // Reset queue and create a new session
+    _session++;
+    final session = _session;
+    _buffered.clear();
+    _expectedChunks = 0;
+    _currentIndex = -1;
+    _waitingNext = false;
+
+    final chunks = _splitForTts(text);
+    if (chunks.isEmpty) return;
+    _expectedChunks = chunks.length;
+
+    // Fetch first chunk to start playback quickly
+    final firstBytes = await _fetchServerAudio(
+      chunks.first,
+      effectiveVoice,
+      session,
+    );
+    if (session != _session) return; // canceled
+    if (firstBytes.isEmpty) throw Exception('Empty audio response');
+
+    await _player.stop();
+    _buffered.add(Uint8List.fromList(firstBytes));
+    _currentIndex = 0;
+    await _player.play(BytesSource(_buffered.first));
+
+    // Prefetch the rest in background
+    unawaited(
+      _prefetchRemainingChunks(
+        chunks.skip(1).toList(),
+        effectiveVoice,
+        session,
+      ),
+    );
+  }
+
+  Future<void> _prefetchRemainingChunks(
+    List<String> remaining,
+    String voice,
+    int session,
+  ) async {
+    for (final chunk in remaining) {
+      if (session != _session) return; // canceled
+      try {
+        final audio = await _fetchServerAudio(chunk, voice, session);
+        if (session != _session) return;
+        if (audio.isNotEmpty) {
+          _buffered.add(Uint8List.fromList(audio));
+          // If the player finished the previous chunk and is waiting, start now
+          if (_waitingNext && (_currentIndex + 1) < _buffered.length) {
+            _waitingNext = false;
+            await _playNextIfBuffered(session);
+          }
+        }
+      } catch (e) {
+        _onError?.call(e.toString());
+        // continue with other chunks
+      }
+    }
+  }
+
+  Future<List<int>> _fetchServerAudio(
+    String text,
+    String voice,
+    int session,
+  ) async {
+    return await _api!.generateSpeech(text: text, voice: voice);
+  }
+
+  Future<void> _onAudioComplete() async {
+    final session = _session;
+    // If there are more expected chunks
+    if ((_currentIndex + 1) < _expectedChunks) {
+      // If next chunk is already buffered, play it
+      if ((_currentIndex + 1) < _buffered.length) {
+        await _playNextIfBuffered(session);
+      } else {
+        // Wait for prefetch to provide it
+        _waitingNext = true;
+      }
+      return;
+    }
+    // No more chunks – this is the real completion
+    _handleComplete();
+  }
+
+  Future<void> _playNextIfBuffered(int session) async {
+    if (session != _session) return;
+    final nextIndex = _currentIndex + 1;
+    if (nextIndex < 0 || nextIndex >= _buffered.length) return;
+    _currentIndex = nextIndex;
+    final bytes = _buffered[nextIndex];
+    await _player.play(BytesSource(bytes));
+  }
+
+  List<String> _splitForTts(String text) {
+    // Normalize whitespace
+    final normalized = text.replaceAll(RegExp(r"\s+"), ' ').trim();
+    if (normalized.isEmpty) return const [];
+
+    // Split on sentence-ending punctuation while keeping the delimiter
+    final parts = <String>[];
+    final sentenceRegex = RegExp(r"(.+?[\.!?]+)(\s+|\$)");
+    int index = 0;
+    for (final match in sentenceRegex.allMatches('$normalized ')) {
+      final s = match.group(1) ?? '';
+      if (s.trim().isNotEmpty) parts.add(s.trim());
+      index = match.end;
+    }
+    if (index < normalized.length) {
+      final tail = normalized.substring(index).trim();
+      if (tail.isNotEmpty) parts.add(tail);
+    }
+
+    // Fallback to length-based splits for very long segments
+    const maxLen = 300;
+    final chunks = <String>[];
+    for (final p in parts.isEmpty ? [normalized] : parts) {
+      if (p.length <= maxLen) {
+        chunks.add(p);
+      } else {
+        // Try splitting on commas/spaces
+        var remaining = p;
+        while (remaining.length > maxLen) {
+          int cut = remaining.lastIndexOf(RegExp(r",\s|\s"), maxLen);
+          cut = cut <= 0 ? maxLen : cut;
+          chunks.add(remaining.substring(0, cut).trim());
+          remaining = remaining.substring(cut).trim();
+        }
+        if (remaining.isNotEmpty) chunks.add(remaining);
+      }
+    }
+    return chunks;
   }
 
   Future<void> _configurePreferredVoice() async {
