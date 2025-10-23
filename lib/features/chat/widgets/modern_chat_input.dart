@@ -210,7 +210,14 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     PlatformUtils.lightHaptic();
     widget.onSendMessage(text);
     _controller.clear();
-    // Keep focus and keyboard open; do not collapse automatically
+
+    // Dismiss keyboard after sending to recover screen space
+    _focusNode.unfocus();
+    try {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    } catch (_) {
+      // Silently handle if keyboard dismissal fails
+    }
   }
 
   void _insertNewline() {
