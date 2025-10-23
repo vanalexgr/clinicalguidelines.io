@@ -210,7 +210,14 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     PlatformUtils.lightHaptic();
     widget.onSendMessage(text);
     _controller.clear();
-    // Keep focus and keyboard open; do not collapse automatically
+
+    // Dismiss keyboard after sending to recover screen space
+    _focusNode.unfocus();
+    try {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    } catch (_) {
+      // Silently handle if keyboard dismissal fails
+    }
   }
 
   void _insertNewline() {
@@ -786,7 +793,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             Spacing.sm,
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               _buildOverflowButton(
                 tooltip: AppLocalizations.of(context)!.more,
@@ -796,42 +803,47 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
               ),
               const SizedBox(width: Spacing.sm),
               Expanded(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
-                  constraints: const BoxConstraints(
-                    minHeight: TouchTarget.input,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.25,
                   ),
-                  decoration: BoxDecoration(
-                    color: composerSurface.withValues(
-                      alpha: brightness == Brightness.dark ? 0.9 : 0.2,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+                    constraints: const BoxConstraints(
+                      minHeight: TouchTarget.input,
                     ),
-                    borderRadius: BorderRadius.circular(AppBorderRadius.round),
-                    border: Border.all(
-                      color: outlineColor.withValues(
-                        alpha: brightness == Brightness.dark ? 0.32 : 0.2,
+                    decoration: BoxDecoration(
+                      color: composerSurface.withValues(
+                        alpha: brightness == Brightness.dark ? 0.9 : 0.2,
                       ),
-                      width: BorderWidth.micro,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildComposerTextField(
-                          brightness: brightness,
-                          sendOnEnter: sendOnEnter,
-                          placeholderBase: placeholderBase,
-                          placeholderFocused: placeholderFocused,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: Spacing.xs,
-                          ),
-                          isActive: isActive,
+                      borderRadius: BorderRadius.circular(_composerRadius),
+                      border: Border.all(
+                        color: outlineColor.withValues(
+                          alpha: brightness == Brightness.dark ? 0.32 : 0.2,
                         ),
+                        width: BorderWidth.micro,
                       ),
-                      if (!_hasText && voiceAvailable && !isGenerating)
-                        _buildInlineMicIcon(voiceAvailable),
-                    ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildComposerTextField(
+                            brightness: brightness,
+                            sendOnEnter: sendOnEnter,
+                            placeholderBase: placeholderBase,
+                            placeholderFocused: placeholderFocused,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: Spacing.xs,
+                            ),
+                            isActive: isActive,
+                          ),
+                        ),
+                        if (!_hasText && voiceAvailable && !isGenerating)
+                          _buildInlineMicIcon(voiceAvailable),
+                      ],
+                    ),
                   ),
                 ),
               ),

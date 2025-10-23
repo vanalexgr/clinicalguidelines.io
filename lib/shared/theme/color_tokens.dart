@@ -39,6 +39,8 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
     required this.overlayWeak,
     required this.overlayMedium,
     required this.overlayStrong,
+    required this.scrimMedium,
+    required this.scrimStrong,
     required this.codeBackground,
     required this.codeBorder,
     required this.codeText,
@@ -83,6 +85,10 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
   final Color overlayWeak;
   final Color overlayMedium;
   final Color overlayStrong;
+
+  // Scrim tokens (for drawer/modal overlays)
+  final Color scrimMedium;
+  final Color scrimStrong;
 
   // Markdown/code tokens
   final Color codeBackground;
@@ -194,6 +200,14 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
       alpha: isLight ? 0.32 : 0.36,
     );
 
+    // Scrim tokens use black to create darkening effect in both modes
+    final Color scrimMedium = Colors.black.withValues(
+      alpha: isLight ? 0.2 : 0.5,
+    );
+    final Color scrimStrong = Colors.black.withValues(
+      alpha: isLight ? 0.32 : 0.6,
+    );
+
     final Color codeBackground = mix(variant.muted, neutralTone00, 0.5);
     final Color codeBorder = mix(variant.border, neutralTone40, 0.6);
     final Color codeText = _ensureContrast(
@@ -232,6 +246,8 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
       overlayWeak: overlayWeak,
       overlayMedium: overlayMedium,
       overlayStrong: overlayStrong,
+      scrimMedium: scrimMedium,
+      scrimStrong: scrimStrong,
       codeBackground: codeBackground,
       codeBorder: codeBorder,
       codeText: codeText,
@@ -269,6 +285,8 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
     Color? overlayWeak,
     Color? overlayMedium,
     Color? overlayStrong,
+    Color? scrimMedium,
+    Color? scrimStrong,
     Color? codeBackground,
     Color? codeBorder,
     Color? codeText,
@@ -303,6 +321,8 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
       overlayWeak: overlayWeak ?? this.overlayWeak,
       overlayMedium: overlayMedium ?? this.overlayMedium,
       overlayStrong: overlayStrong ?? this.overlayStrong,
+      scrimMedium: scrimMedium ?? this.scrimMedium,
+      scrimStrong: scrimStrong ?? this.scrimStrong,
       codeBackground: codeBackground ?? this.codeBackground,
       codeBorder: codeBorder ?? this.codeBorder,
       codeText: codeText ?? this.codeText,
@@ -364,6 +384,8 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
       overlayWeak: Color.lerp(overlayWeak, other.overlayWeak, t)!,
       overlayMedium: Color.lerp(overlayMedium, other.overlayMedium, t)!,
       overlayStrong: Color.lerp(overlayStrong, other.overlayStrong, t)!,
+      scrimMedium: Color.lerp(scrimMedium, other.scrimMedium, t)!,
+      scrimStrong: Color.lerp(scrimStrong, other.scrimStrong, t)!,
       codeBackground: Color.lerp(codeBackground, other.codeBackground, t)!,
       codeBorder: Color.lerp(codeBorder, other.codeBorder, t)!,
       codeText: Color.lerp(codeText, other.codeText, t)!,

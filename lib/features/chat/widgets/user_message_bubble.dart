@@ -7,10 +7,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io' show Platform;
 import 'package:conduit/l10n/app_localizations.dart';
-import 'package:conduit/shared/widgets/chat_action_button.dart';
+import 'package:flutter/services.dart';
 import '../../../core/providers/app_providers.dart';
 import '../providers/chat_providers.dart';
 import '../../../shared/services/tasks/task_queue.dart';
+import '../../../shared/utils/conversation_context_menu.dart';
 import '../../tools/providers/tools_providers.dart';
 
 class UserMessageBubble extends ConsumerStatefulWidget {
@@ -41,28 +42,15 @@ class UserMessageBubble extends ConsumerStatefulWidget {
   ConsumerState<UserMessageBubble> createState() => _UserMessageBubbleState();
 }
 
-class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
-    with TickerProviderStateMixin {
-  bool _showActions = false;
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
-  // press state handled by shared ChatActionButton
-
+class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
   bool _isEditing = false;
   late final TextEditingController _editController;
   final FocusNode _editFocusNode = FocusNode();
+  final GlobalKey _bubbleKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      duration: AnimationDuration.microInteraction,
-      vsync: this,
-    );
-    _slideController = AnimationController(
-      duration: AnimationDuration.messageSlide,
-      vsync: this,
-    );
     _editController = TextEditingController(
       text: widget.message?.content ?? '',
     );
@@ -417,25 +405,56 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
 
   @override
   void dispose() {
-    _fadeController.dispose();
-    _slideController.dispose();
     _editController.dispose();
     _editFocusNode.dispose();
     super.dispose();
   }
 
-  void _toggleActions() {
-    setState(() {
-      _showActions = !_showActions;
-    });
+  Future<void> _showMessageMenu(BuildContext context) async {
+    // Don't show menu while editing - use the visible Save/Cancel buttons instead
+    if (_isEditing) return;
 
-    if (_showActions) {
-      _fadeController.forward();
-      _slideController.forward();
-    } else {
-      _fadeController.reverse();
-      _slideController.reverse();
+    final l10n = AppLocalizations.of(context)!;
+    HapticFeedback.selectionClick();
+
+    // Get the position of the bubble to show menu below it
+    Offset? menuPosition;
+    final RenderBox? renderBox =
+        _bubbleKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox != null) {
+      final position = renderBox.localToGlobal(Offset.zero);
+      final size = renderBox.size;
+      // Position menu at bottom-right of the bubble
+      menuPosition = Offset(
+        position.dx + size.width,
+        position.dy + size.height,
+      );
     }
+
+    await showConduitContextMenu(
+      context: context,
+      position: menuPosition,
+      actions: [
+        ConduitContextMenuAction(
+          cupertinoIcon: CupertinoIcons.pencil,
+          materialIcon: Icons.edit_outlined,
+          label: l10n.edit,
+          onBeforeClose: () => HapticFeedback.selectionClick(),
+          onSelected: () async => _startInlineEdit(),
+        ),
+        ConduitContextMenuAction(
+          cupertinoIcon: CupertinoIcons.doc_on_clipboard,
+          materialIcon: Icons.content_copy,
+          label: l10n.copy,
+          onBeforeClose: () => HapticFeedback.selectionClick(),
+          onSelected: () async {
+            if (widget.onCopy != null) {
+              widget.onCopy!();
+            }
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -458,7 +477,7 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
     );
 
     return GestureDetector(
-      onLongPress: () => _toggleActions(),
+      onLongPress: () => _showMessageMenu(context),
       behavior: HitTestBehavior.translucent,
       child: Container(
         width: double.infinity,
@@ -490,6 +509,7 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
                         maxWidth: MediaQuery.of(context).size.width * 0.82,
                       ),
                       child: Container(
+                        key: _bubbleKey,
                         padding: const EdgeInsets.symmetric(
                           horizontal: Spacing.chatBubblePadding,
                           vertical: Spacing.sm,
@@ -584,12 +604,11 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
                   ),
                 ],
               ),
-            if (hasText) const SizedBox(height: Spacing.xs),
 
-            // Action buttons below the message
-            if (_showActions) ...[
+            // Edit action buttons - show Save/Cancel when editing
+            if (_isEditing) ...[
               const SizedBox(height: Spacing.sm),
-              _buildUserActionButtons(),
+              _buildEditActionButtons(),
             ],
           ],
         ),
@@ -597,59 +616,100 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
     );
   }
 
-  // Assistant-only message renderer removed.
+  Widget _buildEditActionButtons() {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = context.conduitTheme;
 
-  // Markdown rendering and typing indicator helpers removed.
-
-  // Removed unused assistant action buttons builder.
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    VoidCallback? onTap,
-  }) {
-    return ChatActionButton(icon: icon, label: label, onTap: onTap);
-  }
-
-  Widget _buildUserActionButtons() {
-    return Wrap(
-      spacing: Spacing.sm,
-      runSpacing: Spacing.sm,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        if (_isEditing) ...[
-          _buildActionButton(
-            icon: Platform.isIOS ? CupertinoIcons.check_mark : Icons.check,
-            label: AppLocalizations.of(context)!.save,
-            onTap: _saveInlineEdit,
-          ),
-          _buildActionButton(
-            icon: Platform.isIOS ? CupertinoIcons.xmark : Icons.close,
-            label: AppLocalizations.of(context)!.cancel,
+        // Cancel button
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
             onTap: _cancelInlineEdit,
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Spacing.md,
+                vertical: Spacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: theme.surfaceContainer,
+                borderRadius: BorderRadius.circular(AppBorderRadius.small),
+                border: Border.all(
+                  color: theme.cardBorder,
+                  width: BorderWidth.thin,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Platform.isIOS ? CupertinoIcons.xmark : Icons.close,
+                    size: IconSize.xs,
+                    color: theme.textSecondary,
+                  ),
+                  const SizedBox(width: Spacing.xs),
+                  Text(
+                    l10n.cancel,
+                    style: AppTypography.standard.copyWith(
+                      color: theme.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ] else ...[
-          _buildActionButton(
-            icon: Platform.isIOS ? CupertinoIcons.pencil : Icons.edit_outlined,
-            label: AppLocalizations.of(context)!.edit,
-            onTap: widget.onEdit ?? _startInlineEdit,
+        ),
+        const SizedBox(width: Spacing.sm),
+        // Save button
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _saveInlineEdit,
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Spacing.md,
+                vertical: Spacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: theme.buttonPrimary,
+                borderRadius: BorderRadius.circular(AppBorderRadius.small),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Platform.isIOS ? CupertinoIcons.check_mark : Icons.check,
+                    size: IconSize.xs,
+                    color: theme.buttonPrimaryText,
+                  ),
+                  const SizedBox(width: Spacing.xs),
+                  Text(
+                    l10n.save,
+                    style: AppTypography.standard.copyWith(
+                      color: theme.buttonPrimaryText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          _buildActionButton(
-            icon: Platform.isIOS
-                ? CupertinoIcons.doc_on_clipboard
-                : Icons.content_copy,
-            label: AppLocalizations.of(context)!.copy,
-            onTap: widget.onCopy,
-          ),
-        ],
+        ),
       ],
     );
   }
+
+  // Assistant-only message renderer removed.
 
   void _startInlineEdit() {
     if (_isEditing) return;
     setState(() {
       _isEditing = true;
-      _showActions = true; // ensure actions visible for Save/Cancel
       _editController.text = widget.message.content ?? '';
     });
     // Request focus after frame to show keyboard
@@ -664,7 +724,6 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble>
     if (!_isEditing) return;
     setState(() {
       _isEditing = false;
-      // keep actions panel open; user can close with long-press
       _editController.text = widget.message.content ?? '';
     });
     _editFocusNode.unfocus();
