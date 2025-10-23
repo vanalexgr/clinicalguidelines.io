@@ -3,9 +3,6 @@ import 'dart:io' show Platform;
 import 'package:conduit/core/providers/app_providers.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 import 'package:conduit/shared/theme/theme_extensions.dart';
-import 'package:conduit/shared/widgets/conduit_components.dart';
-import 'package:conduit/shared/widgets/modal_safe_area.dart';
-import 'package:conduit/shared/widgets/sheet_handle.dart';
 import 'package:conduit/shared/widgets/themed_dialogs.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -35,74 +32,76 @@ class ConduitContextMenuAction {
 Future<void> showConduitContextMenu({
   required BuildContext context,
   required List<ConduitContextMenuAction> actions,
+  Offset? position,
 }) async {
   if (actions.isEmpty) return;
 
   final theme = context.conduitTheme;
+  final RenderBox? overlay =
+      Overlay.of(context).context.findRenderObject() as RenderBox?;
 
-  await showModalBottomSheet(
+  if (overlay == null) return;
+
+  // Determine menu position
+  final Offset menuPosition = position ?? _getDefaultMenuPosition(context);
+
+  final result = await showMenu<ConduitContextMenuAction>(
     context: context,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) {
-      Future<void> handleAction(ConduitContextMenuAction action) async {
-        action.onBeforeClose?.call();
-        Navigator.of(sheetContext).pop();
-        await Future.microtask(action.onSelected);
-      }
-
-      List<Widget> buildActionTiles() {
-        return actions
-            .map(
-              (action) => ConduitListItem(
-                isCompact: true,
-                leading: Icon(
-                  Platform.isIOS ? action.cupertinoIcon : action.materialIcon,
-                  color: action.destructive ? Colors.red : theme.iconPrimary,
-                  size: IconSize.modal,
-                ),
-                title: Text(
-                  action.label,
-                  style: AppTypography.standard.copyWith(
-                    color: action.destructive ? Colors.red : theme.textPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                onTap: () => handleAction(action),
-              ),
-            )
-            .toList();
-      }
-
-      final actionTiles = buildActionTiles();
-
-      return ModalSheetSafeArea(
+    position: RelativeRect.fromLTRB(
+      menuPosition.dx,
+      menuPosition.dy,
+      overlay.size.width - menuPosition.dx,
+      overlay.size.height - menuPosition.dy,
+    ),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppBorderRadius.md),
+    ),
+    color: theme.surfaceBackground,
+    elevation: 8,
+    items: actions.map((action) {
+      return PopupMenuItem<ConduitContextMenuAction>(
+        value: action,
         padding: const EdgeInsets.symmetric(
-          horizontal: Spacing.screenPadding,
-          vertical: Spacing.screenPadding,
+          horizontal: Spacing.md,
+          vertical: Spacing.xs,
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: theme.surfaceBackground,
-            borderRadius: BorderRadius.circular(AppBorderRadius.lg),
-            boxShadow: ConduitShadows.modal(context),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: Spacing.sm),
-              const SheetHandle(),
-              const SizedBox(height: Spacing.sm),
-              for (var i = 0; i < actionTiles.length; i++) ...[
-                if (i != 0) const ConduitDivider(isCompact: true),
-                actionTiles[i],
-              ],
-              const SizedBox(height: Spacing.sm),
-            ],
-          ),
+        child: Row(
+          children: [
+            Icon(
+              Platform.isIOS ? action.cupertinoIcon : action.materialIcon,
+              color: action.destructive ? Colors.red : theme.iconPrimary,
+              size: IconSize.sm,
+            ),
+            const SizedBox(width: Spacing.md),
+            Expanded(
+              child: Text(
+                action.label,
+                style: AppTypography.standard.copyWith(
+                  color: action.destructive ? Colors.red : theme.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
       );
-    },
+    }).toList(),
   );
+
+  if (result != null) {
+    result.onBeforeClose?.call();
+    await Future.microtask(result.onSelected);
+  }
+}
+
+Offset _getDefaultMenuPosition(BuildContext context) {
+  final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+  if (renderBox == null) {
+    return Offset.zero;
+  }
+  final position = renderBox.localToGlobal(Offset.zero);
+  final size = renderBox.size;
+  return Offset(position.dx + size.width, position.dy);
 }
 
 Future<void> showConversationContextMenu({

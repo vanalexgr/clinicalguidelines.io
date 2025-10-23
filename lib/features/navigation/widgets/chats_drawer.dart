@@ -1254,9 +1254,9 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           ? null
           : () => _selectConversation(context, conv.id),
       onLongPress: null,
-      onMorePressed: () {
+      onMorePressed: (buttonContext) {
         showConversationContextMenu(
-          context: context,
+          context: buttonContext,
           ref: ref,
           conversation: conv,
         );
@@ -1609,7 +1609,7 @@ class _ConversationTileContent extends StatelessWidget {
   final bool pinned;
   final bool selected;
   final bool isLoading;
-  final VoidCallback? onMorePressed;
+  final void Function(BuildContext)? onMorePressed;
   final Widget? leading;
 
   const _ConversationTileContent({
@@ -1664,22 +1664,29 @@ class _ConversationTileContent extends StatelessWidget {
         } else if (onMorePressed != null) {
           trailing.addAll([
             const SizedBox(width: Spacing.sm),
-            IconButton(
-              iconSize: IconSize.sm,
-              visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: TouchTarget.listItem,
-                minHeight: TouchTarget.listItem,
-              ),
-              icon: Icon(
-                Platform.isIOS
-                    ? CupertinoIcons.ellipsis
-                    : Icons.more_vert_rounded,
-                color: theme.iconSecondary,
-              ),
-              onPressed: onMorePressed,
-              tooltip: AppLocalizations.of(context)!.more,
+            Builder(
+              builder: (buttonContext) {
+                return IconButton(
+                  iconSize: IconSize.sm,
+                  visualDensity: const VisualDensity(
+                    horizontal: -2,
+                    vertical: -2,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: TouchTarget.listItem,
+                    minHeight: TouchTarget.listItem,
+                  ),
+                  icon: Icon(
+                    Platform.isIOS
+                        ? CupertinoIcons.ellipsis
+                        : Icons.more_vert_rounded,
+                    color: theme.iconSecondary,
+                  ),
+                  onPressed: () => onMorePressed!(buttonContext),
+                  tooltip: AppLocalizations.of(context)!.more,
+                );
+              },
             ),
           ]);
         }
@@ -1720,7 +1727,7 @@ class _ConversationTile extends StatelessWidget {
   final Widget? leading;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
-  final VoidCallback? onMorePressed;
+  final void Function(BuildContext)? onMorePressed;
 
   const _ConversationTile({
     required this.title,
