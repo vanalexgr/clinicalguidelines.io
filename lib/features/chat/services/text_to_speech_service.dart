@@ -1,13 +1,21 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+import '../../../core/services/api_service.dart';
+import '../../../core/services/settings_service.dart';
+
 /// Lightweight wrapper around FlutterTts to centralize configuration
 class TextToSpeechService {
   final FlutterTts _tts = FlutterTts();
+  final AudioPlayer _player = AudioPlayer();
+  final ApiService? _api;
+  TtsEngine _engine = TtsEngine.device;
+  String? _preferredVoice;
   bool _initialized = false;
   bool _available = false;
   bool _voiceConfigured = false;
@@ -21,6 +29,14 @@ class TextToSpeechService {
 
   bool get isInitialized => _initialized;
   bool get isAvailable => _available;
+
+  TextToSpeechService({ApiService? api}) : _api = api {
+    // Wire minimal player events to callbacks
+    _player.onPlayerComplete.listen((_) => _handleComplete());
+    _player.onPlayerStateChanged.listen((s) {
+      if (s == PlayerState.playing) _handleStart();
+    });
+  }
 
   /// Register callbacks for TTS lifecycle events
   void bindHandlers({
@@ -52,12 +68,15 @@ class TextToSpeechService {
     double speechRate = 0.5,
     double pitch = 1.0,
     double volume = 1.0,
+    TtsEngine engine = TtsEngine.device,
   }) async {
     if (_initialized) {
       return _available;
     }
 
     try {
+      _engine = engine;
+      _preferredVoice = voice;
       await _tts.awaitSpeakCompletion(false);
 
       // Set volume
@@ -97,34 +116,61 @@ class TextToSpeechService {
     }
 
     if (!_initialized) {
-      await initialize();
+      await initialize(voice: _preferredVoice, engine: _engine);
     }
 
+    if (_engine == TtsEngine.server && _api != null) {
+      // Server-backed TTS path
+      try {
+        final effectiveVoice =
+            (_preferredVoice == null || _preferredVoice!.trim().isEmpty)
+            ? 'alloy'
+            : _preferredVoice!;
+
+        final bytes = await _api.generateSpeech(
+          text: text,
+          voice: effectiveVoice,
+        );
+        if (bytes.isEmpty) {
+          throw Exception('Empty audio response');
+        }
+        await _player.stop();
+        final data = Uint8List.fromList(bytes);
+        await _player.play(BytesSource(data));
+      } catch (e) {
+        _onError?.call(e.toString());
+        // Fallback to device TTS on failure
+        await _speakOnDevice(text);
+      }
+      return;
+    }
+
+    // Device TTS path
+    await _speakOnDevice(text);
+  }
+
+  Future<void> _speakOnDevice(String text) async {
     if (!_available) {
       throw StateError('Text-to-speech is unavailable on this device');
     }
-
     await _tts.stop();
     if (!_voiceConfigured) {
       await _configurePreferredVoice();
     }
     final result = await _tts.speak(text);
-    if (result == null) {
-      return;
-    }
-
     if (result is int && result != 1) {
       _onError?.call('Text-to-speech engine returned code $result');
     }
   }
 
   Future<void> pause() async {
-    if (!_initialized || !_available) {
-      return;
-    }
-
+    if (!_initialized) return;
     try {
-      await _tts.pause();
+      if (_engine == TtsEngine.server) {
+        await _player.pause();
+      } else if (_available) {
+        await _tts.pause();
+      }
     } catch (e) {
       _onError?.call(e.toString());
     }
@@ -136,7 +182,11 @@ class TextToSpeechService {
     }
 
     try {
-      await _tts.stop();
+      if (_engine == TtsEngine.server) {
+        await _player.stop();
+      } else {
+        await _tts.stop();
+      }
     } catch (e) {
       _onError?.call(e.toString());
     }
@@ -144,6 +194,7 @@ class TextToSpeechService {
 
   Future<void> dispose() async {
     await stop();
+    await _player.dispose();
   }
 
   /// Update TTS settings on-the-fly
@@ -152,12 +203,22 @@ class TextToSpeechService {
     double? speechRate,
     double? pitch,
     double? volume,
+    TtsEngine? engine,
   }) async {
     if (!_initialized || !_available) {
+      // Allow engine and voice to update before init
+      if (engine != null) _engine = engine;
+      if (voice != null) _preferredVoice = voice;
       return;
     }
 
     try {
+      if (engine != null) {
+        _engine = engine;
+      }
+      if (voice != null) {
+        _preferredVoice = voice;
+      }
       if (volume != null) {
         await _tts.setVolume(volume);
       }
@@ -167,8 +228,10 @@ class TextToSpeechService {
       if (pitch != null) {
         await _tts.setPitch(pitch);
       }
-      // Set specific voice by name
-      await _setVoiceByName(voice);
+      // Set specific voice by name on device engine
+      if (_engine == TtsEngine.device) {
+        await _setVoiceByName(_preferredVoice);
+      }
     } catch (e) {
       _onError?.call(e.toString());
     }
@@ -224,7 +287,31 @@ class TextToSpeechService {
   /// Get available voices from the TTS engine
   Future<List<Map<String, dynamic>>> getAvailableVoices() async {
     if (!_initialized) {
-      await initialize();
+      await initialize(voice: _preferredVoice, engine: _engine);
+    }
+
+    if (_engine == TtsEngine.server && _api != null) {
+      try {
+        final serverVoices = await _api.getAvailableServerVoices();
+        final mapped = serverVoices
+            .map(
+              (v) => {
+                'name': (v['name'] ?? v['id'] ?? '').toString(),
+                'locale': (v['locale'] ?? '').toString(),
+              },
+            )
+            .where((e) => (e['name'] as String).isNotEmpty)
+            .toList();
+        if (mapped.isEmpty) {
+          return [
+            {'name': 'alloy', 'locale': ''},
+          ];
+        }
+        return mapped;
+      } catch (e) {
+        _onError?.call(e.toString());
+        // Fall back to device voices
+      }
     }
 
     if (!_available) {

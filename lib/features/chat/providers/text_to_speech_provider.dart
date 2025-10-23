@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/settings_service.dart';
+import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/markdown_to_text.dart';
 import '../services/text_to_speech_service.dart';
 
@@ -79,11 +80,15 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
     // Listen to settings changes and update TTS when initialized
     ref.listen<AppSettings>(appSettingsProvider, (previous, next) {
       if (_service.isInitialized && _service.isAvailable) {
+        final selectedVoice = next.ttsEngine == TtsEngine.server
+            ? next.ttsServerVoiceId
+            : next.ttsVoice;
         _service.updateSettings(
-          voice: next.ttsVoice,
+          voice: selectedVoice,
           speechRate: next.ttsSpeechRate,
           pitch: next.ttsPitch,
           volume: next.ttsVolume,
+          engine: next.ttsEngine,
         );
       }
     }, fireImmediately: false);
@@ -105,10 +110,13 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
     final settings = ref.read(appSettingsProvider);
     final future = _service
         .initialize(
-          voice: settings.ttsVoice,
+          voice: settings.ttsEngine == TtsEngine.server
+              ? settings.ttsServerVoiceId
+              : settings.ttsVoice,
           speechRate: settings.ttsSpeechRate,
           pitch: settings.ttsPitch,
           volume: settings.ttsVolume,
+          engine: settings.ttsEngine,
         )
         .then((available) {
           if (!ref.mounted) {
@@ -289,7 +297,8 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
 }
 
 final textToSpeechServiceProvider = Provider<TextToSpeechService>((ref) {
-  final service = TextToSpeechService();
+  final api = ref.watch(apiServiceProvider);
+  final service = TextToSpeechService(api: api);
   ref.onDispose(() {
     unawaited(service.dispose());
   });
