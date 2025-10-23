@@ -988,7 +988,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       '',
     );
     cleanedContent = cleanedContent.replaceAll(
-      RegExp(r'<reasoning>[\s\S]*?<\/reasoning>', multiLine: true, dotAll: true),
+      RegExp(
+        r'<reasoning>[\s\S]*?<\/reasoning>',
+        multiLine: true,
+        dotAll: true,
+      ),
       '',
     );
 
@@ -1274,8 +1278,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             final maxFraction = isTablet ? 0.42 : 0.84;
             final edgeFraction = isTablet ? 0.36 : 0.50; // large phone edge
             final scrim = Platform.isIOS
-                ? context.colorTokens.overlayMedium
-                : context.colorTokens.overlayStrong;
+                ? context.colorTokens.scrimMedium
+                : context.colorTokens.scrimStrong;
 
             return ResponsiveDrawerLayout(
               maxFraction: maxFraction,
