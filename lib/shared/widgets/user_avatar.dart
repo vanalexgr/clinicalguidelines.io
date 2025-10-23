@@ -3,14 +3,17 @@ import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/brand_service.dart';
 import '../theme/theme_extensions.dart';
+import 'package:conduit/core/network/self_signed_image_cache_manager.dart';
+import 'package:conduit/core/network/image_header_utils.dart';
 
 typedef AvatarWidgetBuilder =
     Widget Function(BuildContext context, double size);
 
-class AvatarImage extends StatelessWidget {
+class AvatarImage extends ConsumerWidget {
   final double size;
   final String? imageUrl;
   final BorderRadius? borderRadius;
@@ -29,7 +32,7 @@ class AvatarImage extends StatelessWidget {
   BorderRadius get _radius => borderRadius ?? BorderRadius.circular(size / 2);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final url = imageUrl?.trim();
     if (url == null || url.isEmpty) {
       return fallbackBuilder(context, size);
@@ -53,6 +56,11 @@ class AvatarImage extends StatelessWidget {
       return fallbackBuilder(context, size);
     }
 
+    // Build auth/custom headers when loading from network
+    final headers = buildImageHeadersFromWidgetRef(ref);
+
+    final cacheManager = ref.read(selfSignedImageCacheManagerProvider);
+
     return ClipRRect(
       borderRadius: _radius,
       child: CachedNetworkImage(
@@ -60,6 +68,8 @@ class AvatarImage extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
+        cacheManager: cacheManager,
+        httpHeaders: headers,
         placeholder: (context, _) =>
             (placeholderBuilder ?? _defaultPlaceholder)(context, size),
         errorWidget: (context, url, error) => fallbackBuilder(context, size),

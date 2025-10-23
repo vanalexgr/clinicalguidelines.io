@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -16,6 +17,8 @@ import 'package:conduit/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../theme/theme_extensions.dart';
 import 'code_block_header.dart';
+import 'package:conduit/core/network/self_signed_image_cache_manager.dart';
+import 'package:conduit/core/network/image_header_utils.dart';
 
 typedef MarkdownLinkTapCallback = void Function(String url, String title);
 
@@ -413,8 +416,15 @@ class _ImageBuilder extends MarkdownElementBuilder {
     BuildContext context,
     ConduitThemeExtension theme,
   ) {
+    // Read headers and optional self-signed cache manager from Riverpod
+    final container = ProviderScope.containerOf(context, listen: false);
+    final headers = buildImageHeadersFromContainer(container);
+    final cacheManager = container.read(selfSignedImageCacheManagerProvider);
+
     return CachedNetworkImage(
       imageUrl: url,
+      cacheManager: cacheManager,
+      httpHeaders: headers,
       placeholder: (context, _) => Container(
         height: 200,
         decoration: BoxDecoration(
