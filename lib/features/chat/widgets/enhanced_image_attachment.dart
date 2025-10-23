@@ -13,6 +13,8 @@ import 'package:conduit/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../auth/providers/unified_auth_providers.dart';
 import '../../../core/utils/debug_logger.dart';
+import '../../../core/network/self_signed_image_cache_manager.dart';
+import '../../../core/network/image_header_utils.dart';
 
 // Simple global cache to prevent reloading
 final _globalImageCache = <String, String>{};
@@ -414,29 +416,15 @@ class _EnhancedImageAttachmentState
 
   Widget _buildNetworkImage() {
     // Get authentication headers if available
-    final api = ref.read(apiServiceProvider);
-    final authToken = ref.read(authTokenProvider3);
-    final headers = <String, String>{};
+    final headers = buildImageHeadersFromWidgetRef(ref);
 
-    // Add auth token from unified auth provider
-    if (authToken != null && authToken.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $authToken';
-    } else if (api?.serverConfig.apiKey != null &&
-        api!.serverConfig.apiKey!.isNotEmpty) {
-      // Fallback to API key from server config
-      headers['Authorization'] = 'Bearer ${api.serverConfig.apiKey}';
-    }
-
-    // Add any custom headers from server config
-    if (api != null && api.serverConfig.customHeaders.isNotEmpty) {
-      headers.addAll(api.serverConfig.customHeaders);
-    }
-
+    final cacheManager = ref.read(selfSignedImageCacheManagerProvider);
     final imageWidget = CachedNetworkImage(
       key: ValueKey('image_${widget.attachmentId}'),
       imageUrl: _cachedImageData!,
       fit: BoxFit.cover,
-      httpHeaders: headers.isNotEmpty ? headers : null,
+      cacheManager: cacheManager,
+      httpHeaders: headers,
       fadeInDuration: widget.disableAnimation
           ? Duration.zero
           : const Duration(milliseconds: 200),
@@ -559,28 +547,14 @@ class FullScreenImageViewer extends ConsumerWidget {
 
     if (imageData.startsWith('http')) {
       // Get authentication headers if available
-      final api = ref.read(apiServiceProvider);
-      final authToken = ref.read(authTokenProvider3);
-      final headers = <String, String>{};
+      final headers = buildImageHeadersFromWidgetRef(ref);
 
-      // Add auth token from unified auth provider
-      if (authToken != null && authToken.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $authToken';
-      } else if (api?.serverConfig.apiKey != null &&
-          api!.serverConfig.apiKey!.isNotEmpty) {
-        // Fallback to API key from server config
-        headers['Authorization'] = 'Bearer ${api.serverConfig.apiKey}';
-      }
-
-      // Add any custom headers from server config
-      if (api != null && api.serverConfig.customHeaders.isNotEmpty) {
-        headers.addAll(api.serverConfig.customHeaders);
-      }
-
+      final cacheManager = ref.read(selfSignedImageCacheManagerProvider);
       imageWidget = CachedNetworkImage(
         imageUrl: imageData,
         fit: BoxFit.contain,
-        httpHeaders: headers.isNotEmpty ? headers : null,
+        cacheManager: cacheManager,
+        httpHeaders: headers,
         placeholder: (context, url) => Center(
           child: CircularProgressIndicator(
             color: context.conduitTheme.buttonPrimary,
