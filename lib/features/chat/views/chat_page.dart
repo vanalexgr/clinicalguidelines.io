@@ -902,6 +902,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 }
               }
 
+              // Hide archived assistant variants in the linear view
+              final isArchivedVariant =
+                  !isUser && (message.metadata?['archivedVariant'] == true);
+              if (isArchivedVariant) {
+                return const SizedBox.shrink();
+              }
+
               final showFollowUps =
                   !isUser && !hasUserBubbleBelow && !hasAssistantBubbleBelow;
 
@@ -990,8 +997,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         return;
       }
 
-      // Remove the assistant message we want to regenerate
-      ref.read(chatMessagesProvider.notifier).removeLastMessage();
+      // Mark previous assistant as archived for UI; keep it for server history
+      ref.read(chatMessagesProvider.notifier).updateLastMessageWithFunction((
+        m,
+      ) {
+        final meta = Map<String, dynamic>.from(m.metadata ?? const {});
+        meta['archivedVariant'] = true;
+        return m.copyWith(metadata: meta, isStreaming: false);
+      });
 
       // Regenerate response for the previous user message (without duplicating it)
       final userMessage = messages[messageIndex - 1];

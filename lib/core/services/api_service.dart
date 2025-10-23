@@ -879,10 +879,59 @@ class ApiService {
           }
 
           // Default path: parse message as-is
-          final message = _parseOpenWebUIMessage(
-            msgData,
-            historyMsg: historyMsg,
-          );
+          var message = _parseOpenWebUIMessage(msgData, historyMsg: historyMsg);
+
+          // Attach server-persisted variants (siblings) as versions for assistant
+          if (message.role == 'assistant' && historyMessagesMap != null) {
+            try {
+              final parentId = historyMsg?['parentId']?.toString();
+              if (parentId != null && parentId.isNotEmpty) {
+                final parent =
+                    historyMessagesMap[parentId] as Map<String, dynamic>?;
+                final children = parent != null && parent['childrenIds'] is List
+                    ? (parent['childrenIds'] as List)
+                          .map((e) => e.toString())
+                          .toList()
+                    : const <String>[];
+                final versions = <ChatMessageVersion>[];
+
+                for (final cid in children) {
+                  if (cid == message.id) continue; // skip current assistant
+                  final sibling = historyMessagesMap[cid];
+                  if (sibling is Map<String, dynamic>) {
+                    final role = (sibling['role'] ?? '').toString();
+                    if (role != 'assistant') continue;
+                    // Build a ChatMessage from sibling for consistent parsing
+                    final siblingData = Map<String, dynamic>.from(sibling);
+                    siblingData['id'] = cid;
+                    final parsed = _parseOpenWebUIMessage(
+                      siblingData,
+                      historyMsg: sibling,
+                    );
+                    versions.add(
+                      ChatMessageVersion(
+                        id: parsed.id,
+                        content: parsed.content,
+                        timestamp: parsed.timestamp,
+                        model: parsed.model,
+                        files: parsed.files,
+                        sources: parsed.sources,
+                        followUps: parsed.followUps,
+                        codeExecutions: parsed.codeExecutions,
+                        usage: parsed.usage,
+                      ),
+                    );
+                  }
+                }
+
+                if (versions.isNotEmpty) {
+                  message = message.copyWith(versions: versions);
+                }
+              }
+            } catch (_) {
+              // Best-effort: ignore variants if parsing fails
+            }
+          }
           messages.add(message);
           if (_traceFullChatParsing) {
             DebugLogger.log(
@@ -1412,14 +1461,19 @@ class ApiService {
     final List<Map<String, dynamic>> messagesArray = [];
     String? currentId;
     String? previousId;
-
+    String? lastUserId;
     for (final msg in messages) {
       final messageId = msg.id;
+
+      // Choose parent id (branch assistants from last user)
+      final parentId = msg.role == 'assistant'
+          ? (lastUserId ?? previousId)
+          : previousId;
 
       // Build message for history.messages map
       messagesMap[messageId] = {
         'id': messageId,
-        'parentId': previousId,
+        'parentId': parentId,
         'childrenIds': [],
         'role': msg.role,
         'content': msg.content,
@@ -1432,14 +1486,14 @@ class ApiService {
       };
 
       // Update parent's childrenIds if there's a previous message
-      if (previousId != null && messagesMap.containsKey(previousId)) {
-        (messagesMap[previousId]['childrenIds'] as List).add(messageId);
+      if (parentId != null && messagesMap.containsKey(parentId)) {
+        (messagesMap[parentId]['childrenIds'] as List).add(messageId);
       }
 
       // Build message for messages array
       messagesArray.add({
         'id': messageId,
-        'parentId': previousId,
+        'parentId': parentId,
         'childrenIds': [],
         'role': msg.role,
         'content': msg.content,
@@ -1453,6 +1507,9 @@ class ApiService {
 
       previousId = messageId;
       currentId = messageId;
+      if (msg.role == 'user') {
+        lastUserId = messageId;
+      }
     }
 
     // Create the chat data structure matching OpenWebUI format exactly
@@ -1509,6 +1566,7 @@ class ApiService {
     final List<Map<String, dynamic>> messagesArray = [];
     String? currentId;
     String? previousId;
+    String? lastUserId;
 
     for (final msg in messages) {
       final messageId = msg.id;
@@ -1517,9 +1575,19 @@ class ApiService {
       // The msg.files array already contains all attachments in the correct format
       final sanitizedFiles = _sanitizeFilesForWebUI(msg.files);
 
+      // Determine parent id: allow explicit parent override via metadata
+      final explicitParent = msg.metadata != null
+          ? (msg.metadata!['parentId']?.toString())
+          : null;
+      // For assistant messages, branch from the last user (OpenWebUI-style)
+      final fallbackParent = msg.role == 'assistant'
+          ? (lastUserId ?? previousId)
+          : previousId;
+      final parentId = explicitParent ?? fallbackParent;
+
       messagesMap[messageId] = {
         'id': messageId,
-        'parentId': previousId,
+        'parentId': parentId,
         'childrenIds': <String>[],
         'role': msg.role,
         'content': msg.content,
@@ -1536,8 +1604,8 @@ class ApiService {
       };
 
       // Update parent's childrenIds
-      if (previousId != null && messagesMap.containsKey(previousId)) {
-        (messagesMap[previousId]['childrenIds'] as List).add(messageId);
+      if (parentId != null && messagesMap.containsKey(parentId)) {
+        (messagesMap[parentId]['childrenIds'] as List).add(messageId);
       }
 
       // Use the same properly formatted files array for messages array
@@ -1545,7 +1613,7 @@ class ApiService {
 
       messagesArray.add({
         'id': messageId,
-        'parentId': previousId,
+        'parentId': parentId,
         'childrenIds': [],
         'role': msg.role,
         'content': msg.content,
@@ -1562,6 +1630,37 @@ class ApiService {
       });
 
       previousId = messageId;
+      if (msg.role == 'user') {
+        lastUserId = messageId;
+      }
+
+      // Server-side persistence of assistant versions (OpenWebUI-style)
+      if (msg.role == 'assistant' && (msg.versions.isNotEmpty)) {
+        final parentForVersions = explicitParent ?? lastUserId ?? previousId;
+        for (final ver in msg.versions) {
+          final vId = ver.id;
+          // Only add if not already present
+          if (!messagesMap.containsKey(vId)) {
+            messagesMap[vId] = {
+              'id': vId,
+              'parentId': parentForVersions,
+              'childrenIds': <String>[],
+              'role': 'assistant',
+              'content': ver.content,
+              'timestamp': ver.timestamp.millisecondsSinceEpoch ~/ 1000,
+              if (ver.model != null) 'model': ver.model,
+              if (ver.model != null) 'modelName': ver.model,
+              'modelIdx': 0,
+              'done': true,
+              if (ver.files != null) 'files': _sanitizeFilesForWebUI(ver.files),
+            };
+            // Link into parent (parentForVersions is always non-null here)
+            if (messagesMap.containsKey(parentForVersions)) {
+              (messagesMap[parentForVersions]['childrenIds'] as List).add(vId);
+            }
+          }
+        }
+      }
       currentId = messageId;
     }
 
