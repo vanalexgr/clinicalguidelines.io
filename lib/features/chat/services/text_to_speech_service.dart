@@ -31,6 +31,8 @@ class TextToSpeechService {
   VoidCallback? _onPause;
   VoidCallback? _onContinue;
   void Function(String message)? _onError;
+  void Function(int sentenceIndex)? _onSentenceIndex;
+  void Function(int start, int end)? _onDeviceWordProgress;
 
   bool get isInitialized => _initialized;
   bool get isAvailable => _available;
@@ -51,6 +53,8 @@ class TextToSpeechService {
     VoidCallback? onPause,
     VoidCallback? onContinue,
     void Function(String message)? onError,
+    void Function(int sentenceIndex)? onSentenceIndex,
+    void Function(int start, int end)? onDeviceWordProgress,
   }) {
     _onStart = onStart;
     _onComplete = onComplete;
@@ -58,6 +62,8 @@ class TextToSpeechService {
     _onPause = onPause;
     _onContinue = onContinue;
     _onError = onError;
+    _onSentenceIndex = onSentenceIndex;
+    _onDeviceWordProgress = onDeviceWordProgress;
 
     _tts.setStartHandler(_handleStart);
     _tts.setCompletionHandler(_handleComplete);
@@ -65,6 +71,13 @@ class TextToSpeechService {
     _tts.setPauseHandler(_handlePause);
     _tts.setContinueHandler(_handleContinue);
     _tts.setErrorHandler(_handleError);
+    try {
+      _tts.setProgressHandler((String text, int start, int end, String word) {
+        _onDeviceWordProgress?.call(start, end);
+      });
+    } catch (_) {
+      // Some platforms may not support progress handler
+    }
   }
 
   /// Initialize the native TTS engine lazily
@@ -151,6 +164,7 @@ class TextToSpeechService {
     if (result is int && result != 1) {
       _onError?.call('Text-to-speech engine returned code $result');
     }
+    _onSentenceIndex?.call(0);
   }
 
   Future<void> pause() async {
@@ -370,6 +384,7 @@ class TextToSpeechService {
     _buffered.add(Uint8List.fromList(firstBytes));
     _currentIndex = 0;
     await _player.play(BytesSource(_buffered.first));
+    _onSentenceIndex?.call(0);
 
     // Prefetch the rest in background
     unawaited(
@@ -438,6 +453,7 @@ class TextToSpeechService {
     _currentIndex = nextIndex;
     final bytes = _buffered[nextIndex];
     await _player.play(BytesSource(bytes));
+    _onSentenceIndex?.call(_currentIndex);
   }
 
   List<String> _splitForTts(String text) {

@@ -18,6 +18,7 @@ import 'package:conduit/l10n/app_localizations.dart';
 import 'enhanced_attachment.dart';
 import 'package:conduit/shared/widgets/chat_action_button.dart';
 import '../../../shared/widgets/model_avatar.dart';
+import '../../../shared/widgets/conduit_components.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import '../providers/chat_providers.dart' show sendMessageWithContainer;
 import '../../../core/utils/debug_logger.dart';
@@ -457,9 +458,69 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
 
     if (children.isEmpty) return const SizedBox.shrink();
+    // Append TTS karaoke bar if this is the active message
+    final ttsState = ref.watch(textToSpeechControllerProvider);
+    final isActive =
+        ttsState.activeMessageId == _messageId &&
+        (ttsState.status == TtsPlaybackStatus.speaking ||
+            ttsState.status == TtsPlaybackStatus.paused ||
+            ttsState.status == TtsPlaybackStatus.loading);
+    if (isActive && ttsState.activeSentenceIndex >= 0) {
+      children.add(const SizedBox(height: Spacing.sm));
+      children.add(_buildKaraokeBar(ttsState));
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: children,
+    );
+  }
+
+  Widget _buildKaraokeBar(TextToSpeechState ttsState) {
+    final theme = context.conduitTheme;
+    final idx = ttsState.activeSentenceIndex;
+    if (idx < 0 || idx >= ttsState.sentences.length) {
+      return const SizedBox.shrink();
+    }
+    final sentence = ttsState.sentences[idx];
+    final ws = ttsState.wordStartInSentence;
+    final we = ttsState.wordEndInSentence;
+
+    final baseStyle = TextStyle(
+      color: theme.textPrimary,
+      height: 1.2,
+      fontSize: 14,
+    );
+    final highlightStyle = baseStyle.copyWith(
+      backgroundColor: theme.buttonPrimary.withValues(alpha: 0.25),
+      color: theme.textPrimary,
+      fontWeight: FontWeight.w600,
+    );
+
+    InlineSpan buildSpans() {
+      if (ws == null ||
+          we == null ||
+          ws < 0 ||
+          we <= ws ||
+          ws >= sentence.length) {
+        return TextSpan(text: sentence, style: baseStyle);
+      }
+      final safeEnd = we.clamp(0, sentence.length);
+      final before = sentence.substring(0, ws);
+      final word = sentence.substring(ws, safeEnd);
+      final after = sentence.substring(safeEnd);
+      return TextSpan(
+        children: [
+          if (before.isNotEmpty) TextSpan(text: before, style: baseStyle),
+          TextSpan(text: word, style: highlightStyle),
+          if (after.isNotEmpty) TextSpan(text: after, style: baseStyle),
+        ],
+      );
+    }
+
+    return ConduitCard(
+      padding: const EdgeInsets.all(Spacing.sm),
+      child: RichText(text: buildSpans()),
     );
   }
 

@@ -15,6 +15,11 @@ class TextToSpeechState {
   final TtsPlaybackStatus status;
   final String? activeMessageId;
   final String? errorMessage;
+  final List<String> sentences;
+  final List<int> sentenceOffsets; // start indices in full text
+  final int activeSentenceIndex; // -1 when none
+  final int? wordStartInSentence; // nullable; only for on-device
+  final int? wordEndInSentence; // nullable; only for on-device
 
   const TextToSpeechState({
     this.initialized = false,
@@ -22,6 +27,11 @@ class TextToSpeechState {
     this.status = TtsPlaybackStatus.idle,
     this.activeMessageId,
     this.errorMessage,
+    this.sentences = const [],
+    this.sentenceOffsets = const [],
+    this.activeSentenceIndex = -1,
+    this.wordStartInSentence,
+    this.wordEndInSentence,
   });
 
   bool get isSpeaking => status == TtsPlaybackStatus.speaking;
@@ -37,6 +47,12 @@ class TextToSpeechState {
     bool clearActiveMessageId = false,
     String? errorMessage,
     bool clearErrorMessage = false,
+    List<String>? sentences,
+    List<int>? sentenceOffsets,
+    int? activeSentenceIndex,
+    bool clearWord = false,
+    int? wordStartInSentence,
+    int? wordEndInSentence,
   }) {
     return TextToSpeechState(
       initialized: initialized ?? this.initialized,
@@ -48,6 +64,15 @@ class TextToSpeechState {
       errorMessage: clearErrorMessage
           ? null
           : errorMessage ?? this.errorMessage,
+      sentences: sentences ?? this.sentences,
+      sentenceOffsets: sentenceOffsets ?? this.sentenceOffsets,
+      activeSentenceIndex: activeSentenceIndex ?? this.activeSentenceIndex,
+      wordStartInSentence: clearWord
+          ? null
+          : (wordStartInSentence ?? this.wordStartInSentence),
+      wordEndInSentence: clearWord
+          ? null
+          : (wordEndInSentence ?? this.wordEndInSentence),
     );
   }
 }
@@ -70,6 +95,8 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
         onPause: _handlePause,
         onContinue: _handleContinue,
         onError: _handleError,
+        onSentenceIndex: _handleSentenceIndex,
+        onDeviceWordProgress: _handleDeviceWordProgress,
       );
 
       ref.onDispose(() {
@@ -184,15 +211,23 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
       return;
     }
 
+    // Prepare sentence split for highlighting
+    final cleanText = MarkdownToText.convert(text);
+    final sentences = _splitForTts(cleanText);
+    final offsets = _computeOffsets(sentences);
+
     state = state.copyWith(
       status: TtsPlaybackStatus.loading,
       activeMessageId: messageId,
       clearErrorMessage: true,
+      sentences: sentences,
+      sentenceOffsets: offsets,
+      activeSentenceIndex: sentences.isEmpty ? -1 : 0,
+      clearWord: true,
     );
 
     try {
       // Convert markdown to clean text for TTS
-      final cleanText = MarkdownToText.convert(text);
       if (cleanText.isEmpty) {
         // No speakable content
         if (!ref.mounted) {
@@ -222,6 +257,34 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
         clearActiveMessageId: true,
       );
     }
+  }
+
+  List<String> _splitForTts(String text) {
+    final normalized = text.replaceAll(RegExp(r"\s+"), ' ').trim();
+    if (normalized.isEmpty) return const [];
+    final parts = <String>[];
+    final sentenceRegex = RegExp(r"(.+?[\.!?]+)(\s+|\$)");
+    int index = 0;
+    for (final match in sentenceRegex.allMatches('$normalized ')) {
+      final s = match.group(1) ?? '';
+      if (s.trim().isNotEmpty) parts.add(s.trim());
+      index = match.end;
+    }
+    if (index < normalized.length) {
+      final tail = normalized.substring(index).trim();
+      if (tail.isNotEmpty) parts.add(tail);
+    }
+    return parts;
+  }
+
+  List<int> _computeOffsets(List<String> sentences) {
+    final offsets = <int>[];
+    int acc = 0;
+    for (final s in sentences) {
+      offsets.add(acc);
+      acc += s.length + 1; // assume a space or punctuation between
+    }
+    return offsets;
   }
 
   Future<void> pause() async {
@@ -292,6 +355,41 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
       status: TtsPlaybackStatus.error,
       errorMessage: message,
       clearActiveMessageId: true,
+    );
+  }
+
+  void _handleSentenceIndex(int index) {
+    if (!ref.mounted) return;
+    final clamped = index.clamp(
+      -1,
+      state.sentences.isEmpty ? -1 : state.sentences.length - 1,
+    );
+    state = state.copyWith(
+      activeSentenceIndex: clamped,
+      // clear per-word highlight when sentence switches (server or device)
+      clearWord: true,
+    );
+  }
+
+  void _handleDeviceWordProgress(int start, int end) {
+    if (!ref.mounted) return;
+    // Map global offsets to sentence index
+    final offsets = state.sentenceOffsets;
+    if (offsets.isEmpty) return;
+    int idx = 0;
+    for (var i = 0; i < offsets.length; i++) {
+      final sStart = offsets[i];
+      final sEnd = i + 1 < offsets.length ? offsets[i + 1] : 1 << 30;
+      if (start >= sStart && start < sEnd) {
+        idx = i;
+        break;
+      }
+    }
+    final sentenceStart = offsets[idx];
+    state = state.copyWith(
+      activeSentenceIndex: idx,
+      wordStartInSentence: (start - sentenceStart).clamp(0, 1 << 20),
+      wordEndInSentence: (end - sentenceStart).clamp(0, 1 << 20),
     );
   }
 }
