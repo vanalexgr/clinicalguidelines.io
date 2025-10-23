@@ -969,7 +969,33 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _copyMessage(String content) {
-    Clipboard.setData(ClipboardData(text: content));
+    // Strip reasoning details from the copied content
+    String cleanedContent = content;
+
+    // Remove <details type="reasoning"> blocks
+    cleanedContent = cleanedContent.replaceAll(
+      RegExp(
+        r'<details\s+type="reasoning"[^>]*>[\s\S]*?<\/details>',
+        multiLine: true,
+        dotAll: true,
+      ),
+      '',
+    );
+
+    // Remove raw reasoning tags
+    cleanedContent = cleanedContent.replaceAll(
+      RegExp(r'<think>[\s\S]*?<\/think>', multiLine: true, dotAll: true),
+      '',
+    );
+    cleanedContent = cleanedContent.replaceAll(
+      RegExp(r'<reasoning>[\s\S]*?<\/reasoning>', multiLine: true, dotAll: true),
+      '',
+    );
+
+    // Clean up any extra whitespace
+    cleanedContent = cleanedContent.trim();
+
+    Clipboard.setData(ClipboardData(text: cleanedContent));
   }
 
   void _regenerateMessage(dynamic message) async {
