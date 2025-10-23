@@ -441,10 +441,97 @@ class AppCustomizationPage extends ConsumerWidget {
               TextStyle(color: theme.sidebarForeground, fontSize: 18),
         ),
         const SizedBox(height: Spacing.sm),
+        ConduitCard(
+          padding: const EdgeInsets.all(Spacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _buildIconBadge(
+                    context,
+                    UiUtils.platformIcon(
+                      ios: CupertinoIcons.settings,
+                      android: Icons.settings_voice,
+                    ),
+                    color: theme.buttonPrimary,
+                  ),
+                  const SizedBox(width: Spacing.sm),
+                  const Text('Engine'),
+                  const Spacer(),
+                  Wrap(
+                    spacing: Spacing.sm,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('On Device'),
+                        selected: settings.ttsEngine == TtsEngine.device,
+                        showCheckmark: false,
+                        selectedColor: theme.buttonPrimary,
+                        backgroundColor: theme.cardBackground,
+                        side: BorderSide(
+                          color: settings.ttsEngine == TtsEngine.device
+                              ? theme.buttonPrimary.withValues(alpha: 0.6)
+                              : theme.textPrimary.withValues(alpha: 0.2),
+                        ),
+                        labelStyle: TextStyle(
+                          color: settings.ttsEngine == TtsEngine.device
+                              ? theme.buttonPrimaryText
+                              : theme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        onSelected: (v) {
+                          if (v) {
+                            final notifier = ref.read(
+                              appSettingsProvider.notifier,
+                            );
+                            notifier.setTtsEngine(TtsEngine.device);
+                            // Keep previous voice (device voices)
+                          }
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Server'),
+                        selected: settings.ttsEngine == TtsEngine.server,
+                        showCheckmark: false,
+                        selectedColor: theme.buttonPrimary,
+                        backgroundColor: theme.cardBackground,
+                        side: BorderSide(
+                          color: settings.ttsEngine == TtsEngine.server
+                              ? theme.buttonPrimary.withValues(alpha: 0.6)
+                              : theme.textPrimary.withValues(alpha: 0.2),
+                        ),
+                        labelStyle: TextStyle(
+                          color: settings.ttsEngine == TtsEngine.server
+                              ? theme.buttonPrimaryText
+                              : theme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        onSelected: (v) {
+                          if (v) {
+                            final notifier = ref.read(
+                              appSettingsProvider.notifier,
+                            );
+                            // Clear device-specific voice so server can default
+                            notifier.setTtsVoice(null);
+                            notifier.setTtsEngine(TtsEngine.server);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Spacing.sm),
         _ExpandableCard(
           title: l10n.ttsVoice,
           subtitle: _getDisplayVoiceName(
-            settings.ttsVoice,
+            settings.ttsEngine == TtsEngine.server
+                ? ((settings.ttsServerVoiceName ?? settings.ttsServerVoiceId) ??
+                      '')
+                : (settings.ttsVoice ?? ''),
             l10n.ttsSystemDefault,
           ),
           icon: UiUtils.platformIcon(
@@ -466,7 +553,11 @@ class AppCustomizationPage extends ConsumerWidget {
                 ),
                 title: l10n.ttsVoice,
                 subtitle: _getDisplayVoiceName(
-                  settings.ttsVoice,
+                  settings.ttsEngine == TtsEngine.server
+                      ? ((settings.ttsServerVoiceName ??
+                                settings.ttsServerVoiceId) ??
+                            '')
+                      : (settings.ttsVoice ?? ''),
                   l10n.ttsSystemDefault,
                 ),
                 onTap: () => _showVoicePickerSheet(context, ref, settings),
@@ -616,7 +707,10 @@ class AppCustomizationPage extends ConsumerWidget {
     final theme = context.conduitTheme;
     final ttsService = ref.read(textToSpeechServiceProvider);
 
-    // Fetch available voices
+    // Ensure the service uses the currently selected engine before fetching
+    await ttsService.updateSettings(engine: settings.ttsEngine);
+
+    // Fetch available voices from the active engine
     final allVoices = await ttsService.getAvailableVoices();
 
     if (!context.mounted) return;
@@ -729,17 +823,29 @@ class AppCustomizationPage extends ConsumerWidget {
                     style:
                         theme.bodyMedium?.copyWith(
                           color: theme.sidebarForeground,
-                          fontWeight: settings.ttsVoice == null
+                          fontWeight:
+                              (settings.ttsEngine == TtsEngine.server
+                                  ? settings.ttsServerVoiceId == null
+                                  : settings.ttsVoice == null)
                               ? FontWeight.bold
                               : FontWeight.normal,
                         ) ??
                         TextStyle(color: theme.sidebarForeground),
                   ),
-                  trailing: settings.ttsVoice == null
+                  trailing:
+                      (settings.ttsEngine == TtsEngine.server
+                          ? settings.ttsServerVoiceId == null
+                          : settings.ttsVoice == null)
                       ? Icon(Icons.check, color: theme.buttonPrimary)
                       : null,
                   onTap: () {
-                    ref.read(appSettingsProvider.notifier).setTtsVoice(null);
+                    final notifier = ref.read(appSettingsProvider.notifier);
+                    if (settings.ttsEngine == TtsEngine.server) {
+                      notifier.setTtsServerVoiceId(null);
+                      notifier.setTtsServerVoiceName(null);
+                    } else {
+                      notifier.setTtsVoice(null);
+                    }
                     Navigator.of(sheetContext).pop();
                   },
                 ),
@@ -823,7 +929,9 @@ class AppCustomizationPage extends ConsumerWidget {
                       final voiceId = _getVoiceIdentifier(voice);
                       final displayName = _formatVoiceName(voice);
                       final subtitle = _getVoiceSubtitle(voice);
-                      final isSelected = settings.ttsVoice == voiceId;
+                      final isSelected = settings.ttsEngine == TtsEngine.server
+                          ? settings.ttsServerVoiceId == voiceId
+                          : settings.ttsVoice == voiceId;
 
                       return ListTile(
                         leading: Icon(
@@ -865,9 +973,15 @@ class AppCustomizationPage extends ConsumerWidget {
                             ? Icon(Icons.check, color: theme.buttonPrimary)
                             : null,
                         onTap: () {
-                          ref
-                              .read(appSettingsProvider.notifier)
-                              .setTtsVoice(voiceId);
+                          final notifier = ref.read(
+                            appSettingsProvider.notifier,
+                          );
+                          if (settings.ttsEngine == TtsEngine.server) {
+                            notifier.setTtsServerVoiceId(voiceId);
+                            notifier.setTtsServerVoiceName(displayName);
+                          } else {
+                            notifier.setTtsVoice(voiceId);
+                          }
                           Navigator.of(sheetContext).pop();
                         },
                       );

@@ -1830,7 +1830,11 @@ Future<List<String>> availableVoices(Ref ref) async {
   if (api == null) return [];
 
   try {
-    return await api.getAvailableVoices();
+    final voices = await api.getAvailableServerVoices();
+    return voices
+        .map((v) => (v['name'] ?? v['id'] ?? '').toString())
+        .where((s) => s.isNotEmpty)
+        .toList();
   } catch (e) {
     DebugLogger.error('voices-failed', scope: 'voices', error: e);
     return [];

@@ -8,6 +8,9 @@ import 'animation_service.dart';
 
 part 'settings_service.g.dart';
 
+/// TTS engine selection
+enum TtsEngine { device, server }
+
 /// Service for managing app-wide settings including accessibility preferences
 class SettingsService {
   static const String _reduceMotionKey = PreferenceKeys.reduceMotion;
@@ -142,6 +145,12 @@ class SettingsService {
         ttsPitch: (box.get(PreferenceKeys.ttsPitch) as num?)?.toDouble() ?? 1.0,
         ttsVolume:
             (box.get(PreferenceKeys.ttsVolume) as num?)?.toDouble() ?? 1.0,
+        ttsEngine: _parseTtsEngine(
+          box.get(PreferenceKeys.ttsEngine) as String?,
+        ),
+        ttsServerVoiceId: box.get(PreferenceKeys.ttsServerVoiceId) as String?,
+        ttsServerVoiceName:
+            box.get(PreferenceKeys.ttsServerVoiceName) as String?,
       ),
     );
   }
@@ -164,6 +173,7 @@ class SettingsService {
       PreferenceKeys.ttsSpeechRate: settings.ttsSpeechRate,
       PreferenceKeys.ttsPitch: settings.ttsPitch,
       PreferenceKeys.ttsVolume: settings.ttsVolume,
+      PreferenceKeys.ttsEngine: settings.ttsEngine.name,
     };
 
     await box.putAll(updates);
@@ -184,6 +194,33 @@ class SettingsService {
       await box.put(PreferenceKeys.ttsVoice, settings.ttsVoice);
     } else {
       await box.delete(PreferenceKeys.ttsVoice);
+    }
+
+    // Server-specific voice id and friendly name
+    if (settings.ttsServerVoiceId != null &&
+        settings.ttsServerVoiceId!.isNotEmpty) {
+      await box.put(PreferenceKeys.ttsServerVoiceId, settings.ttsServerVoiceId);
+    } else {
+      await box.delete(PreferenceKeys.ttsServerVoiceId);
+    }
+    if (settings.ttsServerVoiceName != null &&
+        settings.ttsServerVoiceName!.isNotEmpty) {
+      await box.put(
+        PreferenceKeys.ttsServerVoiceName,
+        settings.ttsServerVoiceName,
+      );
+    } else {
+      await box.delete(PreferenceKeys.ttsServerVoiceName);
+    }
+  }
+
+  static TtsEngine _parseTtsEngine(String? raw) {
+    switch ((raw ?? '').toLowerCase()) {
+      case 'server':
+        return TtsEngine.server;
+      case 'device':
+      default:
+        return TtsEngine.device;
     }
   }
 
@@ -314,6 +351,9 @@ class AppSettings {
   final double ttsSpeechRate;
   final double ttsPitch;
   final double ttsVolume;
+  final TtsEngine ttsEngine;
+  final String? ttsServerVoiceId;
+  final String? ttsServerVoiceName;
   const AppSettings({
     this.reduceMotion = false,
     this.animationSpeed = 1.0,
@@ -332,6 +372,9 @@ class AppSettings {
     this.ttsSpeechRate = 0.5,
     this.ttsPitch = 1.0,
     this.ttsVolume = 1.0,
+    this.ttsEngine = TtsEngine.device,
+    this.ttsServerVoiceId,
+    this.ttsServerVoiceName,
   });
 
   AppSettings copyWith({
@@ -352,6 +395,9 @@ class AppSettings {
     double? ttsSpeechRate,
     double? ttsPitch,
     double? ttsVolume,
+    TtsEngine? ttsEngine,
+    Object? ttsServerVoiceId = const _DefaultValue(),
+    Object? ttsServerVoiceName = const _DefaultValue(),
   }) {
     return AppSettings(
       reduceMotion: reduceMotion ?? this.reduceMotion,
@@ -375,6 +421,13 @@ class AppSettings {
       ttsSpeechRate: ttsSpeechRate ?? this.ttsSpeechRate,
       ttsPitch: ttsPitch ?? this.ttsPitch,
       ttsVolume: ttsVolume ?? this.ttsVolume,
+      ttsEngine: ttsEngine ?? this.ttsEngine,
+      ttsServerVoiceId: ttsServerVoiceId is _DefaultValue
+          ? this.ttsServerVoiceId
+          : ttsServerVoiceId as String?,
+      ttsServerVoiceName: ttsServerVoiceName is _DefaultValue
+          ? this.ttsServerVoiceName
+          : ttsServerVoiceName as String?,
     );
   }
 
@@ -397,6 +450,9 @@ class AppSettings {
         other.ttsSpeechRate == ttsSpeechRate &&
         other.ttsPitch == ttsPitch &&
         other.ttsVolume == ttsVolume &&
+        other.ttsEngine == ttsEngine &&
+        other.ttsServerVoiceId == ttsServerVoiceId &&
+        other.ttsServerVoiceName == ttsServerVoiceName &&
         _listEquals(other.quickPills, quickPills);
     // socketTransportMode intentionally not included in == to avoid frequent rebuilds
   }
@@ -420,6 +476,9 @@ class AppSettings {
       ttsSpeechRate,
       ttsPitch,
       ttsVolume,
+      ttsEngine,
+      ttsServerVoiceId,
+      ttsServerVoiceName,
       Object.hashAllUnordered(quickPills),
     );
   }
@@ -540,6 +599,21 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
 
   Future<void> setTtsVolume(double volume) async {
     state = state.copyWith(ttsVolume: volume);
+    await SettingsService.saveSettings(state);
+  }
+
+  Future<void> setTtsEngine(TtsEngine engine) async {
+    state = state.copyWith(ttsEngine: engine);
+    await SettingsService.saveSettings(state);
+  }
+
+  Future<void> setTtsServerVoiceName(String? name) async {
+    state = state.copyWith(ttsServerVoiceName: name);
+    await SettingsService.saveSettings(state);
+  }
+
+  Future<void> setTtsServerVoiceId(String? id) async {
+    state = state.copyWith(ttsServerVoiceId: id);
     await SettingsService.saveSettings(state);
   }
 

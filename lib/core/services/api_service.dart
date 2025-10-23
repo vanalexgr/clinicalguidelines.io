@@ -2261,12 +2261,24 @@ class ApiService {
   }
 
   // Audio
-  Future<List<String>> getAvailableVoices() async {
-    _traceApi('Fetching available voices');
+  Future<List<Map<String, dynamic>>> getAvailableServerVoices() async {
+    _traceApi('Fetching server TTS voices');
     final response = await _dio.get('/api/v1/audio/voices');
     final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final voices = data['voices'];
+      if (voices is List) {
+        return voices
+            .whereType<Map>()
+            .map((e) => e.cast<String, dynamic>())
+            .toList();
+      }
+    }
     if (data is List) {
-      return data.cast<String>();
+      // Fallback: plain list of ids
+      return data
+          .map((e) => {'id': e.toString(), 'name': e.toString()})
+          .toList();
     }
     return [];
   }
@@ -2279,13 +2291,15 @@ class ApiService {
     _traceApi('Generating speech for text: $textPreview...');
     final response = await _dio.post(
       '/api/v1/audio/speech',
-      data: {'text': text, if (voice != null) 'voice': voice},
+      data: {'input': text, if (voice != null) 'voice': voice},
+      options: Options(responseType: ResponseType.bytes),
     );
 
     // Return audio data as bytes
-    if (response.data is List) {
-      return (response.data as List).cast<int>();
-    }
+    final data = response.data;
+    if (data is List<int>) return data;
+    if (data is Uint8List) return data.toList();
+    if (data is List) return (data).cast<int>();
     return [];
   }
 

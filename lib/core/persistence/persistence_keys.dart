@@ -25,6 +25,9 @@ final class PreferenceKeys {
   static const String ttsSpeechRate = 'tts_speech_rate';
   static const String ttsPitch = 'tts_pitch';
   static const String ttsVolume = 'tts_volume';
+  static const String ttsEngine = 'tts_engine'; // 'device' | 'server'
+  static const String ttsServerVoiceId = 'tts_server_voice_id';
+  static const String ttsServerVoiceName = 'tts_server_voice_name';
 }
 
 final class LegacyPreferenceKeys {

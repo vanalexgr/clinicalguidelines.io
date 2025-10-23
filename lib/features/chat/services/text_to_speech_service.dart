@@ -1,16 +1,29 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+import '../../../core/services/api_service.dart';
+import '../../../core/services/settings_service.dart';
+
 /// Lightweight wrapper around FlutterTts to centralize configuration
 class TextToSpeechService {
   final FlutterTts _tts = FlutterTts();
+  final AudioPlayer _player = AudioPlayer();
+  final ApiService? _api;
+  TtsEngine _engine = TtsEngine.device;
+  String? _preferredVoice;
   bool _initialized = false;
   bool _available = false;
   bool _voiceConfigured = false;
+  int _session = 0; // increments to cancel in-flight work
+  final List<Uint8List> _buffered = <Uint8List>[]; // server chunks
+  int _expectedChunks = 0;
+  int _currentIndex = -1;
+  bool _waitingNext = false;
 
   VoidCallback? _onStart;
   VoidCallback? _onComplete;
@@ -18,9 +31,19 @@ class TextToSpeechService {
   VoidCallback? _onPause;
   VoidCallback? _onContinue;
   void Function(String message)? _onError;
+  void Function(int sentenceIndex)? _onSentenceIndex;
+  void Function(int start, int end)? _onDeviceWordProgress;
 
   bool get isInitialized => _initialized;
   bool get isAvailable => _available;
+
+  TextToSpeechService({ApiService? api}) : _api = api {
+    // Wire minimal player events to callbacks
+    _player.onPlayerComplete.listen((_) => _onAudioComplete());
+    _player.onPlayerStateChanged.listen((s) {
+      if (s == PlayerState.playing) _handleStart();
+    });
+  }
 
   /// Register callbacks for TTS lifecycle events
   void bindHandlers({
@@ -30,6 +53,8 @@ class TextToSpeechService {
     VoidCallback? onPause,
     VoidCallback? onContinue,
     void Function(String message)? onError,
+    void Function(int sentenceIndex)? onSentenceIndex,
+    void Function(int start, int end)? onDeviceWordProgress,
   }) {
     _onStart = onStart;
     _onComplete = onComplete;
@@ -37,6 +62,8 @@ class TextToSpeechService {
     _onPause = onPause;
     _onContinue = onContinue;
     _onError = onError;
+    _onSentenceIndex = onSentenceIndex;
+    _onDeviceWordProgress = onDeviceWordProgress;
 
     _tts.setStartHandler(_handleStart);
     _tts.setCompletionHandler(_handleComplete);
@@ -44,6 +71,13 @@ class TextToSpeechService {
     _tts.setPauseHandler(_handlePause);
     _tts.setContinueHandler(_handleContinue);
     _tts.setErrorHandler(_handleError);
+    try {
+      _tts.setProgressHandler((String text, int start, int end, String word) {
+        _onDeviceWordProgress?.call(start, end);
+      });
+    } catch (_) {
+      // Some platforms may not support progress handler
+    }
   }
 
   /// Initialize the native TTS engine lazily
@@ -52,12 +86,15 @@ class TextToSpeechService {
     double speechRate = 0.5,
     double pitch = 1.0,
     double volume = 1.0,
+    TtsEngine engine = TtsEngine.device,
   }) async {
     if (_initialized) {
       return _available;
     }
 
     try {
+      _engine = engine;
+      _preferredVoice = voice;
       await _tts.awaitSpeakCompletion(false);
 
       // Set volume
@@ -97,34 +134,47 @@ class TextToSpeechService {
     }
 
     if (!_initialized) {
-      await initialize();
+      await initialize(voice: _preferredVoice, engine: _engine);
     }
 
+    if (_engine == TtsEngine.server && _api != null) {
+      // Server-backed TTS with sentence chunking & queued playback
+      try {
+        await _startServerChunkedPlayback(text);
+      } catch (e) {
+        _onError?.call(e.toString());
+        await _speakOnDevice(text);
+      }
+      return;
+    }
+
+    // Device TTS path
+    await _speakOnDevice(text);
+  }
+
+  Future<void> _speakOnDevice(String text) async {
     if (!_available) {
       throw StateError('Text-to-speech is unavailable on this device');
     }
-
     await _tts.stop();
     if (!_voiceConfigured) {
       await _configurePreferredVoice();
     }
     final result = await _tts.speak(text);
-    if (result == null) {
-      return;
-    }
-
     if (result is int && result != 1) {
       _onError?.call('Text-to-speech engine returned code $result');
     }
+    _onSentenceIndex?.call(0);
   }
 
   Future<void> pause() async {
-    if (!_initialized || !_available) {
-      return;
-    }
-
+    if (!_initialized) return;
     try {
-      await _tts.pause();
+      if (_engine == TtsEngine.server) {
+        await _player.pause();
+      } else if (_available) {
+        await _tts.pause();
+      }
     } catch (e) {
       _onError?.call(e.toString());
     }
@@ -136,7 +186,17 @@ class TextToSpeechService {
     }
 
     try {
-      await _tts.stop();
+      // Cancel any in-flight server work
+      _session++;
+      _buffered.clear();
+      _expectedChunks = 0;
+      _currentIndex = -1;
+      _waitingNext = false;
+      if (_engine == TtsEngine.server) {
+        await _player.stop();
+      } else {
+        await _tts.stop();
+      }
     } catch (e) {
       _onError?.call(e.toString());
     }
@@ -144,6 +204,7 @@ class TextToSpeechService {
 
   Future<void> dispose() async {
     await stop();
+    await _player.dispose();
   }
 
   /// Update TTS settings on-the-fly
@@ -152,12 +213,22 @@ class TextToSpeechService {
     double? speechRate,
     double? pitch,
     double? volume,
+    TtsEngine? engine,
   }) async {
     if (!_initialized || !_available) {
+      // Allow engine and voice to update before init
+      if (engine != null) _engine = engine;
+      if (voice != null) _preferredVoice = voice;
       return;
     }
 
     try {
+      if (engine != null) {
+        _engine = engine;
+      }
+      if (voice != null) {
+        _preferredVoice = voice;
+      }
       if (volume != null) {
         await _tts.setVolume(volume);
       }
@@ -167,8 +238,10 @@ class TextToSpeechService {
       if (pitch != null) {
         await _tts.setPitch(pitch);
       }
-      // Set specific voice by name
-      await _setVoiceByName(voice);
+      // Set specific voice by name on device engine
+      if (_engine == TtsEngine.device) {
+        await _setVoiceByName(_preferredVoice);
+      }
     } catch (e) {
       _onError?.call(e.toString());
     }
@@ -224,7 +297,31 @@ class TextToSpeechService {
   /// Get available voices from the TTS engine
   Future<List<Map<String, dynamic>>> getAvailableVoices() async {
     if (!_initialized) {
-      await initialize();
+      await initialize(voice: _preferredVoice, engine: _engine);
+    }
+
+    if (_engine == TtsEngine.server && _api != null) {
+      try {
+        final serverVoices = await _api.getAvailableServerVoices();
+        final mapped = serverVoices
+            .map(
+              (v) => {
+                'name': (v['name'] ?? v['id'] ?? '').toString(),
+                'locale': (v['locale'] ?? '').toString(),
+              },
+            )
+            .where((e) => (e['name'] as String).isNotEmpty)
+            .toList();
+        if (mapped.isEmpty) {
+          return [
+            {'name': 'alloy', 'locale': ''},
+          ];
+        }
+        return mapped;
+      } catch (e) {
+        _onError?.call(e.toString());
+        // Fall back to device voices
+      }
     }
 
     if (!_available) {
@@ -252,6 +349,151 @@ class TextToSpeechService {
       _onError?.call(e.toString());
       return [];
     }
+  }
+
+  // ===== Server chunked playback =====
+
+  Future<void> _startServerChunkedPlayback(String text) async {
+    final effectiveVoice =
+        (_preferredVoice == null || _preferredVoice!.trim().isEmpty)
+        ? 'alloy'
+        : _preferredVoice!;
+
+    // Reset queue and create a new session
+    _session++;
+    final session = _session;
+    _buffered.clear();
+    _expectedChunks = 0;
+    _currentIndex = -1;
+    _waitingNext = false;
+
+    final chunks = _splitForTts(text);
+    if (chunks.isEmpty) return;
+    _expectedChunks = chunks.length;
+
+    // Fetch first chunk to start playback quickly
+    final firstBytes = await _fetchServerAudio(
+      chunks.first,
+      effectiveVoice,
+      session,
+    );
+    if (session != _session) return; // canceled
+    if (firstBytes.isEmpty) throw Exception('Empty audio response');
+
+    await _player.stop();
+    _buffered.add(Uint8List.fromList(firstBytes));
+    _currentIndex = 0;
+    await _player.play(BytesSource(_buffered.first));
+    _onSentenceIndex?.call(0);
+
+    // Prefetch the rest in background
+    unawaited(
+      _prefetchRemainingChunks(
+        chunks.skip(1).toList(),
+        effectiveVoice,
+        session,
+      ),
+    );
+  }
+
+  Future<void> _prefetchRemainingChunks(
+    List<String> remaining,
+    String voice,
+    int session,
+  ) async {
+    for (final chunk in remaining) {
+      if (session != _session) return; // canceled
+      try {
+        final audio = await _fetchServerAudio(chunk, voice, session);
+        if (session != _session) return;
+        if (audio.isNotEmpty) {
+          _buffered.add(Uint8List.fromList(audio));
+          // If the player finished the previous chunk and is waiting, start now
+          if (_waitingNext && (_currentIndex + 1) < _buffered.length) {
+            _waitingNext = false;
+            await _playNextIfBuffered(session);
+          }
+        }
+      } catch (e) {
+        _onError?.call(e.toString());
+        // continue with other chunks
+      }
+    }
+  }
+
+  Future<List<int>> _fetchServerAudio(
+    String text,
+    String voice,
+    int session,
+  ) async {
+    return await _api!.generateSpeech(text: text, voice: voice);
+  }
+
+  Future<void> _onAudioComplete() async {
+    final session = _session;
+    // If there are more expected chunks
+    if ((_currentIndex + 1) < _expectedChunks) {
+      // If next chunk is already buffered, play it
+      if ((_currentIndex + 1) < _buffered.length) {
+        await _playNextIfBuffered(session);
+      } else {
+        // Wait for prefetch to provide it
+        _waitingNext = true;
+      }
+      return;
+    }
+    // No more chunks – this is the real completion
+    _handleComplete();
+  }
+
+  Future<void> _playNextIfBuffered(int session) async {
+    if (session != _session) return;
+    final nextIndex = _currentIndex + 1;
+    if (nextIndex < 0 || nextIndex >= _buffered.length) return;
+    _currentIndex = nextIndex;
+    final bytes = _buffered[nextIndex];
+    await _player.play(BytesSource(bytes));
+    _onSentenceIndex?.call(_currentIndex);
+  }
+
+  List<String> _splitForTts(String text) {
+    // Normalize whitespace
+    final normalized = text.replaceAll(RegExp(r"\s+"), ' ').trim();
+    if (normalized.isEmpty) return const [];
+
+    // Split on sentence-ending punctuation while keeping the delimiter
+    final parts = <String>[];
+    final sentenceRegex = RegExp(r"(.+?[\.!?]+)(\s+|\$)");
+    int index = 0;
+    for (final match in sentenceRegex.allMatches('$normalized ')) {
+      final s = match.group(1) ?? '';
+      if (s.trim().isNotEmpty) parts.add(s.trim());
+      index = match.end;
+    }
+    if (index < normalized.length) {
+      final tail = normalized.substring(index).trim();
+      if (tail.isNotEmpty) parts.add(tail);
+    }
+
+    // Fallback to length-based splits for very long segments
+    const maxLen = 300;
+    final chunks = <String>[];
+    for (final p in parts.isEmpty ? [normalized] : parts) {
+      if (p.length <= maxLen) {
+        chunks.add(p);
+      } else {
+        // Try splitting on commas/spaces
+        var remaining = p;
+        while (remaining.length > maxLen) {
+          int cut = remaining.lastIndexOf(RegExp(r",\s|\s"), maxLen);
+          cut = cut <= 0 ? maxLen : cut;
+          chunks.add(remaining.substring(0, cut).trim());
+          remaining = remaining.substring(cut).trim();
+        }
+        if (remaining.isNotEmpty) chunks.add(remaining);
+      }
+    }
+    return chunks;
   }
 
   Future<void> _configurePreferredVoice() async {
