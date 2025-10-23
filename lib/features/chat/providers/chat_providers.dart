@@ -494,6 +494,45 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
     state = next;
   }
 
+  // Archive the last assistant message's current content as a previous version
+  // and clear it to prepare for regeneration, keeping the same message id.
+  void archiveLastAssistantAsVersion() {
+    if (state.isEmpty) return;
+    final last = state.last;
+    if (last.role != 'assistant') return;
+    // Do not archive if it's already streaming (nothing final to archive)
+    if (last.isStreaming) return;
+
+    final snapshot = ChatMessageVersion(
+      id: last.id,
+      content: last.content,
+      timestamp: last.timestamp,
+      model: last.model,
+      files: last.files == null
+          ? null
+          : List<Map<String, dynamic>>.from(last.files!),
+      sources: List<ChatSourceReference>.from(last.sources),
+      followUps: List<String>.from(last.followUps),
+      codeExecutions: List<ChatCodeExecution>.from(last.codeExecutions),
+      usage: last.usage == null ? null : Map<String, dynamic>.from(last.usage!),
+    );
+
+    final updated = last.copyWith(
+      // Start a fresh stream for the new generation
+      isStreaming: true,
+      content: '',
+      files: null,
+      followUps: const [],
+      codeExecutions: const [],
+      sources: const [],
+      usage: null,
+      versions: [...last.versions, snapshot],
+    );
+
+    state = [...state.sublist(0, state.length - 1), updated];
+    _touchStreamingActivity();
+  }
+
   void appendStatusUpdate(String messageId, ChatStatusUpdate update) {
     final withTimestamp = update.occurredAt == null
         ? update.copyWith(occurredAt: DateTime.now())
@@ -644,10 +683,38 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
     final finalized = _finalizeFormatter(lastMessage.id, lastMessage.content);
     final cleaned = _stripStreamingPlaceholders(finalized);
 
-    state = [
-      ...state.sublist(0, state.length - 1),
-      lastMessage.copyWith(isStreaming: false, content: cleaned),
-    ];
+    var updatedLast = lastMessage.copyWith(
+      isStreaming: false,
+      content: cleaned,
+    );
+
+    // Fallback: if there is an immediately previous assistant message
+    // marked as an archived variant and we have no versions yet, attach it
+    // as a version so the UI shows a switcher.
+    if (state.length >= 2 && updatedLast.versions.isEmpty) {
+      final prev = state[state.length - 2];
+      final isArchivedAssistant =
+          prev.role == 'assistant' &&
+          (prev.metadata?['archivedVariant'] == true);
+      if (isArchivedAssistant) {
+        final snapshot = ChatMessageVersion(
+          id: prev.id,
+          content: prev.content,
+          timestamp: prev.timestamp,
+          model: prev.model,
+          files: prev.files,
+          sources: prev.sources,
+          followUps: prev.followUps,
+          codeExecutions: prev.codeExecutions,
+          usage: prev.usage,
+        );
+        updatedLast = updatedLast.copyWith(
+          versions: [...updatedLast.versions, snapshot],
+        );
+      }
+    }
+
+    state = [...state.sublist(0, state.length - 1), updatedLast];
     _messageStream = null;
     _stopRemoteTaskMonitor();
 
@@ -1014,8 +1081,9 @@ Future<Map<String, dynamic>> _buildMessagePayloadWithAttachments({
 Future<void> regenerateMessage(
   dynamic ref,
   String userMessageContent,
-  List<String>? attachments,
-) async {
+  List<String>? attachments, [
+  String? existingAssistantId,
+]) async {
   final reviewerMode = ref.read(reviewerModeProvider);
   final api = ref.read(apiServiceProvider);
   final selectedModel = ref.read(selectedModelProvider);
@@ -1135,12 +1203,41 @@ Future<void> regenerateMessage(
       }
     }
 
-    // Pre-seed assistant skeleton and persist chain
+    // Pre-seed assistant skeleton and persist chain; always use a new id so
+    // server history can branch like OpenWebUI.
     final String assistantMessageId = await _preseedAssistantAndPersist(
       ref,
+      existingAssistantId: null,
       modelId: selectedModel.id,
       systemPrompt: effectiveSystemPrompt,
     );
+
+    // Attach previous assistant as a version snapshot to the new assistant
+    try {
+      final msgs = ref.read(chatMessagesProvider);
+      if (msgs.length >= 2) {
+        final prev = msgs[msgs.length - 2];
+        final last = msgs.last;
+        if (prev.role == 'assistant' && last.id == assistantMessageId) {
+          final snapshot = ChatMessageVersion(
+            id: prev.id,
+            content: prev.content,
+            timestamp: prev.timestamp,
+            model: prev.model,
+            files: prev.files,
+            sources: prev.sources,
+            followUps: prev.followUps,
+            codeExecutions: prev.codeExecutions,
+            usage: prev.usage,
+          );
+          ref
+              .read(chatMessagesProvider.notifier)
+              .updateLastMessageWithFunction(
+                (m) => m.copyWith(versions: [...m.versions, snapshot]),
+              );
+        }
+      }
+    } catch (_) {}
 
     // Feature toggles
     final webSearchEnabled =
@@ -2223,8 +2320,16 @@ final regenerateLastMessageProvider = Provider<Future<void> Function()>((ref) {
 
     if (lastUserMessage == null) return;
 
-    // Remove last assistant message
-    ref.read(chatMessagesProvider.notifier).removeLastMessage();
+    // Mark previous assistant as an archived variant so UI can hide it
+    final notifier = ref.read(chatMessagesProvider.notifier);
+    if (lastAssistantMessage != null) {
+      notifier.updateLastMessageWithFunction((m) {
+        final meta = Map<String, dynamic>.from(m.metadata ?? const {});
+        meta['archivedVariant'] = true;
+        // Keep content/files intact for server persistence
+        return m.copyWith(metadata: meta, isStreaming: false);
+      });
+    }
 
     // If previous assistant was image-only or had images, regenerate images instead of text
     if (lastAssistantHadImages) {

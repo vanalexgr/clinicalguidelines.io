@@ -70,6 +70,8 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   bool _allowTypingIndicator = false;
   Timer? _typingGateTimer;
   String _ttsPlainText = '';
+  // Active version index (-1 means current/live content)
+  int _activeVersionIndex = -1;
   // press state handled by shared ChatActionButton
 
   Future<void> _handleFollowUpTap(String suggestion) async {
@@ -140,7 +142,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   }
 
   void _reparseSections() {
-    final raw0 = widget.message.content ?? '';
+    final raw0 = _activeVersionIndex >= 0
+        ? (widget.message.versions[_activeVersionIndex].content as String?) ??
+              ''
+        : widget.message.content ?? '';
     // Strip any leftover placeholders from content before parsing
     const ti = '[TYPING_INDICATOR]';
     const searchBanner = '🔍 Searching the web...';
@@ -633,6 +638,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         widget.showFollowUps &&
         widget.message.followUps.isNotEmpty &&
         !widget.isStreaming;
+    final bool showingVersion = _activeVersionIndex >= 0;
+    final activeFiles = showingVersion
+        ? widget.message.versions[_activeVersionIndex].files
+        : widget.message.files;
     final hasSources = widget.message.sources.isNotEmpty;
 
     return Container(
@@ -657,8 +666,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Display attachments - prioritize files array over attachmentIds to avoid duplication
-                    if (widget.message.files != null &&
-                        widget.message.files!.isNotEmpty) ...[
+                    if (activeFiles != null && activeFiles.isNotEmpty) ...[
                       _buildFilesFromArray(),
                       const SizedBox(height: Spacing.md),
                     ] else if (widget.message.attachmentIds != null &&
@@ -729,6 +737,8 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                         messageId: widget.message.id,
                       ),
                     ],
+
+                    // Version switcher moved inline with action buttons below
                   ],
                 ),
               ),
@@ -896,11 +906,14 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   }
 
   Widget _buildFilesFromArray() {
-    if (widget.message.files == null || widget.message.files!.isEmpty) {
+    final filesArray = _activeVersionIndex >= 0
+        ? widget.message.versions[_activeVersionIndex].files
+        : widget.message.files;
+    if (filesArray == null || filesArray.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final allFiles = widget.message.files!;
+    final allFiles = filesArray;
 
     // Separate images and non-image files
     final imageFiles = allFiles
@@ -1077,6 +1090,8 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     );
   }
 
+  // Deprecated: old in-content version switcher replaced by inline controls with action buttons.
+
   Widget _buildActionButtons() {
     final l10n = AppLocalizations.of(context)!;
     final ttsState = ref.watch(textToSpeechControllerProvider);
@@ -1139,6 +1154,43 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           label: l10n.copy,
           onTap: widget.onCopy,
         ),
+        if (widget.message.versions.isNotEmpty && !widget.isStreaming) ...[
+          // Inline version toggle: Prev [1/n] Next
+          ChatActionButton(
+            icon: Icons.chevron_left,
+            label: 'Prev',
+            onTap: () {
+              setState(() {
+                if (_activeVersionIndex < 0) {
+                  _activeVersionIndex = widget.message.versions.length - 1;
+                } else if (_activeVersionIndex > 0) {
+                  _activeVersionIndex -= 1;
+                }
+                _reparseSections();
+              });
+            },
+          ),
+          ConduitChip(
+            label:
+                '${_activeVersionIndex < 0 ? (widget.message.versions.length + 1) : (_activeVersionIndex + 1)}/${widget.message.versions.length + 1}',
+            isCompact: true,
+          ),
+          ChatActionButton(
+            icon: Icons.chevron_right,
+            label: 'Next',
+            onTap: () {
+              setState(() {
+                if (_activeVersionIndex < 0) return; // already live
+                if (_activeVersionIndex < widget.message.versions.length - 1) {
+                  _activeVersionIndex += 1;
+                } else {
+                  _activeVersionIndex = -1; // move to live
+                }
+                _reparseSections();
+              });
+            },
+          ),
+        ],
         if (isErrorMessage) ...[
           _buildActionButton(
             icon: Platform.isIOS

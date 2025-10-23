@@ -30,10 +30,38 @@ sealed class ChatMessage with _$ChatMessage {
     @Default(<ChatSourceReference>[])
     List<ChatSourceReference> sources,
     Map<String, dynamic>? usage,
+    // Previous generated versions of this assistant message (OpenWebUI-style)
+    @JsonKey(includeFromJson: false, includeToJson: false)
+    @Default(<ChatMessageVersion>[])
+    List<ChatMessageVersion> versions,
   }) = _ChatMessage;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) =>
       _$ChatMessageFromJson(json);
+}
+
+@freezed
+abstract class ChatMessageVersion with _$ChatMessageVersion {
+  const factory ChatMessageVersion({
+    required String id,
+    required String content,
+    required DateTime timestamp,
+    String? model,
+    List<Map<String, dynamic>>? files,
+    @JsonKey(
+      name: 'sources',
+      fromJson: _sourceRefsFromJson,
+      toJson: _sourceRefsToJson,
+    )
+    @Default(<ChatSourceReference>[])
+    List<ChatSourceReference> sources,
+    @Default(<String>[]) List<String> followUps,
+    @Default(<ChatCodeExecution>[]) List<ChatCodeExecution> codeExecutions,
+    Map<String, dynamic>? usage,
+  }) = _ChatMessageVersion;
+
+  factory ChatMessageVersion.fromJson(Map<String, dynamic> json) =>
+      _$ChatMessageVersionFromJson(json);
 }
 
 @freezed
