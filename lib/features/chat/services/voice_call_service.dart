@@ -9,6 +9,7 @@ import '../../../core/services/socket_service.dart';
 import '../../../core/utils/markdown_to_text.dart';
 import '../providers/chat_providers.dart';
 import 'text_to_speech_service.dart';
+import '../../../core/services/settings_service.dart';
 import 'voice_input_service.dart';
 import 'voice_call_notification_service.dart';
 
@@ -66,6 +67,7 @@ class VoiceCallService {
       onStart: _handleTtsStart,
       onComplete: _handleTtsComplete,
       onError: _handleTtsError,
+      // sentence/word callbacks are not required for call UI, but harmless
     );
 
     // Set up notification action handler
@@ -112,8 +114,17 @@ class VoiceCallService {
       throw Exception('Microphone permission not granted');
     }
 
-    // Initialize TTS
-    await _tts.initialize();
+    // Initialize TTS with current app settings (engine/voice/rate/pitch/volume)
+    final settings = _ref.read(appSettingsProvider);
+    await _tts.initialize(
+      voice: settings.ttsEngine == TtsEngine.server
+          ? settings.ttsServerVoiceId
+          : settings.ttsVoice,
+      speechRate: settings.ttsSpeechRate,
+      pitch: settings.ttsPitch,
+      volume: settings.ttsVolume,
+      engine: settings.ttsEngine,
+    );
   }
 
   Future<void> startCall(String? conversationId) async {
@@ -481,7 +492,8 @@ class VoiceCallService {
 @Riverpod(keepAlive: true)
 VoiceCallService voiceCallService(Ref ref) {
   final voiceInput = ref.watch(voiceInputServiceProvider);
-  final tts = TextToSpeechService();
+  final api = ref.watch(apiServiceProvider);
+  final tts = TextToSpeechService(api: api);
   final socketService = ref.watch(socketServiceProvider);
 
   if (socketService == null) {
@@ -494,6 +506,21 @@ VoiceCallService voiceCallService(Ref ref) {
     socketService: socketService,
     ref: ref,
   );
+
+  // Keep TTS settings in sync with app settings during a call
+  ref.listen<AppSettings>(appSettingsProvider, (previous, next) {
+    // Update voice/engine and runtime parameters
+    final selectedVoice = next.ttsEngine == TtsEngine.server
+        ? next.ttsServerVoiceId
+        : next.ttsVoice;
+    service._tts.updateSettings(
+      voice: selectedVoice,
+      speechRate: next.ttsSpeechRate,
+      pitch: next.ttsPitch,
+      volume: next.ttsVolume,
+      engine: next.ttsEngine,
+    );
+  });
 
   ref.onDispose(() {
     service.dispose();
