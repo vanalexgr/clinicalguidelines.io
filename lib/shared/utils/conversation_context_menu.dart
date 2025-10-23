@@ -54,31 +54,33 @@ Future<void> showConduitContextMenu({
       overlay.size.height - menuPosition.dy,
     ),
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppBorderRadius.md),
+      borderRadius: BorderRadius.circular(AppBorderRadius.small),
     ),
     color: theme.surfaceBackground,
-    elevation: 8,
+    elevation: 4,
     items: actions.map((action) {
       return PopupMenuItem<ConduitContextMenuAction>(
         value: action,
         padding: const EdgeInsets.symmetric(
-          horizontal: Spacing.md,
-          vertical: Spacing.xs,
+          horizontal: Spacing.sm,
+          vertical: Spacing.xxs,
         ),
+        height: 36,
         child: Row(
           children: [
             Icon(
               Platform.isIOS ? action.cupertinoIcon : action.materialIcon,
               color: action.destructive ? Colors.red : theme.iconPrimary,
-              size: IconSize.sm,
+              size: IconSize.xs,
             ),
-            const SizedBox(width: Spacing.md),
+            const SizedBox(width: Spacing.sm),
             Expanded(
               child: Text(
                 action.label,
                 style: AppTypography.standard.copyWith(
                   color: action.destructive ? Colors.red : theme.textPrimary,
                   fontWeight: FontWeight.w500,
+                  fontSize: 14,
                 ),
               ),
             ),
