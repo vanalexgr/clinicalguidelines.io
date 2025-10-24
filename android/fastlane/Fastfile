@@ -36,7 +36,7 @@ desc "Push a new release build to the Google Play"
     upload_to_play_store(
       json_key: ENV['FASTLANE_JSON_KEY_PATH'],
       track: 'production',
-      aab: '../build/app/outputs/bundle/release/app-release.aab', 
+      aab: '../app-release.aab', 
       skip_upload_apk: true,
       skip_upload_images: true,
       skip_upload_screenshots: true,
