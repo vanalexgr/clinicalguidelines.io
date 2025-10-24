@@ -29,6 +29,7 @@ class BackgroundStreamingService : Service() {
     private val activeStreams = mutableSetOf<String>()
     private var isForeground = false
     private var currentForegroundType: Int = 0
+    private var foregroundStartTime: Long = 0
 
     companion object {
         const val CHANNEL_ID = "conduit_streaming_channel"
@@ -49,6 +50,12 @@ class BackgroundStreamingService : Service() {
                 stopStreaming()
                 return START_NOT_STICKY
             }
+        }
+        
+        // For KEEP_ALIVE, only refresh the wake lock without restarting foreground
+        if (intent?.action == "KEEP_ALIVE") {
+            keepAlive()
+            return START_STICKY
         }
         
         val notification = createMinimalNotification()
@@ -74,9 +81,6 @@ class BackgroundStreamingService : Service() {
                 acquireWakeLock()
                 println("BackgroundStreamingService: Started foreground service")
             }
-            "KEEP_ALIVE" -> {
-                keepAlive()
-            }
         }
 
         return START_STICKY
@@ -92,9 +96,12 @@ class BackgroundStreamingService : Service() {
                 startForeground(NOTIFICATION_ID, notification)
             }
             isForeground = true
+            foregroundStartTime = System.currentTimeMillis()
+            println("BackgroundStreamingService: Foreground service started at $foregroundStartTime")
             true
-        } catch (e: SecurityException) {
-            println("BackgroundStreamingService: Failed to enter foreground: ${e.message}")
+        } catch (e: Exception) {
+            // Catch all exceptions including ForegroundServiceStartNotAllowedException
+            println("BackgroundStreamingService: Failed to enter foreground: ${e.javaClass.simpleName}: ${e.message}")
             false
         }
     }
@@ -154,7 +161,9 @@ class BackgroundStreamingService : Service() {
             PowerManager.PARTIAL_WAKE_LOCK,
             "Conduit::StreamingWakeLock"
         ).apply {
-            acquire(3 * 60 * 60 * 1000L) // 3 hours max (refreshed every 5 minutes)
+            // Use shorter wake lock duration to comply with Android restrictions
+            // Refresh periodically via keepAlive instead of long timeout
+            acquire(10 * 60 * 1000L) // 10 minutes (refreshed every 5 minutes)
         }
         println("BackgroundStreamingService: Wake lock acquired")
     }
@@ -170,6 +179,18 @@ class BackgroundStreamingService : Service() {
     }
     
     private fun keepAlive() {
+        // Check if we're approaching Android 14's 6-hour dataSync limit
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && isForeground) {
+            val uptime = System.currentTimeMillis() - foregroundStartTime
+            val fiveHours = 5 * 60 * 60 * 1000L // 5 hours in milliseconds
+            
+            if (uptime > fiveHours) {
+                println("BackgroundStreamingService: Approaching time limit (${uptime / 3600000}h), stopping service")
+                stopStreaming()
+                return
+            }
+        }
+        
         // Refresh wake lock to extend background processing time
         releaseWakeLock()
         acquireWakeLock()
@@ -177,15 +198,20 @@ class BackgroundStreamingService : Service() {
     }
     
     private fun stopStreaming() {
+        println("BackgroundStreamingService: Stopping service...")
         activeStreams.clear()
         releaseWakeLock()
         
         if (isForeground) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-            } else {
-                @Suppress("DEPRECATION")
-                stopForeground(true)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+            } catch (e: Exception) {
+                println("BackgroundStreamingService: Error stopping foreground: ${e.message}")
             }
             isForeground = false
         }
@@ -194,9 +220,18 @@ class BackgroundStreamingService : Service() {
         println("BackgroundStreamingService: Service stopped")
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        println("BackgroundStreamingService: Task removed, stopping service")
+        stopStreaming()
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
+        println("BackgroundStreamingService: onDestroy called")
         releaseWakeLock()
+        activeStreams.clear()
         isForeground = false
+        foregroundStartTime = 0
         super.onDestroy()
         println("BackgroundStreamingService: Service destroyed")
     }
@@ -382,11 +417,9 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
                 streamsRequiringMic.isNotEmpty(),
             )
             
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
-            }
+            // Use startService (not startForegroundService) for keep-alive pings
+            // to avoid ForegroundServiceStartNotAllowedException on Android 14+
+            context.startService(serviceIntent)
         } catch (e: Exception) {
             println("BackgroundStreamingHandler: Failed to keep alive service: ${e.message}")
         }
