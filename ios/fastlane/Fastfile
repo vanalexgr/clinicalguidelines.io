@@ -14,15 +14,6 @@
 # update_fastlane
 default_platform(:ios)
 lane :release do
-    require 'yaml'
-    pubspec_path = File.expand_path('../../pubspec.yaml', __dir__)
-    pubspec = YAML.load_file(pubspec_path)
-    version = pubspec['version'] # e.g., "2.1.6+31"
-    semver, _build = version.split('+', 2)
-    tag = "v#{semver}"
-    link = "https://github.com/cogwheel0/conduit/releases/tag/#{tag}"
-    notes_path = File.expand_path('metadata/en-US/release_notes.txt', __dir__)
-    File.write(notes_path, link + "\n")
     app_store_connect_api_key(
       key_id: ENV['FASTLANE_API_KEY_ID'],
       issuer_id: ENV['FASTLANE_API_KEY_ISSUER_ID'],

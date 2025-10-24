@@ -142,9 +142,23 @@ print_status "Updating pubspec.yaml to version: $NEW_VERSION+$NEW_BUILD"
 sed -i.bak "s/^version: .*/version: $NEW_VERSION+$NEW_BUILD/" pubspec.yaml
 rm pubspec.yaml.bak
 
+# Generate Fastlane changelogs
+print_status "Generating Fastlane changelogs..."
+LINK="https://github.com/cogwheel0/conduit/releases/tag/$TAG_VERSION"
+
+# Android changelog (by build number)
+ANDROID_CHANGELOG_DIR="android/fastlane/metadata/android/en-US/changelogs"
+mkdir -p "$ANDROID_CHANGELOG_DIR"
+echo "$LINK" > "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt"
+
+# iOS release notes
+IOS_NOTES_PATH="ios/fastlane/metadata/en-US/release_notes.txt"
+mkdir -p "$(dirname "$IOS_NOTES_PATH")"
+echo "$LINK" > "$IOS_NOTES_PATH"
+
 # Commit changes
 print_status "Committing changes..."
-git add pubspec.yaml
+git add pubspec.yaml "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt" "$IOS_NOTES_PATH"
 git commit -m "chore: bump version to $NEW_VERSION"
 
 git push origin main
