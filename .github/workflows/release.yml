@@ -45,7 +45,7 @@ jobs:
         run: flutter pub get --enforce-lockfile
 
       - name: Generate code (build_runner)
-        run: dart run build_runner build --delete-conflicting-outputs -q
+        run: dart run build_runner build --delete-conflicting-outputs
 
       
 
@@ -109,7 +109,7 @@ jobs:
         run: flutter pub get --enforce-lockfile
 
       - name: Generate code (build_runner)
-        run: dart run build_runner build --delete-conflicting-outputs -q
+        run: dart run build_runner build --delete-conflicting-outputs
 
       
 
