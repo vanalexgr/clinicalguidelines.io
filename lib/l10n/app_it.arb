@@ -337,5 +337,7 @@
   "transportModeAuto": "Auto (Polling + WebSocket)",
   "transportModeWs": "Solo WebSocket",
   "transportModeAutoInfo": "Più robusto nelle reti restrittive. Passa a WebSocket quando possibile.",
-  "transportModeWsInfo": "Minore overhead, ma può fallire dietro proxy/firewall restrittivi."
+  "transportModeWsInfo": "Minore overhead, ma può fallire dietro proxy/firewall restrittivi.",
+  "websocketConnectionError": "Impossibile stabilire una connessione in tempo reale. Si prega di controllare la rete e la configurazione del server.",
+  "websocketReconnectFailed": "Connessione in tempo reale fallita. Lo streaming potrebbe non funzionare correttamente."
 }

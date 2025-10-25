@@ -960,4 +960,12 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get transportModeWsInfo =>
       'Minore overhead, ma può fallire dietro proxy/firewall restrittivi.';
+
+  @override
+  String get websocketConnectionError =>
+      'Impossibile stabilire una connessione in tempo reale. Si prega di controllare la rete e la configurazione del server.';
+
+  @override
+  String get websocketReconnectFailed =>
+      'Connessione in tempo reale fallita. Lo streaming potrebbe non funzionare correttamente.';
 }
