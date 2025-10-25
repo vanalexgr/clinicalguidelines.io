@@ -337,5 +337,7 @@
   "transportModeAuto": "Auto (Polling + WebSocket)",
   "transportModeWs": "Nur WebSocket",
   "transportModeAutoInfo": "Robuster in restriktiven Netzwerken. Wechselt nach Möglichkeit zu WebSocket.",
-  "transportModeWsInfo": "Geringerer Overhead, kann jedoch hinter strikten Proxys/Firewalls fehlschlagen."
+  "transportModeWsInfo": "Geringerer Overhead, kann jedoch hinter strikten Proxys/Firewalls fehlschlagen.",
+  "websocketConnectionError": "Echtzeit-Verbindung konnte nicht hergestellt werden. Bitte überprüfen Sie Ihr Netzwerk und die Serverkonfiguration.",
+  "websocketReconnectFailed": "Echtzeit-Verbindung fehlgeschlagen. Streaming funktioniert möglicherweise nicht ordnungsgemäß."
 }

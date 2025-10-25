@@ -957,4 +957,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get transportModeWsInfo =>
       'Lower overhead, but may fail behind strict proxies/firewalls.';
+
+  @override
+  String get websocketConnectionError =>
+      'Unable to establish real-time connection. Please check your network and server configuration.';
+
+  @override
+  String get websocketReconnectFailed =>
+      'Real-time connection failed. Streaming may not work properly.';
 }

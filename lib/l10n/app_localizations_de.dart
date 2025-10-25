@@ -965,4 +965,12 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get transportModeWsInfo =>
       'Geringerer Overhead, kann jedoch hinter strikten Proxys/Firewalls fehlschlagen.';
+
+  @override
+  String get websocketConnectionError =>
+      'Echtzeit-Verbindung konnte nicht hergestellt werden. Bitte überprüfen Sie Ihr Netzwerk und die Serverkonfiguration.';
+
+  @override
+  String get websocketReconnectFailed =>
+      'Echtzeit-Verbindung fehlgeschlagen. Streaming funktioniert möglicherweise nicht ordnungsgemäß.';
 }

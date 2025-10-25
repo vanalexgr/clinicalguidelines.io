@@ -700,7 +700,10 @@
   "@transportModeWs": {"description": "Dropdown option label for WebSocket-only transport."},
   "transportModeAutoInfo": "More robust on restrictive networks. Upgrades to WebSocket when possible.",
   "@transportModeAutoInfo": {"description": "Footnote text for the Auto transport mode."},
-  "transportModeWsInfo": "Lower overhead, but may fail behind strict proxies/firewalls."
-  ,
-  "@transportModeWsInfo": {"description": "Footnote text for the WebSocket-only transport mode."}
+  "transportModeWsInfo": "Lower overhead, but may fail behind strict proxies/firewalls.",
+  "@transportModeWsInfo": {"description": "Footnote text for the WebSocket-only transport mode."},
+  "websocketConnectionError": "Unable to establish real-time connection. Please check your network and server configuration.",
+  "@websocketConnectionError": {"description": "Error message shown when WebSocket connection fails initially."},
+  "websocketReconnectFailed": "Real-time connection failed. Streaming may not work properly.",
+  "@websocketReconnectFailed": {"description": "Error message shown when WebSocket reconnection attempts fail."}
 }

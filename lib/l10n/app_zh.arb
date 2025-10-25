@@ -330,5 +330,7 @@
   "transportModeAuto": "自动（轮询 + WebSocket）",
   "transportModeWs": "仅 WebSocket",
   "transportModeAutoInfo": "在限制性网络上更稳健。在可能的情况下升级到 WebSocket。",
-  "transportModeWsInfo": "开销较低，但可能在严格的代理/防火墙后失败。"
+  "transportModeWsInfo": "开销较低，但可能在严格的代理/防火墙后失败。",
+  "websocketConnectionError": "无法建立实时连接。请检查您的网络和服务器配置。",
+  "websocketReconnectFailed": "实时连接失败。流式传输可能无法正常工作。"
 }

@@ -56,9 +56,9 @@ class ActiveSocketStream {
 
 /// Unified streaming helper for chat send/regenerate flows.
 ///
-/// This attaches chunked polling streams (fallback) plus WebSocket event handlers,
-/// and manages background search/image-gen UI updates. It operates via callbacks to
-/// avoid tight coupling with provider files for easier reuse and testing.
+/// This attaches WebSocket event handlers and manages background search/image-gen
+/// UI updates. It operates via callbacks to avoid tight coupling with provider files
+/// for easier reuse and testing.
 ActiveSocketStream attachUnifiedChunkedStreaming({
   required Stream<String> stream,
   required bool webSearchEnabled,
@@ -1140,9 +1140,8 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       // Unregister from persistent service
       persistentService.unregisterStream(streamId);
 
-      // Only finish streaming if no socket subscriptions are active
-      // This indicates a polling-driven flow where the stream ending means completion
-      // For socket flows, completion should be handled by socket events (done: true)
+      // Stream completion without socket subscriptions indicates a simple flow
+      // For WebSocket flows, completion should be handled by socket events (done: true)
       if (socketSubscriptions.isEmpty) {
         finishStreaming();
         Future.microtask(refreshConversationSnapshot);

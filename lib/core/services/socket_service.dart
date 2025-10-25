@@ -2,8 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../models/server_config.dart';
-import '../utils/debug_logger.dart';
+import '../../l10n/app_localizations.dart';
+import 'navigation_service.dart';
 import 'socket_tls_override.dart';
+import '../../shared/utils/ui_utils.dart';
 
 typedef SocketChatEventHandler =
     void Function(
@@ -71,10 +73,10 @@ class SocketService with WidgetsBindingObserver {
     final path = '/ws/socket.io';
 
     final builder = io.OptionBuilder()
-        // Transport selection
-        .setTransports(websocketOnly ? ['websocket'] : ['polling', 'websocket'])
-        .setRememberUpgrade(!websocketOnly)
-        .setUpgrade(!websocketOnly)
+        // Transport selection - WebSocket only, no polling fallback
+        .setTransports(['websocket'])
+        .setRememberUpgrade(false)
+        .setUpgrade(false)
         // Tune reconnect/backoff and timeouts
         .setReconnectionAttempts(0) // 0/Infinity semantics: unlimited attempts
         .setReconnectionDelay(1000)
@@ -252,7 +254,6 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleConnect(dynamic _) {
-    DebugLogger.log('Socket connected: ${_socket?.id}', scope: 'socket');
     if (_authToken != null && _authToken!.isNotEmpty) {
       _socket?.emit('user-join', {
         'auth': {'token': _authToken},
@@ -261,14 +262,10 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleReconnectAttempt(dynamic attempt) {
-    DebugLogger.log('Socket reconnect_attempt: $attempt', scope: 'socket');
+    // Silent reconnection attempt
   }
 
   void _handleReconnect(dynamic attempt) {
-    DebugLogger.log(
-      'Socket reconnected after $attempt attempts',
-      scope: 'socket',
-    );
     if (_authToken != null && _authToken!.isNotEmpty) {
       _socket?.emit('user-join', {
         'auth': {'token': _authToken},
@@ -277,15 +274,39 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleConnectError(dynamic err) {
-    DebugLogger.log('Socket connect_error: $err', scope: 'socket');
+    // Show user-facing error notification
+    final context = NavigationService.context;
+    if (context != null) {
+      final l10n = AppLocalizations.of(context);
+      if (l10n != null) {
+        UiUtils.showMessage(
+          context,
+          l10n.websocketConnectionError,
+          isError: true,
+          duration: const Duration(seconds: 5),
+        );
+      }
+    }
   }
 
   void _handleReconnectFailed(dynamic _) {
-    DebugLogger.log('Socket reconnect_failed', scope: 'socket');
+    // Show user-facing error notification
+    final context = NavigationService.context;
+    if (context != null) {
+      final l10n = AppLocalizations.of(context);
+      if (l10n != null) {
+        UiUtils.showMessage(
+          context,
+          l10n.websocketReconnectFailed,
+          isError: true,
+          duration: const Duration(seconds: 5),
+        );
+      }
+    }
   }
 
   void _handleDisconnect(dynamic reason) {
-    DebugLogger.log('Socket disconnected: $reason', scope: 'socket');
+    // Silent disconnect
   }
 
   void _handleChatEvent(dynamic data, [dynamic ack]) {

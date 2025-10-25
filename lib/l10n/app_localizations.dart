@@ -1849,6 +1849,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lower overhead, but may fail behind strict proxies/firewalls.'**
   String get transportModeWsInfo;
+
+  /// Error message shown when WebSocket connection fails initially.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to establish real-time connection. Please check your network and server configuration.'**
+  String get websocketConnectionError;
+
+  /// Error message shown when WebSocket reconnection attempts fail.
+  ///
+  /// In en, this message translates to:
+  /// **'Real-time connection failed. Streaming may not work properly.'**
+  String get websocketReconnectFailed;
 }
 
 class _AppLocalizationsDelegate

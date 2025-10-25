@@ -971,4 +971,12 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get transportModeWsInfo =>
       'Moins de surcharge, mais peut échouer derrière des proxys/firewalls stricts.';
+
+  @override
+  String get websocketConnectionError =>
+      'Impossible d\'établir une connexion en temps réel. Veuillez vérifier votre réseau et la configuration du serveur.';
+
+  @override
+  String get websocketReconnectFailed =>
+      'Échec de la connexion en temps réel. Le streaming pourrait ne pas fonctionner correctement.';
 }
