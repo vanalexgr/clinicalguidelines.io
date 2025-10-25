@@ -152,7 +152,7 @@ mkdir -p "$ANDROID_CHANGELOG_DIR"
 echo "$LINK" > "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt"
 
 # iOS release notes
-IOS_NOTES_PATH="ios/fastlane/metadata/en-US/release_notes.txt"
+IOS_NOTES_PATH="ios/fastlane/metadata/default/release_notes.txt"
 mkdir -p "$(dirname "$IOS_NOTES_PATH")"
 echo "$LINK" > "$IOS_NOTES_PATH"
 
