@@ -31,7 +31,19 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
   bool _hasError = false;
   void Function(FlutterErrorDetails details)? _previousOnError;
 
+  bool _shouldIgnoreError(Object error) {
+    // Ignore RenderFlex overflow errors (layout issues)
+    final errorString = error.toString();
+    return errorString.contains('RenderFlex') ||
+        errorString.contains('overflow') && errorString.contains('pixels');
+  }
+
   void _scheduleHandleError(Object error, StackTrace? stack) {
+    // Skip errors that should be ignored
+    if (_shouldIgnoreError(error)) {
+      return;
+    }
+    
     // Defer to next frame to avoid setState during build exceptions
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -119,43 +131,99 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
         child: Scaffold(
           backgroundColor: context.conduitTheme.surfaceBackground,
           body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: context.conduitTheme.error,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    AppLocalizations.of(context)?.errorMessage ??
-                        'An unexpected error occurred',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: context.conduitTheme.textPrimary,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.pagePadding,
+                  vertical: Spacing.lg,
+                ),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  decoration: BoxDecoration(
+                    color: context.conduitTheme.cardBackground,
+                    borderRadius: BorderRadius.circular(
+                      context.conduitTheme.radiusLg,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    enhancedErrorService.getUserMessage(_error!),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: context.conduitTheme.textSecondary,
+                    border: Border.all(
+                      color: context.conduitTheme.cardBorder,
+                      width: BorderWidth.regular,
                     ),
+                    boxShadow: context.conduitTheme.cardShadows,
                   ),
-                  if (widget.allowRetry) ...[
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: _retry,
-                      icon: const Icon(Icons.refresh),
-                      label: Text(
-                        AppLocalizations.of(context)?.retry ?? 'Retry',
+                  padding: const EdgeInsets.all(Spacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Error icon with gradient background
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: context.conduitTheme.errorBackground,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.error_outline_rounded,
+                          size: 40,
+                          color: context.conduitTheme.error,
+                        ),
                       ),
-                    ),
-                  ],
-                ],
+                      const SizedBox(height: Spacing.lg),
+                      
+                      // Error title
+                      Text(
+                        AppLocalizations.of(context)?.errorMessage ??
+                            'Something went wrong',
+                        style: context.conduitTheme.headingSmall,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: Spacing.sm),
+                      
+                      // Error description
+                      Text(
+                        enhancedErrorService.getUserMessage(_error!),
+                        textAlign: TextAlign.center,
+                        style: context.conduitTheme.bodySmall?.copyWith(
+                          color: context.conduitTheme.textSecondary,
+                        ),
+                      ),
+                      
+                      if (widget.allowRetry) ...[
+                        const SizedBox(height: Spacing.xl),
+                        
+                        // Retry button
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _retry,
+                            icon: const Icon(Icons.refresh_rounded),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: context.conduitTheme.buttonPrimary,
+                              foregroundColor: context.conduitTheme.buttonPrimaryText,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: Spacing.lg,
+                                vertical: Spacing.md,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  context.conduitTheme.radiusMd,
+                                ),
+                              ),
+                              elevation: 0,
+                            ),
+                            label: Text(
+                              AppLocalizations.of(context)?.retry ?? 'Try Again',
+                              style: context.conduitTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: context.conduitTheme.buttonPrimaryText,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
