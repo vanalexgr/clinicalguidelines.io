@@ -3093,6 +3093,7 @@ class ApiService {
     List<Map<String, dynamic>>? toolServers,
     Map<String, dynamic>? backgroundTasks,
     String? responseMessageId,
+    Map<String, dynamic>? userSettings,
   }) {
     final streamController = StreamController<String>();
 
@@ -3199,16 +3200,23 @@ class ApiService {
       data['tool_ids'] = toolIds;
       _traceApi('Including tool_ids in streaming request: $toolIds');
 
-      // Hint server to use native function calling when tools are selected
-      // This enables provider-native tool execution paths and consistent UI events
+      // Respect user's function_calling preference from backend settings
+      // If not set, backend will default to 'default' mode (safer, more compatible)
       try {
-        final params =
-            (data['params'] as Map<String, dynamic>?) ?? <String, dynamic>{};
-        params['function_calling'] = 'native';
-        data['params'] = params;
-        _traceApi('Set params.function_calling = native');
+        final userParams = userSettings?['params'] as Map<String, dynamic>?;
+        final functionCallingMode = userParams?['function_calling'] as String?;
+        
+        if (functionCallingMode != null) {
+          final params =
+              (data['params'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+          params['function_calling'] = functionCallingMode;
+          data['params'] = params;
+          _traceApi('Set params.function_calling = $functionCallingMode (from user settings)');
+        } else {
+          _traceApi('No function_calling preference in user settings, backend will use default mode');
+        }
       } catch (_) {
-        // Non-fatal; continue without forcing native mode
+        // Non-fatal; continue without setting function_calling mode
       }
     }
 
