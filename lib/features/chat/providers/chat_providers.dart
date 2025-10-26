@@ -1414,6 +1414,7 @@ Future<void> regenerateMessage(
       toolServers: toolServers,
       backgroundTasks: bgTasks,
       responseMessageId: assistantMessageId,
+      userSettings: userSettingsData,
     );
 
     final stream = response.stream;
@@ -1959,6 +1960,7 @@ Future<void> _sendMessageInternal(
       toolServers: toolServers,
       backgroundTasks: bgTasks,
       responseMessageId: assistantMessageId,
+      userSettings: userSettingsData,
     );
 
     final stream = response.stream;
