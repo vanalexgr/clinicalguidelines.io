@@ -78,7 +78,7 @@ class TextToSpeechState {
 }
 
 class TextToSpeechController extends Notifier<TextToSpeechState> {
-  late final TextToSpeechService _service;
+  late TextToSpeechService _service;
   bool _handlersBound = false;
   Future<bool>? _initializationFuture;
 
