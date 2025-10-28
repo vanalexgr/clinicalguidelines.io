@@ -3067,6 +3067,29 @@ class ApiService {
   final Map<String, CancelToken> _streamCancelTokens = {};
   final Map<String, String> _messagePersistentStreamIds = {};
 
+  /// Associates a streaming message with its persistent stream identifier.
+  void registerPersistentStreamForMessage(String messageId, String streamId) {
+    _messagePersistentStreamIds[messageId] = streamId;
+  }
+
+  /// Removes the persistent stream mapping for a message if it matches.
+  ///
+  /// Returns the removed persistent stream identifier when one existed and
+  /// matched the optional [expectedStreamId].
+  String? clearPersistentStreamForMessage(
+    String messageId, {
+    String? expectedStreamId,
+  }) {
+    final current = _messagePersistentStreamIds[messageId];
+    if (current == null) {
+      return null;
+    }
+    if (expectedStreamId != null && current != expectedStreamId) {
+      return null;
+    }
+    return _messagePersistentStreamIds.remove(messageId);
+  }
+
   // Send message using dual-stream approach (HTTP SSE + WebSocket events).
   // Matches OpenWebUI web client behavior:
   // - HTTP SSE stream provides immediate content chunks
@@ -3205,15 +3228,19 @@ class ApiService {
       try {
         final userParams = userSettings?['params'] as Map<String, dynamic>?;
         final functionCallingMode = userParams?['function_calling'] as String?;
-        
+
         if (functionCallingMode != null) {
           final params =
               (data['params'] as Map<String, dynamic>?) ?? <String, dynamic>{};
           params['function_calling'] = functionCallingMode;
           data['params'] = params;
-          _traceApi('Set params.function_calling = $functionCallingMode (from user settings)');
+          _traceApi(
+            'Set params.function_calling = $functionCallingMode (from user settings)',
+          );
         } else {
-          _traceApi('No function_calling preference in user settings, backend will use default mode');
+          _traceApi(
+            'No function_calling preference in user settings, backend will use default mode',
+          );
         }
       } catch (_) {
         // Non-fatal; continue without setting function_calling mode
@@ -3288,20 +3315,29 @@ class ApiService {
           data: data,
           options: Options(
             responseType: ResponseType.stream,
+            // Extended timeout for streaming responses - allow up to 10 minutes
+            // for long-running tool calls and reasoning
+            receiveTimeout: const Duration(minutes: 10),
+            // Shorter send timeout for the initial request
+            sendTimeout: const Duration(seconds: 30),
             headers: {
               'Accept': 'text/event-stream',
+              // Enable HTTP keep-alive to maintain connection in background
+              'Connection': 'keep-alive',
+              // Request server to send keep-alive messages
+              'Cache-Control': 'no-cache',
             },
           ),
           cancelToken: cancelToken,
         );
 
         final respData = resp.data;
-        
+
         // Check if we got a task_id response (non-streaming)
         if (respData is Map && respData['task_id'] != null) {
           final taskId = respData['task_id'].toString();
           _traceApi('Background task created: $taskId');
-          
+
           // In this case, all streaming will happen via WebSocket
           // Close HTTP stream but keep WebSocket active
           if (!streamController.isClosed) {
@@ -3309,15 +3345,26 @@ class ApiService {
           }
           return;
         }
-        
+
         // We have a streaming response body
         if (respData is ResponseBody) {
           _traceApi('HTTP SSE stream started for message: $messageId');
-          
+
           // Parse SSE stream and forward chunks to controller
           await for (final chunk in SSEStreamParser.parseResponseStream(
             respData,
             splitLargeDeltas: false,
+            heartbeatTimeout: const Duration(minutes: 2),
+            onHeartbeat: () {
+              // Notify persistent streaming service that connection is alive
+              final persistentStreamId = _messagePersistentStreamIds[messageId];
+              if (persistentStreamId != null) {
+                PersistentStreamingService().updateStreamProgress(
+                  persistentStreamId,
+                  chunkSequence: DateTime.now().millisecondsSinceEpoch,
+                );
+              }
+            },
           )) {
             if (!streamController.isClosed) {
               streamController.add(chunk);
@@ -3326,12 +3373,12 @@ class ApiService {
               break;
             }
           }
-          
+
           _traceApi('HTTP SSE stream completed for message: $messageId');
         } else {
           _traceApi('Unexpected response type: ${respData.runtimeType}');
         }
-        
+
         // Close the HTTP stream controller
         // WebSocket events will continue independently via streaming_helper
         if (!streamController.isClosed) {
@@ -3399,7 +3446,7 @@ class ApiService {
     } catch (_) {}
 
     try {
-      final pid = _messagePersistentStreamIds.remove(messageId);
+      final pid = clearPersistentStreamForMessage(messageId);
       if (pid != null) {
         PersistentStreamingService().unregisterStream(pid);
       }

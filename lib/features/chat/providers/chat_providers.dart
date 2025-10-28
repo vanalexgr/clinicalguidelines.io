@@ -1447,7 +1447,7 @@ Future<void> regenerateMessage(
       modelItem: modelItem,
       sessionId: effectiveSessionId,
       activeConversationId: activeConversation.id,
-      api: api,
+      api: api!,
       socketService: socketService,
       registerDeltaListener: registerDeltaListener,
       appendToLastMessage: (c) =>
@@ -1719,7 +1719,7 @@ Future<void> _sendMessageInternal(
       final List<String> ids = msg.attachmentIds ?? const <String>[];
       if (ids.isNotEmpty) {
         final messageMap = await _buildMessagePayloadWithAttachments(
-          api: api,
+          api: api!,
           role: msg.role,
           cleanedText: cleaned,
           attachmentIds: ids,
@@ -1995,7 +1995,7 @@ Future<void> _sendMessageInternal(
       modelItem: modelItem,
       sessionId: effectiveSessionId,
       activeConversationId: activeConversation?.id,
-      api: api,
+      api: api!,
       socketService: socketService,
       registerDeltaListener: registerDeltaListener,
       appendToLastMessage: (c) =>

@@ -27,9 +27,11 @@ class BackgroundStreamingHandler {
   void Function(List<String> streamIds)? onStreamsSuspending;
   void Function()? onBackgroundTaskExpiring;
   void Function(List<String> streamIds, int estimatedSeconds)?
-  onBackgroundTaskExtended;
+      onBackgroundTaskExtended;
   void Function()? onBackgroundKeepAlive;
   bool Function()? shouldContinueInBackground;
+  void Function(String error, String errorType, List<String> streamIds)?
+      onServiceFailed;
 
   void _setupMethodCallHandler() {
     _channel.setMethodCallHandler((call) async {
@@ -78,6 +80,31 @@ class BackgroundStreamingHandler {
         case 'backgroundKeepAlive':
           DebugLogger.stream('keepalive-signal', scope: 'background');
           onBackgroundKeepAlive?.call();
+          break;
+
+        case 'serviceFailed':
+          final Map<String, dynamic> args =
+              call.arguments as Map<String, dynamic>;
+          final String error = args['error'] as String? ?? 'Unknown error';
+          final String errorType = args['errorType'] as String? ?? 'Exception';
+          final List<String> streamIds =
+              (args['streamIds'] as List?)?.cast<String>() ?? [];
+
+          DebugLogger.error(
+            'service-failed',
+            scope: 'background',
+            error: error,
+            data: {'type': errorType, 'streams': streamIds.length},
+          );
+
+          // Notify callback about service failure
+          onServiceFailed?.call(error, errorType, streamIds);
+
+          // Clean up failed streams
+          for (final streamId in streamIds) {
+            _activeStreamIds.remove(streamId);
+            _streamStates.remove(streamId);
+          }
           break;
       }
     });

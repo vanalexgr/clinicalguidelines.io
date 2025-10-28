@@ -12,15 +12,45 @@ class SSEStreamParser {
   /// 
   /// Returns a stream of content strings extracted from OpenAI-style
   /// completion chunks.
+  /// 
+  /// [heartbeatTimeout] - Maximum time without data before considering
+  /// the connection stale (default: 2 minutes)
+  /// [onHeartbeat] - Callback invoked when any data is received
   static Stream<String> parseResponseStream(
     ResponseBody responseBody, {
     bool splitLargeDeltas = false,
+    Duration heartbeatTimeout = const Duration(minutes: 2),
+    void Function()? onHeartbeat,
   }) async* {
+    DateTime lastDataReceived = DateTime.now();
+    Timer? heartbeatTimer;
+    
+    // Set up heartbeat monitoring
+    if (heartbeatTimeout.inMilliseconds > 0) {
+      heartbeatTimer = Timer.periodic(
+        const Duration(seconds: 30),
+        (timer) {
+          final timeSinceLastData = DateTime.now().difference(lastDataReceived);
+          if (timeSinceLastData > heartbeatTimeout) {
+            DebugLogger.warning(
+              'SSE stream heartbeat timeout: No data received for ${timeSinceLastData.inSeconds}s',
+              data: {'timeout': heartbeatTimeout.inSeconds},
+            );
+            timer.cancel();
+          }
+        },
+      );
+    }
+    
     try {
       // Buffer for accumulating incomplete SSE messages
       String buffer = '';
       
       await for (final chunk in responseBody.stream) {
+        // Update last data timestamp and invoke heartbeat callback
+        lastDataReceived = DateTime.now();
+        onHeartbeat?.call();
+        
         // Convert bytes to string (Dio ResponseBody.stream always emits Uint8List)
         final text = utf8.decode(chunk as List<int>, allowMalformed: true);
         buffer += text;
@@ -68,6 +98,9 @@ class SSEStreamParser {
         stackTrace: stackTrace,
       );
       rethrow;
+    } finally {
+      // Clean up heartbeat timer
+      heartbeatTimer?.cancel();
     }
   }
   

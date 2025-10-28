@@ -46,6 +46,28 @@ class PersistentStreamingService with WidgetsBindingObserver {
   }
 
   void _setupBackgroundHandlerCallbacks() {
+    _backgroundHandler.onServiceFailed = (error, errorType, streamIds) {
+      DebugLogger.error(
+        'background-service-failed',
+        scope: 'streaming/persistent',
+        error: '$errorType: $error',
+        data: {'affectedStreams': streamIds},
+      );
+      
+      // Attempt immediate recovery for failed streams
+      for (final streamId in streamIds) {
+        final callback = _streamRecoveryCallbacks[streamId];
+        if (callback != null) {
+          // Schedule recovery after a short delay
+          Future.delayed(const Duration(seconds: 2), () {
+            if (_activeStreams.containsKey(streamId)) {
+              _attemptStreamRecovery(streamId, callback);
+            }
+          });
+        }
+      }
+    };
+
     _backgroundHandler.onStreamsSuspending = (streamIds) {
       DebugLogger.stream(
         'PersistentStreaming: Streams suspending - $streamIds',
@@ -123,8 +145,45 @@ class PersistentStreamingService with WidgetsBindingObserver {
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (_activeStreams.isNotEmpty && _isInBackground) {
         _backgroundHandler.keepAlive();
+        
+        // Check for stale streams during background operation
+        _checkStreamHealth();
       }
     });
+  }
+  
+  void _checkStreamHealth() {
+    final now = DateTime.now();
+    final staleStreams = <String>[];
+    
+    for (final entry in _streamMetadata.entries) {
+      final streamId = entry.key;
+      final metadata = entry.value;
+      final lastUpdate = metadata['lastUpdate'] as DateTime?;
+      
+      if (lastUpdate != null) {
+        final timeSinceUpdate = now.difference(lastUpdate);
+        
+        // If no update in 90 seconds while in background, consider stale
+        if (timeSinceUpdate > const Duration(seconds: 90)) {
+          DebugLogger.warning(
+            'Stream $streamId appears stale: ${timeSinceUpdate.inSeconds}s since last update',
+          );
+          staleStreams.add(streamId);
+        }
+      }
+    }
+    
+    // Attempt recovery for stale streams
+    for (final streamId in staleStreams) {
+      final callback = _streamRecoveryCallbacks[streamId];
+      if (callback != null && _retryAttempts[streamId] == null) {
+        DebugLogger.stream(
+          'Initiating recovery for stale stream: $streamId',
+        );
+        _attemptStreamRecovery(streamId, callback);
+      }
+    }
   }
 
   @override
@@ -385,13 +444,26 @@ class PersistentStreamingService with WidgetsBindingObserver {
     final metadata = _streamMetadata[streamId];
     if (metadata == null) return false;
 
+    // Check if stream is marked as suspended
+    if (metadata['suspended'] == true) {
+      final suspendedAt = metadata['suspendedAt'] as DateTime?;
+      if (suspendedAt != null) {
+        final timeSinceSuspend = DateTime.now().difference(suspendedAt);
+        // Try to recover suspended streams after 10 seconds
+        return timeSinceSuspend > const Duration(seconds: 10);
+      }
+    }
+
     // Check if stream has been inactive for too long
     final lastUpdate = metadata['lastUpdate'] as DateTime?;
     if (lastUpdate != null) {
       final timeSinceUpdate = DateTime.now().difference(lastUpdate);
-      // Align with app-side watchdogs: be less aggressive than UI guard
-      // but still attempt recovery before server timeouts become likely.
-      return timeSinceUpdate > const Duration(minutes: 2);
+      // In background: 90 seconds
+      // In foreground: 2 minutes
+      final threshold = _isInBackground
+          ? const Duration(seconds: 90)
+          : const Duration(minutes: 2);
+      return timeSinceUpdate > threshold;
     }
 
     return false;

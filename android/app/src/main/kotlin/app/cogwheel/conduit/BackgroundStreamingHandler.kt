@@ -102,8 +102,18 @@ class BackgroundStreamingService : Service() {
         } catch (e: Exception) {
             // Catch all exceptions including ForegroundServiceStartNotAllowedException
             println("BackgroundStreamingService: Failed to enter foreground: ${e.javaClass.simpleName}: ${e.message}")
+            // Notify Flutter about the failure
+            sendFailureNotification(e)
             false
         }
+    }
+    
+    private fun sendFailureNotification(e: Exception) {
+        // Send broadcast intent to notify MainActivity
+        val intent = Intent("app.cogwheel.conduit.FOREGROUND_SERVICE_FAILED")
+        intent.putExtra("error", e.message ?: "Unknown error")
+        intent.putExtra("errorType", e.javaClass.simpleName)
+        sendBroadcast(intent)
     }
 
     private fun updateForegroundType(notification: Notification, type: Int) {
@@ -248,6 +258,7 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
     private val streamsRequiringMic = mutableSetOf<String>()
     private var backgroundJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var serviceFailureReceiver: android.content.BroadcastReceiver? = null
     
     companion object {
         private const val CHANNEL_NAME = "conduit/background_streaming"
@@ -262,6 +273,38 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         
         createNotificationChannel()
+        setupServiceFailureReceiver()
+    }
+    
+    private fun setupServiceFailureReceiver() {
+        serviceFailureReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == "app.cogwheel.conduit.FOREGROUND_SERVICE_FAILED") {
+                    val error = intent.getStringExtra("error") ?: "Unknown error"
+                    val errorType = intent.getStringExtra("errorType") ?: "Exception"
+                    
+                    println("BackgroundStreamingHandler: Service failure received: $errorType - $error")
+                    
+                    // Notify Flutter about the service failure
+                    channel.invokeMethod("serviceFailed", mapOf(
+                        "error" to error,
+                        "errorType" to errorType,
+                        "streamIds" to activeStreams.toList()
+                    ))
+                    
+                    // Clear active streams since service failed
+                    activeStreams.clear()
+                    streamsRequiringMic.clear()
+                }
+            }
+        }
+        
+        val filter = android.content.IntentFilter("app.cogwheel.conduit.FOREGROUND_SERVICE_FAILED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(serviceFailureReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(serviceFailureReceiver, filter)
+        }
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
@@ -514,5 +557,15 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         scope.cancel()
         stopBackgroundMonitoring()
         stopForegroundService()
+        
+        // Unregister broadcast receiver
+        try {
+            serviceFailureReceiver?.let {
+                context.unregisterReceiver(it)
+            }
+        } catch (e: Exception) {
+            println("BackgroundStreamingHandler: Error unregistering receiver: ${e.message}")
+        }
+        serviceFailureReceiver = null
     }
 }

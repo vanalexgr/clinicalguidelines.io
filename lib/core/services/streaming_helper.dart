@@ -16,6 +16,7 @@ import '../../shared/theme/theme_extensions.dart';
 import '../utils/debug_logger.dart';
 import '../utils/openwebui_source_parser.dart';
 import 'streaming_response_controller.dart';
+import 'api_service.dart';
 
 // Keep local verbosity toggle for socket logs
 const bool kSocketVerboseLogging = false;
@@ -67,7 +68,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   required Map<String, dynamic> modelItem,
   required String sessionId,
   required String? activeConversationId,
-  required dynamic api,
+  required ApiService api,
   required SocketService? socketService,
   RegisterConversationDeltaListener? registerDeltaListener,
   // Message update callbacks
@@ -169,6 +170,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       'modelId': modelId,
     },
   );
+  api.registerPersistentStreamForMessage(assistantMessageId, streamId);
 
   InactivityWatchdog? socketWatchdog;
   final socketSubscriptions = <VoidCallback>[];
@@ -318,8 +320,6 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
     if (chatId == null || chatId.isEmpty) {
       return;
     }
-    if (api == null) return;
-
     refreshingSnapshot = true;
     try {
       final conversation = await api.getConversation(chatId);
@@ -376,7 +376,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
             try {
               // Fire and forget
               // ignore: unawaited_futures
-              api?.sendChatCompleted(
+              api.sendChatCompleted(
                 chatId: activeConversationId ?? '',
                 messageId: assistantMessageId,
                 messages: const [],
@@ -397,7 +397,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
               } catch (_) {}
               try {
                 // ignore: unawaited_futures
-                api?.sendChatCompleted(
+                api.sendChatCompleted(
                   chatId: activeConversationId ?? '',
                   messageId: assistantMessageId,
                   messages: const [],
@@ -594,7 +594,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
           if (payload['done'] == true) {
             try {
               // ignore: unawaited_futures
-              api?.sendChatCompleted(
+              api.sendChatCompleted(
                 chatId: activeConversationId ?? '',
                 messageId: assistantMessageId,
                 messages: const [],
@@ -614,8 +614,8 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                   try {
                     final chatId = activeConversationId;
                     if (chatId != null && chatId.isNotEmpty) {
-                      final resp = await api?.dio.get('/api/v1/chats/$chatId');
-                      final data = resp?.data as Map<String, dynamic>?;
+                      final resp = await api.dio.get('/api/v1/chats/$chatId');
+                      final data = resp.data as Map<String, dynamic>?;
                       String content = '';
                       final chatObj = data?['chat'] as Map<String, dynamic>?;
                       if (chatObj != null) {
@@ -1137,6 +1137,10 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       }
     },
     onComplete: () {
+      api.clearPersistentStreamForMessage(
+        assistantMessageId,
+        expectedStreamId: streamId,
+      );
       // Unregister from persistent service
       persistentService.unregisterStream(streamId);
 
@@ -1159,6 +1163,10 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
         },
       );
 
+      api.clearPersistentStreamForMessage(
+        assistantMessageId,
+        expectedStreamId: streamId,
+      );
       try {
         persistentService.unregisterStream(streamId);
       } catch (_) {}
