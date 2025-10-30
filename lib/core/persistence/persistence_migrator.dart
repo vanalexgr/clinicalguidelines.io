@@ -93,7 +93,6 @@ class PersistenceMigrator {
     copyString(PreferenceKeys.socketTransportMode);
     copyStringList(PreferenceKeys.quickPills);
     copyBool(PreferenceKeys.sendOnEnterKey);
-    copyBool(PreferenceKeys.rememberCredentials);
     copyString(PreferenceKeys.activeServerId);
     copyString(PreferenceKeys.themeMode);
     copyString(PreferenceKeys.themePalette);
@@ -198,7 +197,6 @@ class PersistenceMigrator {
       PreferenceKeys.socketTransportMode,
       PreferenceKeys.quickPills,
       PreferenceKeys.sendOnEnterKey,
-      PreferenceKeys.rememberCredentials,
       PreferenceKeys.activeServerId,
       PreferenceKeys.themeMode,
       PreferenceKeys.themePalette,

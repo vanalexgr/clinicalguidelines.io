@@ -32,8 +32,6 @@ class OptimizedStorageService {
 
   static const String _authTokenKey = 'auth_token_v3';
   static const String _activeServerIdKey = PreferenceKeys.activeServerId;
-  static const String _rememberCredentialsKey =
-      PreferenceKeys.rememberCredentials;
   static const String _themeModeKey = PreferenceKeys.themeMode;
   static const String _themePaletteKey = PreferenceKeys.themePalette;
   static const String _localeCodeKey = PreferenceKeys.localeCode;
@@ -101,10 +99,12 @@ class OptimizedStorageService {
         scope: 'storage/optimized',
       );
     } catch (error) {
-      DebugLogger.log(
-        'Failed to delete auth token: $error',
+      DebugLogger.error(
+        'Failed to delete auth token',
         scope: 'storage/optimized',
+        error: error,
       );
+      rethrow;
     }
   }
 
@@ -164,10 +164,12 @@ class OptimizedStorageService {
         scope: 'storage/optimized',
       );
     } catch (error) {
-      DebugLogger.log(
-        'Failed to delete credentials: $error',
+      DebugLogger.error(
+        'Failed to delete credentials',
         scope: 'storage/optimized',
+        error: error,
       );
+      rethrow;
     }
   }
 
@@ -182,14 +184,6 @@ class OptimizedStorageService {
   // ---------------------------------------------------------------------------
   // Preference helpers (Hive-backed)
   // ---------------------------------------------------------------------------
-  Future<void> setRememberCredentials(bool remember) async {
-    await _preferencesBox.put(_rememberCredentialsKey, remember);
-  }
-
-  bool getRememberCredentials() {
-    return (_preferencesBox.get(_rememberCredentialsKey) as bool?) ?? false;
-  }
-
   Future<void> saveServerConfigs(List<ServerConfig> configs) async {
     try {
       final jsonString = jsonEncode(configs.map((c) => c.toJson()).toList());
@@ -352,37 +346,29 @@ class OptimizedStorageService {
   // Batch operations
   // ---------------------------------------------------------------------------
   Future<void> clearAuthData() async {
-    try {
-      await Future.wait([
-        deleteAuthToken(),
-        deleteSavedCredentials(),
-        _preferencesBox.delete(_rememberCredentialsKey),
-        _preferencesBox.delete(_activeServerIdKey),
-      ]);
+    await Future.wait([
+      deleteAuthToken(),
+      deleteSavedCredentials(),
+      _preferencesBox.delete(_activeServerIdKey),
+    ]);
 
-      _cache.removeWhere(
-        (key, _) =>
-            key.contains('auth') ||
-            key.contains('credentials') ||
-            key.contains('server'),
-      );
-      _cacheTimestamps.removeWhere(
-        (key, _) =>
-            key.contains('auth') ||
-            key.contains('credentials') ||
-            key.contains('server'),
-      );
+    _cache.removeWhere(
+      (key, _) =>
+          key.contains('auth') ||
+          key.contains('credentials') ||
+          key.contains('server'),
+    );
+    _cacheTimestamps.removeWhere(
+      (key, _) =>
+          key.contains('auth') ||
+          key.contains('credentials') ||
+          key.contains('server'),
+    );
 
-      DebugLogger.log(
-        'Auth data cleared in batch operation',
-        scope: 'storage/optimized',
-      );
-    } catch (error) {
-      DebugLogger.log(
-        'Failed to clear auth data: $error',
-        scope: 'storage/optimized',
-      );
-    }
+    DebugLogger.log(
+      'Auth data cleared in batch operation',
+      scope: 'storage/optimized',
+    );
   }
 
   Future<void> clearAll() async {

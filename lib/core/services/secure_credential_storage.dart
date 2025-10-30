@@ -171,6 +171,7 @@ class SecureCredentialStorage {
       DebugLogger.storage('delete-ok', scope: 'credentials');
     } catch (e) {
       DebugLogger.error('delete-failed', scope: 'credentials', error: e);
+      rethrow;
     }
   }
 
@@ -216,6 +217,7 @@ class SecureCredentialStorage {
         scope: 'credentials/token',
         error: e,
       );
+      rethrow;
     }
   }
 
