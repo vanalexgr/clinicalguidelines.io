@@ -2361,6 +2361,22 @@ class ApiService {
   }
 
   // Audio
+  Future<String?> getDefaultServerVoice() async {
+    _traceApi('Fetching default server TTS voice');
+    final response = await _dio.get('/api/v1/audio/config');
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final ttsConfig = data['tts'];
+      if (ttsConfig is Map<String, dynamic>) {
+        final voice = ttsConfig['VOICE'] ?? ttsConfig['voice'];
+        if (voice is String && voice.trim().isNotEmpty) {
+          return voice.trim();
+        }
+      }
+    }
+    return null;
+  }
+
   Future<List<Map<String, dynamic>>> getAvailableServerVoices() async {
     _traceApi('Fetching server TTS voices');
     final response = await _dio.get('/api/v1/audio/voices');
