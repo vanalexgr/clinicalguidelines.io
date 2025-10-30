@@ -1553,53 +1553,109 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   }) {
     final bool enabled = onTap != null;
     final Brightness brightness = Theme.of(context).brightness;
-    final Color baseBackground = context.conduitTheme.cardBackground;
-    final Color background = isActive
-        ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.16)
-        : baseBackground.withValues(
-            alpha: brightness == Brightness.dark ? 0.18 : 0.12,
-          );
-    final Color outline = isActive
-        ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.8)
-        : context.conduitTheme.cardBorder.withValues(alpha: 0.6);
-    final Color contentColor = isActive
-        ? context.conduitTheme.buttonPrimary
-        : context.conduitTheme.textPrimary.withValues(
-            alpha: enabled ? Alpha.strong : Alpha.disabled,
-          );
+    final theme = context.conduitTheme;
+    
+    // Enhanced color scheme for active state
+    final Color activeBackground = isActive
+        ? theme.buttonPrimary.withValues(alpha: brightness == Brightness.dark ? 0.22 : 0.14)
+        : Colors.transparent;
+    
+    final Color inactiveBackground = brightness == Brightness.dark
+        ? theme.cardBackground.withValues(alpha: 0.25)
+        : theme.cardBackground.withValues(alpha: 0.08);
+    
+    final Color background = isActive ? activeBackground : inactiveBackground;
+    
+    // Enhanced border styling
+    final Color activeBorder = theme.buttonPrimary.withValues(
+      alpha: brightness == Brightness.dark ? 0.85 : 0.75,
+    );
+    final Color inactiveBorder = theme.cardBorder.withValues(
+      alpha: brightness == Brightness.dark ? 0.4 : 0.25,
+    );
+    final Color borderColor = isActive ? activeBorder : inactiveBorder;
+    
+    // Enhanced content colors
+    final Color activeTextColor = theme.buttonPrimary;
+    final Color inactiveTextColor = theme.textPrimary.withValues(
+      alpha: enabled ? (brightness == Brightness.dark ? 0.85 : 0.75) : Alpha.disabled,
+    );
+    final Color textColor = isActive ? activeTextColor : inactiveTextColor;
+    
+    final Color iconColor = isActive
+        ? activeTextColor
+        : inactiveTextColor;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppBorderRadius.input),
-        onTap: onTap == null
-            ? null
-            : () {
-                HapticFeedback.selectionClick();
-                onTap();
-              },
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.sm,
-            vertical: Spacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(AppBorderRadius.input),
-            border: Border.all(color: outline, width: BorderWidth.thin),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: IconSize.medium, color: contentColor),
-              const SizedBox(width: Spacing.xs),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.labelStyle.copyWith(color: contentColor),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppBorderRadius.round),
+          onTap: onTap == null
+              ? null
+              : () {
+                  HapticFeedback.mediumImpact();
+                  onTap();
+                },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.md,
+              vertical: Spacing.sm - 2,
+            ),
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(AppBorderRadius.round),
+              border: Border.all(
+                color: borderColor,
+                width: isActive ? BorderWidth.medium : BorderWidth.thin,
               ),
-            ],
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: theme.buttonPrimary.withValues(
+                          alpha: brightness == Brightness.dark ? 0.25 : 0.15,
+                        ),
+                        blurRadius: 8,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  child: Icon(
+                    icon,
+                    size: IconSize.small + 1,
+                    color: iconColor,
+                  ),
+                ),
+                const SizedBox(width: Spacing.xs + 1),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  style: AppTypography.labelStyle.copyWith(
+                    color: textColor,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                    fontSize: 13,
+                    letterSpacing: -0.1,
+                  ),
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
