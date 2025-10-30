@@ -168,7 +168,7 @@ class SettingsService {
       _voiceHoldToTalkKey: settings.voiceHoldToTalk,
       _voiceAutoSendKey: settings.voiceAutoSendFinal,
       _socketTransportModeKey: settings.socketTransportMode,
-      _quickPillsKey: settings.quickPills.take(2).toList(),
+      _quickPillsKey: settings.quickPills.toList(),
       _sendOnEnterKey: settings.sendOnEnter,
       PreferenceKeys.ttsSpeechRate: settings.ttsSpeechRate,
       PreferenceKeys.ttsPitch: settings.ttsPitch,
@@ -287,11 +287,11 @@ class SettingsService {
     if (stored == null) {
       return Future.value(const []);
     }
-    return Future.value(List<String>.from(stored.take(2)));
+    return Future.value(List<String>.from(stored));
   }
 
   static Future<void> setQuickPills(List<String> pills) {
-    return _preferencesBox().put(_quickPillsKey, pills.take(2).toList());
+    return _preferencesBox().put(_quickPillsKey, pills.toList());
   }
 
   // Chat input behavior
@@ -592,10 +592,10 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
   }
 
   Future<void> setQuickPills(List<String> pills) async {
-    // Enforce max 2; accept arbitrary server tool IDs plus built-ins
-    final filtered = pills.take(2).toList();
-    state = state.copyWith(quickPills: filtered);
-    await SettingsService.setQuickPills(filtered);
+    // Accept arbitrary server tool IDs plus built-ins
+    // Platform-specific limits are enforced in the UI layer
+    state = state.copyWith(quickPills: pills);
+    await SettingsService.setQuickPills(pills);
   }
 
   Future<void> setSendOnEnter(bool value) async {

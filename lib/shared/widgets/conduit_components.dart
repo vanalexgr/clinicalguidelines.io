@@ -654,7 +654,7 @@ class ConduitChip extends StatelessWidget {
                 ? context.conduitTheme.buttonPrimary.withValues(
                     alpha: Alpha.standard,
                   )
-                : context.conduitTheme.dividerColor,
+                : context.conduitTheme.cardBorder,
             width: BorderWidth.standard,
           ),
         ),

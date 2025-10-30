@@ -283,6 +283,9 @@ class AppCustomizationPage extends ConsumerWidget {
     WidgetRef ref,
     AppSettings settings,
   ) {
+    // Allow unlimited selections on all platforms
+    final maxPills = 999;
+
     final selectedRaw = ref.watch(
       appSettingsProvider.select((s) => s.quickPills),
     );
@@ -295,7 +298,7 @@ class AppCustomizationPage extends ConsumerWidget {
 
     final selected = selectedRaw
         .where((id) => allowed.contains(id))
-        .take(2)
+        .take(maxPills)
         .toList();
     if (selected.length != selectedRaw.length) {
       Future.microtask(
@@ -310,7 +313,7 @@ class AppCustomizationPage extends ConsumerWidget {
       if (next.contains(id)) {
         next.remove(id);
       } else {
-        if (next.length >= 2) return;
+        if (next.length >= maxPills) return;
         next.add(id);
       }
       await ref.read(appSettingsProvider.notifier).setQuickPills(next);
@@ -319,7 +322,7 @@ class AppCustomizationPage extends ConsumerWidget {
     List<Widget> buildToolChips() {
       return tools.map((tool) {
         final isSelected = selected.contains(tool.id);
-        final canSelect = selectedCount < 2 || isSelected;
+        final canSelect = selectedCount < maxPills || isSelected;
         return ConduitChip(
           label: tool.name,
           icon: Icons.extension,
@@ -344,19 +347,6 @@ class AppCustomizationPage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (selected.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Spacing.md),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => ref
-                      .read(appSettingsProvider.notifier)
-                      .setQuickPills(const []),
-                  child: Text(l10n.clear),
-                ),
-              ),
-            ),
           Wrap(
             spacing: Spacing.sm,
             runSpacing: Spacing.sm,
@@ -365,7 +355,7 @@ class AppCustomizationPage extends ConsumerWidget {
                 label: l10n.web,
                 icon: Platform.isIOS ? CupertinoIcons.search : Icons.search,
                 isSelected: selected.contains('web'),
-                onTap: (selectedCount < 2 || selected.contains('web'))
+                onTap: (selectedCount < maxPills || selected.contains('web'))
                     ? () => toggle('web')
                     : null,
               ),
@@ -373,11 +363,20 @@ class AppCustomizationPage extends ConsumerWidget {
                 label: l10n.imageGen,
                 icon: Platform.isIOS ? CupertinoIcons.photo : Icons.image,
                 isSelected: selected.contains('image'),
-                onTap: (selectedCount < 2 || selected.contains('image'))
+                onTap: (selectedCount < maxPills || selected.contains('image'))
                     ? () => toggle('image')
                     : null,
               ),
               ...buildToolChips(),
+              if (selected.isNotEmpty)
+                ConduitChip(
+                  label: l10n.clear,
+                  icon: Platform.isIOS ? CupertinoIcons.xmark : Icons.close,
+                  isSelected: false,
+                  onTap: () => ref
+                      .read(appSettingsProvider.notifier)
+                      .setQuickPills(const []),
+                ),
             ],
           ),
         ],
@@ -501,7 +500,15 @@ class AppCustomizationPage extends ConsumerWidget {
                     color: theme.buttonPrimary,
                   ),
                   const SizedBox(width: Spacing.sm),
-                  const Text('Engine'),
+                  Text(
+                    'Engine',
+                    style:
+                        theme.bodyMedium?.copyWith(
+                          color: theme.sidebarForeground,
+                          fontWeight: FontWeight.w500,
+                        ) ??
+                        TextStyle(color: theme.sidebarForeground, fontSize: 14),
+                  ),
                   const Spacer(),
                   Wrap(
                     spacing: Spacing.sm,
