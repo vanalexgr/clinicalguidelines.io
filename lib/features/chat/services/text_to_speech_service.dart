@@ -24,6 +24,8 @@ class TextToSpeechService {
   int _expectedChunks = 0;
   int _currentIndex = -1;
   bool _waitingNext = false;
+  String? _serverDefaultVoice;
+  Future<String?>? _serverDefaultVoiceFuture;
 
   VoidCallback? _onStart;
   VoidCallback? _onComplete;
@@ -209,16 +211,18 @@ class TextToSpeechService {
 
   /// Update TTS settings on-the-fly
   Future<void> updateSettings({
-    String? voice,
+    Object? voice = const _VoiceNotProvided(),
     double? speechRate,
     double? pitch,
     double? volume,
     TtsEngine? engine,
   }) async {
+    final voiceProvided = voice is! _VoiceNotProvided;
+    final voiceValue = voiceProvided ? voice as String? : null;
     if (!_initialized || !_available) {
       // Allow engine and voice to update before init
       if (engine != null) _engine = engine;
-      if (voice != null) _preferredVoice = voice;
+      if (voiceProvided) _preferredVoice = voiceValue;
       return;
     }
 
@@ -226,8 +230,8 @@ class TextToSpeechService {
       if (engine != null) {
         _engine = engine;
       }
-      if (voice != null) {
-        _preferredVoice = voice;
+      if (voiceProvided) {
+        _preferredVoice = voiceValue;
       }
       if (volume != null) {
         await _tts.setVolume(volume);
@@ -239,7 +243,7 @@ class TextToSpeechService {
         await _tts.setPitch(pitch);
       }
       // Set specific voice by name on device engine
-      if (_engine == TtsEngine.device) {
+      if (_engine == TtsEngine.device && voiceProvided) {
         await _setVoiceByName(_preferredVoice);
       }
     } catch (e) {
@@ -304,18 +308,45 @@ class TextToSpeechService {
       try {
         final serverVoices = await _api.getAvailableServerVoices();
         final mapped = serverVoices
-            .map(
-              (v) => {
-                'name': (v['name'] ?? v['id'] ?? '').toString(),
-                'locale': (v['locale'] ?? '').toString(),
-              },
-            )
-            .where((e) => (e['name'] as String).isNotEmpty)
+            .map((v) {
+              final id = (v['id'] ?? v['name'] ?? '').toString();
+              final name = (v['name'] ?? v['id'] ?? '').toString();
+              final localeValue = (v['locale'] ?? v['language'] ?? '')
+                  .toString();
+              return {'id': id, 'name': name, 'locale': localeValue};
+            })
+            .where((entry) {
+              final name = entry['name'];
+              return name is String && name.trim().isNotEmpty;
+            })
             .toList();
+
+        final defaultVoice = await _getServerDefaultVoice();
+        if (defaultVoice != null && defaultVoice.isNotEmpty) {
+          final normalized = defaultVoice.toLowerCase();
+          final exists = mapped.any((voice) {
+            final name = voice['name'];
+            final id = voice['id'];
+            final lowerName = name is String ? name.toLowerCase() : '';
+            final lowerId = id is String ? id.toLowerCase() : '';
+            return lowerName == normalized || lowerId == normalized;
+          });
+          if (!exists) {
+            mapped.insert(0, {
+              'id': defaultVoice,
+              'name': defaultVoice,
+              'locale': '',
+            });
+          }
+        }
+
         if (mapped.isEmpty) {
-          return [
-            {'name': 'alloy', 'locale': ''},
-          ];
+          if (defaultVoice != null && defaultVoice.isNotEmpty) {
+            return [
+              {'id': defaultVoice, 'name': defaultVoice, 'locale': ''},
+            ];
+          }
+          return const [];
         }
         return mapped;
       } catch (e) {
@@ -351,13 +382,54 @@ class TextToSpeechService {
     }
   }
 
+  Future<String?> _resolveServerVoice() async {
+    final selected = _preferredVoice?.trim();
+    if (selected != null && selected.isNotEmpty) {
+      return selected;
+    }
+    final configVoice = await _getServerDefaultVoice();
+    if (configVoice != null && configVoice.isNotEmpty) {
+      return configVoice;
+    }
+    return null;
+  }
+
+  Future<String?> _getServerDefaultVoice() async {
+    if (_api == null) {
+      return null;
+    }
+    if (_serverDefaultVoice != null) {
+      return _serverDefaultVoice;
+    }
+    final pending = _serverDefaultVoiceFuture;
+    if (pending != null) {
+      return pending;
+    }
+
+    final future = _api.getDefaultServerVoice();
+    _serverDefaultVoiceFuture = future;
+
+    try {
+      final voice = await future;
+      final trimmed = voice?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        _serverDefaultVoice = trimmed;
+        return _serverDefaultVoice;
+      }
+      return null;
+    } catch (e) {
+      _onError?.call(e.toString());
+      return null;
+    } finally {
+      _serverDefaultVoiceFuture = null;
+    }
+  }
+
   // ===== Server chunked playback =====
 
   Future<void> _startServerChunkedPlayback(String text) async {
-    final effectiveVoice =
-        (_preferredVoice == null || _preferredVoice!.trim().isEmpty)
-        ? 'alloy'
-        : _preferredVoice!;
+    final resolvedVoice = await _resolveServerVoice();
+    final effectiveVoice = resolvedVoice;
 
     // Reset queue and create a new session
     _session++;
@@ -398,7 +470,7 @@ class TextToSpeechService {
 
   Future<void> _prefetchRemainingChunks(
     List<String> remaining,
-    String voice,
+    String? voice,
     int session,
   ) async {
     for (final chunk in remaining) {
@@ -423,7 +495,7 @@ class TextToSpeechService {
 
   Future<List<int>> _fetchServerAudio(
     String text,
-    String voice,
+    String? voice,
     int session,
   ) async {
     return await _api!.generateSpeech(text: text, voice: voice);
@@ -828,4 +900,8 @@ class TextToSpeechService {
         : message.toString();
     _onError?.call(safeMessage);
   }
+}
+
+class _VoiceNotProvided {
+  const _VoiceNotProvided();
 }
