@@ -26,7 +26,7 @@ class SettingsService {
   static const String _voiceAutoSendKey = PreferenceKeys.voiceAutoSendFinal;
   // Realtime transport preference
   static const String _socketTransportModeKey =
-      PreferenceKeys.socketTransportMode; // 'auto' or 'ws'
+      PreferenceKeys.socketTransportMode; // 'polling' or 'ws'
   // Quick pill visibility selections (max 2)
   static const String _quickPillsKey = PreferenceKeys
       .quickPills; // StringList of identifiers e.g. ['web','image','tools']
@@ -256,15 +256,27 @@ class SettingsService {
     return _preferencesBox().put(_voiceAutoSendKey, value);
   }
 
-  /// Transport mode: 'auto' (polling+websocket) or 'ws' (websocket only)
+  /// Transport mode: 'polling' (HTTP polling + WebSocket upgrade) or 'ws'
   static Future<String> getSocketTransportMode() {
-    final value = _preferencesBox().get(_socketTransportModeKey) as String?;
-    return Future.value(value ?? 'ws');
+    final raw = _preferencesBox().get(_socketTransportModeKey) as String?;
+    if (raw == null) {
+      return Future.value('ws');
+    }
+    if (raw == 'auto') {
+      return Future.value('polling');
+    }
+    if (raw != 'polling' && raw != 'ws') {
+      return Future.value('ws');
+    }
+    return Future.value(raw);
   }
 
   static Future<void> setSocketTransportMode(String mode) {
-    if (mode != 'auto' && mode != 'ws') {
-      mode = 'auto';
+    if (mode == 'auto') {
+      mode = 'polling';
+    }
+    if (mode != 'polling' && mode != 'ws') {
+      mode = 'polling';
     }
     return _preferencesBox().put(_socketTransportModeKey, mode);
   }
@@ -344,7 +356,7 @@ class AppSettings {
   final String? voiceLocaleId;
   final bool voiceHoldToTalk;
   final bool voiceAutoSendFinal;
-  final String socketTransportMode; // 'auto' or 'ws'
+  final String socketTransportMode; // 'polling' or 'ws'
   final List<String> quickPills; // e.g., ['web','image']
   final bool sendOnEnter;
   final String? ttsVoice;
@@ -566,8 +578,17 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
   }
 
   Future<void> setSocketTransportMode(String mode) async {
-    state = state.copyWith(socketTransportMode: mode);
-    await SettingsService.setSocketTransportMode(mode);
+    var sanitized = mode;
+    if (sanitized == 'auto') {
+      sanitized = 'polling';
+    }
+    if (sanitized != 'polling' && sanitized != 'ws') {
+      sanitized = 'polling';
+    }
+    if (state.socketTransportMode != sanitized) {
+      state = state.copyWith(socketTransportMode: sanitized);
+    }
+    await SettingsService.setSocketTransportMode(sanitized);
   }
 
   Future<void> setQuickPills(List<String> pills) async {

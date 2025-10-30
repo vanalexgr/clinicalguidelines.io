@@ -22,6 +22,7 @@ typedef SocketChannelEventHandler =
 class SocketService with WidgetsBindingObserver {
   final ServerConfig serverConfig;
   final bool websocketOnly;
+  final bool allowWebsocketUpgrade;
   io.Socket? _socket;
   String? _authToken;
   bool _isAppForeground = true;
@@ -34,6 +35,7 @@ class SocketService with WidgetsBindingObserver {
     required this.serverConfig,
     String? authToken,
     this.websocketOnly = false,
+    this.allowWebsocketUpgrade = true,
   }) : _authToken = authToken {
     final binding = WidgetsBinding.instance;
     final lifecycle = binding.lifecycleState;
@@ -72,11 +74,18 @@ class SocketService with WidgetsBindingObserver {
     } catch (_) {}
     final path = '/ws/socket.io';
 
+    final usePollingOnly = !websocketOnly && !allowWebsocketUpgrade;
+    final transports = websocketOnly
+        ? const ['websocket']
+        : usePollingOnly
+        ? const ['polling']
+        : const ['polling', 'websocket'];
+
     final builder = io.OptionBuilder()
-        // Transport selection - WebSocket only, no polling fallback
-        .setTransports(['websocket'])
-        .setRememberUpgrade(false)
-        .setUpgrade(false)
+        // Transport selection switches between WebSocket-only and polling fallback
+        .setTransports(transports)
+        .setRememberUpgrade(!websocketOnly && allowWebsocketUpgrade)
+        .setUpgrade(!websocketOnly && allowWebsocketUpgrade)
         // Tune reconnect/backoff and timeouts
         .setReconnectionAttempts(0) // 0/Infinity semantics: unlimited attempts
         .setReconnectionDelay(1000)

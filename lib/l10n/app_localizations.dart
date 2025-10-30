@@ -1826,11 +1826,11 @@ abstract class AppLocalizations {
   /// **'Mode'**
   String get mode;
 
-  /// Dropdown option label for automatic transport selection.
+  /// Dropdown option label for HTTP polling fallback transport.
   ///
   /// In en, this message translates to:
-  /// **'Auto (Polling + WebSocket)'**
-  String get transportModeAuto;
+  /// **'Polling fallback'**
+  String get transportModePolling;
 
   /// Dropdown option label for WebSocket-only transport.
   ///
@@ -1838,11 +1838,11 @@ abstract class AppLocalizations {
   /// **'WebSocket only'**
   String get transportModeWs;
 
-  /// Footnote text for the Auto transport mode.
+  /// Footnote text for the polling fallback transport mode.
   ///
   /// In en, this message translates to:
-  /// **'More robust on restrictive networks. Upgrades to WebSocket when possible.'**
-  String get transportModeAutoInfo;
+  /// **'Falls back to HTTP polling when WebSocket is blocked. Upgrades to WebSocket when possible.'**
+  String get transportModePollingInfo;
 
   /// Footnote text for the WebSocket-only transport mode.
   ///
