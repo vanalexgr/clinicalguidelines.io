@@ -99,12 +99,19 @@ class VoiceCallNotificationService {
     required String modelName,
     required bool isMuted,
     required bool isSpeaking,
+    required bool isPaused,
   }) async {
     if (!_initialized) {
       await initialize();
     }
 
-    final status = isSpeaking ? 'Speaking...' : 'Listening...';
+    final status = isSpeaking
+        ? 'Speaking...'
+        : isMuted
+        ? 'Muted'
+        : isPaused
+        ? 'Paused'
+        : 'Listening...';
     final muteAction = isMuted ? 'Unmute' : 'Mute';
     final muteActionId = isMuted ? _actionUnmute : _actionMute;
 
@@ -131,7 +138,7 @@ class VoiceCallNotificationService {
             muteActionId,
             muteAction,
             icon: DrawableResourceAndroidBitmap(
-              isMuted ? '@drawable/ic_mic_on' : '@drawable/ic_mic_off',
+              isMuted ? '@drawable/ic_mic_off' : '@drawable/ic_mic_on',
             ),
             showsUserInterface: false,
             cancelNotification: false,
@@ -176,11 +183,13 @@ class VoiceCallNotificationService {
     required String modelName,
     required bool isMuted,
     required bool isSpeaking,
+    required bool isPaused,
   }) async {
     await showCallNotification(
       modelName: modelName,
       isMuted: isMuted,
       isSpeaking: isSpeaking,
+      isPaused: isPaused,
     );
   }
 

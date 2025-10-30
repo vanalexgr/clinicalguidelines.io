@@ -24,6 +24,7 @@ class TextToSpeechService {
   int _expectedChunks = 0;
   int _currentIndex = -1;
   bool _waitingNext = false;
+  bool _deviceEngineAvailable = false;
   String? _serverDefaultVoice;
   Future<String?>? _serverDefaultVoiceFuture;
 
@@ -42,8 +43,20 @@ class TextToSpeechService {
   TextToSpeechService({ApiService? api}) : _api = api {
     // Wire minimal player events to callbacks
     _player.onPlayerComplete.listen((_) => _onAudioComplete());
-    _player.onPlayerStateChanged.listen((s) {
-      if (s == PlayerState.playing) _handleStart();
+    _player.onPlayerStateChanged.listen((state) {
+      switch (state) {
+        case PlayerState.playing:
+          _handleStart();
+          break;
+        case PlayerState.paused:
+          _handlePause();
+          break;
+        case PlayerState.stopped:
+          _handleCancel();
+          break;
+        default:
+          break;
+      }
     });
   }
 
@@ -118,14 +131,22 @@ class TextToSpeechService {
         ]);
       }
 
-      // Set the voice (specific or default)
-      await _setVoiceByName(voice);
-      _available = true;
+      // Set the voice (specific or default) when using device engine
+      if (_engine == TtsEngine.device) {
+        await _setVoiceByName(voice);
+      }
+      _deviceEngineAvailable = true;
     } catch (e) {
-      _available = false;
-      _onError?.call(e.toString());
+      _deviceEngineAvailable = false;
+      if (_engine != TtsEngine.server) {
+        _available = false;
+        _onError?.call(e.toString());
+        _initialized = true;
+        return _available;
+      }
     }
 
+    _available = _engine == TtsEngine.server || _deviceEngineAvailable;
     _initialized = true;
     return _available;
   }
@@ -145,7 +166,11 @@ class TextToSpeechService {
         await _startServerChunkedPlayback(text);
       } catch (e) {
         _onError?.call(e.toString());
-        await _speakOnDevice(text);
+        if (_deviceEngineAvailable) {
+          await _speakOnDevice(text);
+        } else {
+          throw StateError('Server text-to-speech failed: $e');
+        }
       }
       return;
     }
@@ -155,8 +180,8 @@ class TextToSpeechService {
   }
 
   Future<void> _speakOnDevice(String text) async {
-    if (!_available) {
-      throw StateError('Text-to-speech is unavailable on this device');
+    if (!_deviceEngineAvailable) {
+      throw StateError('Device text-to-speech is unavailable');
     }
     await _tts.stop();
     if (!_voiceConfigured) {
@@ -174,8 +199,25 @@ class TextToSpeechService {
     try {
       if (_engine == TtsEngine.server) {
         await _player.pause();
-      } else if (_available) {
+        _handlePause();
+      } else if (_deviceEngineAvailable) {
         await _tts.pause();
+      }
+    } catch (e) {
+      _onError?.call(e.toString());
+    }
+  }
+
+  Future<void> resume() async {
+    if (!_initialized) return;
+    try {
+      if (_engine == TtsEngine.server) {
+        if (_waitingNext && (_currentIndex + 1) < _buffered.length) {
+          _waitingNext = false;
+          await _playNextIfBuffered(_session);
+        } else {
+          await _player.resume();
+        }
       }
     } catch (e) {
       _onError?.call(e.toString());

@@ -19,11 +19,14 @@ enum VoiceCallState {
   idle,
   connecting,
   listening,
+  paused,
   processing,
   speaking,
   error,
   disconnected,
 }
+
+enum VoiceCallPauseReason { user, mute, system }
 
 class VoiceCallService {
   static const String _voiceCallStreamId = 'voice-call';
@@ -42,6 +45,8 @@ class VoiceCallService {
   String _accumulatedTranscript = '';
   bool _isDisposed = false;
   bool _isMuted = false;
+  bool _listeningPaused = false;
+  final Set<VoiceCallPauseReason> _pauseReasons = <VoiceCallPauseReason>{};
   SocketEventSubscription? _socketSubscription;
   Timer? _keepAliveTimer;
 
@@ -82,6 +87,9 @@ class VoiceCallService {
 
   Future<void> initialize() async {
     if (_isDisposed) return;
+
+    _pauseReasons.clear();
+    _listeningPaused = false;
 
     // Initialize notification service
     await _notificationService.initialize();
@@ -183,6 +191,15 @@ class VoiceCallService {
     if (_isDisposed) return;
 
     try {
+      if (_pauseReasons.isNotEmpty) {
+        _listeningPaused = true;
+        if (_state != VoiceCallState.paused) {
+          _updateState(VoiceCallState.paused);
+        }
+        return;
+      }
+
+      _listeningPaused = false;
       _accumulatedTranscript = '';
 
       // Check if voice input is available
@@ -291,8 +308,12 @@ class VoiceCallService {
                 _speakResponse(_accumulatedResponse);
                 _accumulatedResponse = '';
               } else if (_accumulatedResponse.isEmpty) {
-                // No response, restart listening
-                _startListening();
+                // No response, restart listening unless paused
+                if (_pauseReasons.isEmpty) {
+                  _startListening();
+                } else if (_state != VoiceCallState.paused) {
+                  _updateState(VoiceCallState.paused);
+                }
               }
             }
           }
@@ -341,7 +362,12 @@ class VoiceCallService {
   void _handleTtsComplete() {
     if (_isDisposed) return;
     _isSpeaking = false;
-    // After assistant finishes speaking, start listening for user again
+    // After assistant finishes speaking, resume only if not paused
+    if (_pauseReasons.isNotEmpty) {
+      _listeningPaused = true;
+      _updateState(VoiceCallState.paused);
+      return;
+    }
     _startListening();
   }
 
@@ -379,24 +405,52 @@ class VoiceCallService {
     _sessionId = null;
     _accumulatedTranscript = '';
     _isMuted = false;
+    _listeningPaused = false;
+    _pauseReasons.clear();
     _updateState(VoiceCallState.disconnected);
   }
 
-  Future<void> pauseListening() async {
+  Future<void> pauseListening({
+    VoiceCallPauseReason reason = VoiceCallPauseReason.user,
+  }) async {
     if (_isDisposed) return;
+
+    final wasEmpty = _pauseReasons.isEmpty;
+    _pauseReasons.add(reason);
+    if (!wasEmpty) {
+      return;
+    }
+
+    _listeningPaused = true;
     await _voiceInput.stopListening();
     await _transcriptSubscription?.cancel();
     await _intensitySubscription?.cancel();
+
+    if (_state == VoiceCallState.listening) {
+      _updateState(VoiceCallState.paused);
+    }
   }
 
-  Future<void> resumeListening() async {
+  Future<void> resumeListening({
+    VoiceCallPauseReason reason = VoiceCallPauseReason.user,
+  }) async {
     if (_isDisposed) return;
-    await _startListening();
+
+    _pauseReasons.remove(reason);
+    if (_pauseReasons.isNotEmpty) {
+      return;
+    }
+
+    if (_state == VoiceCallState.paused || _listeningPaused) {
+      await _startListening();
+    }
   }
 
   Future<void> cancelSpeaking() async {
     if (_isDisposed) return;
     await _tts.stop();
+    _isSpeaking = false;
+    _accumulatedResponse = '';
     // Immediately restart listening
     await _startListening();
   }
@@ -428,6 +482,9 @@ class VoiceCallService {
         modelName: modelName,
         isMuted: _isMuted,
         isSpeaking: _state == VoiceCallState.speaking,
+        isPaused:
+            _state == VoiceCallState.paused ||
+            (_pauseReasons.isNotEmpty && !_isSpeaking),
       );
     } catch (e) {
       // Silently ignore notification errors
@@ -451,9 +508,14 @@ class VoiceCallService {
   void _toggleMute() {
     _isMuted = !_isMuted;
     if (_isMuted) {
-      pauseListening();
+      if (_isSpeaking) {
+        unawaited(_tts.stop());
+        _isSpeaking = false;
+        _accumulatedResponse = '';
+      }
+      pauseListening(reason: VoiceCallPauseReason.mute);
     } else {
-      resumeListening();
+      resumeListening(reason: VoiceCallPauseReason.mute);
     }
     _updateNotification();
   }
