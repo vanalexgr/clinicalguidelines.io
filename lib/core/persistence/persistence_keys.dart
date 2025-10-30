@@ -14,7 +14,6 @@ final class PreferenceKeys {
   static const String socketTransportMode = 'socket_transport_mode';
   static const String quickPills = 'quick_pills';
   static const String sendOnEnterKey = 'send_on_enter';
-  static const String rememberCredentials = 'remember_credentials';
   static const String activeServerId = 'active_server_id';
   static const String themeMode = 'theme_mode';
   static const String themePalette = 'theme_palette_v1';

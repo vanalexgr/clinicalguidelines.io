@@ -244,7 +244,6 @@ class AuthStateManager extends _$AuthStateManager {
                   'api_key_user', // Special username to indicate API key auth
               password: tokenStr, // Store API key in password field
             );
-            await storage.setRememberCredentials(true);
           }
         }
 
@@ -273,8 +272,13 @@ class AuthStateManager extends _$AuthStateManager {
         // If user fetch fails, the API key might be invalid
         throw Exception('Invalid API key or insufficient permissions');
       }
-    } catch (e) {
-      DebugLogger.error('api-key-login-failed', scope: 'auth/state', error: e);
+    } catch (e, stack) {
+      DebugLogger.error(
+        'api-key-login-failed',
+        scope: 'auth/state',
+        error: e,
+        stackTrace: stack,
+      );
       _update(
         (current) => current.copyWith(
           status: AuthStatus.error,
@@ -283,7 +287,7 @@ class AuthStateManager extends _$AuthStateManager {
           clearToken: true,
         ),
       );
-      return false;
+      rethrow;
     }
   }
 
@@ -336,7 +340,6 @@ class AuthStateManager extends _$AuthStateManager {
             username: username,
             password: password,
           );
-          await storage.setRememberCredentials(true);
         }
       }
 
@@ -360,8 +363,13 @@ class AuthStateManager extends _$AuthStateManager {
 
       DebugLogger.auth('Login successful');
       return true;
-    } catch (e) {
-      DebugLogger.error('login-failed', scope: 'auth/state', error: e);
+    } catch (e, stack) {
+      DebugLogger.error(
+        'login-failed',
+        scope: 'auth/state',
+        error: e,
+        stackTrace: stack,
+      );
       _update(
         (current) => current.copyWith(
           status: AuthStatus.error,
@@ -370,7 +378,7 @@ class AuthStateManager extends _$AuthStateManager {
           clearToken: true,
         ),
       );
-      return false;
+      rethrow;
     }
   }
 
@@ -478,8 +486,15 @@ class AuthStateManager extends _$AuthStateManager {
         // Normal username/password credentials
         return await login(username, password, rememberCredentials: false);
       }
-    } catch (e) {
-      DebugLogger.error('silent-login-failed', scope: 'auth/state', error: e);
+    } catch (e, stack) {
+      DebugLogger.error(
+        'silent-login-failed',
+        scope: 'auth/state',
+        error: e,
+        stackTrace: stack,
+      );
+
+      String errorMessage = e.toString();
 
       // Clear invalid credentials on auth errors
       if (e.toString().contains('401') ||
@@ -487,13 +502,26 @@ class AuthStateManager extends _$AuthStateManager {
           e.toString().contains('authentication') ||
           e.toString().contains('unauthorized')) {
         final storage = ref.read(optimizedStorageServiceProvider);
-        await storage.deleteSavedCredentials();
+        try {
+          await storage.deleteSavedCredentials();
+        } catch (deleteError, deleteStack) {
+          DebugLogger.error(
+            'silent-login-credential-clear-failed',
+            scope: 'auth/state',
+            error: deleteError,
+            stackTrace: deleteStack,
+          );
+          errorMessage =
+              '$errorMessage. Also failed to clear saved '
+              'credentials; please clear Conduit credentials from '
+              'system settings.';
+        }
       }
 
       _update(
         (current) => current.copyWith(
           status: AuthStatus.unauthenticated,
-          error: e.toString(),
+          error: errorMessage,
           isLoading: false,
           clearToken: true,
         ),
@@ -512,8 +540,30 @@ class AuthStateManager extends _$AuthStateManager {
 
     // Clear token from storage
     final storage = ref.read(optimizedStorageServiceProvider);
-    await storage.deleteAuthToken();
-    _updateApiServiceToken(null);
+    try {
+      await storage.deleteAuthToken();
+      _updateApiServiceToken(null);
+    } catch (error, stack) {
+      DebugLogger.error(
+        'token-delete-failed',
+        scope: 'auth/state',
+        error: error,
+        stackTrace: stack,
+      );
+      _updateApiServiceToken(null);
+      _update(
+        (current) => current.copyWith(
+          status: AuthStatus.error,
+          error:
+              'Failed to clear secure token. Please clear Conduit '
+              'credentials from your device keychain and sign in again.',
+          clearToken: true,
+          clearUser: true,
+          clearError: false,
+        ),
+      );
+      return;
+    }
 
     // Update state
     _update(
@@ -578,9 +628,14 @@ class AuthStateManager extends _$AuthStateManager {
       );
 
       DebugLogger.auth('Logout complete');
-    } catch (e) {
-      DebugLogger.error('logout-failed', scope: 'auth/state', error: e);
-      // Even if logout fails, clear local state
+    } catch (e, stack) {
+      DebugLogger.error(
+        'logout-failed',
+        scope: 'auth/state',
+        error: e,
+        stackTrace: stack,
+      );
+      // Even if logout fails, clear local state where possible
       final storage = ref.read(optimizedStorageServiceProvider);
       await storage.setActiveServerId(null);
       ref.invalidate(activeServerProvider);
@@ -591,7 +646,9 @@ class AuthStateManager extends _$AuthStateManager {
           isLoading: false,
           clearToken: true,
           clearUser: true,
-          error: 'Logout error: $e',
+          error:
+              'Logout error: $e. Secure credentials may remain stored; '
+              'please clear them from your device keychain.',
         ),
       );
       _updateApiServiceToken(null);
