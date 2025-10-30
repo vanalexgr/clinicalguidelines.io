@@ -188,10 +188,19 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
       return;
     }
 
+    final isPausedActive =
+        state.activeMessageId == messageId &&
+        state.status == TtsPlaybackStatus.paused;
+    if (isPausedActive) {
+      await resume();
+      return;
+    }
+
     final isCurrentlyActive =
         state.activeMessageId == messageId &&
         state.status != TtsPlaybackStatus.idle &&
-        state.status != TtsPlaybackStatus.error;
+        state.status != TtsPlaybackStatus.error &&
+        state.status != TtsPlaybackStatus.paused;
 
     if (isCurrentlyActive) {
       await stop();
@@ -292,6 +301,24 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
       return;
     }
     await _service.pause();
+  }
+
+  Future<void> resume() async {
+    if (!state.initialized || !state.available) {
+      return;
+    }
+    try {
+      await _service.resume();
+    } catch (e) {
+      if (!ref.mounted) {
+        return;
+      }
+      state = state.copyWith(
+        status: TtsPlaybackStatus.error,
+        errorMessage: e.toString(),
+        clearActiveMessageId: true,
+      );
+    }
   }
 
   Future<void> stop() async {

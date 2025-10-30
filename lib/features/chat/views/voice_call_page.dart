@@ -348,45 +348,83 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
   Widget _buildControlButtons(Color primaryColor) {
     final errorColor = Theme.of(context).colorScheme.error;
     final warningColor = Colors.orange;
+    final successColor = Theme.of(context).colorScheme.secondary;
+
+    final buttons = <Widget>[];
+
+    // Retry button (only show in error state)
+    if (_currentState == VoiceCallState.error) {
+      buttons.add(
+        _buildActionButton(
+          icon: CupertinoIcons.arrow_clockwise,
+          label: 'Retry',
+          color: primaryColor,
+          onPressed: () async {
+            await _initializeCall();
+          },
+        ),
+      );
+    }
+
+    final canPause = _currentState == VoiceCallState.listening;
+    final canResume = _currentState == VoiceCallState.paused;
+
+    if (canPause) {
+      buttons.add(
+        _buildActionButton(
+          icon: CupertinoIcons.pause_fill,
+          label: 'Pause',
+          color: warningColor,
+          onPressed: () async {
+            await _service?.pauseListening();
+          },
+        ),
+      );
+    } else if (canResume) {
+      buttons.add(
+        _buildActionButton(
+          icon: CupertinoIcons.play_fill,
+          label: 'Resume',
+          color: successColor,
+          onPressed: () async {
+            await _service?.resumeListening();
+          },
+        ),
+      );
+    }
+
+    // Cancel speaking button (only show when speaking)
+    if (_currentState == VoiceCallState.speaking) {
+      buttons.add(
+        _buildActionButton(
+          icon: CupertinoIcons.stop_fill,
+          label: 'Stop',
+          color: warningColor,
+          onPressed: () async {
+            await _service?.cancelSpeaking();
+          },
+        ),
+      );
+    }
+
+    // End call button
+    buttons.add(
+      _buildActionButton(
+        icon: CupertinoIcons.phone_down_fill,
+        label: 'End Call',
+        color: errorColor,
+        onPressed: () async {
+          await _service?.stopCall();
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        },
+      ),
+    );
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        // Retry button (only show in error state)
-        if (_currentState == VoiceCallState.error)
-          _buildActionButton(
-            icon: CupertinoIcons.arrow_clockwise,
-            label: 'Retry',
-            color: primaryColor,
-            onPressed: () async {
-              await _initializeCall();
-            },
-          ),
-
-        // Cancel speaking button (only show when speaking)
-        if (_currentState == VoiceCallState.speaking)
-          _buildActionButton(
-            icon: CupertinoIcons.stop_fill,
-            label: 'Stop',
-            color: warningColor,
-            onPressed: () async {
-              await _service?.cancelSpeaking();
-            },
-          ),
-
-        // End call button
-        _buildActionButton(
-          icon: CupertinoIcons.phone_down_fill,
-          label: 'End Call',
-          color: errorColor,
-          onPressed: () async {
-            await _service?.stopCall();
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-      ],
+      children: buttons,
     );
   }
 
@@ -422,6 +460,8 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
         return 'Connecting...';
       case VoiceCallState.listening:
         return 'Listening';
+      case VoiceCallState.paused:
+        return 'Paused';
       case VoiceCallState.processing:
         return 'Thinking...';
       case VoiceCallState.speaking:
