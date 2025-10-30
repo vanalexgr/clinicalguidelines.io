@@ -327,9 +327,9 @@
   "transportMode": "Modo de transporte",
   "transportModeDescription": "Elige cómo se conecta la aplicación para actualizaciones en tiempo real.",
   "mode": "Modo",
-  "transportModeAuto": "Automático (Polling + WebSocket)",
+  "transportModePolling": "Polling de respaldo",
   "transportModeWs": "Solo WebSocket",
-  "transportModeAutoInfo": "Más robusto en redes restrictivas. Se actualiza a WebSocket cuando es posible.",
+  "transportModePollingInfo": "Recurrirá a HTTP polling si WebSocket está bloqueado. Se actualizará a WebSocket cuando sea posible.",
   "transportModeWsInfo": "Menor sobrecarga, pero puede fallar detrás de proxies/firewalls estrictos.",
   "websocketConnectionError": "No se puede establecer la conexión en tiempo real. Por favor, verifica tu red y la configuración del servidor.",
   "websocketReconnectFailed": "Fallo en la conexión en tiempo real. El streaming podría no funcionar correctamente."

@@ -334,9 +334,9 @@
   "transportMode": "Transportmodus",
   "transportModeDescription": "Wähle, wie die App für Echtzeit-Updates verbindet.",
   "mode": "Modus",
-  "transportModeAuto": "Auto (Polling + WebSocket)",
+  "transportModePolling": "Polling-Fallback",
   "transportModeWs": "Nur WebSocket",
-  "transportModeAutoInfo": "Robuster in restriktiven Netzwerken. Wechselt nach Möglichkeit zu WebSocket.",
+  "transportModePollingInfo": "Fällt auf HTTP-Polling zurück, wenn WebSockets blockiert sind. Wechselt nach Möglichkeit zu WebSocket.",
   "transportModeWsInfo": "Geringerer Overhead, kann jedoch hinter strikten Proxys/Firewalls fehlschlagen.",
   "websocketConnectionError": "Echtzeit-Verbindung konnte nicht hergestellt werden. Bitte überprüfen Sie Ihr Netzwerk und die Serverkonfiguration.",
   "websocketReconnectFailed": "Echtzeit-Verbindung fehlgeschlagen. Streaming funktioniert möglicherweise nicht ordnungsgemäß."

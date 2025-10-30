@@ -953,14 +953,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mode => 'Modus';
 
   @override
-  String get transportModeAuto => 'Auto (Polling + WebSocket)';
+  String get transportModePolling => 'Polling-Fallback';
 
   @override
   String get transportModeWs => 'Nur WebSocket';
 
   @override
-  String get transportModeAutoInfo =>
-      'Robuster in restriktiven Netzwerken. Wechselt nach Möglichkeit zu WebSocket.';
+  String get transportModePollingInfo =>
+      'Fällt auf HTTP-Polling zurück, wenn WebSockets blockiert sind. Wechselt nach Möglichkeit zu WebSocket.';
 
   @override
   String get transportModeWsInfo =>

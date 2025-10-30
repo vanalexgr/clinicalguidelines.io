@@ -392,6 +392,18 @@ class AppCustomizationPage extends ConsumerWidget {
   ) {
     final theme = context.conduitTheme;
     final l10n = AppLocalizations.of(context)!;
+    final transportAvailability = ref.watch(socketTransportOptionsProvider);
+    var activeTransportMode = settings.socketTransportMode;
+    if (!transportAvailability.allowPolling &&
+        activeTransportMode == 'polling') {
+      activeTransportMode = 'ws';
+    } else if (!transportAvailability.allowWebsocketOnly &&
+        activeTransportMode == 'ws') {
+      activeTransportMode = 'polling';
+    }
+    final transportLabel = activeTransportMode == 'polling'
+        ? l10n.transportModePolling
+        : l10n.transportModeWs;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -400,6 +412,38 @@ class AppCustomizationPage extends ConsumerWidget {
           style:
               theme.headingSmall?.copyWith(color: theme.sidebarForeground) ??
               TextStyle(color: theme.sidebarForeground, fontSize: 18),
+        ),
+        const SizedBox(height: Spacing.sm),
+        _CustomizationTile(
+          leading: _buildIconBadge(
+            context,
+            UiUtils.platformIcon(
+              ios: CupertinoIcons.arrow_2_circlepath,
+              android: Icons.sync,
+            ),
+            color: theme.buttonPrimary,
+          ),
+          title: l10n.transportMode,
+          subtitle: transportLabel,
+          trailing:
+              transportAvailability.allowPolling &&
+                  transportAvailability.allowWebsocketOnly
+              ? _buildValueBadge(context, transportLabel)
+              : null,
+          onTap:
+              transportAvailability.allowPolling &&
+                  transportAvailability.allowWebsocketOnly
+              ? () => _showTransportModeSheet(
+                  context,
+                  ref,
+                  settings,
+                  allowPolling: transportAvailability.allowPolling,
+                  allowWebsocketOnly: transportAvailability.allowWebsocketOnly,
+                )
+              : null,
+          showChevron:
+              transportAvailability.allowPolling &&
+              transportAvailability.allowWebsocketOnly,
         ),
         const SizedBox(height: Spacing.sm),
         _CustomizationTile(
@@ -1215,6 +1259,148 @@ class AppCustomizationPage extends ConsumerWidget {
       default:
         return AppLocalizations.of(context)!.system;
     }
+  }
+
+  Future<void> _showTransportModeSheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings, {
+    required bool allowPolling,
+    required bool allowWebsocketOnly,
+  }) async {
+    final theme = context.conduitTheme;
+    final l10n = AppLocalizations.of(context)!;
+    var current = settings.socketTransportMode;
+
+    final options = <({String value, String title, String subtitle})>[];
+    if (allowPolling) {
+      options.add((
+        value: 'polling',
+        title: l10n.transportModePolling,
+        subtitle: l10n.transportModePollingInfo,
+      ));
+    }
+    if (allowWebsocketOnly) {
+      options.add((
+        value: 'ws',
+        title: l10n.transportModeWs,
+        subtitle: l10n.transportModeWsInfo,
+      ));
+    }
+
+    if (options.isEmpty) {
+      return;
+    }
+
+    if (!options.any((option) => option.value == current)) {
+      current = options.first.value;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.sidebarBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppBorderRadius.modal),
+        ),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.lg,
+                  vertical: Spacing.md,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.transportMode,
+                        style:
+                            theme.headingSmall?.copyWith(
+                              color: theme.sidebarForeground,
+                            ) ??
+                            TextStyle(
+                              color: theme.sidebarForeground,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: theme.iconPrimary),
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              for (var i = 0; i < options.length; i++) ...[
+                () {
+                  final option = options[i];
+                  final selected = current == option.value;
+                  return ListTile(
+                    leading: Icon(
+                      selected ? Icons.check_circle : Icons.circle_outlined,
+                      color: selected
+                          ? theme.buttonPrimary
+                          : theme.iconSecondary,
+                    ),
+                    title: Text(option.title),
+                    subtitle: Text(option.subtitle),
+                    onTap: () {
+                      if (!selected) {
+                        ref
+                            .read(appSettingsProvider.notifier)
+                            .setSocketTransportMode(option.value);
+                      }
+                      Navigator.of(sheetContext).pop();
+                    },
+                  );
+                }(),
+                if (i != options.length - 1) const Divider(height: 1),
+              ],
+              const SizedBox(height: Spacing.lg),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildValueBadge(BuildContext context, String label) {
+    final theme = context.conduitTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Spacing.md,
+        vertical: Spacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: theme.buttonPrimary.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
+        border: Border.all(
+          color: theme.buttonPrimary.withValues(alpha: 0.25),
+          width: BorderWidth.thin,
+        ),
+      ),
+      child: Text(
+        label,
+        style:
+            theme.bodySmall?.copyWith(
+              color: theme.buttonPrimary,
+              fontWeight: FontWeight.w600,
+            ) ??
+            TextStyle(
+              color: theme.buttonPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+      ),
+    );
   }
 
   Widget _buildIconBadge(

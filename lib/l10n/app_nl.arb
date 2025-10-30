@@ -327,9 +327,9 @@
   "transportMode": "Transportmodus",
   "transportModeDescription": "Kies hoe de app verbindt voor realtime updates.",
   "mode": "Modus",
-  "transportModeAuto": "Automatisch (Polling + WebSocket)",
+  "transportModePolling": "Polling-fallback",
   "transportModeWs": "Alleen WebSocket",
-  "transportModeAutoInfo": "Robuuster op beperkende netwerken. Upgrade naar WebSocket indien mogelijk.",
+  "transportModePollingInfo": "Valt terug op HTTP-polling wanneer WebSocket geblokkeerd is. Upgrade naar WebSocket zodra dat kan.",
   "transportModeWsInfo": "Lagere overhead, maar kan mislukken achter strikte proxies/firewalls.",
   "websocketConnectionError": "Kan geen realtime verbinding maken. Controleer uw netwerk en serverconfiguratie.",
   "websocketReconnectFailed": "Realtime verbinding mislukt. Streaming werkt mogelijk niet goed."

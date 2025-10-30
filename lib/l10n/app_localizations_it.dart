@@ -948,14 +948,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get mode => 'Modalità';
 
   @override
-  String get transportModeAuto => 'Auto (Polling + WebSocket)';
+  String get transportModePolling => 'Polling di fallback';
 
   @override
   String get transportModeWs => 'Solo WebSocket';
 
   @override
-  String get transportModeAutoInfo =>
-      'Più robusto nelle reti restrittive. Passa a WebSocket quando possibile.';
+  String get transportModePollingInfo =>
+      'Quando WebSocket è bloccato passa a HTTP polling. Torna a WebSocket appena possibile.';
 
   @override
   String get transportModeWsInfo =>

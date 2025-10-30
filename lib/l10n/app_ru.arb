@@ -327,9 +327,9 @@
   "transportMode": "Режим транспорта",
   "transportModeDescription": "Выберите, как приложение подключается для обновлений в реальном времени.",
   "mode": "Режим",
-  "transportModeAuto": "Авто (опрос + WebSocket)",
+  "transportModePolling": "Опрос (резерв)",
   "transportModeWs": "Только WebSocket",
-  "transportModeAutoInfo": "Более надежен в ограничительных сетях. Переходит на WebSocket, когда это возможно.",
+  "transportModePollingInfo": "Переходит на HTTP-опрос, если WebSocket заблокирован. Возвращается к WebSocket, когда это возможно.",
   "transportModeWsInfo": "Меньше накладных расходов, но может не работать за строгими прокси/брандмауэрами.",
   "websocketConnectionError": "Не удалось установить соединение в реальном времени. Пожалуйста, проверьте сеть и конфигурацию сервера.",
   "websocketReconnectFailed": "Сбой соединения в реальном времени. Потоковая передача может работать неправильно."

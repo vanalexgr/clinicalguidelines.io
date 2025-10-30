@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 // import 'package:http_parser/http_parser.dart';
 // Removed legacy websocket/socket.io imports
 import 'package:uuid/uuid.dart';
+import '../models/backend_config.dart';
 import '../models/server_config.dart';
 import '../models/user.dart';
 import '../models/model.dart';
@@ -251,6 +252,44 @@ class ApiService {
     }
 
     return result;
+  }
+
+  Future<BackendConfig?> getBackendConfig() async {
+    try {
+      final response = await _dio.get('/api/config');
+      final data = response.data;
+      Map<String, dynamic>? jsonMap;
+      if (data is Map<String, dynamic>) {
+        jsonMap = data;
+      } else if (data is String && data.isNotEmpty) {
+        final decoded = json.decode(data);
+        if (decoded is Map<String, dynamic>) {
+          jsonMap = decoded;
+        }
+      }
+      if (jsonMap == null) {
+        return null;
+      }
+      return BackendConfig.fromJson(jsonMap);
+    } on DioException catch (e, stackTrace) {
+      _traceApi('Backend config request failed: $e');
+      DebugLogger.error(
+        'backend-config-error',
+        scope: 'api/config',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    } catch (e, stackTrace) {
+      _traceApi('Backend config decode error: $e');
+      DebugLogger.error(
+        'backend-config-decode',
+        scope: 'api/config',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
   }
 
   // Authentication

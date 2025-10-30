@@ -15,6 +15,7 @@ import '../models/user.dart';
 import '../models/model.dart';
 import '../models/conversation.dart';
 import '../models/chat_message.dart';
+import '../models/backend_config.dart';
 import '../models/folder.dart';
 import '../models/user_settings.dart';
 import '../models/file_info.dart';
@@ -172,6 +173,84 @@ final serverConnectionStateProvider = Provider<bool>((ref) {
   );
 });
 
+final backendConfigProvider = FutureProvider<BackendConfig?>((ref) async {
+  final api = ref.watch(apiServiceProvider);
+  if (api == null) {
+    return null;
+  }
+
+  final server = await ref.watch(activeServerProvider.future);
+  if (server == null) {
+    return null;
+  }
+
+  try {
+    final config = await api.getBackendConfig();
+    if (config != null) {
+      final forcedMode = config.enforcedTransportMode;
+      if (forcedMode != null) {
+        final settings = ref.read(appSettingsProvider);
+        if (settings.socketTransportMode != forcedMode) {
+          Future.microtask(() {
+            ref
+                .read(appSettingsProvider.notifier)
+                .setSocketTransportMode(forcedMode);
+          });
+        }
+      }
+    }
+    return config;
+  } catch (_) {
+    return null;
+  }
+});
+
+class SocketTransportAvailability {
+  const SocketTransportAvailability({
+    required this.allowPolling,
+    required this.allowWebsocketOnly,
+  });
+
+  final bool allowPolling;
+  final bool allowWebsocketOnly;
+}
+
+final socketTransportOptionsProvider = Provider<SocketTransportAvailability>((
+  ref,
+) {
+  final backendConfigAsync = ref.watch(backendConfigProvider);
+  final config = backendConfigAsync.maybeWhen(
+    data: (value) => value,
+    orElse: () => null,
+  );
+
+  if (config == null) {
+    return const SocketTransportAvailability(
+      allowPolling: true,
+      allowWebsocketOnly: true,
+    );
+  }
+
+  if (config.websocketOnly) {
+    return const SocketTransportAvailability(
+      allowPolling: false,
+      allowWebsocketOnly: true,
+    );
+  }
+
+  if (config.pollingOnly) {
+    return const SocketTransportAvailability(
+      allowPolling: true,
+      allowWebsocketOnly: false,
+    );
+  }
+
+  return const SocketTransportAvailability(
+    allowPolling: true,
+    allowWebsocketOnly: true,
+  );
+});
+
 // API Service provider with unified auth integration
 final apiServiceProvider = Provider<ApiService?>((ref) {
   // If reviewer mode is enabled, skip creating ApiService
@@ -242,6 +321,8 @@ class SocketServiceManager extends _$SocketServiceManager {
       appSettingsProvider.select((settings) => settings.socketTransportMode),
     );
     final websocketOnly = transportMode == 'ws';
+    final transportAvailability = ref.watch(socketTransportOptionsProvider);
+    final allowWebsocketUpgrade = transportAvailability.allowWebsocketOnly;
 
     // Don't watch authTokenProvider3 here to avoid rebuilding on token changes
     // Token updates are handled via the subscription below
@@ -250,13 +331,15 @@ class SocketServiceManager extends _$SocketServiceManager {
     final requiresNewService =
         _service == null ||
         _service!.serverConfig.id != server.id ||
-        _service!.websocketOnly != websocketOnly;
+        _service!.websocketOnly != websocketOnly ||
+        _service!.allowWebsocketUpgrade != allowWebsocketUpgrade;
     if (requiresNewService) {
       _disposeService();
       _service = SocketService(
         serverConfig: server,
         authToken: token,
         websocketOnly: websocketOnly,
+        allowWebsocketUpgrade: allowWebsocketUpgrade,
       );
       _scheduleConnect(_service!);
     } else {
