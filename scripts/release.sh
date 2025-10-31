@@ -151,16 +151,19 @@ ANDROID_CHANGELOG_DIR="android/fastlane/metadata/android/en-US/changelogs"
 mkdir -p "$ANDROID_CHANGELOG_DIR"
 echo "$LINK" > "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt"
 
-# iOS release notes and whatsnew
-IOS_NOTES_PATH="ios/fastlane/metadata/default/release_notes.txt"
-IOS_WHATSNEW_PATH="ios/fastlane/metadata/default/whatsnew.txt"
-mkdir -p "$(dirname "$IOS_NOTES_PATH")"
-echo "$LINK" > "$IOS_NOTES_PATH"
-echo "$LINK" > "$IOS_WHATSNEW_PATH"
+# iOS whatsnew for all locales (App Store requires it for each locale)
+IOS_LOCALES=("default" "en-US" "de-DE" "es-ES" "fr-FR" "it" "nl-NL" "ru" "zh-Hans")
+IOS_WHATSNEW_FILES=()
+for locale in "${IOS_LOCALES[@]}"; do
+    IOS_WHATSNEW_PATH="ios/fastlane/metadata/$locale/whatsnew.txt"
+    mkdir -p "$(dirname "$IOS_WHATSNEW_PATH")"
+    echo "$LINK" > "$IOS_WHATSNEW_PATH"
+    IOS_WHATSNEW_FILES+=("$IOS_WHATSNEW_PATH")
+done
 
 # Commit changes
 print_status "Committing changes..."
-git add pubspec.yaml "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt" "$IOS_NOTES_PATH" "$IOS_WHATSNEW_PATH"
+git add pubspec.yaml "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt" "${IOS_WHATSNEW_FILES[@]}"
 git commit -m "chore: bump version to $NEW_VERSION"
 
 git push origin main
