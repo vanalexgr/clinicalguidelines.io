@@ -53,7 +53,7 @@ class PersistentStreamingService with WidgetsBindingObserver {
         error: '$errorType: $error',
         data: {'affectedStreams': streamIds},
       );
-      
+
       // Attempt immediate recovery for failed streams
       for (final streamId in streamIds) {
         final callback = _streamRecoveryCallbacks[streamId];
@@ -145,25 +145,25 @@ class PersistentStreamingService with WidgetsBindingObserver {
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (_activeStreams.isNotEmpty && _isInBackground) {
         _backgroundHandler.keepAlive();
-        
+
         // Check for stale streams during background operation
         _checkStreamHealth();
       }
     });
   }
-  
+
   void _checkStreamHealth() {
     final now = DateTime.now();
     final staleStreams = <String>[];
-    
+
     for (final entry in _streamMetadata.entries) {
       final streamId = entry.key;
       final metadata = entry.value;
       final lastUpdate = metadata['lastUpdate'] as DateTime?;
-      
+
       if (lastUpdate != null) {
         final timeSinceUpdate = now.difference(lastUpdate);
-        
+
         // If no update in 90 seconds while in background, consider stale
         if (timeSinceUpdate > const Duration(seconds: 90)) {
           DebugLogger.warning(
@@ -173,14 +173,12 @@ class PersistentStreamingService with WidgetsBindingObserver {
         }
       }
     }
-    
+
     // Attempt recovery for stale streams
     for (final streamId in staleStreams) {
       final callback = _streamRecoveryCallbacks[streamId];
       if (callback != null && _retryAttempts[streamId] == null) {
-        DebugLogger.stream(
-          'Initiating recovery for stale stream: $streamId',
-        );
+        DebugLogger.stream('Initiating recovery for stale stream: $streamId');
         _attemptStreamRecovery(streamId, callback);
       }
     }
