@@ -14,6 +14,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/services/conversation_delta_listener.dart';
 import '../../../core/services/streaming_helper.dart';
 import '../../../core/services/streaming_response_controller.dart';
+import '../../../core/services/worker_manager.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/utils/markdown_stream_formatter.dart';
 import '../../../core/utils/tool_calls_parser.dart';
@@ -1449,6 +1450,7 @@ Future<void> regenerateMessage(
       activeConversationId: activeConversation.id,
       api: api!,
       socketService: socketService,
+      workerManager: ref.read(workerManagerProvider),
       registerDeltaListener: registerDeltaListener,
       appendToLastMessage: (c) =>
           ref.read(chatMessagesProvider.notifier).appendToLastMessage(c),
@@ -1997,6 +1999,7 @@ Future<void> _sendMessageInternal(
       activeConversationId: activeConversation?.id,
       api: api!,
       socketService: socketService,
+      workerManager: ref.read(workerManagerProvider),
       registerDeltaListener: registerDeltaListener,
       appendToLastMessage: (c) =>
           ref.read(chatMessagesProvider.notifier).appendToLastMessage(c),

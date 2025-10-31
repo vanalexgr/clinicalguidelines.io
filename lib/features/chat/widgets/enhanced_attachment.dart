@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:convert';
+import '../../../core/services/worker_manager.dart';
 
 class EnhancedAttachment extends ConsumerStatefulWidget {
   final String attachmentId;
@@ -102,12 +103,14 @@ class _EnhancedAttachmentState extends ConsumerState<EnhancedAttachment> {
       final dir = await getTemporaryDirectory();
       final filePath = '${dir.path}/$filename';
 
+      final worker = ref.read(workerManagerProvider);
       try {
-        if (content.length > 128 &&
-            RegExp(
-              r'^[A-Za-z0-9+/=\r\n]+$',
-            ).hasMatch(content.replaceAll('\n', ''))) {
-          final bytes = base64Decode(content.replaceAll('\n', ''));
+        if (_looksLikeBase64(content)) {
+          final bytes = await worker.schedule<String, Uint8List>(
+            _decodeAttachmentBase64,
+            content,
+            debugLabel: 'attachment_decode_bytes',
+          );
           await File(filePath).writeAsBytes(bytes, flush: true);
         } else {
           await File(filePath).writeAsString(content, flush: true);
@@ -290,4 +293,15 @@ class _EnhancedAttachmentState extends ConsumerState<EnhancedAttachment> {
     }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
+}
+
+bool _looksLikeBase64(String content) {
+  if (content.length <= 128) return false;
+  final sanitized = content.replaceAll('\n', '');
+  return RegExp(r'^[A-Za-z0-9+/=]+$').hasMatch(sanitized);
+}
+
+Uint8List _decodeAttachmentBase64(String raw) {
+  final sanitized = raw.replaceAll('\n', '');
+  return base64Decode(sanitized);
 }

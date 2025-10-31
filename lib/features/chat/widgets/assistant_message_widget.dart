@@ -24,6 +24,7 @@ import '../providers/chat_providers.dart' show sendMessageWithContainer;
 import '../../../core/utils/debug_logger.dart';
 import 'sources/openwebui_sources.dart';
 import '../providers/assistant_response_builder_provider.dart';
+import '../../../core/services/worker_manager.dart';
 
 // Pre-compiled regex patterns for image processing (performance optimization)
 final _base64ImagePattern = RegExp(r'data:image/[^;]+;base64,[A-Za-z0-9+/]+=*');
@@ -104,7 +105,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     );
 
     // Parse reasoning and tool-calls sections
-    _reparseSections();
+    unawaited(_reparseSections());
     _updateTypingIndicatorGate();
   }
 
@@ -121,7 +122,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
     // Re-parse sections when message content changes
     if (oldWidget.message.content != widget.message.content) {
-      _reparseSections();
+      unawaited(_reparseSections());
       _updateTypingIndicatorGate();
     }
 
@@ -141,7 +142,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
   }
 
-  void _reparseSections() {
+  Future<void> _reparseSections() async {
     final raw0 = _activeVersionIndex >= 0
         ? (widget.message.versions[_activeVersionIndex].content as String?) ??
               ''
@@ -162,11 +163,13 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
     final out = <MessageSegment>[];
     final textBuf = StringBuffer();
+    final textSegments = <String>[];
     if (rSegs == null || rSegs.isEmpty) {
       final tSegs = ToolCallsParser.segments(raw);
       if (tSegs == null || tSegs.isEmpty) {
         out.add(MessageSegment.text(raw));
         textBuf.write(raw);
+        textSegments.add(raw);
       } else {
         for (final s in tSegs) {
           if (s.isToolCall && s.entry != null) {
@@ -174,6 +177,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           } else if ((s.text ?? '').isNotEmpty) {
             out.add(MessageSegment.text(s.text!));
             textBuf.write(s.text);
+            textSegments.add(s.text!);
           }
         }
       }
@@ -187,6 +191,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           if (tSegs == null || tSegs.isEmpty) {
             out.add(MessageSegment.text(t));
             textBuf.write(t);
+            textSegments.add(t);
           } else {
             for (final s in tSegs) {
               if (s.isToolCall && s.entry != null) {
@@ -194,6 +199,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
               } else if ((s.text ?? '').isNotEmpty) {
                 out.add(MessageSegment.text(s.text!));
                 textBuf.write(s.text);
+                textSegments.add(s.text!);
               }
             }
           }
@@ -202,8 +208,19 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
 
     final segments = out.isEmpty ? [MessageSegment.text(raw)] : out;
-    final speechText = _buildTtsPlainText(segments, raw);
+    String speechText;
+    try {
+      final worker = ref.read(workerManagerProvider);
+      speechText = await worker.schedule<Map<String, dynamic>, String>(
+        _buildTtsPlainTextWorker,
+        {'segments': textSegments, 'fallback': raw},
+        debugLabel: 'tts_plain_text',
+      );
+    } catch (_) {
+      speechText = _buildTtsPlainTextFallback(textSegments, raw);
+    }
 
+    if (!mounted) return;
     setState(() {
       _segments = segments;
       _ttsPlainText = speechText;
@@ -248,18 +265,14 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
   }
 
-  String _buildTtsPlainText(List<MessageSegment> segments, String fallback) {
+  String _buildTtsPlainTextFallback(List<String> segments, String fallback) {
     if (segments.isEmpty) {
       return MarkdownToText.convert(fallback);
     }
 
     final buffer = StringBuffer();
     for (final segment in segments) {
-      if (!segment.isText) {
-        continue;
-      }
-      final text = segment.text ?? '';
-      final sanitized = MarkdownToText.convert(text);
+      final sanitized = MarkdownToText.convert(segment);
       if (sanitized.isEmpty) {
         continue;
       }
@@ -1157,7 +1170,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                 } else if (_activeVersionIndex > 0) {
                   _activeVersionIndex -= 1;
                 }
-                _reparseSections();
+                unawaited(_reparseSections());
               });
             },
           ),
@@ -1177,7 +1190,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                 } else {
                   _activeVersionIndex = -1; // move to live
                 }
-                _reparseSections();
+                unawaited(_reparseSections());
               });
             },
           ),
@@ -1327,6 +1340,34 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       ),
     );
   }
+}
+
+String _buildTtsPlainTextWorker(Map<String, dynamic> payload) {
+  final rawSegments = payload['segments'];
+  final fallback = payload['fallback'] as String? ?? '';
+  final segments = rawSegments is List ? rawSegments.cast<dynamic>() : const [];
+
+  if (segments.isEmpty) {
+    return MarkdownToText.convert(fallback);
+  }
+
+  final buffer = StringBuffer();
+  for (final segment in segments) {
+    if (segment is! String || segment.isEmpty) continue;
+    final sanitized = MarkdownToText.convert(segment);
+    if (sanitized.isEmpty) continue;
+    if (buffer.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln();
+    }
+    buffer.write(sanitized);
+  }
+
+  final result = buffer.toString().trim();
+  if (result.isEmpty) {
+    return MarkdownToText.convert(fallback);
+  }
+  return result;
 }
 
 class StatusHistoryTimeline extends StatefulWidget {
