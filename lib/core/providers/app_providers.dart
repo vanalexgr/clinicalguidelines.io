@@ -26,6 +26,7 @@ import '../services/optimized_storage_service.dart';
 import '../services/socket_service.dart';
 import '../utils/debug_logger.dart';
 import '../models/socket_event.dart';
+import '../services/worker_manager.dart';
 import '../../shared/theme/tweakcn_themes.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../features/tools/providers/tools_providers.dart';
@@ -259,6 +260,7 @@ final apiServiceProvider = Provider<ApiService?>((ref) {
     return null;
   }
   final activeServer = ref.watch(activeServerProvider);
+  final workerManager = ref.watch(workerManagerProvider);
 
   return activeServer.maybeWhen(
     data: (server) {
@@ -266,6 +268,7 @@ final apiServiceProvider = Provider<ApiService?>((ref) {
 
       final apiService = ApiService(
         serverConfig: server,
+        workerManager: workerManager,
         authToken: null, // Will be set by auth state manager
       );
 
