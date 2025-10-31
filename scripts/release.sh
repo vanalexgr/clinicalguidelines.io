@@ -151,14 +151,16 @@ ANDROID_CHANGELOG_DIR="android/fastlane/metadata/android/en-US/changelogs"
 mkdir -p "$ANDROID_CHANGELOG_DIR"
 echo "$LINK" > "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt"
 
-# iOS release notes
+# iOS release notes and whatsnew
 IOS_NOTES_PATH="ios/fastlane/metadata/default/release_notes.txt"
+IOS_WHATSNEW_PATH="ios/fastlane/metadata/default/whatsnew.txt"
 mkdir -p "$(dirname "$IOS_NOTES_PATH")"
 echo "$LINK" > "$IOS_NOTES_PATH"
+echo "$LINK" > "$IOS_WHATSNEW_PATH"
 
 # Commit changes
 print_status "Committing changes..."
-git add pubspec.yaml "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt" "$IOS_NOTES_PATH"
+git add pubspec.yaml "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt" "$IOS_NOTES_PATH" "$IOS_WHATSNEW_PATH"
 git commit -m "chore: bump version to $NEW_VERSION"
 
 git push origin main

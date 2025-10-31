@@ -11,7 +11,6 @@ Features
 - Markdown rendering with syntax highlighting
 - Light, dark, and system themes
 - Secure credential storage (Keychain/Keystore)
-- Offline-aware experience
 
 Requirements
 - Requires an existing Open‑WebUI server. Conduit does not host or provide AI models.
