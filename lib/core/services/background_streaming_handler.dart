@@ -27,11 +27,11 @@ class BackgroundStreamingHandler {
   void Function(List<String> streamIds)? onStreamsSuspending;
   void Function()? onBackgroundTaskExpiring;
   void Function(List<String> streamIds, int estimatedSeconds)?
-      onBackgroundTaskExtended;
+  onBackgroundTaskExtended;
   void Function()? onBackgroundKeepAlive;
   bool Function()? shouldContinueInBackground;
   void Function(String error, String errorType, List<String> streamIds)?
-      onServiceFailed;
+  onServiceFailed;
 
   void _setupMethodCallHandler() {
     _channel.setMethodCallHandler((call) async {

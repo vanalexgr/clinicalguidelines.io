@@ -1554,18 +1554,20 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final bool enabled = onTap != null;
     final Brightness brightness = Theme.of(context).brightness;
     final theme = context.conduitTheme;
-    
+
     // Enhanced color scheme for active state
     final Color activeBackground = isActive
-        ? theme.buttonPrimary.withValues(alpha: brightness == Brightness.dark ? 0.22 : 0.14)
+        ? theme.buttonPrimary.withValues(
+            alpha: brightness == Brightness.dark ? 0.22 : 0.14,
+          )
         : Colors.transparent;
-    
+
     final Color inactiveBackground = brightness == Brightness.dark
         ? theme.cardBackground.withValues(alpha: 0.25)
         : theme.cardBackground.withValues(alpha: 0.08);
-    
+
     final Color background = isActive ? activeBackground : inactiveBackground;
-    
+
     // Enhanced border styling
     final Color activeBorder = theme.buttonPrimary.withValues(
       alpha: brightness == Brightness.dark ? 0.85 : 0.75,
@@ -1574,17 +1576,17 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       alpha: brightness == Brightness.dark ? 0.4 : 0.25,
     );
     final Color borderColor = isActive ? activeBorder : inactiveBorder;
-    
+
     // Enhanced content colors
     final Color activeTextColor = theme.buttonPrimary;
     final Color inactiveTextColor = theme.textPrimary.withValues(
-      alpha: enabled ? (brightness == Brightness.dark ? 0.85 : 0.75) : Alpha.disabled,
+      alpha: enabled
+          ? (brightness == Brightness.dark ? 0.85 : 0.75)
+          : Alpha.disabled,
     );
     final Color textColor = isActive ? activeTextColor : inactiveTextColor;
-    
-    final Color iconColor = isActive
-        ? activeTextColor
-        : inactiveTextColor;
+
+    final Color iconColor = isActive ? activeTextColor : inactiveTextColor;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -1632,11 +1634,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOutCubic,
-                  child: Icon(
-                    icon,
-                    size: IconSize.small + 1,
-                    color: iconColor,
-                  ),
+                  child: Icon(icon, size: IconSize.small + 1, color: iconColor),
                 ),
                 const SizedBox(width: Spacing.xs + 1),
                 AnimatedDefaultTextStyle(

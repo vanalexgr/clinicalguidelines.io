@@ -43,7 +43,7 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
     if (_shouldIgnoreError(error)) {
       return;
     }
-    
+
     // Defer to next frame to avoid setState during build exceptions
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -169,7 +169,7 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
                         ),
                       ),
                       const SizedBox(height: Spacing.lg),
-                      
+
                       // Error title
                       Text(
                         AppLocalizations.of(context)?.errorMessage ??
@@ -178,7 +178,7 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: Spacing.sm),
-                      
+
                       // Error description
                       Text(
                         enhancedErrorService.getUserMessage(_error!),
@@ -187,10 +187,10 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
                           color: context.conduitTheme.textSecondary,
                         ),
                       ),
-                      
+
                       if (widget.allowRetry) ...[
                         const SizedBox(height: Spacing.xl),
-                        
+
                         // Retry button
                         SizedBox(
                           width: double.infinity,
@@ -198,8 +198,10 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
                             onPressed: _retry,
                             icon: const Icon(Icons.refresh_rounded),
                             style: FilledButton.styleFrom(
-                              backgroundColor: context.conduitTheme.buttonPrimary,
-                              foregroundColor: context.conduitTheme.buttonPrimaryText,
+                              backgroundColor:
+                                  context.conduitTheme.buttonPrimary,
+                              foregroundColor:
+                                  context.conduitTheme.buttonPrimaryText,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: Spacing.lg,
                                 vertical: Spacing.md,
@@ -212,7 +214,8 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
                               elevation: 0,
                             ),
                             label: Text(
-                              AppLocalizations.of(context)?.retry ?? 'Try Again',
+                              AppLocalizations.of(context)?.retry ??
+                                  'Try Again',
                               style: context.conduitTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: context.conduitTheme.buttonPrimaryText,

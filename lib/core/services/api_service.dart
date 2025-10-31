@@ -2438,7 +2438,7 @@ class ApiService {
     return [];
   }
 
-  Future<List<int>> generateSpeech({
+  Future<({Uint8List bytes, String mimeType})> generateSpeech({
     required String text,
     String? voice,
   }) async {
@@ -2450,12 +2450,75 @@ class ApiService {
       options: Options(responseType: ResponseType.bytes),
     );
 
-    // Return audio data as bytes
-    final data = response.data;
-    if (data is List<int>) return data;
-    if (data is Uint8List) return data.toList();
-    if (data is List) return (data).cast<int>();
-    return [];
+    final rawMimeType = response.headers.value('content-type');
+    final audioBytes = _coerceAudioBytes(response.data);
+    final resolvedMimeType = _resolveAudioMimeType(rawMimeType, audioBytes);
+
+    return (bytes: audioBytes, mimeType: resolvedMimeType);
+  }
+
+  Uint8List _coerceAudioBytes(Object? data) {
+    if (data is Uint8List && data.isNotEmpty) {
+      return Uint8List.fromList(data);
+    }
+    if (data is List<int>) {
+      return Uint8List.fromList(data);
+    }
+    if (data is List) {
+      return Uint8List.fromList(data.cast<int>());
+    }
+    return Uint8List(0);
+  }
+
+  String _resolveAudioMimeType(String? rawMimeType, Uint8List bytes) {
+    final sanitized = rawMimeType?.split(';').first.trim();
+    if (sanitized != null && sanitized.isNotEmpty) {
+      return sanitized;
+    }
+    if (_matchesPrefix(bytes, const [0x52, 0x49, 0x46, 0x46]) &&
+        _matchesPrefix(bytes, const [0x57, 0x41, 0x56, 0x45], offset: 8)) {
+      return 'audio/wav';
+    }
+    if (_matchesPrefix(bytes, const [0x4F, 0x67, 0x67, 0x53])) {
+      return 'audio/ogg';
+    }
+    if (_matchesPrefix(bytes, const [0x66, 0x4C, 0x61, 0x43])) {
+      return 'audio/flac';
+    }
+    if (_looksLikeMp4(bytes)) {
+      return 'audio/mp4';
+    }
+    if (_looksLikeMpeg(bytes)) {
+      return 'audio/mpeg';
+    }
+    return 'audio/mpeg';
+  }
+
+  bool _matchesPrefix(Uint8List bytes, List<int> signature, {int offset = 0}) {
+    if (bytes.length < offset + signature.length) {
+      return false;
+    }
+    for (var i = 0; i < signature.length; i++) {
+      if (bytes[offset + i] != signature[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _looksLikeMp4(Uint8List bytes) {
+    return bytes.length >= 8 &&
+        _matchesPrefix(bytes, const [0x66, 0x74, 0x79, 0x70], offset: 4);
+  }
+
+  bool _looksLikeMpeg(Uint8List bytes) {
+    if (bytes.length >= 3 &&
+        bytes[0] == 0x49 &&
+        bytes[1] == 0x44 &&
+        bytes[2] == 0x33) {
+      return true;
+    }
+    return bytes.length >= 2 && bytes[0] == 0xFF && (bytes[1] & 0xE0) == 0xE0;
   }
 
   // Server audio transcription removed; rely on on-device STT in UI layer

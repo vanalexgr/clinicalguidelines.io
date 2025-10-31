@@ -9,6 +9,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/settings_service.dart';
 
+typedef _SpeechChunk = ({Uint8List bytes, String mimeType});
+
 /// Lightweight wrapper around FlutterTts to centralize configuration
 class TextToSpeechService {
   final FlutterTts _tts = FlutterTts();
@@ -20,7 +22,7 @@ class TextToSpeechService {
   bool _available = false;
   bool _voiceConfigured = false;
   int _session = 0; // increments to cancel in-flight work
-  final List<Uint8List> _buffered = <Uint8List>[]; // server chunks
+  final List<_SpeechChunk> _buffered = <_SpeechChunk>[]; // server chunks
   int _expectedChunks = 0;
   int _currentIndex = -1;
   bool _waitingNext = false;
@@ -50,9 +52,6 @@ class TextToSpeechService {
           break;
         case PlayerState.paused:
           _handlePause();
-          break;
-        case PlayerState.stopped:
-          _handleCancel();
           break;
         default:
           break;
@@ -238,6 +237,7 @@ class TextToSpeechService {
       _waitingNext = false;
       if (_engine == TtsEngine.server) {
         await _player.stop();
+        _handleCancel();
       } else {
         await _tts.stop();
       }
@@ -486,18 +486,23 @@ class TextToSpeechService {
     _expectedChunks = chunks.length;
 
     // Fetch first chunk to start playback quickly
-    final firstBytes = await _fetchServerAudio(
+    final firstChunk = await _fetchServerAudio(
       chunks.first,
       effectiveVoice,
       session,
     );
     if (session != _session) return; // canceled
-    if (firstBytes.isEmpty) throw Exception('Empty audio response');
+    if (firstChunk.bytes.isEmpty) {
+      throw Exception('Empty audio response');
+    }
 
     await _player.stop();
-    _buffered.add(Uint8List.fromList(firstBytes));
+    final bufferedFirst = _cloneChunk(firstChunk);
+    _buffered.add(bufferedFirst);
     _currentIndex = 0;
-    await _player.play(BytesSource(_buffered.first));
+    await _player.play(
+      BytesSource(bufferedFirst.bytes, mimeType: bufferedFirst.mimeType),
+    );
     _onSentenceIndex?.call(0);
 
     // Prefetch the rest in background
@@ -518,10 +523,10 @@ class TextToSpeechService {
     for (final chunk in remaining) {
       if (session != _session) return; // canceled
       try {
-        final audio = await _fetchServerAudio(chunk, voice, session);
+        final audioChunk = await _fetchServerAudio(chunk, voice, session);
         if (session != _session) return;
-        if (audio.isNotEmpty) {
-          _buffered.add(Uint8List.fromList(audio));
+        if (audioChunk.bytes.isNotEmpty) {
+          _buffered.add(_cloneChunk(audioChunk));
           // If the player finished the previous chunk and is waiting, start now
           if (_waitingNext && (_currentIndex + 1) < _buffered.length) {
             _waitingNext = false;
@@ -535,7 +540,7 @@ class TextToSpeechService {
     }
   }
 
-  Future<List<int>> _fetchServerAudio(
+  Future<_SpeechChunk> _fetchServerAudio(
     String text,
     String? voice,
     int session,
@@ -565,9 +570,13 @@ class TextToSpeechService {
     final nextIndex = _currentIndex + 1;
     if (nextIndex < 0 || nextIndex >= _buffered.length) return;
     _currentIndex = nextIndex;
-    final bytes = _buffered[nextIndex];
-    await _player.play(BytesSource(bytes));
+    final chunk = _buffered[nextIndex];
+    await _player.play(BytesSource(chunk.bytes, mimeType: chunk.mimeType));
     _onSentenceIndex?.call(_currentIndex);
+  }
+
+  _SpeechChunk _cloneChunk(_SpeechChunk chunk) {
+    return (bytes: Uint8List.fromList(chunk.bytes), mimeType: chunk.mimeType);
   }
 
   List<String> _splitForTts(String text) {
