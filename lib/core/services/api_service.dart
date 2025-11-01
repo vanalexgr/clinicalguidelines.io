@@ -1599,10 +1599,10 @@ class ApiService {
     if (data is Map<String, dynamic>) {
       final voices = data['voices'];
       if (voices is List) {
-        return voices
-            .whereType<Map>()
-            .map((e) => e.cast<String, dynamic>())
-            .toList();
+        return _normalizeList(
+          voices,
+          debugLabel: 'parse_voice_list',
+        );
       }
     }
     if (data is List) {
@@ -1705,7 +1705,10 @@ class ApiService {
     final response = await _dio.get('/api/v1/images/models');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      return _normalizeList(
+        data,
+        debugLabel: 'parse_image_models',
+      );
     }
     return [];
   }
@@ -3120,19 +3123,25 @@ class ApiService {
 
       final data = response.data;
       if (data is List) {
-        return data.whereType<Map<String, dynamic>>().toList();
+        return _normalizeList(
+          data,
+          debugLabel: 'parse_message_search',
+        );
       }
       if (data is Map<String, dynamic>) {
         final list = (data['items'] ?? data['results'] ?? data['messages']);
         if (list is List) {
-          return list.whereType<Map<String, dynamic>>().toList();
+          return _normalizeList(
+            list,
+            debugLabel: 'parse_message_search_wrapped',
+          );
         }
       }
-      return [];
+      return const [];
     } on DioException catch (e) {
       // On any transport or other error, degrade gracefully without surfacing
       _traceApi('messages search request failed gracefully: ${e.type}');
-      return [];
+      return const [];
     }
   }
 
