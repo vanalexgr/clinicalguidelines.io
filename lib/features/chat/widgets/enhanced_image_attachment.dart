@@ -417,7 +417,7 @@ class _EnhancedImageAttachmentState
     // Get authentication headers if available
     final headers = buildImageHeadersFromWidgetRef(ref);
 
-    final cacheManager = ref.read(selfSignedImageCacheManagerProvider);
+    final cacheManager = ref.watch(selfSignedImageCacheManagerProvider);
     final imageWidget = CachedNetworkImage(
       key: ValueKey('image_${widget.attachmentId}'),
       imageUrl: _cachedImageData!,
@@ -548,7 +548,7 @@ class FullScreenImageViewer extends ConsumerWidget {
       // Get authentication headers if available
       final headers = buildImageHeadersFromWidgetRef(ref);
 
-      final cacheManager = ref.read(selfSignedImageCacheManagerProvider);
+      final cacheManager = ref.watch(selfSignedImageCacheManagerProvider);
       imageWidget = CachedNetworkImage(
         imageUrl: imageData,
         fit: BoxFit.contain,

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:conduit/core/providers/app_providers.dart';
+import 'package:conduit/core/services/api_service.dart';
 import 'package:conduit/features/auth/providers/unified_auth_providers.dart';
 
 /// Builds HTTP headers for protected image requests.
@@ -8,14 +9,14 @@ import 'package:conduit/features/auth/providers/unified_auth_providers.dart';
 /// Includes Authorization (Bearer token or API key) and any server-configured
 /// custom headers. Returns `null` if no headers are needed.
 Map<String, String>? buildImageHeadersFromRef(Ref ref) {
-  final api = ref.read(apiServiceProvider);
-  final token = ref.read(authTokenProvider3);
+  final api = ref.watch(apiServiceProvider);
+  final token = ref.watch(authTokenProvider3);
   return _build(api, token);
 }
 
 Map<String, String>? buildImageHeadersFromWidgetRef(WidgetRef ref) {
-  final api = ref.read(apiServiceProvider);
-  final token = ref.read(authTokenProvider3);
+  final api = ref.watch(apiServiceProvider);
+  final token = ref.watch(authTokenProvider3);
   return _build(api, token);
 }
 
@@ -29,7 +30,7 @@ Map<String, String>? buildImageHeadersFromContainer(
   return _build(api, token);
 }
 
-Map<String, String>? _build(dynamic api, String? token) {
+Map<String, String>? _build(ApiService? api, String? token) {
   final headers = <String, String>{};
 
   if (token != null && token.isNotEmpty) {
@@ -39,8 +40,9 @@ Map<String, String>? _build(dynamic api, String? token) {
     headers['Authorization'] = 'Bearer ${api.serverConfig.apiKey}';
   }
 
-  if (api != null && api.serverConfig.customHeaders.isNotEmpty) {
-    headers.addAll(api.serverConfig.customHeaders);
+  final customHeaders = api?.serverConfig.customHeaders ?? {};
+  if (customHeaders.isNotEmpty) {
+    headers.addAll(customHeaders);
   }
 
   return headers.isEmpty ? null : headers;

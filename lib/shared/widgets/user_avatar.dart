@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:conduit/core/network/image_header_utils.dart';
+import 'package:conduit/core/network/self_signed_image_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/brand_service.dart';
 import '../theme/theme_extensions.dart';
-import 'package:conduit/core/network/self_signed_image_cache_manager.dart';
-import 'package:conduit/core/network/image_header_utils.dart';
 
 typedef AvatarWidgetBuilder =
     Widget Function(BuildContext context, double size);
@@ -59,7 +59,7 @@ class AvatarImage extends ConsumerWidget {
     // Build auth/custom headers when loading from network
     final headers = buildImageHeadersFromWidgetRef(ref);
 
-    final cacheManager = ref.read(selfSignedImageCacheManagerProvider);
+    final cacheManager = ref.watch(selfSignedImageCacheManagerProvider);
 
     return ClipRRect(
       borderRadius: _radius,

@@ -14,7 +14,7 @@ import '../providers/app_providers.dart';
 /// Notes
 /// - Scoped to the configured host and (optionally) port only.
 /// - Not available on web (browsers enforce TLS validation).
-final selfSignedImageCacheManagerProvider = Provider<CacheManager?>((ref) {
+final selfSignedImageCacheManagerProvider = Provider<BaseCacheManager?>((ref) {
   final active = ref.watch(activeServerProvider);
 
   return active.maybeWhen(
@@ -26,7 +26,7 @@ final selfSignedImageCacheManagerProvider = Provider<CacheManager?>((ref) {
   );
 });
 
-CacheManager? _buildForServer(ServerConfig server) {
+BaseCacheManager? _buildForServer(ServerConfig server) {
   if (kIsWeb) return null;
   if (!server.allowSelfSignedCertificates) return null;
 
