@@ -221,6 +221,13 @@ Future<void> _renameConversation(
     if (api == null) throw Exception('No API service');
     await api.updateConversation(conversationId, title: newName);
     HapticFeedback.selectionClick();
+    ref
+        .read(conversationsProvider.notifier)
+        .updateConversation(
+          conversationId,
+          (conversation) =>
+              conversation.copyWith(title: newName, updatedAt: DateTime.now()),
+        );
     refreshConversationsCache(ref);
     final active = ref.read(activeConversationProvider);
     if (active?.id == conversationId) {
@@ -257,6 +264,7 @@ Future<void> _confirmAndDeleteConversation(
     if (api == null) throw Exception('No API service');
     await api.deleteConversation(conversationId);
     HapticFeedback.mediumImpact();
+    ref.read(conversationsProvider.notifier).removeConversation(conversationId);
     final active = ref.read(activeConversationProvider);
     if (active?.id == conversationId) {
       ref.read(activeConversationProvider.notifier).clear();

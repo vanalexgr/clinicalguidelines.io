@@ -770,8 +770,10 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     try {
       final api = ref.read(apiServiceProvider);
       if (api == null) throw Exception('No API service');
-      await api.createFolder(name: name);
+      final created = await api.createFolder(name: name);
+      final folder = Folder.fromJson(Map<String, dynamic>.from(created));
       HapticFeedback.lightImpact();
+      ref.read(foldersProvider.notifier).upsertFolder(folder);
       refreshConversationsCache(ref, includeFolders: true);
     } catch (e, stackTrace) {
       if (!mounted) return;
@@ -813,6 +815,15 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           if (api == null) throw Exception('No API service');
           await api.moveConversationToFolder(details.data.id, folderId);
           HapticFeedback.selectionClick();
+          ref
+              .read(conversationsProvider.notifier)
+              .updateConversation(
+                details.data.id,
+                (conversation) => conversation.copyWith(
+                  folderId: folderId,
+                  updatedAt: DateTime.now(),
+                ),
+              );
           refreshConversationsCache(ref, includeFolders: true);
         } catch (e, stackTrace) {
           DebugLogger.error(
@@ -1085,6 +1096,13 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       if (api == null) throw Exception('No API service');
       await api.updateFolder(folderId, name: newName);
       HapticFeedback.selectionClick();
+      ref
+          .read(foldersProvider.notifier)
+          .updateFolder(
+            folderId,
+            (folder) =>
+                folder.copyWith(name: newName, updatedAt: DateTime.now()),
+          );
       refreshConversationsCache(ref, includeFolders: true);
     } catch (e, stackTrace) {
       if (!mounted) return;
@@ -1120,6 +1138,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       if (api == null) throw Exception('No API service');
       await api.deleteFolder(folderId);
       HapticFeedback.mediumImpact();
+      ref.read(foldersProvider.notifier).removeFolder(folderId);
       refreshConversationsCache(ref, includeFolders: true);
     } catch (e, stackTrace) {
       if (!mounted) return;
@@ -1153,6 +1172,15 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           if (api == null) throw Exception('No API service');
           await api.moveConversationToFolder(details.data.id, null);
           HapticFeedback.selectionClick();
+          ref
+              .read(conversationsProvider.notifier)
+              .updateConversation(
+                details.data.id,
+                (conversation) => conversation.copyWith(
+                  folderId: null,
+                  updatedAt: DateTime.now(),
+                ),
+              );
           refreshConversationsCache(ref, includeFolders: true);
         } catch (e, stackTrace) {
           DebugLogger.error(

@@ -13,12 +13,7 @@ class PromptsService {
 
   Future<List<Prompt>> getPrompts() async {
     try {
-      final List<Map<String, dynamic>> response = await _apiService
-          .getPrompts();
-      return response
-          .map((item) => Prompt.fromJson(item))
-          .where((prompt) => prompt.command.isNotEmpty)
-          .toList();
+      return await _apiService.getPrompts();
     } on DioException catch (error) {
       throw ApiErrorHandler().transformError(error);
     }

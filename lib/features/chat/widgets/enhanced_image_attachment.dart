@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -15,6 +15,7 @@ import '../../auth/providers/unified_auth_providers.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/network/self_signed_image_cache_manager.dart';
 import '../../../core/network/image_header_utils.dart';
+import '../../../core/services/worker_manager.dart';
 
 // Simple global cache to prevent reloading
 final _globalImageCache = <String, String>{};
@@ -22,13 +23,6 @@ final _globalLoadingStates = <String, bool>{};
 final _globalErrorStates = <String, String>{};
 final _globalImageBytesCache = <String, Uint8List>{};
 final _base64WhitespacePattern = RegExp(r'\s');
-
-Future<Uint8List> _decodeImageDataAsync(String data) async {
-  if (kIsWeb) {
-    return _decodeImageData(data);
-  }
-  return compute(_decodeImageData, data);
-}
 
 Uint8List _decodeImageData(String data) {
   var payload = data;
@@ -233,7 +227,12 @@ class _EnhancedImageAttachmentState
     if (_isDecoding) return;
     _isDecoding = true;
     try {
-      final bytes = await _decodeImageDataAsync(data);
+      final worker = ref.read(workerManagerProvider);
+      final bytes = await worker.schedule(
+        _decodeImageData,
+        data,
+        debugLabel: 'decode_image',
+      );
       _globalImageBytesCache[widget.attachmentId] = bytes;
       if (!mounted) return;
       setState(() {
@@ -418,7 +417,7 @@ class _EnhancedImageAttachmentState
     // Get authentication headers if available
     final headers = buildImageHeadersFromWidgetRef(ref);
 
-    final cacheManager = ref.read(selfSignedImageCacheManagerProvider);
+    final cacheManager = ref.watch(selfSignedImageCacheManagerProvider);
     final imageWidget = CachedNetworkImage(
       key: ValueKey('image_${widget.attachmentId}'),
       imageUrl: _cachedImageData!,
@@ -549,7 +548,7 @@ class FullScreenImageViewer extends ConsumerWidget {
       // Get authentication headers if available
       final headers = buildImageHeadersFromWidgetRef(ref);
 
-      final cacheManager = ref.read(selfSignedImageCacheManagerProvider);
+      final cacheManager = ref.watch(selfSignedImageCacheManagerProvider);
       imageWidget = CachedNetworkImage(
         imageUrl: imageData,
         fit: BoxFit.contain,

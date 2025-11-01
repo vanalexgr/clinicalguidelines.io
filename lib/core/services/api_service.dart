@@ -13,6 +13,9 @@ import '../models/user.dart';
 import '../models/model.dart';
 import '../models/conversation.dart';
 import '../models/chat_message.dart';
+import '../models/file_info.dart';
+import '../models/knowledge_base.dart';
+import '../models/prompt.dart';
 import '../auth/api_auth_interceptor.dart';
 import '../error/api_error_interceptor.dart';
 // Tool-call details are parsed in the UI layer to render collapsible blocks
@@ -20,11 +23,10 @@ import 'persistent_streaming_service.dart';
 import 'connectivity_service.dart';
 import 'sse_stream_parser.dart';
 import '../utils/debug_logger.dart';
-import '../utils/openwebui_source_parser.dart';
+import 'conversation_parsing.dart';
+import 'worker_manager.dart';
 
 const bool _traceApiLogs = false;
-const bool _traceConversationParsing = false;
-const bool _traceFullChatParsing = false;
 
 void _traceApi(String message) {
   if (!_traceApiLogs) {
@@ -36,6 +38,7 @@ void _traceApi(String message) {
 class ApiService {
   final Dio _dio;
   final ServerConfig serverConfig;
+  final WorkerManager _workerManager;
   late final ApiAuthInterceptor _authInterceptor;
   // Removed legacy websocket/socket.io fields
 
@@ -51,21 +54,25 @@ class ApiService {
   // New callback for the unified auth state manager
   Future<void> Function()? onTokenInvalidated;
 
-  ApiService({required this.serverConfig, String? authToken})
-    : _dio = Dio(
-        BaseOptions(
-          baseUrl: serverConfig.url,
-          connectTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 30),
-          followRedirects: true,
-          maxRedirects: 5,
-          validateStatus: (status) => status != null && status < 400,
-          // Add custom headers from server config
-          headers: serverConfig.customHeaders.isNotEmpty
-              ? Map<String, String>.from(serverConfig.customHeaders)
-              : null,
-        ),
-      ) {
+  ApiService({
+    required this.serverConfig,
+    required WorkerManager workerManager,
+    String? authToken,
+  }) : _dio = Dio(
+         BaseOptions(
+           baseUrl: serverConfig.url,
+           connectTimeout: const Duration(seconds: 30),
+           receiveTimeout: const Duration(seconds: 30),
+           followRedirects: true,
+           maxRedirects: 5,
+           validateStatus: (status) => status != null && status < 400,
+           // Add custom headers from server config
+           headers: serverConfig.customHeaders.isNotEmpty
+               ? Map<String, String>.from(serverConfig.customHeaders)
+               : null,
+         ),
+       ),
+       _workerManager = workerManager {
     _configureSelfSignedSupport();
 
     // Use API key from server config if provided and no explicit auth token
@@ -486,102 +493,28 @@ class ApiService {
       },
     );
 
-    // Convert OpenWebUI chat format to our Conversation format
-    final conversations = <Conversation>[];
-    final pinnedIds = <String>{};
-    final archivedIds = <String>{};
-
-    // Process pinned conversations first
-    for (final chatData in pinnedChatList) {
-      try {
-        final conversation = _parseOpenWebUIChat(chatData);
-        // Create a new conversation instance with pinned=true
-        final pinnedConversation = conversation.copyWith(pinned: true);
-        conversations.add(pinnedConversation);
-        pinnedIds.add(conversation.id);
-      } catch (e) {
-        DebugLogger.error(
-          'parse-pinned-failed',
-          scope: 'api/conversations',
-          error: e,
-          data: {'conversationId': chatData['id']},
+    final parsedJson = await _workerManager
+        .schedule<Map<String, dynamic>, List<Map<String, dynamic>>>(
+          parseConversationSummariesWorker,
+          {
+            'pinned': pinnedChatList,
+            'archived': archivedChatList,
+            'regular': regularChatList,
+          },
+          debugLabel: 'parse_conversation_list',
         );
-      }
-    }
 
-    // Process archived conversations
-    for (final chatData in archivedChatList) {
-      try {
-        final conversation = _parseOpenWebUIChat(chatData);
-        // Create a new conversation instance with archived=true
-        final archivedConversation = conversation.copyWith(archived: true);
-        conversations.add(archivedConversation);
-        archivedIds.add(conversation.id);
-      } catch (e) {
-        DebugLogger.error(
-          'parse-archived-failed',
-          scope: 'api/conversations',
-          error: e,
-          data: {'conversationId': chatData['id']},
-        );
-      }
-    }
-
-    // Process regular conversations (excluding pinned and archived ones)
-    var loggedSampleChat = false;
-    for (final chatData in regularChatList) {
-      try {
-        // Debug: Check if conversation has folder_id in raw data
-        if (chatData.containsKey('folder_id') &&
-            chatData['folder_id'] != null) {
-          DebugLogger.log(
-            'folder-ref',
-            scope: 'api/conversations',
-            data: {
-              'conversationId': chatData['id'],
-              'folderId': chatData['folder_id'],
-            },
-          );
-        }
-
-        if (!loggedSampleChat && _traceConversationParsing) {
-          loggedSampleChat = true;
-          DebugLogger.log(
-            'sample-keys',
-            scope: 'api/conversations',
-            data: {'keys': chatData.keys.take(6).toList()},
-          );
-          DebugLogger.log(
-            'sample-data',
-            scope: 'api/conversations',
-            data: {'preview': chatData.toString()},
-          );
-        }
-
-        final conversation = _parseOpenWebUIChat(chatData);
-        // Only add if not already added as pinned or archived
-        if (!pinnedIds.contains(conversation.id) &&
-            !archivedIds.contains(conversation.id)) {
-          conversations.add(conversation);
-        }
-      } catch (e) {
-        DebugLogger.error(
-          'parse-regular-failed',
-          scope: 'api/conversations',
-          error: e,
-          data: {'conversationId': chatData['id']},
-        );
-        // Continue with other chats even if one fails
-      }
-    }
+    final conversations = parsedJson
+        .map((json) => Conversation.fromJson(json))
+        .toList(growable: false);
 
     DebugLogger.log(
       'parse-complete',
       scope: 'api/conversations',
       data: {
         'total': conversations.length,
-        'pinned': pinnedIds.length,
-        'archived': archivedIds.length,
+        'pinned': conversations.where((c) => c.pinned).length,
+        'archived': conversations.where((c) => c.archived).length,
       },
     );
     return conversations;
@@ -619,845 +552,26 @@ class ApiService {
     return <dynamic>[];
   }
 
-  // Helper method to safely parse timestamps
-  DateTime _parseTimestamp(dynamic timestamp) {
-    if (timestamp == null) return DateTime.now();
-
-    if (timestamp is int) {
-      // OpenWebUI uses Unix timestamps in seconds
-      // Check if it's already in milliseconds (13 digits) or seconds (10 digits)
-      final timestampMs = timestamp > 1000000000000
-          ? timestamp
-          : timestamp * 1000;
-      return DateTime.fromMillisecondsSinceEpoch(timestampMs);
-    }
-
-    if (timestamp is String) {
-      final parsed = int.tryParse(timestamp);
-      if (parsed != null) {
-        final timestampMs = parsed > 1000000000000 ? parsed : parsed * 1000;
-        return DateTime.fromMillisecondsSinceEpoch(timestampMs);
-      }
-    }
-
-    return DateTime.now(); // Fallback to current time
-  }
-
   // Parse OpenWebUI chat format to our Conversation format
-  Conversation _parseOpenWebUIChat(Map<String, dynamic> chatData) {
-    // OpenWebUI ChatTitleIdResponse format:
-    // {
-    //   "id": "string",
-    //   "title": "string",
-    //   "updated_at": integer (timestamp),
-    //   "created_at": integer (timestamp),
-    //   "pinned": boolean (optional),
-    //   "archived": boolean (optional),
-    //   "share_id": string (optional),
-    //   "folder_id": string (optional)
-    // }
-
-    final id = chatData['id'] as String;
-    final title = chatData['title'] as String;
-
-    // Safely parse timestamps with validation
-    // Try both snake_case and camelCase field names
-    final updatedAtRaw = chatData['updated_at'] ?? chatData['updatedAt'];
-    final createdAtRaw = chatData['created_at'] ?? chatData['createdAt'];
-
-    final updatedAt = _parseTimestamp(updatedAtRaw);
-    final createdAt = _parseTimestamp(createdAtRaw);
-
-    // Parse additional OpenWebUI fields
-    // The API response might not include these fields, so we need to handle them safely
-    final pinned = chatData['pinned'] as bool? ?? false;
-    final archived = chatData['archived'] as bool? ?? false;
-    final shareId = chatData['share_id'] as String?;
-    final folderId = chatData['folder_id'] as String?;
-
-    // Debug logging for folder assignment
-    if (_traceConversationParsing && folderId != null) {
-      final idPreview = id.length > 8 ? id.substring(0, 8) : id;
-      DebugLogger.log(
-        'folder-ref',
-        scope: 'api/conversations',
-        data: {'conversationId': idPreview, 'folderId': folderId},
-      );
-    }
-
-    if (_traceConversationParsing) {
-      DebugLogger.log(
-        'parsed',
-        scope: 'api/conversations',
-        data: {'id': id, 'pinned': pinned, 'archived': archived},
-      );
-    }
-
-    String? systemPrompt;
-    final chatObject = chatData['chat'] as Map<String, dynamic>?;
-    if (chatObject != null) {
-      final systemValue = chatObject['system'];
-      if (systemValue is String && systemValue.trim().isNotEmpty) {
-        systemPrompt = systemValue;
-      }
-    } else if (chatData['system'] is String) {
-      final systemValue = (chatData['system'] as String).trim();
-      if (systemValue.isNotEmpty) systemPrompt = systemValue;
-    }
-
-    // For the list endpoint, we don't get the full chat messages
-    // We'll need to fetch individual chats later if needed
-    return Conversation(
-      id: id,
-      title: title,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
-      systemPrompt: systemPrompt,
-      pinned: pinned,
-      archived: archived,
-      shareId: shareId,
-      folderId: folderId,
-      messages: [], // Empty for now, will be loaded when chat is opened
-    );
-  }
-
   Future<Conversation> getConversation(String id) async {
     DebugLogger.log('fetch', scope: 'api/chat', data: {'id': id});
     final response = await _dio.get('/api/v1/chats/$id');
 
     DebugLogger.log('fetch-ok', scope: 'api/chat');
 
-    // Parse OpenWebUI ChatResponse format
-    final chatData = response.data as Map<String, dynamic>;
-    return _parseFullOpenWebUIChat(chatData);
+    final json = await _workerManager
+        .schedule<Map<String, dynamic>, Map<String, dynamic>>(
+          parseFullConversationWorker,
+          {'conversation': response.data},
+          debugLabel: 'parse_conversation_full',
+        );
+    return Conversation.fromJson(json);
   }
 
   // Parse full OpenWebUI chat with messages
-  Conversation _parseFullOpenWebUIChat(Map<String, dynamic> chatData) {
-    if (_traceFullChatParsing) {
-      DebugLogger.log(
-        'parse-full',
-        scope: 'api/chat',
-        data: {'keys': chatData.keys.take(8).toList()},
-      );
-    }
-
-    final id = chatData['id'] as String;
-    final title = chatData['title'] as String;
-
-    if (_traceFullChatParsing) {
-      DebugLogger.log(
-        'chat-meta',
-        scope: 'api/chat',
-        data: {'id': id, 'title': title},
-      );
-    }
-
-    // Safely parse timestamps with validation
-    final updatedAt = _parseTimestamp(chatData['updated_at']);
-    final createdAt = _parseTimestamp(chatData['created_at']);
-
-    // Parse additional OpenWebUI fields
-    final pinned = chatData['pinned'] as bool? ?? false;
-    final archived = chatData['archived'] as bool? ?? false;
-    final shareId = chatData['share_id'] as String?;
-    final folderId = chatData['folder_id'] as String?;
-
-    // Parse messages from the 'chat' object or top-level messages
-    final chatObject = chatData['chat'] as Map<String, dynamic>?;
-    String? systemPrompt;
-    if (chatObject != null) {
-      final systemValue = chatObject['system'];
-      if (systemValue is String && systemValue.trim().isNotEmpty) {
-        systemPrompt = systemValue;
-      }
-    } else if (chatData['system'] is String) {
-      final systemValue = (chatData['system'] as String).trim();
-      if (systemValue.isNotEmpty) systemPrompt = systemValue;
-    }
-    final messages = <ChatMessage>[];
-
-    // Extract model from chat.models array
-    String? model;
-    if (chatObject != null && chatObject['models'] != null) {
-      final models = chatObject['models'] as List?;
-      if (models != null && models.isNotEmpty) {
-        model = models.first as String;
-        if (_traceFullChatParsing) {
-          DebugLogger.log(
-            'model',
-            scope: 'api/chat',
-            data: {'id': id, 'model': model},
-          );
-        }
-      }
-    }
-
-    // Try multiple locations for messages - prefer history-based ordering like Open‑WebUI
-    List? messagesList;
-    Map<String, dynamic>? historyMessagesMap;
-
-    if (chatObject != null) {
-      // Prefer history.messages with currentId to reconstruct the selected branch
-      final history = chatObject['history'] as Map<String, dynamic>?;
-      if (history != null && history['messages'] is Map<String, dynamic>) {
-        historyMessagesMap = history['messages'] as Map<String, dynamic>;
-
-        // Reconstruct ordered list using parent chain up to currentId
-        final currentId = history['currentId']?.toString();
-        if (currentId != null && currentId.isNotEmpty) {
-          messagesList = _buildMessagesListFromHistory(history);
-          if (_traceFullChatParsing) {
-            DebugLogger.log(
-              'history-chain',
-              scope: 'api/chat',
-              data: {
-                'id': id,
-                'count': messagesList.length,
-                'currentId': currentId,
-              },
-            );
-          }
-        }
-      }
-
-      // Fallback to chat.messages (list format) if history is missing or empty
-      if (((messagesList?.isEmpty ?? true)) && chatObject['messages'] != null) {
-        messagesList = chatObject['messages'] as List;
-        if (_traceFullChatParsing) {
-          DebugLogger.log(
-            'messages-fallback',
-            scope: 'api/chat',
-            data: {'id': id, 'count': messagesList.length},
-          );
-        }
-      }
-    } else if (chatData['messages'] != null) {
-      messagesList = chatData['messages'] as List;
-      if (_traceFullChatParsing) {
-        DebugLogger.log(
-          'messages-top-level',
-          scope: 'api/chat',
-          data: {'id': id, 'count': messagesList.length},
-        );
-      }
-    }
-
-    // Parse messages from list format only (avoiding duplication)
-    if (messagesList != null) {
-      for (int idx = 0; idx < messagesList.length; idx++) {
-        final msgData = messagesList[idx] as Map<String, dynamic>;
-        try {
-          if (_traceFullChatParsing) {
-            DebugLogger.log(
-              'message-parse',
-              scope: 'api/chat',
-              data: {
-                'chatId': id,
-                'messageId': msgData['id'],
-                'role': msgData['role'],
-                'contentLen': msgData['content']?.toString().length ?? 0,
-              },
-            );
-          }
-
-          // If this assistant message includes tool_calls, merge following tool results
-          final historyMsg = historyMessagesMap != null
-              ? (historyMessagesMap[msgData['id']] as Map<String, dynamic>?)
-              : null;
-
-          final toolCalls = (msgData['tool_calls'] is List)
-              ? (msgData['tool_calls'] as List)
-              : (historyMsg != null && historyMsg['tool_calls'] is List)
-              ? (historyMsg['tool_calls'] as List)
-              : null;
-
-          if ((msgData['role']?.toString() == 'assistant') &&
-              toolCalls is List) {
-            // Collect subsequent tool results associated with this assistant turn
-            final List<Map<String, dynamic>> results = [];
-            int j = idx + 1;
-            while (j < messagesList.length) {
-              final next = messagesList[j] as Map<String, dynamic>;
-              if ((next['role']?.toString() ?? '') != 'tool') break;
-              final toolCallId = next['tool_call_id']?.toString();
-              final resContent = next['content'];
-              final resFiles = next['files'];
-              results.add({
-                'tool_call_id': toolCallId,
-                'content': resContent,
-                if (resFiles != null) 'files': resFiles,
-              });
-              j++;
-            }
-
-            // Synthesize content from tool_calls and results
-            final synthesized = _synthesizeToolDetailsFromToolCallsWithResults(
-              toolCalls,
-              results,
-            );
-
-            final mergedAssistant = Map<String, dynamic>.from(msgData);
-            mergedAssistant['content'] = synthesized;
-
-            final message = _parseOpenWebUIMessage(
-              mergedAssistant,
-              historyMsg: historyMsg,
-            );
-            messages.add(message);
-
-            // Skip the tool messages we just merged
-            idx = j - 1;
-            if (_traceFullChatParsing) {
-              DebugLogger.log(
-                'message-tool-call',
-                scope: 'api/chat',
-                data: {'chatId': id, 'messageId': message.id},
-              );
-            }
-            continue;
-          }
-
-          // Default path: parse message as-is
-          var message = _parseOpenWebUIMessage(msgData, historyMsg: historyMsg);
-
-          // Attach server-persisted variants (siblings) as versions for assistant
-          if (message.role == 'assistant' && historyMessagesMap != null) {
-            try {
-              final parentId = historyMsg?['parentId']?.toString();
-              if (parentId != null && parentId.isNotEmpty) {
-                final parent =
-                    historyMessagesMap[parentId] as Map<String, dynamic>?;
-                final children = parent != null && parent['childrenIds'] is List
-                    ? (parent['childrenIds'] as List)
-                          .map((e) => e.toString())
-                          .toList()
-                    : const <String>[];
-                final versions = <ChatMessageVersion>[];
-
-                for (final cid in children) {
-                  if (cid == message.id) continue; // skip current assistant
-                  final sibling = historyMessagesMap[cid];
-                  if (sibling is Map<String, dynamic>) {
-                    final role = (sibling['role'] ?? '').toString();
-                    if (role != 'assistant') continue;
-                    // Build a ChatMessage from sibling for consistent parsing
-                    final siblingData = Map<String, dynamic>.from(sibling);
-                    siblingData['id'] = cid;
-                    final parsed = _parseOpenWebUIMessage(
-                      siblingData,
-                      historyMsg: sibling,
-                    );
-                    versions.add(
-                      ChatMessageVersion(
-                        id: parsed.id,
-                        content: parsed.content,
-                        timestamp: parsed.timestamp,
-                        model: parsed.model,
-                        files: parsed.files,
-                        sources: parsed.sources,
-                        followUps: parsed.followUps,
-                        codeExecutions: parsed.codeExecutions,
-                        usage: parsed.usage,
-                      ),
-                    );
-                  }
-                }
-
-                if (versions.isNotEmpty) {
-                  message = message.copyWith(versions: versions);
-                }
-              }
-            } catch (_) {
-              // Best-effort: ignore variants if parsing fails
-            }
-          }
-          messages.add(message);
-          if (_traceFullChatParsing) {
-            DebugLogger.log(
-              'message',
-              scope: 'api/chat',
-              data: {
-                'chatId': id,
-                'messageId': message.id,
-                'role': message.role,
-              },
-            );
-          }
-        } catch (e) {
-          DebugLogger.error(
-            'message-parse-failed',
-            scope: 'api/chat',
-            error: e,
-            data: {'chatId': id, 'messageId': msgData['id']},
-          );
-        }
-      }
-    }
-
-    if (_traceFullChatParsing) {
-      DebugLogger.log(
-        'message-count',
-        scope: 'api/chat',
-        data: {'chatId': id, 'count': messages.length},
-      );
-    }
-
-    return Conversation(
-      id: id,
-      title: title,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
-      model: model,
-      systemPrompt: systemPrompt,
-      pinned: pinned,
-      archived: archived,
-      shareId: shareId,
-      folderId: folderId,
-      messages: messages,
-    );
-  }
-
   // Parse OpenWebUI message format to our ChatMessage format
-  ChatMessage _parseOpenWebUIMessage(
-    Map<String, dynamic> msgData, {
-    Map<String, dynamic>? historyMsg,
-  }) {
-    // OpenWebUI message format may vary, but typically:
-    // { "role": "user|assistant", "content": "text", ... }
-
-    // Create a single UUID instance to reuse
-    const uuid = Uuid();
-
-    // Prefer richer content from history entry if present
-    dynamic content = msgData['content'];
-    if ((content == null || (content is String && content.isEmpty)) &&
-        historyMsg != null &&
-        historyMsg['content'] != null) {
-      content = historyMsg['content'];
-    }
-    String contentString;
-    if (content is List) {
-      // Concatenate all text fragments in order (Open‑WebUI may split long text)
-      final buffer = StringBuffer();
-      for (final item in content) {
-        if (item is Map && item['type'] == 'text') {
-          final t = item['text']?.toString();
-          if (t != null && t.isNotEmpty) buffer.write(t);
-        }
-      }
-      contentString = buffer.toString();
-      if (contentString.trim().isEmpty) {
-        // Fallback: look for tool-related entries in the array and synthesize details blocks
-        final synthesized = _synthesizeToolDetailsFromContentArray(content);
-        if (synthesized.isNotEmpty) {
-          contentString = synthesized;
-        }
-      }
-    } else {
-      contentString = (content as String?) ?? '';
-    }
-
-    // Prefer longer content from history if available (guards against truncated previews)
-    if (historyMsg != null) {
-      final histContent = historyMsg['content'];
-      if (histContent is String && histContent.length > contentString.length) {
-        contentString = histContent;
-      } else if (histContent is List) {
-        final buf = StringBuffer();
-        for (final item in histContent) {
-          if (item is Map && item['type'] == 'text') {
-            final t = item['text']?.toString();
-            if (t != null && t.isNotEmpty) buf.write(t);
-          }
-        }
-        final combined = buf.toString();
-        if (combined.length > contentString.length) {
-          contentString = combined;
-        }
-      }
-    }
-
-    // Final fallback: some servers store tool calls under tool_calls instead of content
-    final toolCallsList = (msgData['tool_calls'] is List)
-        ? (msgData['tool_calls'] as List)
-        : (historyMsg != null && historyMsg['tool_calls'] is List)
-        ? (historyMsg['tool_calls'] as List)
-        : null;
-    if (contentString.trim().isEmpty && toolCallsList is List) {
-      final synthesized = _synthesizeToolDetailsFromToolCalls(toolCallsList);
-      if (synthesized.isNotEmpty) {
-        contentString = synthesized;
-      }
-    }
-
-    // Determine role based on available fields
-    String role;
-    if (msgData['role'] != null) {
-      role = msgData['role'] as String;
-    } else if (msgData['model'] != null) {
-      // Messages with model field are typically assistant messages
-      role = 'assistant';
-    } else {
-      // Default to user if no role or model
-      role = 'user';
-    }
-
-    // Parse attachments and generated images from 'files' field
-    List<String>? attachmentIds;
-    List<Map<String, dynamic>>? files;
-
-    final effectiveFiles = msgData['files'] ?? historyMsg?['files'];
-    if (effectiveFiles != null) {
-      final filesList = effectiveFiles as List;
-
-      // Handle different file formats from OpenWebUI
-      final userAttachments = <String>[];
-      final allFiles = <Map<String, dynamic>>[];
-
-      for (final file in filesList) {
-        if (file is Map) {
-          if (file['file_id'] != null) {
-            // User uploaded file with file_id (legacy format)
-            userAttachments.add(file['file_id'] as String);
-          } else if (file['type'] != null && file['url'] != null) {
-            // File with type and url (OpenWebUI format)
-            final fileMap = <String, dynamic>{
-              'type': file['type'],
-              'url': file['url'],
-            };
-
-            // Add optional fields if present
-            if (file['name'] != null) fileMap['name'] = file['name'];
-            if (file['size'] != null) fileMap['size'] = file['size'];
-
-            allFiles.add(fileMap);
-
-            // If this is a user-uploaded file (URL contains file ID), also extract the ID
-            final url = file['url'] as String;
-            if (url.contains('/api/v1/files/') && url.contains('/content')) {
-              final fileIdMatch = RegExp(
-                r'/api/v1/files/([^/]+)/content',
-              ).firstMatch(url);
-              if (fileIdMatch != null) {
-                userAttachments.add(fileIdMatch.group(1)!);
-              }
-            }
-          }
-        }
-      }
-
-      attachmentIds = userAttachments.isNotEmpty ? userAttachments : null;
-      files = allFiles.isNotEmpty ? allFiles : null;
-    }
-
-    final dynamic statusRaw =
-        historyMsg != null && historyMsg.containsKey('statusHistory')
-        ? historyMsg['statusHistory']
-        : msgData['statusHistory'];
-    final statusHistory = _parseStatusHistoryField(statusRaw);
-
-    final dynamic followUpsRaw =
-        historyMsg != null && historyMsg.containsKey('followUps')
-        ? historyMsg['followUps']
-        : msgData['followUps'] ?? msgData['follow_ups'];
-    final followUps = _parseFollowUpsField(followUpsRaw);
-
-    final dynamic codeExecRaw = historyMsg != null
-        ? (historyMsg['code_executions'] ?? historyMsg['codeExecutions'])
-        : (msgData['code_executions'] ?? msgData['codeExecutions']);
-    final codeExecutions = _parseCodeExecutionsField(codeExecRaw);
-
-    final dynamic sourcesRaw =
-        historyMsg != null && historyMsg.containsKey('sources')
-        ? historyMsg['sources']
-        : msgData['sources'];
-    final sources = _parseSourcesField(sourcesRaw);
-
-    return ChatMessage(
-      id: msgData['id']?.toString() ?? uuid.v4(),
-      role: role,
-      content: contentString,
-      timestamp: _parseTimestamp(msgData['timestamp']),
-      model: msgData['model'] as String?,
-      attachmentIds: attachmentIds,
-      files: files,
-      statusHistory: statusHistory,
-      followUps: followUps,
-      codeExecutions: codeExecutions,
-      sources: sources,
-    );
-  }
-
   // Build ordered messages list from Open‑WebUI history using parent chain to currentId
-  List<Map<String, dynamic>> _buildMessagesListFromHistory(
-    Map<String, dynamic> history,
-  ) {
-    final messagesMap = history['messages'] as Map<String, dynamic>?;
-    final currentId = history['currentId']?.toString();
-
-    if (messagesMap == null || currentId == null) return [];
-
-    List<Map<String, dynamic>> buildChain(String? id) {
-      if (id == null) return [];
-      final raw = messagesMap[id];
-      if (raw == null) return [];
-      final msg = Map<String, dynamic>.from(raw as Map<String, dynamic>);
-      msg['id'] = id; // ensure id present
-      final parentId = msg['parentId']?.toString();
-      if (parentId != null && parentId.isNotEmpty) {
-        return [...buildChain(parentId), msg];
-      }
-      return [msg];
-    }
-
-    return buildChain(currentId);
-  }
-
   // ===== Helpers to synthesize tool-call details blocks for UI parsing =====
-  String _escapeHtmlAttr(String s) {
-    return s
-        .replaceAll('&', '&amp;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;');
-  }
-
-  String _jsonStringify(dynamic v) {
-    try {
-      return jsonEncode(v);
-    } catch (_) {
-      return v?.toString() ?? '';
-    }
-  }
-
-  String _synthesizeToolDetailsFromToolCalls(List toolCalls) {
-    final buf = StringBuffer();
-    for (final c in toolCalls) {
-      if (c is! Map) continue;
-      final func = c['function'] as Map?;
-      final name =
-          (func != null ? func['name'] : c['name'])?.toString() ?? 'tool';
-      final id =
-          (c['id']?.toString() ??
-          'call_${DateTime.now().millisecondsSinceEpoch}');
-      final done = (c['done']?.toString() ?? 'true');
-      final argsRaw = func != null ? func['arguments'] : c['arguments'];
-      final resRaw =
-          c['result'] ?? c['output'] ?? (func != null ? func['result'] : null);
-      final argsStr = _jsonStringify(argsRaw);
-      final resStr = resRaw != null ? _jsonStringify(resRaw) : null;
-      final attrs = StringBuffer()
-        ..write('type="tool_calls"')
-        ..write(' done="${_escapeHtmlAttr(done)}"')
-        ..write(' id="${_escapeHtmlAttr(id)}"')
-        ..write(' name="${_escapeHtmlAttr(name)}"')
-        ..write(' arguments="${_escapeHtmlAttr(argsStr)}"');
-      if (resStr != null && resStr.isNotEmpty) {
-        attrs.write(' result="${_escapeHtmlAttr(resStr)}"');
-      }
-      buf.writeln(
-        '<details ${attrs.toString()}><summary>Tool Executed</summary>',
-      );
-      buf.writeln('</details>');
-    }
-    return buf.toString().trim();
-  }
-
-  String _synthesizeToolDetailsFromToolCallsWithResults(
-    List toolCalls,
-    List<Map<String, dynamic>> results,
-  ) {
-    final buf = StringBuffer();
-    Map<String, Map<String, dynamic>> resultsMap = {};
-    for (final r in results) {
-      final id = r['tool_call_id']?.toString();
-      if (id != null) resultsMap[id] = r;
-    }
-
-    for (final c in toolCalls) {
-      if (c is! Map) continue;
-      final func = c['function'] as Map?;
-      final name =
-          (func != null ? func['name'] : c['name'])?.toString() ?? 'tool';
-      final id =
-          (c['id']?.toString() ??
-          'call_${DateTime.now().millisecondsSinceEpoch}');
-      final argsRaw = func != null ? func['arguments'] : c['arguments'];
-      final argsStr = _jsonStringify(argsRaw);
-      final resultEntry = resultsMap[id];
-      final resRaw = resultEntry != null ? resultEntry['content'] : null;
-      final filesRaw = resultEntry != null ? resultEntry['files'] : null;
-      final resStr = resRaw != null ? _jsonStringify(resRaw) : null;
-      final filesStr = filesRaw != null ? _jsonStringify(filesRaw) : null;
-
-      final attrs = StringBuffer()
-        ..write('type="tool_calls"')
-        ..write(
-          ' done="${_escapeHtmlAttr(resultEntry != null ? 'true' : 'false')}"',
-        )
-        ..write(' id="${_escapeHtmlAttr(id)}"')
-        ..write(' name="${_escapeHtmlAttr(name)}"')
-        ..write(' arguments="${_escapeHtmlAttr(argsStr)}"');
-      if (resStr != null && resStr.isNotEmpty) {
-        attrs.write(' result="${_escapeHtmlAttr(resStr)}"');
-      }
-      if (filesStr != null && filesStr.isNotEmpty) {
-        attrs.write(' files="${_escapeHtmlAttr(filesStr)}"');
-      }
-
-      buf.writeln(
-        '<details ${attrs.toString()}><summary>${resultEntry != null ? 'Tool Executed' : 'Executing...'}</summary>',
-      );
-      buf.writeln('</details>');
-    }
-    return buf.toString().trim();
-  }
-
-  String _synthesizeToolDetailsFromContentArray(List content) {
-    final buf = StringBuffer();
-    for (final item in content) {
-      if (item is! Map) continue;
-      final type = item['type']?.toString();
-      if (type == null) continue;
-      // OpenWebUI content-blocks shape: { type: 'tool_calls', content: [...], results: [...] }
-      if (type == 'tool_calls') {
-        final calls = (item['content'] is List)
-            ? (item['content'] as List)
-            : <dynamic>[];
-        final results = <Map<String, dynamic>>[];
-        if (item['results'] is List) {
-          for (final r in (item['results'] as List)) {
-            if (r is Map<String, dynamic>) results.add(r);
-          }
-        }
-        final synthesized = _synthesizeToolDetailsFromToolCallsWithResults(
-          calls,
-          results,
-        );
-        if (synthesized.isNotEmpty) buf.writeln(synthesized);
-        continue;
-      }
-
-      // Heuristics: handle other variants (single tool/function call entries)
-      if (type == 'tool_call' || type == 'function_call') {
-        final name = (item['name'] ?? item['tool'] ?? 'tool').toString();
-        final id =
-            (item['id']?.toString() ??
-            'call_${DateTime.now().millisecondsSinceEpoch}');
-        final argsStr = _jsonStringify(item['arguments'] ?? item['args']);
-        final resStr = item['result'] ?? item['output'] ?? item['response'];
-        final attrs = StringBuffer()
-          ..write('type="tool_calls"')
-          ..write(
-            ' done="${_escapeHtmlAttr(resStr != null ? 'true' : 'false')}"',
-          )
-          ..write(' id="${_escapeHtmlAttr(id)}"')
-          ..write(' name="${_escapeHtmlAttr(name)}"')
-          ..write(' arguments="${_escapeHtmlAttr(argsStr)}"');
-        if (resStr != null) {
-          final r = _jsonStringify(resStr);
-          if (r.isNotEmpty) attrs.write(' result="${_escapeHtmlAttr(r)}"');
-        }
-        buf.writeln(
-          '<details ${attrs.toString()}><summary>${resStr != null ? 'Tool Executed' : 'Executing...'}</summary>',
-        );
-        buf.writeln('</details>');
-      }
-    }
-    return buf.toString().trim();
-  }
-
-  List<ChatStatusUpdate> _parseStatusHistoryField(dynamic raw) {
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((entry) {
-            try {
-              // Convert Map to Map<String, dynamic> safely
-              final Map<String, dynamic> statusMap = {};
-              entry.forEach((key, value) {
-                statusMap[key.toString()] = value;
-              });
-              final statusUpdate = ChatStatusUpdate.fromJson(statusMap);
-
-              // Debug log to help diagnose template issues
-              if (statusUpdate.description?.contains('{{count}}') == true) {
-                DebugLogger.log(
-                  'template-placeholder-found',
-                  scope: 'api/chat',
-                  data: {
-                    'description': statusUpdate.description,
-                    'count': statusUpdate.count,
-                    'urls': statusUpdate.urls.length,
-                    'items': statusUpdate.items.length,
-                    'action': statusUpdate.action,
-                  },
-                );
-              }
-
-              return statusUpdate;
-            } catch (e) {
-              // Log the error and skip this entry
-              DebugLogger.log(
-                'status-parse-error',
-                scope: 'api/chat',
-                data: {'error': e.toString(), 'entry': entry.toString()},
-              );
-              return null;
-            }
-          })
-          .where((item) => item != null)
-          .cast<ChatStatusUpdate>()
-          .toList(growable: false);
-    }
-    return const <ChatStatusUpdate>[];
-  }
-
-  List<String> _parseFollowUpsField(dynamic raw) {
-    if (raw is List) {
-      return raw
-          .whereType<dynamic>()
-          .map((value) => value?.toString().trim() ?? '')
-          .where((value) => value.isNotEmpty)
-          .toList(growable: false);
-    }
-    if (raw is String && raw.trim().isNotEmpty) {
-      return [raw.trim()];
-    }
-    return const <String>[];
-  }
-
-  List<ChatCodeExecution> _parseCodeExecutionsField(dynamic raw) {
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((entry) {
-            try {
-              // Convert Map to Map<String, dynamic> safely
-              final Map<String, dynamic> execMap = {};
-              entry.forEach((key, value) {
-                execMap[key.toString()] = value;
-              });
-              return ChatCodeExecution.fromJson(execMap);
-            } catch (e) {
-              // Log the error and skip this entry
-              DebugLogger.log(
-                'code-exec-parse-error',
-                scope: 'api/chat',
-                data: {'error': e.toString(), 'entry': entry.toString()},
-              );
-              return null;
-            }
-          })
-          .where((item) => item != null)
-          .cast<ChatCodeExecution>()
-          .toList(growable: false);
-    }
-    return const <ChatCodeExecution>[];
-  }
-
   List<Map<String, dynamic>>? _sanitizeFilesForWebUI(
     List<Map<String, dynamic>>? files,
   ) {
@@ -1476,14 +590,6 @@ class ApiService {
       }
     }
     return sanitized.isNotEmpty ? sanitized : null;
-  }
-
-  List<ChatSourceReference> _parseSourcesField(dynamic raw) {
-    try {
-      return parseOpenWebUISourceList(raw);
-    } catch (_) {
-      return const <ChatSourceReference>[];
-    }
   }
 
   // Create new conversation using OpenWebUI API
@@ -1584,9 +690,14 @@ class ApiService {
     );
     DebugLogger.log('create-ok', scope: 'api/conversation');
 
-    // Parse the response
-    final responseData = response.data as Map<String, dynamic>;
-    return _parseFullOpenWebUIChat(responseData);
+    final responseData = response.data;
+    final json = await _workerManager
+        .schedule<Map<String, dynamic>, Map<String, dynamic>>(
+          parseFullConversationWorker,
+          {'conversation': responseData},
+          debugLabel: 'parse_conversation_full',
+        );
+    return Conversation.fromJson(json);
   }
 
   // Sync conversation messages to ensure WebUI can load conversation history
@@ -1770,7 +881,13 @@ class ApiService {
   Future<Conversation> cloneConversation(String id) async {
     _traceApi('Cloning conversation: $id');
     final response = await _dio.post('/api/v1/chats/$id/clone');
-    return _parseFullOpenWebUIChat(response.data as Map<String, dynamic>);
+    final json = await _workerManager
+        .schedule<Map<String, dynamic>, Map<String, dynamic>>(
+          parseFullConversationWorker,
+          {'conversation': response.data},
+          debugLabel: 'parse_conversation_full',
+        );
+    return Conversation.fromJson(json);
   }
 
   // User Settings
@@ -1795,6 +912,38 @@ class ApiService {
       return data.cast<String>();
     }
     return [];
+  }
+
+  Future<List<Conversation>> _parseConversationSummaryList(
+    List<dynamic> regular, {
+    required String debugLabel,
+  }) async {
+    final payload = <String, dynamic>{
+      'regular': List<dynamic>.from(regular),
+      'pinned': const <dynamic>[],
+      'archived': const <dynamic>[],
+    };
+    final parsed = await _workerManager
+        .schedule<Map<String, dynamic>, List<Map<String, dynamic>>>(
+          parseConversationSummariesWorker,
+          payload,
+          debugLabel: debugLabel,
+        );
+    return parsed
+        .map((json) => Conversation.fromJson(json))
+        .toList(growable: false);
+  }
+
+  Future<List<Map<String, dynamic>>> _normalizeList(
+    List<dynamic> raw, {
+    required String debugLabel,
+  }) {
+    return _workerManager
+        .schedule<Map<String, dynamic>, List<Map<String, dynamic>>>(
+          _normalizeMapListWorker,
+          {'list': raw},
+          debugLabel: debugLabel,
+        );
   }
 
   // Tools - Check available tools on server
@@ -1891,7 +1040,10 @@ class ApiService {
     final response = await _dio.get('/api/v1/chats/folder/$folderId');
     final data = response.data;
     if (data is List) {
-      return data.map((chatData) => _parseOpenWebUIChat(chatData)).toList();
+      return _parseConversationSummaryList(
+        data,
+        debugLabel: 'parse_folder_$folderId',
+      );
     }
     return [];
   }
@@ -1935,7 +1087,7 @@ class ApiService {
     final response = await _dio.get('/api/v1/chats/tags/$tag');
     final data = response.data;
     if (data is List) {
-      return data.map((chatData) => _parseOpenWebUIChat(chatData)).toList();
+      return _parseConversationSummaryList(data, debugLabel: 'parse_tag_$tag');
     }
     return [];
   }
@@ -1980,18 +1132,22 @@ class ApiService {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<List<Map<String, dynamic>>> getUserFiles() async {
+  Future<List<FileInfo>> getUserFiles() async {
     _traceApi('Fetching user files');
     final response = await _dio.get('/api/v1/files/');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_file_list',
+      );
+      return normalized.map(FileInfo.fromJson).toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   // Enhanced File Operations
-  Future<List<Map<String, dynamic>>> searchFiles({
+  Future<List<FileInfo>> searchFiles({
     String? query,
     String? contentType,
     int? limit,
@@ -2010,19 +1166,31 @@ class ApiService {
     );
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_file_search',
+      );
+      return normalized
+          .map(FileInfo.fromJson)
+          .toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
-  Future<List<Map<String, dynamic>>> getAllFiles() async {
+  Future<List<FileInfo>> getAllFiles() async {
     _traceApi('Fetching all files (admin)');
     final response = await _dio.get('/api/v1/files/all');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_file_all',
+      );
+      return normalized
+          .map(FileInfo.fromJson)
+          .toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   Future<String> uploadFileWithProgress(
@@ -2125,14 +1293,18 @@ class ApiService {
   }
 
   // Knowledge Base
-  Future<List<Map<String, dynamic>>> getKnowledgeBases() async {
+  Future<List<KnowledgeBase>> getKnowledgeBases() async {
     _traceApi('Fetching knowledge bases');
     final response = await _dio.get('/api/v1/knowledge/');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_knowledge_bases',
+      );
+      return normalized.map(KnowledgeBase.fromJson).toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   Future<Map<String, dynamic>> createKnowledgeBase({
@@ -2167,16 +1339,20 @@ class ApiService {
     await _dio.delete('/api/v1/knowledge/$id');
   }
 
-  Future<List<Map<String, dynamic>>> getKnowledgeBaseItems(
+  Future<List<KnowledgeBaseItem>> getKnowledgeBaseItems(
     String knowledgeBaseId,
   ) async {
     _traceApi('Fetching knowledge base items: $knowledgeBaseId');
     final response = await _dio.get('/api/v1/knowledge/$knowledgeBaseId/items');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_kb_items',
+      );
+      return normalized.map(KnowledgeBaseItem.fromJson).toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   Future<Map<String, dynamic>> addKnowledgeBaseItem(
@@ -2423,10 +1599,10 @@ class ApiService {
     if (data is Map<String, dynamic>) {
       final voices = data['voices'];
       if (voices is List) {
-        return voices
-            .whereType<Map>()
-            .map((e) => e.cast<String, dynamic>())
-            .toList();
+        return _normalizeList(
+          voices,
+          debugLabel: 'parse_voice_list',
+        );
       }
     }
     if (data is List) {
@@ -2529,7 +1705,10 @@ class ApiService {
     final response = await _dio.get('/api/v1/images/models');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      return _normalizeList(
+        data,
+        debugLabel: 'parse_image_models',
+      );
     }
     return [];
   }
@@ -2571,14 +1750,21 @@ class ApiService {
   }
 
   // Prompts
-  Future<List<Map<String, dynamic>>> getPrompts() async {
+  Future<List<Prompt>> getPrompts() async {
     _traceApi('Fetching prompts');
     final response = await _dio.get('/api/v1/prompts/');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_prompts',
+      );
+      return normalized
+          .map(Prompt.fromJson)
+          .where((prompt) => prompt.command.isNotEmpty)
+          .toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   // Permissions & Features
@@ -2998,7 +2184,10 @@ class ApiService {
     final response = await _dio.get('/api/v1/channels/$channelId/chats');
     final data = response.data;
     if (data is List) {
-      return data.map((chatData) => _parseOpenWebUIChat(chatData)).toList();
+      return data.whereType<Map>().map((chatData) {
+        final map = Map<String, dynamic>.from(chatData);
+        return Conversation.fromJson(parseConversationSummary(map));
+      }).toList();
     }
     return [];
   }
@@ -3615,8 +2804,11 @@ class ApiService {
       '/api/v1/chats/search',
       queryParameters: {'q': query},
     );
-    final results = response.data as List;
-    return results.map((c) => Conversation.fromJson(c)).toList();
+    final results = response.data;
+    if (results is List) {
+      return _parseConversationSummaryList(results, debugLabel: 'parse_search');
+    }
+    return [];
   }
 
   // Debug method to test API endpoints
@@ -3792,7 +2984,10 @@ class ApiService {
     final response = await _dio.get('/api/v1/chats/pinned');
     final data = response.data;
     if (data is List) {
-      return data.map((chatData) => _parseOpenWebUIChat(chatData)).toList();
+      return data.whereType<Map>().map((chatData) {
+        final map = Map<String, dynamic>.from(chatData);
+        return Conversation.fromJson(parseConversationSummary(map));
+      }).toList();
     }
     return [];
   }
@@ -3810,7 +3005,10 @@ class ApiService {
     );
     final data = response.data;
     if (data is List) {
-      return data.map((chatData) => _parseOpenWebUIChat(chatData)).toList();
+      return data.whereType<Map>().map((chatData) {
+        final map = Map<String, dynamic>.from(chatData);
+        return Conversation.fromJson(parseConversationSummary(map));
+      }).toList();
     }
     return [];
   }
@@ -3854,23 +3052,23 @@ class ApiService {
     );
     final data = response.data;
     // The endpoint can return a List[ChatTitleIdResponse] or a map.
-    // Normalize to a List<Conversation> using our safe parser.
+    // Normalize to a List<Conversation> using our isolate parser.
     if (data is List) {
-      return data
-          .whereType<Map<String, dynamic>>()
-          .map((e) => _parseOpenWebUIChat(e))
-          .toList();
+      return _parseConversationSummaryList(
+        data,
+        debugLabel: 'parse_search_direct',
+      );
     }
     if (data is Map<String, dynamic>) {
       final list = (data['conversations'] ?? data['items'] ?? data['results']);
       if (list is List) {
-        return list
-            .whereType<Map<String, dynamic>>()
-            .map((e) => _parseOpenWebUIChat(e))
-            .toList();
+        return _parseConversationSummaryList(
+          list,
+          debugLabel: 'parse_search_wrapped',
+        );
       }
     }
-    return <Conversation>[];
+    return const <Conversation>[];
   }
 
   /// Search within messages content (capability-safe)
@@ -3925,19 +3123,25 @@ class ApiService {
 
       final data = response.data;
       if (data is List) {
-        return data.whereType<Map<String, dynamic>>().toList();
+        return _normalizeList(
+          data,
+          debugLabel: 'parse_message_search',
+        );
       }
       if (data is Map<String, dynamic>) {
         final list = (data['items'] ?? data['results'] ?? data['messages']);
         if (list is List) {
-          return list.whereType<Map<String, dynamic>>().toList();
+          return _normalizeList(
+            list,
+            debugLabel: 'parse_message_search_wrapped',
+          );
         }
       }
-      return [];
+      return const [];
     } on DioException catch (e) {
       // On any transport or other error, degrade gracefully without surfacing
       _traceApi('messages search request failed gracefully: ${e.type}');
-      return [];
+      return const [];
     }
   }
 
@@ -3967,7 +3171,13 @@ class ApiService {
       '/api/v1/chats/$chatId/duplicate',
       data: {if (title != null) 'title': title},
     );
-    return _parseFullOpenWebUIChat(response.data as Map<String, dynamic>);
+    final json = await _workerManager
+        .schedule<Map<String, dynamic>, Map<String, dynamic>>(
+          parseFullConversationWorker,
+          {'conversation': response.data},
+          debugLabel: 'parse_conversation_full',
+        );
+    return Conversation.fromJson(json);
   }
 
   /// Get recent chats with activity
@@ -3982,7 +3192,13 @@ class ApiService {
     );
     final data = response.data;
     if (data is List) {
-      return data.map((chatData) => _parseOpenWebUIChat(chatData)).toList();
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (chatData) =>
+                Conversation.fromJson(parseConversationSummary(chatData)),
+          )
+          .toList();
     }
     return [];
   }
@@ -4094,10 +3310,32 @@ class ApiService {
         if (title != null) 'title': title,
       },
     );
-    return _parseFullOpenWebUIChat(response.data as Map<String, dynamic>);
+    final json = await _workerManager
+        .schedule<Map<String, dynamic>, Map<String, dynamic>>(
+          parseFullConversationWorker,
+          {'conversation': response.data},
+          debugLabel: 'parse_conversation_full',
+        );
+    return Conversation.fromJson(json);
   }
 
   // ==================== END ADVANCED CHAT FEATURES ====================
 
   // Legacy streaming wrapper methods removed
+}
+
+List<Map<String, dynamic>> _normalizeMapListWorker(
+  Map<String, dynamic> payload,
+) {
+  final raw = payload['list'];
+  if (raw is! List) {
+    return const <Map<String, dynamic>>[];
+  }
+  final normalized = <Map<String, dynamic>>[];
+  for (final entry in raw) {
+    if (entry is Map) {
+      normalized.add(Map<String, dynamic>.from(entry));
+    }
+  }
+  return normalized;
 }

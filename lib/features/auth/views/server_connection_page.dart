@@ -11,6 +11,7 @@ import 'package:conduit/l10n/app_localizations.dart';
 import '../../../core/models/server_config.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/worker_manager.dart';
 import '../../../core/services/input_validation_service.dart';
 import '../../../core/services/navigation_service.dart';
 import '../../../core/widgets/error_boundary.dart';
@@ -81,7 +82,11 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         allowSelfSignedCertificates: _allowSelfSignedCertificates,
       );
 
-      final api = ApiService(serverConfig: tempConfig);
+      final workerManager = ref.read(workerManagerProvider);
+      final api = ApiService(
+        serverConfig: tempConfig,
+        workerManager: workerManager,
+      );
       final isHealthy = await api.checkHealth();
       if (!isHealthy) {
         throw Exception('This does not appear to be an Open-WebUI server.');

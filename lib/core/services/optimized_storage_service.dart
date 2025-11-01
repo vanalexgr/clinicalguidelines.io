@@ -9,6 +9,7 @@ import '../persistence/hive_boxes.dart';
 import '../persistence/persistence_keys.dart';
 import '../utils/debug_logger.dart';
 import 'secure_credential_storage.dart';
+import 'worker_manager.dart';
 
 /// Optimized storage service backed by Hive for non-sensitive data and
 /// FlutterSecureStorage for credentials.
@@ -16,19 +17,22 @@ class OptimizedStorageService {
   OptimizedStorageService({
     required FlutterSecureStorage secureStorage,
     required HiveBoxes boxes,
+    required WorkerManager workerManager,
   }) : _preferencesBox = boxes.preferences,
        _cachesBox = boxes.caches,
        _attachmentQueueBox = boxes.attachmentQueue,
        _metadataBox = boxes.metadata,
        _secureCredentialStorage = SecureCredentialStorage(
          instance: secureStorage,
-       );
+       ),
+       _workerManager = workerManager;
 
   final Box<dynamic> _preferencesBox;
   final Box<dynamic> _cachesBox;
   final Box<dynamic> _attachmentQueueBox;
   final Box<dynamic> _metadataBox;
   final SecureCredentialStorage _secureCredentialStorage;
+  final WorkerManager _workerManager;
 
   static const String _authTokenKey = 'auth_token_v3';
   static const String _activeServerIdKey = PreferenceKeys.activeServerId;
@@ -298,19 +302,13 @@ class OptimizedStorageService {
       if (stored == null) {
         return const [];
       }
-      if (stored is String) {
-        final decoded = jsonDecode(stored) as List<dynamic>;
-        return decoded.map((item) => Conversation.fromJson(item)).toList();
-      }
-      if (stored is List) {
-        return stored
-            .map(
-              (item) =>
-                  Conversation.fromJson(Map<String, dynamic>.from(item as Map)),
-            )
-            .toList();
-      }
-      return const [];
+      final parsed = await _workerManager
+          .schedule<Map<String, dynamic>, List<Map<String, dynamic>>>(
+            _decodeStoredConversationsWorker,
+            {'stored': stored},
+            debugLabel: 'decode_local_conversations',
+          );
+      return parsed.map(Conversation.fromJson).toList(growable: false);
     } catch (error, stack) {
       DebugLogger.error(
         'Failed to retrieve local conversations',
@@ -324,9 +322,13 @@ class OptimizedStorageService {
 
   Future<void> saveLocalConversations(List<Conversation> conversations) async {
     try {
-      final serialized = conversations
+      final jsonReady = conversations
           .map((conversation) => conversation.toJson())
           .toList();
+      final serialized = await _workerManager
+          .schedule<Map<String, dynamic>, String>(_encodeConversationsWorker, {
+            'conversations': jsonReady,
+          }, debugLabel: 'encode_local_conversations');
       await _cachesBox.put(_localConversationsKey, serialized);
       DebugLogger.log(
         'Saved ${conversations.length} local conversations',
@@ -454,4 +456,41 @@ class OptimizedStorageService {
           .toList(),
     };
   }
+}
+
+List<Map<String, dynamic>> _decodeStoredConversationsWorker(
+  Map<String, dynamic> payload,
+) {
+  final stored = payload['stored'];
+  if (stored is String) {
+    final decoded = jsonDecode(stored);
+    if (decoded is List) {
+      return decoded
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+    }
+    return <Map<String, dynamic>>[];
+  }
+
+  if (stored is List) {
+    return stored
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  return <Map<String, dynamic>>[];
+}
+
+String _encodeConversationsWorker(Map<String, dynamic> payload) {
+  final raw = payload['conversations'];
+  if (raw is List) {
+    return jsonEncode(raw);
+  }
+  if (raw is String) {
+    // Already encoded.
+    return raw;
+  }
+  return jsonEncode([]);
 }

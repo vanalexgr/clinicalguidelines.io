@@ -17,6 +17,7 @@ import '../utils/debug_logger.dart';
 import '../utils/openwebui_source_parser.dart';
 import 'streaming_response_controller.dart';
 import 'api_service.dart';
+import 'worker_manager.dart';
 
 // Keep local verbosity toggle for socket logs
 const bool kSocketVerboseLogging = false;
@@ -42,6 +43,74 @@ final _imageFilePattern = RegExp(
   r'https?://[^\s]+\.(jpg|jpeg|png|gif|webp)$',
   caseSensitive: false,
 );
+
+List<Map<String, dynamic>> _collectImageReferencesWorker(String content) {
+  final collected = <Map<String, dynamic>>[];
+  if (content.isEmpty) {
+    return collected;
+  }
+
+  if (content.contains('<details') && content.contains('</details>')) {
+    final parsed = ToolCallsParser.parse(content);
+    if (parsed != null) {
+      for (final entry in parsed.toolCalls) {
+        if (entry.files != null && entry.files!.isNotEmpty) {
+          collected.addAll(_extractFilesFromResult(entry.files));
+        }
+        if (entry.result != null) {
+          collected.addAll(_extractFilesFromResult(entry.result));
+        }
+      }
+    }
+  }
+
+  if (collected.isNotEmpty) {
+    return collected;
+  }
+
+  final base64Matches = _base64ImagePattern.allMatches(content);
+  for (final match in base64Matches) {
+    final url = match.group(0);
+    if (url != null && url.isNotEmpty) {
+      collected.add({'type': 'image', 'url': url});
+    }
+  }
+
+  final urlMatches = _urlImagePattern.allMatches(content);
+  for (final match in urlMatches) {
+    final url = match.group(0);
+    if (url != null && url.isNotEmpty) {
+      collected.add({'type': 'image', 'url': url});
+    }
+  }
+
+  final jsonMatches = _jsonImagePattern.allMatches(content);
+  for (final match in jsonMatches) {
+    final url = _jsonUrlExtractPattern
+        .firstMatch(match.group(0) ?? '')
+        ?.group(1);
+    if (url != null && url.isNotEmpty) {
+      collected.add({'type': 'image', 'url': url});
+    }
+  }
+
+  final partialMatches = _partialResultsPattern.allMatches(content);
+  for (final match in partialMatches) {
+    final attrValue = match.group(2);
+    if (attrValue == null) continue;
+    try {
+      final decoded = json.decode(attrValue);
+      collected.addAll(_extractFilesFromResult(decoded));
+    } catch (_) {
+      if (attrValue.startsWith('data:image/') ||
+          _imageFilePattern.hasMatch(attrValue)) {
+        collected.add({'type': 'image', 'url': attrValue});
+      }
+    }
+  }
+
+  return collected;
+}
 
 class ActiveSocketStream {
   ActiveSocketStream({
@@ -70,6 +139,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   required String? activeConversationId,
   required ApiService api,
   required SocketService? socketService,
+  required WorkerManager workerManager,
   RegisterConversationDeltaListener? registerDeltaListener,
   // Message update callbacks
   required void Function(String) appendToLastMessage,
@@ -228,88 +298,44 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       final content = msgs.last.content;
       if (content.isEmpty) return;
 
-      final collected = <Map<String, dynamic>>[];
-
-      // Quick check: only parse tool calls if complete details blocks exist
-      if (content.contains('<details') && content.contains('</details>')) {
-        final parsed = ToolCallsParser.parse(content);
-        if (parsed != null) {
-          for (final entry in parsed.toolCalls) {
-            if (entry.files != null && entry.files!.isNotEmpty) {
-              collected.addAll(_extractFilesFromResult(entry.files));
-            }
-            if (entry.result != null) {
-              collected.addAll(_extractFilesFromResult(entry.result));
-            }
-          }
-        }
-      }
-
-      if (collected.isEmpty) {
-        // Use pre-compiled patterns for better performance
-        final base64Matches = _base64ImagePattern.allMatches(content);
-        for (final match in base64Matches) {
-          final url = match.group(0);
-          if (url != null && url.isNotEmpty) {
-            collected.add({'type': 'image', 'url': url});
-          }
-        }
-
-        final urlMatches = _urlImagePattern.allMatches(content);
-        for (final match in urlMatches) {
-          final url = match.group(0);
-          if (url != null && url.isNotEmpty) {
-            collected.add({'type': 'image', 'url': url});
-          }
-        }
-
-        final jsonMatches = _jsonImagePattern.allMatches(content);
-        for (final match in jsonMatches) {
-          final url = _jsonUrlExtractPattern
-              .firstMatch(match.group(0) ?? '')
-              ?.group(1);
-          if (url != null && url.isNotEmpty) {
-            collected.add({'type': 'image', 'url': url});
-          }
-        }
-
-        final partialMatches = _partialResultsPattern.allMatches(content);
-        for (final match in partialMatches) {
-          final attrValue = match.group(2);
-          if (attrValue != null) {
-            try {
-              final decoded = json.decode(attrValue);
-              collected.addAll(_extractFilesFromResult(decoded));
-            } catch (_) {
-              if (attrValue.startsWith('data:image/') ||
-                  _imageFilePattern.hasMatch(attrValue)) {
-                collected.add({'type': 'image', 'url': attrValue});
+      final targetMessageId = msgs.last.id;
+      unawaited(
+        workerManager
+            .schedule<String, List<Map<String, dynamic>>>(
+              _collectImageReferencesWorker,
+              content,
+              debugLabel: 'stream_collect_images',
+            )
+            .then((collected) {
+              if (collected.isEmpty) return;
+              final currentMessages = getMessages();
+              if (currentMessages.isEmpty) return;
+              final last = currentMessages.last;
+              if (last.id != targetMessageId || last.role != 'assistant') {
+                return;
               }
-            }
-          }
-        }
-      }
 
-      if (collected.isEmpty) return;
+              final existing = last.files ?? <Map<String, dynamic>>[];
+              final seen = <String>{
+                for (final f in existing)
+                  if (f['url'] is String) (f['url'] as String) else '',
+              }..removeWhere((e) => e.isEmpty);
 
-      final existing = msgs.last.files ?? <Map<String, dynamic>>[];
-      final seen = <String>{
-        for (final f in existing)
-          if (f['url'] is String) (f['url'] as String) else '',
-      }..removeWhere((e) => e.isEmpty);
+              final merged = <Map<String, dynamic>>[...existing];
+              for (final f in collected) {
+                final url = f['url'] as String?;
+                if (url != null && url.isNotEmpty && !seen.contains(url)) {
+                  merged.add({'type': 'image', 'url': url});
+                  seen.add(url);
+                }
+              }
 
-      final merged = <Map<String, dynamic>>[...existing];
-      for (final f in collected) {
-        final url = f['url'] as String?;
-        if (url != null && url.isNotEmpty && !seen.contains(url)) {
-          merged.add({'type': 'image', 'url': url});
-          seen.add(url);
-        }
-      }
-
-      if (merged.length != existing.length) {
-        updateLastMessageWith((m) => m.copyWith(files: merged));
-      }
+              if (merged.length != existing.length) {
+                updateLastMessageWith((m) => m.copyWith(files: merged));
+              }
+            })
+            .catchError((_) {}),
+      );
     } catch (_) {}
   }
 
