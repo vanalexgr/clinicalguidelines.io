@@ -813,6 +813,15 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           if (api == null) throw Exception('No API service');
           await api.moveConversationToFolder(details.data.id, folderId);
           HapticFeedback.selectionClick();
+          ref
+              .read(conversationsProvider.notifier)
+              .updateConversation(
+                details.data.id,
+                (conversation) => conversation.copyWith(
+                  folderId: folderId,
+                  updatedAt: DateTime.now(),
+                ),
+              );
           refreshConversationsCache(ref, includeFolders: true);
         } catch (e, stackTrace) {
           DebugLogger.error(
@@ -1153,6 +1162,15 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           if (api == null) throw Exception('No API service');
           await api.moveConversationToFolder(details.data.id, null);
           HapticFeedback.selectionClick();
+          ref
+              .read(conversationsProvider.notifier)
+              .updateConversation(
+                details.data.id,
+                (conversation) => conversation.copyWith(
+                  folderId: null,
+                  updatedAt: DateTime.now(),
+                ),
+              );
           refreshConversationsCache(ref, includeFolders: true);
         } catch (e, stackTrace) {
           DebugLogger.error(

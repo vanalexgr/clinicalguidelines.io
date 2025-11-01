@@ -58,6 +58,7 @@ final optimizedStorageServiceProvider = Provider<OptimizedStorageService>((
   return OptimizedStorageService(
     secureStorage: ref.watch(secureStorageProvider),
     boxes: ref.watch(hiveBoxesProvider),
+    workerManager: ref.watch(workerManagerProvider),
   );
 });
 
@@ -882,311 +883,341 @@ class _ConversationsCacheTimestamp extends _$ConversationsCacheTimestamp {
   void set(DateTime? timestamp) => state = timestamp;
 }
 
-/// Clears the in-memory timestamp cache and invalidates the conversations
-/// provider so the next read forces a refetch. Optionally invalidates the
-/// folders provider when folder metadata must stay in sync with conversations.
+/// Clears the in-memory timestamp cache and triggers a refresh of the
+/// conversations provider. Optionally refreshes the folders provider so folder
+/// metadata stays in sync.
 void refreshConversationsCache(dynamic ref, {bool includeFolders = false}) {
   ref.read(_conversationsCacheTimestampProvider.notifier).set(null);
-  ref.invalidate(conversationsProvider);
-  if (includeFolders) {
-    ref.invalidate(foldersProvider);
-  }
+  final notifier = ref.read(conversationsProvider.notifier);
+  unawaited(notifier.refresh(includeFolders: includeFolders));
 }
 
-// Conversation providers - Now using correct OpenWebUI API with caching
-// keepAlive to maintain cache during authenticated session
+// Conversation providers - Now using correct OpenWebUI API with caching and
+// immediate mutation helpers.
 @Riverpod(keepAlive: true)
-Future<List<Conversation>> conversations(Ref ref) async {
-  // Do not fetch protected data until authenticated. Use watch so we refetch
-  // when the auth state transitions in either direction.
-  final authed = ref.watch(isAuthenticatedProvider2);
-  if (!authed) {
-    DebugLogger.log('skip-unauthed', scope: 'conversations');
-    return [];
-  }
-  // Check if we have a recent cache (within 5 seconds)
-  final lastFetch = ref.read(_conversationsCacheTimestampProvider);
-  if (lastFetch != null && DateTime.now().difference(lastFetch).inSeconds < 5) {
-    DebugLogger.log(
-      'cache-hit',
-      scope: 'conversations',
-      data: {'ageSecs': DateTime.now().difference(lastFetch).inSeconds},
-    );
-    // Note: Can't read our own provider here, would cause a cycle
-    // The caching is handled by Riverpod's built-in mechanism
-  }
-  final reviewerMode = ref.watch(reviewerModeProvider);
-  if (reviewerMode) {
-    // Provide a simple local demo conversation list
-    return [
-      Conversation(
-        id: 'demo-conv-1',
-        title: 'Welcome to Conduit (Demo)',
-        createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
-        updatedAt: DateTime.now().subtract(const Duration(minutes: 10)),
-        messages: [
-          ChatMessage(
-            id: 'demo-msg-1',
-            role: 'assistant',
-            content:
-                '**Welcome to Conduit Demo Mode**\n\nThis is a demo for app review - responses are pre-written, not from real AI.\n\nTry these features:\n• Send messages\n• Attach images\n• Use voice input\n• Switch models (tap header)\n• Create new chats (menu)\n\nAll features work offline. No server needed.',
-            timestamp: DateTime.now().subtract(const Duration(minutes: 10)),
-            model: 'Gemma 2 Mini (Demo)',
-            isStreaming: false,
-          ),
-        ],
-      ),
-    ];
-  }
-  final api = ref.watch(apiServiceProvider);
-  if (api == null) {
-    DebugLogger.warning('api-missing', scope: 'conversations');
-    return [];
+class Conversations extends _$Conversations {
+  @override
+  Future<List<Conversation>> build() async {
+    final authed = ref.watch(isAuthenticatedProvider2);
+    if (!authed) {
+      DebugLogger.log('skip-unauthed', scope: 'conversations');
+      _updateCacheTimestamp(null);
+      return const [];
+    }
+
+    if (ref.watch(reviewerModeProvider)) {
+      return _demoConversations();
+    }
+
+    return _loadRemoteConversations();
   }
 
-  try {
-    DebugLogger.log('fetch-start', scope: 'conversations');
-    final conversations = await api
-        .getConversations(); // Fetch all conversations
-    DebugLogger.log(
-      'fetch-ok',
-      scope: 'conversations',
-      data: {'count': conversations.length},
-    );
+  Future<void> refresh({bool includeFolders = false}) async {
+    final authed = ref.read(isAuthenticatedProvider2);
+    if (!authed) {
+      _updateCacheTimestamp(null);
+      state = AsyncData<List<Conversation>>(<Conversation>[]);
+      if (includeFolders) {
+        ref.invalidate(foldersProvider);
+      }
+      return;
+    }
 
-    // Also fetch folder information and update conversations with folder IDs
+    if (ref.read(reviewerModeProvider)) {
+      state = AsyncData<List<Conversation>>(_demoConversations());
+      if (includeFolders) {
+        ref.invalidate(foldersProvider);
+      }
+      return;
+    }
+
+    final result = await AsyncValue.guard(_loadRemoteConversations);
+    if (!ref.mounted) return;
+    state = result;
+    if (includeFolders) {
+      ref.invalidate(foldersProvider);
+    }
+  }
+
+  void removeConversation(String id) {
+    final current = state.asData?.value;
+    if (current == null) return;
+    final updated = current
+        .where((conversation) => conversation.id != id)
+        .toList(growable: true);
+    state = AsyncData<List<Conversation>>(_sortByUpdatedAt(updated));
+  }
+
+  void upsertConversation(Conversation conversation) {
+    final current = state.asData?.value ?? const <Conversation>[];
+    final updated = <Conversation>[...current];
+    final index = updated.indexWhere(
+      (element) => element.id == conversation.id,
+    );
+    if (index >= 0) {
+      updated[index] = conversation;
+    } else {
+      updated.add(conversation);
+    }
+    state = AsyncData<List<Conversation>>(_sortByUpdatedAt(updated));
+  }
+
+  void updateConversation(
+    String id,
+    Conversation Function(Conversation conversation) transform,
+  ) {
+    final current = state.asData?.value;
+    if (current == null) return;
+    final index = current.indexWhere((conversation) => conversation.id == id);
+    if (index < 0) return;
+    final updated = <Conversation>[...current];
+    updated[index] = transform(updated[index]);
+    state = AsyncData<List<Conversation>>(_sortByUpdatedAt(updated));
+  }
+
+  List<Conversation> _demoConversations() => [
+    Conversation(
+      id: 'demo-conv-1',
+      title: 'Welcome to Conduit (Demo)',
+      createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
+      updatedAt: DateTime.now().subtract(const Duration(minutes: 10)),
+      messages: [
+        ChatMessage(
+          id: 'demo-msg-1',
+          role: 'assistant',
+          content:
+              '**Welcome to Conduit Demo Mode**\n\nThis is a demo for app review - responses are pre-written, not from real AI.\n\nTry these features:\n• Send messages\n• Attach images\n• Use voice input\n• Switch models (tap header)\n• Create new chats (menu)\n\nAll features work offline. No server needed.',
+          timestamp: DateTime.now().subtract(const Duration(minutes: 10)),
+          model: 'Gemma 2 Mini (Demo)',
+          isStreaming: false,
+        ),
+      ],
+    ),
+  ];
+
+  Future<List<Conversation>> _loadRemoteConversations() async {
+    final api = ref.watch(apiServiceProvider);
+    if (api == null) {
+      DebugLogger.warning('api-missing', scope: 'conversations');
+      return const [];
+    }
+
     try {
-      final foldersData = await api.getFolders();
+      DebugLogger.log('fetch-start', scope: 'conversations');
+      final conversations = await api.getConversations();
       DebugLogger.log(
-        'folders-fetched',
+        'fetch-ok',
         scope: 'conversations',
-        data: {'count': foldersData.length},
+        data: {'count': conversations.length},
       );
 
-      // Parse folder data into Folder objects
-      final folders = foldersData
-          .map((folderData) => Folder.fromJson(folderData))
-          .toList();
-
-      // Create a map of conversation ID to folder ID
-      final conversationToFolder = <String, String>{};
-      for (final folder in folders) {
+      try {
+        final foldersData = await api.getFolders();
         DebugLogger.log(
-          'folder',
-          scope: 'conversations/map',
-          data: {
-            'id': folder.id,
-            'name': folder.name,
-            'count': folder.conversationIds.length,
-          },
+          'folders-fetched',
+          scope: 'conversations',
+          data: {'count': foldersData.length},
         );
-        for (final conversationId in folder.conversationIds) {
-          conversationToFolder[conversationId] = folder.id;
-          DebugLogger.log(
-            'map',
-            scope: 'conversations/map',
-            data: {'conversationId': conversationId, 'folderId': folder.id},
-          );
-        }
-      }
 
-      // Update conversations with folder IDs, preferring explicit folder_id from chat if present
-      // Use a map to ensure uniqueness by ID throughout the merge process
-      final conversationMap = <String, Conversation>{};
+        final folders = foldersData
+            .map((folderData) => Folder.fromJson(folderData))
+            .toList();
 
-      for (final conversation in conversations) {
-        // Prefer server-provided folderId on the chat itself
-        final explicitFolderId = conversation.folderId;
-        final mappedFolderId = conversationToFolder[conversation.id];
-        final folderIdToUse = explicitFolderId ?? mappedFolderId;
-        if (folderIdToUse != null) {
-          conversationMap[conversation.id] = conversation.copyWith(
-            folderId: folderIdToUse,
-          );
+        final conversationToFolder = <String, String>{};
+        for (final folder in folders) {
           DebugLogger.log(
-            'update-folder',
+            'folder',
             scope: 'conversations/map',
             data: {
-              'conversationId': conversation.id,
-              'folderId': folderIdToUse,
-              'explicit': explicitFolderId != null,
+              'id': folder.id,
+              'name': folder.name,
+              'count': folder.conversationIds.length,
+            },
+          );
+          for (final conversationId in folder.conversationIds) {
+            conversationToFolder[conversationId] = folder.id;
+            DebugLogger.log(
+              'map',
+              scope: 'conversations/map',
+              data: {'conversationId': conversationId, 'folderId': folder.id},
+            );
+          }
+        }
+
+        final conversationMap = <String, Conversation>{};
+
+        for (final conversation in conversations) {
+          final explicitFolderId = conversation.folderId;
+          final mappedFolderId = conversationToFolder[conversation.id];
+          final folderIdToUse = explicitFolderId ?? mappedFolderId;
+          if (folderIdToUse != null) {
+            conversationMap[conversation.id] = conversation.copyWith(
+              folderId: folderIdToUse,
+            );
+            DebugLogger.log(
+              'update-folder',
+              scope: 'conversations/map',
+              data: {
+                'conversationId': conversation.id,
+                'folderId': folderIdToUse,
+                'explicit': explicitFolderId != null,
+              },
+            );
+          } else {
+            conversationMap[conversation.id] = conversation;
+          }
+        }
+
+        final existingIds = conversationMap.keys.toSet();
+        final missingInBase = conversationToFolder.keys
+            .where((id) => !existingIds.contains(id))
+            .toList();
+        if (missingInBase.isNotEmpty) {
+          DebugLogger.warning(
+            'missing-in-base',
+            scope: 'conversations/map',
+            data: {
+              'count': missingInBase.length,
+              'preview': missingInBase.take(5).toList(),
             },
           );
         } else {
-          conversationMap[conversation.id] = conversation;
+          DebugLogger.log('folders-synced', scope: 'conversations/map');
         }
-      }
 
-      // Merge conversations that are in folders but missing from the main list
-      // Build a set of existing IDs from the fetched list
-      final existingIds = conversationMap.keys.toSet();
+        for (final folder in folders) {
+          final missingIds = folder.conversationIds
+              .where((id) => !existingIds.contains(id))
+              .toList();
 
-      // Diagnostics: count how many folder-mapped IDs are missing from the main list
-      final missingInBase = conversationToFolder.keys
-          .where((id) => !existingIds.contains(id))
-          .toList();
-      if (missingInBase.isNotEmpty) {
-        DebugLogger.warning(
-          'missing-in-base',
-          scope: 'conversations/map',
-          data: {
-            'count': missingInBase.length,
-            'preview': missingInBase.take(5).toList(),
-          },
+          final hasKnownConversations = conversationMap.values.any(
+            (conversation) => conversation.folderId == folder.id,
+          );
+
+          final shouldFetchFolder =
+              missingIds.isNotEmpty ||
+              (!hasKnownConversations && folder.conversationIds.isEmpty);
+
+          List<Conversation> folderConvs = const [];
+          if (shouldFetchFolder) {
+            try {
+              folderConvs = await api.getConversationsInFolder(folder.id);
+              DebugLogger.log(
+                'folder-sync',
+                scope: 'conversations/map',
+                data: {
+                  'folderId': folder.id,
+                  'fetched': folderConvs.length,
+                  'missingIds': missingIds.length,
+                },
+              );
+            } catch (e) {
+              DebugLogger.error(
+                'folder-fetch-failed',
+                scope: 'conversations/map',
+                error: e,
+                data: {'folderId': folder.id},
+              );
+            }
+          }
+
+          final fetchedMap = {for (final c in folderConvs) c.id: c};
+
+          for (final convId in missingIds) {
+            final fetched = fetchedMap[convId];
+            if (fetched != null) {
+              final toAdd = fetched.folderId == null
+                  ? fetched.copyWith(folderId: folder.id)
+                  : fetched;
+              conversationMap[toAdd.id] = toAdd;
+              existingIds.add(toAdd.id);
+              DebugLogger.log(
+                'add-missing',
+                scope: 'conversations/map',
+                data: {'conversationId': toAdd.id, 'folderId': folder.id},
+              );
+            } else {
+              final placeholder = Conversation(
+                id: convId,
+                title: 'Chat',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+                messages: const [],
+                folderId: folder.id,
+              );
+              conversationMap[convId] = placeholder;
+              existingIds.add(convId);
+              DebugLogger.log(
+                'add-placeholder',
+                scope: 'conversations/map',
+                data: {'conversationId': convId, 'folderId': folder.id},
+              );
+            }
+          }
+
+          if (folderConvs.isNotEmpty && folder.conversationIds.isEmpty) {
+            for (final conv in folderConvs) {
+              final toAdd = conv.folderId == null
+                  ? conv.copyWith(folderId: folder.id)
+                  : conv;
+              conversationMap[toAdd.id] = toAdd;
+              existingIds.add(toAdd.id);
+              DebugLogger.log(
+                'add-folder-fetch',
+                scope: 'conversations/map',
+                data: {'conversationId': toAdd.id, 'folderId': folder.id},
+              );
+            }
+          }
+        }
+
+        final sortedConversations = _sortByUpdatedAt(
+          conversationMap.values.toList(),
         );
-      } else {
-        DebugLogger.log('folders-synced', scope: 'conversations/map');
-      }
-
-      // Attempt to fetch missing conversations per-folder to construct accurate entries
-      // If per-folder fetch fails, fall back to creating minimal placeholder entries
-      final apiSvc = ref.read(apiServiceProvider);
-      for (final folder in folders) {
-        // Collect IDs in this folder that are missing
-        final missingIds = folder.conversationIds
-            .where((id) => !existingIds.contains(id))
-            .toList();
-
-        final hasKnownConversations = conversationMap.values.any(
-          (conversation) => conversation.folderId == folder.id,
+        DebugLogger.log(
+          'sort',
+          scope: 'conversations',
+          data: {'source': 'folder-sync'},
         );
-
-        final shouldFetchFolder =
-            apiSvc != null &&
-            (missingIds.isNotEmpty ||
-                (!hasKnownConversations && folder.conversationIds.isEmpty));
-
-        List<Conversation> folderConvs = const [];
-        if (shouldFetchFolder) {
-          try {
-            folderConvs = await apiSvc.getConversationsInFolder(folder.id);
-            DebugLogger.log(
-              'folder-sync',
-              scope: 'conversations/map',
-              data: {
-                'folderId': folder.id,
-                'fetched': folderConvs.length,
-                'missingIds': missingIds.length,
-              },
-            );
-          } catch (e) {
-            DebugLogger.error(
-              'folder-fetch-failed',
-              scope: 'conversations/map',
-              error: e,
-              data: {'folderId': folder.id},
-            );
-          }
-        }
-
-        // Index fetched folder conversations for quick lookup
-        final fetchedMap = {for (final c in folderConvs) c.id: c};
-
-        for (final convId in missingIds) {
-          final fetched = fetchedMap[convId];
-          if (fetched != null) {
-            final toAdd = fetched.folderId == null
-                ? fetched.copyWith(folderId: folder.id)
-                : fetched;
-            // Use map to prevent duplicates - this will overwrite if ID already exists
-            conversationMap[toAdd.id] = toAdd;
-            existingIds.add(toAdd.id);
-            DebugLogger.log(
-              'add-missing',
-              scope: 'conversations/map',
-              data: {'conversationId': toAdd.id, 'folderId': folder.id},
-            );
-          } else {
-            // Create a minimal placeholder if not returned by folder API
-            final placeholder = Conversation(
-              id: convId,
-              title: 'Chat',
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              messages: const [],
-              folderId: folder.id,
-            );
-            // Use map to prevent duplicates
-            conversationMap[convId] = placeholder;
-            existingIds.add(convId);
-            DebugLogger.log(
-              'add-placeholder',
-              scope: 'conversations/map',
-              data: {'conversationId': convId, 'folderId': folder.id},
-            );
-          }
-        }
-
-        if (folderConvs.isNotEmpty && folder.conversationIds.isEmpty) {
-          for (final conv in folderConvs) {
-            final toAdd = conv.folderId == null
-                ? conv.copyWith(folderId: folder.id)
-                : conv;
-            conversationMap[toAdd.id] = toAdd;
-            existingIds.add(toAdd.id);
-            DebugLogger.log(
-              'add-folder-fetch',
-              scope: 'conversations/map',
-              data: {'conversationId': toAdd.id, 'folderId': folder.id},
-            );
-          }
-        }
+        _updateCacheTimestamp(DateTime.now());
+        return sortedConversations;
+      } catch (e) {
+        DebugLogger.error(
+          'folders-fetch-failed',
+          scope: 'conversations',
+          error: e,
+        );
+        final sorted = _sortByUpdatedAt(conversations.toList());
+        DebugLogger.log(
+          'sort',
+          scope: 'conversations',
+          data: {'source': 'fallback'},
+        );
+        _updateCacheTimestamp(DateTime.now());
+        return sorted;
       }
-
-      // Convert map back to list - this ensures no duplicates by ID
-      final sortedConversations = conversationMap.values.toList();
-
-      // Sort conversations by updatedAt in descending order (most recent first)
-      sortedConversations.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      DebugLogger.log(
-        'sort',
-        scope: 'conversations',
-        data: {'source': 'folder-sync'},
-      );
-
-      // Update cache timestamp
-      ref
-          .read(_conversationsCacheTimestampProvider.notifier)
-          .set(DateTime.now());
-
-      return sortedConversations;
-    } catch (e) {
+    } catch (e, stackTrace) {
       DebugLogger.error(
-        'folders-fetch-failed',
+        'fetch-failed',
         scope: 'conversations',
         error: e,
+        stackTrace: stackTrace,
       );
-      // Sort conversations even when folder fetch fails
-      conversations.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      DebugLogger.log(
-        'sort',
-        scope: 'conversations',
-        data: {'source': 'fallback'},
-      );
-
-      // Update cache timestamp
-      ref
-          .read(_conversationsCacheTimestampProvider.notifier)
-          .set(DateTime.now());
-
-      return conversations; // Return original conversations if folder fetch fails
+      if (e.toString().contains('403')) {
+        DebugLogger.warning('endpoint-403', scope: 'conversations');
+      }
+      return const [];
     }
-  } catch (e, stackTrace) {
-    DebugLogger.error(
-      'fetch-failed',
-      scope: 'conversations',
-      error: e,
-      stackTrace: stackTrace,
-    );
+  }
 
-    // If conversations endpoint returns 403, this should now clear auth token
-    // and redirect user to login since it's marked as a core endpoint
-    if (e.toString().contains('403')) {
-      DebugLogger.warning('endpoint-403', scope: 'conversations');
-    }
+  List<Conversation> _sortByUpdatedAt(List<Conversation> conversations) {
+    final sorted = [...conversations];
+    sorted.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return List<Conversation>.unmodifiable(sorted);
+  }
 
-    // Return empty list instead of re-throwing to allow app to continue functioning
-    return [];
+  void _updateCacheTimestamp(DateTime? timestamp) {
+    ref.read(_conversationsCacheTimestampProvider.notifier).set(timestamp);
   }
 }
 

@@ -911,6 +911,26 @@ class ApiService {
     return [];
   }
 
+  Future<List<Conversation>> _parseConversationSummaryList(
+    List<dynamic> regular, {
+    required String debugLabel,
+  }) async {
+    final payload = <String, dynamic>{
+      'regular': List<dynamic>.from(regular),
+      'pinned': const <dynamic>[],
+      'archived': const <dynamic>[],
+    };
+    final parsed = await _workerManager
+        .schedule<Map<String, dynamic>, List<Map<String, dynamic>>>(
+          parseConversationSummariesWorker,
+          payload,
+          debugLabel: debugLabel,
+        );
+    return parsed
+        .map((json) => Conversation.fromJson(json))
+        .toList(growable: false);
+  }
+
   // Tools - Check available tools on server
   Future<List<Map<String, dynamic>>> getAvailableTools() async {
     _traceApi('Fetching available tools');
@@ -1005,10 +1025,10 @@ class ApiService {
     final response = await _dio.get('/api/v1/chats/folder/$folderId');
     final data = response.data;
     if (data is List) {
-      return data.whereType<Map>().map((chatData) {
-        final map = Map<String, dynamic>.from(chatData);
-        return Conversation.fromJson(parseConversationSummary(map));
-      }).toList();
+      return _parseConversationSummaryList(
+        data,
+        debugLabel: 'parse_folder_$folderId',
+      );
     }
     return [];
   }
@@ -1052,10 +1072,7 @@ class ApiService {
     final response = await _dio.get('/api/v1/chats/tags/$tag');
     final data = response.data;
     if (data is List) {
-      return data.whereType<Map>().map((chatData) {
-        final map = Map<String, dynamic>.from(chatData);
-        return Conversation.fromJson(parseConversationSummary(map));
-      }).toList();
+      return _parseConversationSummaryList(data, debugLabel: 'parse_tag_$tag');
     }
     return [];
   }
@@ -2738,8 +2755,11 @@ class ApiService {
       '/api/v1/chats/search',
       queryParameters: {'q': query},
     );
-    final results = response.data as List;
-    return results.map((c) => Conversation.fromJson(c)).toList();
+    final results = response.data;
+    if (results is List) {
+      return _parseConversationSummaryList(results, debugLabel: 'parse_search');
+    }
+    return [];
   }
 
   // Debug method to test API endpoints

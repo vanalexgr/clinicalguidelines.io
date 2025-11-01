@@ -170,12 +170,14 @@ class WorkerManager {
 
 /// Keep a single [WorkerManager] alive across the app.
 @Riverpod(keepAlive: true)
-// ignore: functional_ref
-WorkerManager workerManager(Ref ref) {
-  final concurrency = kIsWeb ? 1 : WorkerManager._defaultMaxConcurrentTasks;
-  final manager = WorkerManager(maxConcurrentTasks: concurrency);
-  ref.onDispose(manager.dispose);
-  return manager;
+class WorkerManagerNotifier extends _$WorkerManagerNotifier {
+  @override
+  WorkerManager build() {
+    final concurrency = kIsWeb ? 1 : WorkerManager._defaultMaxConcurrentTasks;
+    final manager = WorkerManager(maxConcurrentTasks: concurrency);
+    ref.onDispose(manager.dispose);
+    return manager;
+  }
 }
 
 class _EnqueuedJob {

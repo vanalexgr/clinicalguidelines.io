@@ -719,9 +719,40 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
     _messageStream = null;
     _stopRemoteTaskMonitor();
 
+    final activeConversation = ref.read(activeConversationProvider);
+    if (activeConversation != null) {
+      final updatedActive = activeConversation.copyWith(
+        messages: List<ChatMessage>.unmodifiable(state),
+        updatedAt: DateTime.now(),
+      );
+      ref.read(activeConversationProvider.notifier).set(updatedActive);
+
+      final conversationsAsync = ref.read(conversationsProvider);
+      Conversation? summary;
+      conversationsAsync.maybeWhen(
+        data: (conversations) {
+          for (final conversation in conversations) {
+            if (conversation.id == updatedActive.id) {
+              summary = conversation;
+              break;
+            }
+          }
+        },
+        orElse: () {},
+      );
+      final updatedSummary =
+          (summary ?? updatedActive.copyWith(messages: const [])).copyWith(
+            updatedAt: updatedActive.updatedAt,
+          );
+
+      ref
+          .read(conversationsProvider.notifier)
+          .upsertConversation(updatedSummary.copyWith(messages: const []));
+    }
+
     // Trigger a refresh of the conversations list so UI like the Chats Drawer
-    // can pick up updated titles and ordering once streaming completes.
-    // Best-effort: ignore if ref lifecycle/context prevents invalidation.
+    // can reconcile with the server once streaming completes. Best-effort:
+    // ignore if ref lifecycle/context prevents invalidation.
     try {
       refreshConversationsCache(ref);
     } catch (_) {}
@@ -1480,6 +1511,15 @@ Future<void> regenerateMessage(
           ref
               .read(activeConversationProvider.notifier)
               .set(active.copyWith(title: newTitle));
+          ref
+              .read(conversationsProvider.notifier)
+              .updateConversation(
+                active.id,
+                (conversation) => conversation.copyWith(
+                  title: newTitle,
+                  updatedAt: DateTime.now(),
+                ),
+              );
         }
         refreshConversationsCache(ref);
       },
@@ -1492,6 +1532,9 @@ Future<void> regenerateMessage(
             try {
               final refreshed = await api.getConversation(active.id);
               ref.read(activeConversationProvider.notifier).set(refreshed);
+              ref
+                  .read(conversationsProvider.notifier)
+                  .upsertConversation(refreshed.copyWith(messages: const []));
             } catch (_) {}
           });
         }
@@ -1624,6 +1667,12 @@ Future<void> _sendMessageInternal(
         // Set messages in the messages provider to keep UI in sync
         ref.read(chatMessagesProvider.notifier).clearMessages();
         ref.read(chatMessagesProvider.notifier).addMessage(userMessage);
+
+        ref
+            .read(conversationsProvider.notifier)
+            .upsertConversation(
+              updatedConversation.copyWith(updatedAt: DateTime.now()),
+            );
 
         // Invalidate conversations provider to refresh the list
         // Adding a small delay to prevent rapid invalidations that could cause duplicates
@@ -2029,6 +2078,15 @@ Future<void> _sendMessageInternal(
           ref
               .read(activeConversationProvider.notifier)
               .set(active.copyWith(title: newTitle));
+          ref
+              .read(conversationsProvider.notifier)
+              .updateConversation(
+                active.id,
+                (conversation) => conversation.copyWith(
+                  title: newTitle,
+                  updatedAt: DateTime.now(),
+                ),
+              );
         }
         refreshConversationsCache(ref);
       },
@@ -2041,6 +2099,9 @@ Future<void> _sendMessageInternal(
             try {
               final refreshed = await api.getConversation(active.id);
               ref.read(activeConversationProvider.notifier).set(refreshed);
+              ref
+                  .read(conversationsProvider.notifier)
+                  .upsertConversation(refreshed.copyWith(messages: const []));
             } catch (_) {}
           });
         }
@@ -2204,6 +2265,14 @@ Future<void> pinConversation(
 
     await api.pinConversation(conversationId, pinned);
 
+    ref
+        .read(conversationsProvider.notifier)
+        .updateConversation(
+          conversationId,
+          (conversation) =>
+              conversation.copyWith(pinned: pinned, updatedAt: DateTime.now()),
+        );
+
     // Refresh conversations list to reflect the change
     refreshConversationsCache(ref);
 
@@ -2243,6 +2312,16 @@ Future<void> archiveConversation(
 
     await api.archiveConversation(conversationId, archived);
 
+    ref
+        .read(conversationsProvider.notifier)
+        .updateConversation(
+          conversationId,
+          (conversation) => conversation.copyWith(
+            archived: archived,
+            updatedAt: DateTime.now(),
+          ),
+        );
+
     // Refresh conversations list to reflect the change
     refreshConversationsCache(ref);
   } catch (e) {
@@ -2269,6 +2348,16 @@ Future<String?> shareConversation(WidgetRef ref, String conversationId) async {
 
     final shareId = await api.shareConversation(conversationId);
 
+    ref
+        .read(conversationsProvider.notifier)
+        .updateConversation(
+          conversationId,
+          (conversation) => conversation.copyWith(
+            shareId: shareId,
+            updatedAt: DateTime.now(),
+          ),
+        );
+
     // Refresh conversations list to reflect the change
     refreshConversationsCache(ref);
 
@@ -2293,6 +2382,11 @@ Future<void> cloneConversation(WidgetRef ref, String conversationId) async {
     // The ChatMessagesNotifier will automatically load messages when activeConversation changes
 
     // Refresh conversations list to show the new conversation
+    ref
+        .read(conversationsProvider.notifier)
+        .upsertConversation(
+          clonedConversation.copyWith(updatedAt: DateTime.now()),
+        );
     refreshConversationsCache(ref);
   } catch (e) {
     DebugLogger.log('Error cloning conversation: $e', scope: 'chat/providers');
