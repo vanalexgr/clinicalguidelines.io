@@ -125,9 +125,20 @@ sealed class Model with _$Model {
       }
     }
 
+    final idRaw = json['id'];
+    final id = idRaw?.toString();
+    if (id == null || id.isEmpty) {
+      throw ArgumentError('Model JSON missing required "id" field.');
+    }
+
+    final nameRaw = json['name'];
+    final name = (nameRaw == null || nameRaw.toString().trim().isEmpty)
+        ? id
+        : nameRaw.toString();
+
     return Model(
-      id: json['id'] as String,
-      name: json['name'] as String,
+      id: id,
+      name: name,
       description: json['description'] as String?,
       isMultimodal: isMultimodal,
       supportsStreaming: supportsStreaming,
