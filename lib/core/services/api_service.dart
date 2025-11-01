@@ -15,6 +15,7 @@ import '../models/conversation.dart';
 import '../models/chat_message.dart';
 import '../models/file_info.dart';
 import '../models/knowledge_base.dart';
+import '../models/prompt.dart';
 import '../auth/api_auth_interceptor.dart';
 import '../error/api_error_interceptor.dart';
 // Tool-call details are parsed in the UI layer to render collapsible blocks
@@ -1146,7 +1147,7 @@ class ApiService {
   }
 
   // Enhanced File Operations
-  Future<List<Map<String, dynamic>>> searchFiles({
+  Future<List<FileInfo>> searchFiles({
     String? query,
     String? contentType,
     int? limit,
@@ -1165,19 +1166,31 @@ class ApiService {
     );
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_file_search',
+      );
+      return normalized
+          .map(FileInfo.fromJson)
+          .toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
-  Future<List<Map<String, dynamic>>> getAllFiles() async {
+  Future<List<FileInfo>> getAllFiles() async {
     _traceApi('Fetching all files (admin)');
     final response = await _dio.get('/api/v1/files/all');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_file_all',
+      );
+      return normalized
+          .map(FileInfo.fromJson)
+          .toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   Future<String> uploadFileWithProgress(
@@ -1734,14 +1747,21 @@ class ApiService {
   }
 
   // Prompts
-  Future<List<Map<String, dynamic>>> getPrompts() async {
+  Future<List<Prompt>> getPrompts() async {
     _traceApi('Fetching prompts');
     final response = await _dio.get('/api/v1/prompts/');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_prompts',
+      );
+      return normalized
+          .map(Prompt.fromJson)
+          .where((prompt) => prompt.command.isNotEmpty)
+          .toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   // Permissions & Features
