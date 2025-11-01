@@ -13,6 +13,8 @@ import '../models/user.dart';
 import '../models/model.dart';
 import '../models/conversation.dart';
 import '../models/chat_message.dart';
+import '../models/file_info.dart';
+import '../models/knowledge_base.dart';
 import '../auth/api_auth_interceptor.dart';
 import '../error/api_error_interceptor.dart';
 // Tool-call details are parsed in the UI layer to render collapsible blocks
@@ -931,6 +933,18 @@ class ApiService {
         .toList(growable: false);
   }
 
+  Future<List<Map<String, dynamic>>> _normalizeList(
+    List<dynamic> raw, {
+    required String debugLabel,
+  }) {
+    return _workerManager
+        .schedule<Map<String, dynamic>, List<Map<String, dynamic>>>(
+          _normalizeMapListWorker,
+          {'list': raw},
+          debugLabel: debugLabel,
+        );
+  }
+
   // Tools - Check available tools on server
   Future<List<Map<String, dynamic>>> getAvailableTools() async {
     _traceApi('Fetching available tools');
@@ -1117,14 +1131,18 @@ class ApiService {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<List<Map<String, dynamic>>> getUserFiles() async {
+  Future<List<FileInfo>> getUserFiles() async {
     _traceApi('Fetching user files');
     final response = await _dio.get('/api/v1/files/');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_file_list',
+      );
+      return normalized.map(FileInfo.fromJson).toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   // Enhanced File Operations
@@ -1262,14 +1280,18 @@ class ApiService {
   }
 
   // Knowledge Base
-  Future<List<Map<String, dynamic>>> getKnowledgeBases() async {
+  Future<List<KnowledgeBase>> getKnowledgeBases() async {
     _traceApi('Fetching knowledge bases');
     final response = await _dio.get('/api/v1/knowledge/');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_knowledge_bases',
+      );
+      return normalized.map(KnowledgeBase.fromJson).toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   Future<Map<String, dynamic>> createKnowledgeBase({
@@ -1304,16 +1326,20 @@ class ApiService {
     await _dio.delete('/api/v1/knowledge/$id');
   }
 
-  Future<List<Map<String, dynamic>>> getKnowledgeBaseItems(
+  Future<List<KnowledgeBaseItem>> getKnowledgeBaseItems(
     String knowledgeBaseId,
   ) async {
     _traceApi('Fetching knowledge base items: $knowledgeBaseId');
     final response = await _dio.get('/api/v1/knowledge/$knowledgeBaseId/items');
     final data = response.data;
     if (data is List) {
-      return data.cast<Map<String, dynamic>>();
+      final normalized = await _normalizeList(
+        data,
+        debugLabel: 'parse_kb_items',
+      );
+      return normalized.map(KnowledgeBaseItem.fromJson).toList(growable: false);
     }
-    return [];
+    return const [];
   }
 
   Future<Map<String, dynamic>> addKnowledgeBaseItem(
@@ -3267,4 +3293,20 @@ class ApiService {
   // ==================== END ADVANCED CHAT FEATURES ====================
 
   // Legacy streaming wrapper methods removed
+}
+
+List<Map<String, dynamic>> _normalizeMapListWorker(
+  Map<String, dynamic> payload,
+) {
+  final raw = payload['list'];
+  if (raw is! List) {
+    return const <Map<String, dynamic>>[];
+  }
+  final normalized = <Map<String, dynamic>>[];
+  for (final entry in raw) {
+    if (entry is Map) {
+      normalized.add(Map<String, dynamic>.from(entry));
+    }
+  }
+  return normalized;
 }

@@ -1920,21 +1920,73 @@ class Folders extends _$Folders {
 
 // Files provider
 @Riverpod(keepAlive: true)
-Future<List<FileInfo>> userFiles(Ref ref) async {
-  // Protected: require authentication
-  if (!ref.read(isAuthenticatedProvider2)) {
-    DebugLogger.log('skip-unauthed', scope: 'files');
-    return [];
+class UserFiles extends _$UserFiles {
+  @override
+  Future<List<FileInfo>> build() async {
+    if (!ref.watch(isAuthenticatedProvider2)) {
+      DebugLogger.log('skip-unauthed', scope: 'files');
+      return const [];
+    }
+    final api = ref.watch(apiServiceProvider);
+    if (api == null) return const [];
+    return _load(api);
   }
-  final api = ref.watch(apiServiceProvider);
-  if (api == null) return [];
 
-  try {
-    final filesData = await api.getUserFiles();
-    return filesData.map((fileData) => FileInfo.fromJson(fileData)).toList();
-  } catch (e) {
-    DebugLogger.error('files-failed', scope: 'files', error: e);
-    return [];
+  Future<void> refresh() async {
+    if (!ref.read(isAuthenticatedProvider2)) {
+      state = const AsyncData<List<FileInfo>>([]);
+      return;
+    }
+    final api = ref.read(apiServiceProvider);
+    if (api == null) {
+      state = const AsyncData<List<FileInfo>>([]);
+      return;
+    }
+    final result = await AsyncValue.guard(() => _load(api));
+    if (!ref.mounted) return;
+    state = result;
+  }
+
+  void upsert(FileInfo file) {
+    final current = state.asData?.value ?? const <FileInfo>[];
+    final updated = <FileInfo>[...current];
+    final index = updated.indexWhere((existing) => existing.id == file.id);
+    if (index >= 0) {
+      updated[index] = file;
+    } else {
+      updated.add(file);
+    }
+    state = AsyncData<List<FileInfo>>(_sort(updated));
+  }
+
+  void remove(String id) {
+    final current = state.asData?.value;
+    if (current == null) return;
+    final updated = current
+        .where((file) => file.id != id)
+        .toList(growable: true);
+    state = AsyncData<List<FileInfo>>(_sort(updated));
+  }
+
+  Future<List<FileInfo>> _load(ApiService api) async {
+    try {
+      final files = await api.getUserFiles();
+      return _sort(files);
+    } catch (e, stackTrace) {
+      DebugLogger.error(
+        'files-failed',
+        scope: 'files',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return const [];
+    }
+  }
+
+  List<FileInfo> _sort(List<FileInfo> input) {
+    final sorted = [...input];
+    sorted.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return List<FileInfo>.unmodifiable(sorted);
   }
 }
 
@@ -1964,21 +2016,75 @@ Future<String> fileContent(Ref ref, String fileId) async {
 
 // Knowledge Base providers
 @Riverpod(keepAlive: true)
-Future<List<KnowledgeBase>> knowledgeBases(Ref ref) async {
-  // Protected: require authentication
-  if (!ref.read(isAuthenticatedProvider2)) {
-    DebugLogger.log('skip-unauthed', scope: 'knowledge');
-    return [];
+class KnowledgeBases extends _$KnowledgeBases {
+  @override
+  Future<List<KnowledgeBase>> build() async {
+    if (!ref.watch(isAuthenticatedProvider2)) {
+      DebugLogger.log('skip-unauthed', scope: 'knowledge');
+      return const [];
+    }
+    final api = ref.watch(apiServiceProvider);
+    if (api == null) return const [];
+    return _load(api);
   }
-  final api = ref.watch(apiServiceProvider);
-  if (api == null) return [];
 
-  try {
-    final kbData = await api.getKnowledgeBases();
-    return kbData.map((data) => KnowledgeBase.fromJson(data)).toList();
-  } catch (e) {
-    DebugLogger.error('knowledge-bases-failed', scope: 'knowledge', error: e);
-    return [];
+  Future<void> refresh() async {
+    if (!ref.read(isAuthenticatedProvider2)) {
+      state = const AsyncData<List<KnowledgeBase>>([]);
+      return;
+    }
+    final api = ref.read(apiServiceProvider);
+    if (api == null) {
+      state = const AsyncData<List<KnowledgeBase>>([]);
+      return;
+    }
+    final result = await AsyncValue.guard(() => _load(api));
+    if (!ref.mounted) return;
+    state = result;
+  }
+
+  void upsert(KnowledgeBase knowledgeBase) {
+    final current = state.asData?.value ?? const <KnowledgeBase>[];
+    final updated = <KnowledgeBase>[...current];
+    final index = updated.indexWhere(
+      (existing) => existing.id == knowledgeBase.id,
+    );
+    if (index >= 0) {
+      updated[index] = knowledgeBase;
+    } else {
+      updated.add(knowledgeBase);
+    }
+    state = AsyncData<List<KnowledgeBase>>(_sort(updated));
+  }
+
+  void remove(String id) {
+    final current = state.asData?.value;
+    if (current == null) return;
+    final updated = current
+        .where((knowledgeBase) => knowledgeBase.id != id)
+        .toList(growable: true);
+    state = AsyncData<List<KnowledgeBase>>(_sort(updated));
+  }
+
+  Future<List<KnowledgeBase>> _load(ApiService api) async {
+    try {
+      final knowledgeBases = await api.getKnowledgeBases();
+      return _sort(knowledgeBases);
+    } catch (e, stackTrace) {
+      DebugLogger.error(
+        'knowledge-bases-failed',
+        scope: 'knowledge',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return const [];
+    }
+  }
+
+  List<KnowledgeBase> _sort(List<KnowledgeBase> input) {
+    final sorted = [...input];
+    sorted.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return List<KnowledgeBase>.unmodifiable(sorted);
   }
 }
 
@@ -1993,8 +2099,7 @@ Future<List<KnowledgeBaseItem>> knowledgeBaseItems(Ref ref, String kbId) async {
   if (api == null) return [];
 
   try {
-    final itemsData = await api.getKnowledgeBaseItems(kbId);
-    return itemsData.map((data) => KnowledgeBaseItem.fromJson(data)).toList();
+    return await api.getKnowledgeBaseItems(kbId);
   } catch (e) {
     DebugLogger.error('knowledge-items-failed', scope: 'knowledge', error: e);
     return [];
