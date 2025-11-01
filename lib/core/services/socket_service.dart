@@ -2,10 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../models/server_config.dart';
-import '../../l10n/app_localizations.dart';
-import 'navigation_service.dart';
 import 'socket_tls_override.dart';
-import '../../shared/utils/ui_utils.dart';
 
 typedef SocketChatEventHandler =
     void Function(
@@ -282,37 +279,9 @@ class SocketService with WidgetsBindingObserver {
     }
   }
 
-  void _handleConnectError(dynamic err) {
-    // Show user-facing error notification
-    final context = NavigationService.context;
-    if (context != null) {
-      final l10n = AppLocalizations.of(context);
-      if (l10n != null) {
-        UiUtils.showMessage(
-          context,
-          l10n.websocketConnectionError,
-          isError: true,
-          duration: const Duration(seconds: 5),
-        );
-      }
-    }
-  }
+  void _handleConnectError(dynamic err) {}
 
-  void _handleReconnectFailed(dynamic _) {
-    // Show user-facing error notification
-    final context = NavigationService.context;
-    if (context != null) {
-      final l10n = AppLocalizations.of(context);
-      if (l10n != null) {
-        UiUtils.showMessage(
-          context,
-          l10n.websocketReconnectFailed,
-          isError: true,
-          duration: const Duration(seconds: 5),
-        );
-      }
-    }
-  }
+  void _handleReconnectFailed(dynamic _) {}
 
   void _handleDisconnect(dynamic reason) {
     // Silent disconnect
