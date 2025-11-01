@@ -890,6 +890,10 @@ void refreshConversationsCache(dynamic ref, {bool includeFolders = false}) {
   ref.read(_conversationsCacheTimestampProvider.notifier).set(null);
   final notifier = ref.read(conversationsProvider.notifier);
   unawaited(notifier.refresh(includeFolders: includeFolders));
+  if (includeFolders) {
+    final foldersNotifier = ref.read(foldersProvider.notifier);
+    unawaited(foldersNotifier.refresh());
+  }
 }
 
 // Conversation providers - Now using correct OpenWebUI API with caching and
@@ -918,7 +922,7 @@ class Conversations extends _$Conversations {
       _updateCacheTimestamp(null);
       state = AsyncData<List<Conversation>>(<Conversation>[]);
       if (includeFolders) {
-        ref.invalidate(foldersProvider);
+        unawaited(ref.read(foldersProvider.notifier).refresh());
       }
       return;
     }
@@ -926,7 +930,7 @@ class Conversations extends _$Conversations {
     if (ref.read(reviewerModeProvider)) {
       state = AsyncData<List<Conversation>>(_demoConversations());
       if (includeFolders) {
-        ref.invalidate(foldersProvider);
+        unawaited(ref.read(foldersProvider.notifier).refresh());
       }
       return;
     }
@@ -935,7 +939,7 @@ class Conversations extends _$Conversations {
     if (!ref.mounted) return;
     state = result;
     if (includeFolders) {
-      ref.invalidate(foldersProvider);
+      unawaited(ref.read(foldersProvider.notifier).refresh());
     }
   }
 
@@ -1823,32 +1827,94 @@ final webSearchAvailableProvider = Provider<bool>((ref) {
 
 // Folders provider
 @Riverpod(keepAlive: true)
-Future<List<Folder>> folders(Ref ref) async {
-  // Protected: require authentication
-  if (!ref.read(isAuthenticatedProvider2)) {
-    DebugLogger.log('skip-unauthed', scope: 'folders');
-    return [];
-  }
-  final api = ref.watch(apiServiceProvider);
-  if (api == null) {
-    DebugLogger.warning('api-missing', scope: 'folders');
-    return [];
+class Folders extends _$Folders {
+  @override
+  Future<List<Folder>> build() async {
+    if (!ref.watch(isAuthenticatedProvider2)) {
+      DebugLogger.log('skip-unauthed', scope: 'folders');
+      return const [];
+    }
+    final api = ref.watch(apiServiceProvider);
+    if (api == null) {
+      DebugLogger.warning('api-missing', scope: 'folders');
+      return const [];
+    }
+    return _load(api);
   }
 
-  try {
-    final foldersData = await api.getFolders();
-    final folders = foldersData
-        .map((folderData) => Folder.fromJson(folderData))
-        .toList();
-    DebugLogger.log(
-      'fetch-ok',
-      scope: 'folders',
-      data: {'count': folders.length},
-    );
-    return folders;
-  } catch (e) {
-    DebugLogger.error('fetch-failed', scope: 'folders', error: e);
-    return [];
+  Future<void> refresh() async {
+    if (!ref.read(isAuthenticatedProvider2)) {
+      state = const AsyncData<List<Folder>>([]);
+      return;
+    }
+    final api = ref.read(apiServiceProvider);
+    if (api == null) {
+      state = const AsyncData<List<Folder>>([]);
+      return;
+    }
+    final result = await AsyncValue.guard(() => _load(api));
+    if (!ref.mounted) return;
+    state = result;
+  }
+
+  void upsertFolder(Folder folder) {
+    final current = state.asData?.value ?? const <Folder>[];
+    final updated = <Folder>[...current];
+    final index = updated.indexWhere((existing) => existing.id == folder.id);
+    if (index >= 0) {
+      updated[index] = folder;
+    } else {
+      updated.add(folder);
+    }
+    state = AsyncData<List<Folder>>(_sort(updated));
+  }
+
+  void updateFolder(String id, Folder Function(Folder folder) transform) {
+    final current = state.asData?.value;
+    if (current == null) return;
+    final index = current.indexWhere((folder) => folder.id == id);
+    if (index < 0) return;
+    final updated = <Folder>[...current];
+    updated[index] = transform(updated[index]);
+    state = AsyncData<List<Folder>>(_sort(updated));
+  }
+
+  void removeFolder(String id) {
+    final current = state.asData?.value;
+    if (current == null) return;
+    final updated = current
+        .where((folder) => folder.id != id)
+        .toList(growable: true);
+    state = AsyncData<List<Folder>>(_sort(updated));
+  }
+
+  Future<List<Folder>> _load(ApiService api) async {
+    try {
+      final foldersData = await api.getFolders();
+      final folders = foldersData
+          .map((folderData) => Folder.fromJson(folderData))
+          .toList();
+      DebugLogger.log(
+        'fetch-ok',
+        scope: 'folders',
+        data: {'count': folders.length},
+      );
+      return _sort(folders);
+    } catch (e, stackTrace) {
+      DebugLogger.error(
+        'fetch-failed',
+        scope: 'folders',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return const [];
+    }
+  }
+
+  List<Folder> _sort(List<Folder> input) {
+    final sorted = [...input];
+    sorted.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return List<Folder>.unmodifiable(sorted);
   }
 }
 

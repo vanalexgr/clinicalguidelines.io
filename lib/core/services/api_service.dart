@@ -3003,23 +3003,23 @@ class ApiService {
     );
     final data = response.data;
     // The endpoint can return a List[ChatTitleIdResponse] or a map.
-    // Normalize to a List<Conversation> using our safe parser.
+    // Normalize to a List<Conversation> using our isolate parser.
     if (data is List) {
-      return data
-          .whereType<Map<String, dynamic>>()
-          .map((e) => Conversation.fromJson(parseConversationSummary(e)))
-          .toList();
+      return _parseConversationSummaryList(
+        data,
+        debugLabel: 'parse_search_direct',
+      );
     }
     if (data is Map<String, dynamic>) {
       final list = (data['conversations'] ?? data['items'] ?? data['results']);
       if (list is List) {
-        return list
-            .whereType<Map<String, dynamic>>()
-            .map((e) => Conversation.fromJson(parseConversationSummary(e)))
-            .toList();
+        return _parseConversationSummaryList(
+          list,
+          debugLabel: 'parse_search_wrapped',
+        );
       }
     }
-    return <Conversation>[];
+    return const <Conversation>[];
   }
 
   /// Search within messages content (capability-safe)

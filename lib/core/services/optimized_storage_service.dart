@@ -322,9 +322,13 @@ class OptimizedStorageService {
 
   Future<void> saveLocalConversations(List<Conversation> conversations) async {
     try {
-      final serialized = conversations
+      final jsonReady = conversations
           .map((conversation) => conversation.toJson())
           .toList();
+      final serialized = await _workerManager
+          .schedule<Map<String, dynamic>, String>(_encodeConversationsWorker, {
+            'conversations': jsonReady,
+          }, debugLabel: 'encode_local_conversations');
       await _cachesBox.put(_localConversationsKey, serialized);
       DebugLogger.log(
         'Saved ${conversations.length} local conversations',
@@ -477,4 +481,16 @@ List<Map<String, dynamic>> _decodeStoredConversationsWorker(
   }
 
   return <Map<String, dynamic>>[];
+}
+
+String _encodeConversationsWorker(Map<String, dynamic> payload) {
+  final raw = payload['conversations'];
+  if (raw is List) {
+    return jsonEncode(raw);
+  }
+  if (raw is String) {
+    // Already encoded.
+    return raw;
+  }
+  return jsonEncode([]);
 }
