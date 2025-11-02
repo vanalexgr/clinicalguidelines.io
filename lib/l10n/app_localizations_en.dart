@@ -926,6 +926,41 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available';
 
   @override
+  String get sttSettings => 'Speech to Text';
+
+  @override
+  String get sttEngineLabel => 'Recognition engine';
+
+  @override
+  String get sttEngineAuto => 'Auto';
+
+  @override
+  String get sttEngineDevice => 'On device';
+
+  @override
+  String get sttEngineServer => 'Server';
+
+  @override
+  String get sttEngineAutoDescription =>
+      'Use on-device recognition when available and fall back to your server.';
+
+  @override
+  String get sttEngineDeviceDescription =>
+      'Keep audio on this device. Voice input stops working if on-device speech recognition isn’t supported.';
+
+  @override
+  String get sttEngineServerDescription =>
+      'Always send recordings to your Conduit server for transcription.';
+
+  @override
+  String get sttDeviceUnavailableWarning =>
+      'On-device speech recognition isn’t available on this device.';
+
+  @override
+  String get sttServerUnavailableWarning =>
+      'Connect to a server with transcription enabled to use this option.';
+
+  @override
   String get ttsEngineLabel => 'Engine';
 
   @override

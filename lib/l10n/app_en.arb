@@ -1219,6 +1219,46 @@
   "@sendOnEnterDescription": {
     "description": "Explanation of how the Send on Enter toggle behaves."
   },
+  "sttSettings": "Speech to Text",
+  "@sttSettings": {
+    "description": "Section header for speech-to-text settings."
+  },
+  "sttEngineLabel": "Recognition engine",
+  "@sttEngineLabel": {
+    "description": "Label shown above the speech-to-text engine chips."
+  },
+  "sttEngineAuto": "Auto",
+  "@sttEngineAuto": {
+    "description": "Chip label for automatic speech-to-text selection."
+  },
+  "sttEngineDevice": "On device",
+  "@sttEngineDevice": {
+    "description": "Chip label for on-device speech recognition."
+  },
+  "sttEngineServer": "Server",
+  "@sttEngineServer": {
+    "description": "Chip label for server speech recognition."
+  },
+  "sttEngineAutoDescription": "Use on-device recognition when available and fall back to your server.",
+  "@sttEngineAutoDescription": {
+    "description": "Description shown when automatic speech-to-text preference is active."
+  },
+  "sttEngineDeviceDescription": "Keep audio on this device. Voice input stops working if on-device speech recognition isn’t supported.",
+  "@sttEngineDeviceDescription": {
+    "description": "Description shown when on-device speech-to-text preference is active."
+  },
+  "sttEngineServerDescription": "Always send recordings to your Conduit server for transcription.",
+  "@sttEngineServerDescription": {
+    "description": "Description shown when server speech-to-text preference is active."
+  },
+  "sttDeviceUnavailableWarning": "On-device speech recognition isn’t available on this device.",
+  "@sttDeviceUnavailableWarning": {
+    "description": "Warning shown when the user selects on-device speech recognition but it is unavailable."
+  },
+  "sttServerUnavailableWarning": "Connect to a server with transcription enabled to use this option.",
+  "@sttServerUnavailableWarning": {
+    "description": "Warning shown when the user selects server speech recognition but no server is available."
+  },
   "ttsEngineLabel": "Engine",
   "@ttsEngineLabel": {
     "description": "Label for selecting the text-to-speech engine."

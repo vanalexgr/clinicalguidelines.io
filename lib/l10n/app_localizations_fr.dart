@@ -941,6 +941,41 @@ class AppLocalizationsFr extends AppLocalizations {
       'Entrée envoie (clavier logiciel). Cmd/Ctrl+Entrée aussi disponible';
 
   @override
+  String get sttSettings => 'Voix vers texte';
+
+  @override
+  String get sttEngineLabel => 'Moteur de reconnaissance';
+
+  @override
+  String get sttEngineAuto => 'Auto';
+
+  @override
+  String get sttEngineDevice => 'Sur l’appareil';
+
+  @override
+  String get sttEngineServer => 'Serveur';
+
+  @override
+  String get sttEngineAutoDescription =>
+      'Utilise la reconnaissance sur l’appareil quand c’est possible, sinon bascule vers votre serveur.';
+
+  @override
+  String get sttEngineDeviceDescription =>
+      'Conserve l’audio sur cet appareil. L’entrée vocale cesse de fonctionner si la reconnaissance vocale n’est pas prise en charge.';
+
+  @override
+  String get sttEngineServerDescription =>
+      'Envoie toujours les enregistrements à votre serveur Conduit pour transcription.';
+
+  @override
+  String get sttDeviceUnavailableWarning =>
+      'La reconnaissance vocale sur l’appareil n’est pas disponible sur cet appareil.';
+
+  @override
+  String get sttServerUnavailableWarning =>
+      'Connectez-vous à un serveur avec la transcription activée pour utiliser cette option.';
+
+  @override
   String get ttsEngineLabel => 'Moteur';
 
   @override

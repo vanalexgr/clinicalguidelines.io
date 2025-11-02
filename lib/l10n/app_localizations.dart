@@ -1784,6 +1784,66 @@ abstract class AppLocalizations {
   /// **'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available'**
   String get sendOnEnterDescription;
 
+  /// Section header for speech-to-text settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech to Text'**
+  String get sttSettings;
+
+  /// Label shown above the speech-to-text engine chips.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognition engine'**
+  String get sttEngineLabel;
+
+  /// Chip label for automatic speech-to-text selection.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get sttEngineAuto;
+
+  /// Chip label for on-device speech recognition.
+  ///
+  /// In en, this message translates to:
+  /// **'On device'**
+  String get sttEngineDevice;
+
+  /// Chip label for server speech recognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get sttEngineServer;
+
+  /// Description shown when automatic speech-to-text preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Use on-device recognition when available and fall back to your server.'**
+  String get sttEngineAutoDescription;
+
+  /// Description shown when on-device speech-to-text preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep audio on this device. Voice input stops working if on-device speech recognition isn’t supported.'**
+  String get sttEngineDeviceDescription;
+
+  /// Description shown when server speech-to-text preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Always send recordings to your Conduit server for transcription.'**
+  String get sttEngineServerDescription;
+
+  /// Warning shown when the user selects on-device speech recognition but it is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'On-device speech recognition isn’t available on this device.'**
+  String get sttDeviceUnavailableWarning;
+
+  /// Warning shown when the user selects server speech recognition but no server is available.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a server with transcription enabled to use this option.'**
+  String get sttServerUnavailableWarning;
+
   /// Label for selecting the text-to-speech engine.
   ///
   /// In en, this message translates to:

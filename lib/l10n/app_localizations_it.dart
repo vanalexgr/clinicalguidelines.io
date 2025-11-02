@@ -930,6 +930,41 @@ class AppLocalizationsIt extends AppLocalizations {
       'Invio invia (tastiera software). Cmd/Ctrl+Invio disponibile';
 
   @override
+  String get sttSettings => 'Voce in testo';
+
+  @override
+  String get sttEngineLabel => 'Motore di riconoscimento';
+
+  @override
+  String get sttEngineAuto => 'Automatico';
+
+  @override
+  String get sttEngineDevice => 'Sul dispositivo';
+
+  @override
+  String get sttEngineServer => 'Server';
+
+  @override
+  String get sttEngineAutoDescription =>
+      'Usa il riconoscimento sul dispositivo quando disponibile e altrimenti passa al tuo server.';
+
+  @override
+  String get sttEngineDeviceDescription =>
+      'Mantiene l’audio su questo dispositivo. L’input vocale non funziona se il dispositivo non supporta il riconoscimento vocale.';
+
+  @override
+  String get sttEngineServerDescription =>
+      'Invia sempre le registrazioni al tuo server Conduit per la trascrizione.';
+
+  @override
+  String get sttDeviceUnavailableWarning =>
+      'Il riconoscimento vocale sul dispositivo non è disponibile su questo dispositivo.';
+
+  @override
+  String get sttServerUnavailableWarning =>
+      'Collegati a un server con la trascrizione abilitata per usare questa opzione.';
+
+  @override
   String get ttsEngineLabel => 'Motore';
 
   @override
