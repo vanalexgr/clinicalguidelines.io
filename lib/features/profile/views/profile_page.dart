@@ -1172,7 +1172,7 @@ class _DefaultModelBottomSheetState
                     if (isAutoSelect) ...[
                       const SizedBox(height: Spacing.xs),
                       Text(
-                        'Let the app choose the best model',
+                        AppLocalizations.of(context)!.autoSelectDescription,
                         style: TextStyle(
                           fontSize: AppTypography.bodySmall,
                           color: context.conduitTheme.textSecondary,
@@ -1189,14 +1189,18 @@ class _DefaultModelBottomSheetState
                               icon: Platform.isIOS
                                   ? CupertinoIcons.photo
                                   : Icons.image,
-                              label: 'Multimodal',
+                              label: AppLocalizations.of(
+                                context,
+                              )!.modelCapabilityMultimodal,
                             ),
                           if (_modelSupportsReasoning(model))
                             _capabilityChip(
                               icon: Platform.isIOS
                                   ? CupertinoIcons.lightbulb
                                   : Icons.psychology_alt,
-                              label: 'Reasoning',
+                              label: AppLocalizations.of(
+                                context,
+                              )!.modelCapabilityReasoning,
                             ),
                         ],
                       ),

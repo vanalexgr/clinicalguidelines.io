@@ -1,7 +1,6 @@
 {
   "@@locale": "es",
   "appTitle": "Conduit",
-  "initializationFailed": "Error de inicialización",
   "retry": "Reintentar",
   "back": "Atrás",
   "you": "Tú",
@@ -15,10 +14,6 @@
   "connectionIssueSubtitle": "Reconecta para continuar o cierra sesión para elegir otro servidor.",
   "@connectionIssueSubtitle": {
     "description": "Subtítulo que explica las acciones disponibles cuando no se puede acceder al servidor"
-  },
-  "stillOfflineMessage": "Todavía no podemos conectarnos al servidor. Verifica tu conexión e inténtalo de nuevo.",
-  "@stillOfflineMessage": {
-    "description": "Mensaje de estado después de un reintento cuando no se ha restaurado la conexión"
   },
   "account": "Cuenta",
   "supportConduit": "Apoyar Conduit",
@@ -37,32 +32,14 @@
   "noResults": "Sin resultados",
   "searchModels": "Buscar modelos...",
   "errorMessage": "Algo salió mal. Por favor, inténtalo de nuevo.",
-  "loginButton": "Iniciar sesión",
-  "menuItem": "Configuración",
-  "dynamicContentWithPlaceholder": "¡Bienvenido, {name}!",
-  "itemsCount": "{count, plural, =0{Sin elementos} one{1 elemento} other{{count} elementos}}",
   "closeButtonSemantic": "Cerrar",
   "loadingContent": "Cargando contenido",
   "noItems": "Sin elementos",
   "noItemsToDisplay": "No hay elementos para mostrar",
-  "loadMore": "Cargar más",
-  "workspace": "Espacio de trabajo",
-  "recentFiles": "Archivos recientes",
   "knowledgeBase": "Base de conocimientos",
-  "noFilesYet": "Aún no hay archivos",
-  "uploadDocsPrompt": "Sube documentos para referenciarlos en tus conversaciones con Conduit",
-  "uploadFirstFile": "Sube tu primer archivo",
   "attachments": "Adjuntos",
-  "knowledgeBaseEmpty": "La base de conocimientos está vacía",
-  "createCollectionsPrompt": "Crea colecciones de documentos relacionados para referencia fácil",
-  "chooseSourcePhoto": "Elige tu fuente",
   "takePhoto": "Tomar una foto",
-  "chooseFromGallery": "Elegir de tus fotos",
   "document": "Documento",
-  "documentHint": "Archivo PDF, Word o de texto",
-  "uploadFileTitle": "Subir archivo",
-  "fileUploadComingSoon": "¡La carga de archivos para {type} estará disponible pronto!",
-  "kbCreationComingSoon": "¡La creación de base de conocimientos estará disponible pronto!",
   "backToServerSetup": "Volver a configuración del servidor",
   "connectedToServer": "Conectado al servidor",
   "signIn": "Iniciar sesión",
@@ -125,7 +102,6 @@
   "onboardQuickSubtitle": "Abre el menú para cambiar entre Conversaciones, Espacio de trabajo y Perfil.",
   "onboardQuickBullet1": "Toca el menú para acceder a Conversaciones, Espacio de trabajo, Perfil",
   "onboardQuickBullet2": "Inicia Nueva conversación o gestiona modelos desde la barra superior",
-  "addAttachment": "Añadir adjunto",
   "attachmentLabel": "Adjunto",
   "tools": "Herramientas",
   "voiceInput": "Entrada de voz",
@@ -157,16 +133,12 @@
   "failedToDecodeImage": "No se pudo decodificar la imagen",
   "invalidImageFormat": "Formato de imagen inválido",
   "emptyImageData": "Datos de imagen vacíos",
-  "featureRequiresInternet": "Esta función requiere conexión a Internet",
-  "messagesWillSendWhenOnline": "Los mensajes se enviarán cuando vuelvas a estar en línea",
   "confirm": "Confirmar",
   "cancel": "Cancelar",
   "ok": "OK",
   "inputField": "Campo de entrada",
-  "captureDocumentOrImage": "Capturar un documento o imagen",
   "checkConnection": "Verificar conexión",
   "openSettings": "Abrir configuración",
-  "chooseDifferentFile": "Elegir otro archivo",
   "goBack": "Volver",
   "technicalDetails": "Detalles técnicos",
   "save": "Guardar",
@@ -178,18 +150,9 @@
   "newChat": "Nueva conversación",
   "more": "Más",
   "clear": "Limpiar",
-  "searchHint": "Buscar...",
   "searchConversations": "Buscar conversaciones...",
   "create": "Crear",
-  "folderCreated": "Carpeta creada",
   "failedToCreateFolder": "No se pudo crear la carpeta",
-  "movedChatToFolder": "Se movió \"{title}\" a \"{folder}\"",
-  "@movedChatToFolder": {
-    "placeholders": {
-      "title": {"type": "String"},
-      "folder": {"type": "String"}
-    }
-  },
   "failedToMoveChat": "No se pudo mover la conversación",
   "failedToLoadChats": "No se pudieron cargar las conversaciones",
   "failedToUpdatePin": "No se pudo actualizar el anclaje",
@@ -219,13 +182,17 @@
   "deleteMessagesMessage": "¿Eliminar {count} mensajes?",
   "@deleteMessagesMessage": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "routeNotFound": "Ruta no encontrada: {routeName}",
   "@routeNotFound": {
     "placeholders": {
-      "routeName": {"type": "String"}
+      "routeName": {
+        "type": "String"
+      }
     }
   },
   "deleteChatTitle": "Eliminar conversación",
@@ -271,29 +238,55 @@
   "headerNameTooLong": "Nombre de encabezado demasiado largo (máx. 64 caracteres)",
   "headerNameInvalidChars": "Nombre de encabezado inválido. Usa solo letras, números y estos símbolos: !#$&-^_`|~",
   "headerNameReserved": "No se puede sobrescribir el encabezado reservado \"{key}\"",
-  "@headerNameReserved": {"placeholders": {"key": {"type": "String"}}},
+  "@headerNameReserved": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "headerValueEmpty": "El valor del encabezado no puede estar vacío",
   "headerValueTooLong": "Valor de encabezado demasiado largo (máx. 1024 caracteres)",
   "headerValueInvalidChars": "El valor del encabezado contiene caracteres inválidos. Usa solo ASCII imprimible.",
   "headerValueUnsafe": "El valor del encabezado parece contener contenido potencialmente inseguro",
   "headerAlreadyExists": "El encabezado \"{key}\" ya existe. Elimínalo primero para actualizarlo.",
-  "@headerAlreadyExists": {"placeholders": {"key": {"type": "String"}}},
+  "@headerAlreadyExists": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "maxHeadersReachedDetail": "Máximo de 10 encabezados personalizados permitidos. Elimina algunos para añadir más.",
-  "editMessage": "Editar mensaje",
   "noModelsAvailable": "No hay modelos disponibles",
   "followingSystem": "Siguiendo el sistema: {theme}",
-  "@followingSystem": {"placeholders": {"theme": {"type": "String"}}},
+  "@followingSystem": {
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
+  },
   "themeDark": "Oscuro",
   "themePalette": "Paleta de acentos",
-  "@themePalette": {"description": "Título para seleccionar la paleta de colores de la aplicación."},
-  "themePaletteDescription": "Elige los colores de acento usados para botones, tarjetas y burbujas de chat.",
-  "@themePaletteDescription": {"description": "Texto de ayuda que explica la selección de paleta."},
+  "@themePalette": {
+    "description": "Título para seleccionar la paleta de colores de la aplicación."
+  },
   "themeLight": "Claro",
   "currentlyUsingDarkTheme": "Usando actualmente el tema oscuro",
   "currentlyUsingLightTheme": "Usando actualmente el tema claro",
   "aboutConduit": "Acerca de Conduit",
   "versionLabel": "Versión: {version} ({build})",
-  "@versionLabel": {"placeholders": {"version": {"type": "String"}, "build": {"type": "String"}}},
+  "@versionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
   "githubRepository": "Repositorio GitHub",
   "unableToLoadAppInfo": "No se puede cargar información de la aplicación",
   "thinking": "Pensando...",
@@ -301,7 +294,12 @@
   "thoughtForDuration": "Pensó durante {duration}",
   "@thoughtForDuration": {
     "description": "Muestra cuánto tiempo el asistente estuvo pensando antes de responder.",
-    "placeholders": {"duration": {"type": "String", "example": "3s"}}
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "3s"
+      }
+    }
   },
   "appCustomization": "Personalización",
   "appCustomizationSubtitle": "Tema, idioma, voz y quickpills",
@@ -325,12 +323,413 @@
   "display": "Visualización",
   "realtime": "Tiempo real",
   "transportMode": "Modo de transporte",
-  "transportModeDescription": "Elige cómo se conecta la aplicación para actualizaciones en tiempo real.",
   "mode": "Modo",
   "transportModePolling": "Polling de respaldo",
   "transportModeWs": "Solo WebSocket",
   "transportModePollingInfo": "Recurrirá a HTTP polling si WebSocket está bloqueado. Se actualizará a WebSocket cuando sea posible.",
   "transportModeWsInfo": "Menor sobrecarga, pero puede fallar detrás de proxies/firewalls estrictos.",
-  "websocketConnectionError": "No se puede establecer la conexión en tiempo real. Por favor, verifica tu red y la configuración del servidor.",
-  "websocketReconnectFailed": "Fallo en la conexión en tiempo real. El streaming podría no funcionar correctamente."
+  "quickActionsSelectedCount": "{count, plural, =0{No hay acciones seleccionadas} one{{count} acción seleccionada} other{{count} acciones seleccionadas}}",
+  "@quickActionsSelectedCount": {
+    "description": "Subtitle indicating how many quick actions are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "autoSelectDescription": "Deja que la aplicación elija el mejor modelo",
+  "@autoSelectDescription": {
+    "description": "Explains what the auto-select model setting does."
+  },
+  "ttsEngineLabel": "Motor",
+  "@ttsEngineLabel": {
+    "description": "Label for selecting the text-to-speech engine."
+  },
+  "ttsEngineDevice": "En el dispositivo",
+  "@ttsEngineDevice": {
+    "description": "Chip label for using on-device text-to-speech."
+  },
+  "ttsEngineServer": "Servidor",
+  "@ttsEngineServer": {
+    "description": "Chip label for using server-side text-to-speech."
+  },
+  "modelCapabilityMultimodal": "Multimodal",
+  "@modelCapabilityMultimodal": {
+    "description": "Capability chip label for models that support multimodal input."
+  },
+  "modelCapabilityReasoning": "Razonamiento",
+  "@modelCapabilityReasoning": {
+    "description": "Capability chip label for models that support reasoning features."
+  },
+  "voiceCallTitle": "Llamada de voz",
+  "@voiceCallTitle": {
+    "description": "Title displayed on the voice call screen."
+  },
+  "voiceCallPause": "Pausar",
+  "@voiceCallPause": {
+    "description": "Button label to pause a voice call."
+  },
+  "voiceCallResume": "Reanudar",
+  "@voiceCallResume": {
+    "description": "Button label to resume a paused voice call."
+  },
+  "voiceCallStop": "Detener",
+  "@voiceCallStop": {
+    "description": "Button label to stop the active voice call."
+  },
+  "voiceCallEnd": "Finalizar llamada",
+  "@voiceCallEnd": {
+    "description": "Button label to end the voice call session."
+  },
+  "chooseDifferentFile": "Seleccionar otro archivo",
+  "@chooseDifferentFile": {
+    "description": "Action label prompting the user to pick another file."
+  },
+  "errorWithMessage": "Error: {message}",
+  "@errorWithMessage": {
+    "description": "Error label with appended message text.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "networkTimeoutError": "La conexión agotó el tiempo de espera. Verifica tu conexión a Internet e inténtalo de nuevo.",
+  "@networkTimeoutError": {
+    "description": "User-facing message when a network request times out."
+  },
+  "networkUnreachableError": "No se puede alcanzar el servidor. Verifica la URL del servidor y tu conexión a Internet.",
+  "@networkUnreachableError": {
+    "description": "User-facing message when the server cannot be reached."
+  },
+  "networkServerNotResponding": "El servidor no responde. Verifica que esté en ejecución y accesible.",
+  "@networkServerNotResponding": {
+    "description": "User-facing message when the server does not respond to a request."
+  },
+  "networkGenericError": "Problema de conexión de red. Verifica tu conexión a Internet.",
+  "@networkGenericError": {
+    "description": "Fallback message for generic network errors."
+  },
+  "serverError500": "El servidor tiene problemas. Normalmente es temporal.",
+  "@serverError500": {
+    "description": "Message when a 500 error is encountered."
+  },
+  "serverErrorUnavailable": "El servidor está temporalmente no disponible. Inténtalo de nuevo en un momento.",
+  "@serverErrorUnavailable": {
+    "description": "Message when a 502/503 error is encountered."
+  },
+  "serverErrorTimeout": "El servidor tardó demasiado en responder. Inténtalo de nuevo.",
+  "@serverErrorTimeout": {
+    "description": "Message when the server times out."
+  },
+  "serverErrorGeneric": "El servidor está teniendo problemas. Inténtalo más tarde.",
+  "@serverErrorGeneric": {
+    "description": "Fallback server error message."
+  },
+  "authSessionExpired": "Tu sesión ha expirado. Vuelve a iniciar sesión.",
+  "@authSessionExpired": {
+    "description": "Message when an authentication session expires."
+  },
+  "authForbidden": "No tienes permiso para realizar esta acción.",
+  "@authForbidden": {
+    "description": "Message when the user lacks required permissions."
+  },
+  "authInvalidToken": "El token de autenticación no es válido. Vuelve a iniciar sesión.",
+  "@authInvalidToken": {
+    "description": "Message when the authentication token is invalid."
+  },
+  "authGenericError": "Problema de autenticación. Vuelve a iniciar sesión.",
+  "@authGenericError": {
+    "description": "Fallback authentication error message."
+  },
+  "validationInvalidEmail": "Introduce una dirección de correo válida.",
+  "@validationInvalidEmail": {
+    "description": "Validation message for invalid email input."
+  },
+  "validationWeakPassword": "La contraseña no cumple los requisitos. Revísala e inténtalo de nuevo.",
+  "@validationWeakPassword": {
+    "description": "Validation message for weak passwords."
+  },
+  "validationMissingRequired": "Completa todos los campos obligatorios.",
+  "@validationMissingRequired": {
+    "description": "Validation message when required fields are missing."
+  },
+  "validationFormatError": "Algunos datos tienen un formato incorrecto. Revísalos e inténtalo de nuevo.",
+  "@validationFormatError": {
+    "description": "Validation message for generic formatting issues."
+  },
+  "validationGenericError": "Revisa tu entrada e inténtalo de nuevo.",
+  "@validationGenericError": {
+    "description": "Fallback validation message."
+  },
+  "fileNotFound": "Archivo no encontrado. Puede que se haya movido o eliminado.",
+  "@fileNotFound": {
+    "description": "Message when a file cannot be located."
+  },
+  "fileAccessDenied": "No se puede acceder al archivo. Verifica los permisos.",
+  "@fileAccessDenied": {
+    "description": "Message when file access is denied."
+  },
+  "fileTooLarge": "El archivo es demasiado grande. Elige uno más pequeño.",
+  "@fileTooLarge": {
+    "description": "Message when a file exceeds size limits."
+  },
+  "fileGenericError": "Problema con el archivo. Prueba con otro archivo.",
+  "@fileGenericError": {
+    "description": "Fallback file error message."
+  },
+  "permissionCameraRequired": "Se requiere permiso de cámara. Actívalo en los ajustes.",
+  "@permissionCameraRequired": {
+    "description": "Message when camera permission is missing."
+  },
+  "permissionStorageRequired": "Se requiere permiso de almacenamiento. Actívalo en los ajustes.",
+  "@permissionStorageRequired": {
+    "description": "Message when storage permission is missing."
+  },
+  "permissionMicrophoneRequired": "Se requiere permiso de micrófono. Actívalo en los ajustes.",
+  "@permissionMicrophoneRequired": {
+    "description": "Message when microphone permission is missing."
+  },
+  "permissionGenericError": "Se requiere un permiso. Revisa los permisos de la app en los ajustes.",
+  "@permissionGenericError": {
+    "description": "Fallback permission error message."
+  },
+  "actionRetryRequest": "Intenta la solicitud nuevamente.",
+  "@actionRetryRequest": {
+    "description": "Description for retrying a failed request."
+  },
+  "actionVerifyConnection": "Verifica tu conexión a Internet.",
+  "@actionVerifyConnection": {
+    "description": "Description for checking internet connectivity."
+  },
+  "actionRetryOperation": "Vuelve a intentar la operación.",
+  "@actionRetryOperation": {
+    "description": "Description for retrying the same operation."
+  },
+  "actionRetryAfterDelay": "Espera un momento y vuelve a intentarlo.",
+  "@actionRetryAfterDelay": {
+    "description": "Description suggesting a short delay before retrying."
+  },
+  "actionSignInToAccount": "Inicia sesión en tu cuenta.",
+  "@actionSignInToAccount": {
+    "description": "Description for signing back into the app."
+  },
+  "actionSelectAnotherFile": "Selecciona otro archivo.",
+  "@actionSelectAnotherFile": {
+    "description": "Description for choosing a different file."
+  },
+  "actionOpenAppSettings": "Abre la configuración de la aplicación para otorgar permisos.",
+  "@actionOpenAppSettings": {
+    "description": "Description for opening system or app settings."
+  },
+  "actionRetryAfterPermission": "Vuelve a intentarlo después de otorgar el permiso.",
+  "@actionRetryAfterPermission": {
+    "description": "Description for retrying once permissions are granted."
+  },
+  "actionReturnToPrevious": "Vuelve a la pantalla anterior.",
+  "@actionReturnToPrevious": {
+    "description": "Description for navigating back to the prior screen."
+  },
+  "continueAction": "Continuar",
+  "@continueAction": {
+    "description": "Button label to continue an action or flow."
+  },
+  "loadingShort": "Cargando",
+  "@loadingShort": {
+    "description": "Short loading label used for accessibility."
+  },
+  "loadingAnnouncement": "Cargando: {message}",
+  "@loadingAnnouncement": {
+    "description": "Screen reader announcement when loading a resource.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
+  "errorAnnouncement": "Error: {error}",
+  "@errorAnnouncement": {
+    "description": "Screen reader announcement for an error.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "errorAnnouncementWithSuggestion": "Error: {error}. {suggestion}",
+  "@errorAnnouncementWithSuggestion": {
+    "description": "Screen reader announcement for an error with a follow-up suggestion.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      },
+      "suggestion": {
+        "type": "String",
+        "example": "Please try again later."
+      }
+    }
+  },
+  "successAnnouncement": "Éxito: {message}",
+  "@successAnnouncement": {
+    "description": "Screen reader announcement for successful actions.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Profile updated"
+      }
+    }
+  },
+  "requiredFieldLabel": "{label} *",
+  "@requiredFieldLabel": {
+    "description": "Label text indicating a required field.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Email"
+      }
+    }
+  },
+  "requiredFieldHelper": "Campo obligatorio",
+  "@requiredFieldHelper": {
+    "description": "Helper text indicating that the field is required."
+  },
+  "switchOnLabel": "Activado",
+  "@switchOnLabel": {
+    "description": "Semantic label when a switch is enabled."
+  },
+  "switchOffLabel": "Desactivado",
+  "@switchOffLabel": {
+    "description": "Semantic label when a switch is disabled."
+  },
+  "dialogSemanticLabel": "Diálogo: {title}",
+  "@dialogSemanticLabel": {
+    "description": "Semantic label describing the dialog title.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
+  "previousLabel": "Anterior",
+  "@previousLabel": {
+    "description": "Label for navigating to the previous item."
+  },
+  "nextLabel": "Siguiente",
+  "@nextLabel": {
+    "description": "Label for navigating to the next item."
+  },
+  "themePaletteConduitLabel": "Conduit",
+  "@themePaletteConduitLabel": {
+    "description": "Palette name for the default Conduit theme."
+  },
+  "themePaletteConduitDescription": "Tema neutro y limpio diseñado para Conduit.",
+  "@themePaletteConduitDescription": {
+    "description": "Description of the Conduit palette."
+  },
+  "themePaletteClaudeLabel": "Claude",
+  "@themePaletteClaudeLabel": {
+    "description": "Palette name inspired by the Claude web client."
+  },
+  "themePaletteClaudeDescription": "Paleta cálida y táctil inspirada en el cliente web de Claude.",
+  "@themePaletteClaudeDescription": {
+    "description": "Description of the Claude palette."
+  },
+  "themePaletteT3ChatLabel": "T3 Chat",
+  "@themePaletteT3ChatLabel": {
+    "description": "Palette name inspired by the T3 Stack brand."
+  },
+  "themePaletteT3ChatDescription": "Degradados divertidos inspirados en la marca T3 Stack.",
+  "@themePaletteT3ChatDescription": {
+    "description": "Description of the T3 Chat palette."
+  },
+  "themePaletteCatppuccinLabel": "Catppuccin",
+  "@themePaletteCatppuccinLabel": {
+    "description": "Palette name for Catppuccin colors."
+  },
+  "themePaletteCatppuccinDescription": "Paleta suave de tonos pastel.",
+  "@themePaletteCatppuccinDescription": {
+    "description": "Description of the Catppuccin palette."
+  },
+  "themePaletteTangerineLabel": "Tangerine",
+  "@themePaletteTangerineLabel": {
+    "description": "Palette name for Tangerine colors."
+  },
+  "themePaletteTangerineDescription": "Paleta cálida de tonos naranja y gris pizarra.",
+  "@themePaletteTangerineDescription": {
+    "description": "Description of the Tangerine palette."
+  },
+  "@onboardStartTitle": {
+    "description": "Onboarding card: start chatting title.",
+    "placeholders": {
+      "username": {
+        "type": "String",
+        "example": "Alex"
+      }
+    }
+  },
+  "@notAnImageFile": {
+    "description": "Error when a referenced file is not an image.",
+    "placeholders": {
+      "fileName": {
+        "type": "String",
+        "example": "image.txt"
+      }
+    }
+  },
+  "@failedToLoadImage": {
+    "description": "Error including the underlying reason when image loading fails.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "@ttsVoicesForLanguage": {
+    "description": "Section header for voices matching the app language",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "EN"
+      }
+    }
+  },
+  "voiceCallReady": "Listo",
+  "@voiceCallReady": {
+    "description": "Status label shown when the voice call is ready to start."
+  },
+  "voiceCallConnecting": "Conectando...",
+  "@voiceCallConnecting": {
+    "description": "Status label shown while the voice call is connecting."
+  },
+  "voiceCallListening": "Escuchando",
+  "@voiceCallListening": {
+    "description": "Status label shown while the call is listening for input."
+  },
+  "voiceCallPaused": "En pausa",
+  "@voiceCallPaused": {
+    "description": "Status label shown when the call is paused."
+  },
+  "voiceCallProcessing": "Pensando...",
+  "@voiceCallProcessing": {
+    "description": "Status label shown while the call processes a response."
+  },
+  "voiceCallSpeaking": "Hablando",
+  "@voiceCallSpeaking": {
+    "description": "Status label shown while the assistant is speaking."
+  },
+  "voiceCallDisconnected": "Desconectado",
+  "@voiceCallDisconnected": {
+    "description": "Status label shown when the voice call has ended or disconnected."
+  },
+  "voiceCallErrorHelp": "Comprueba lo siguiente:\n• Los permisos del micrófono están concedidos\n• El reconocimiento de voz está disponible en tu dispositivo\n• Estás conectado al servidor",
+  "@voiceCallErrorHelp": {
+    "description": "Guidance shown when the voice call encounters an error."
+  }
 }

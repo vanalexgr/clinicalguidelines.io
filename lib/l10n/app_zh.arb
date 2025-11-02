@@ -1,7 +1,6 @@
 {
   "@@locale": "zh",
   "appTitle": "Conduit",
-  "initializationFailed": "初始化失败",
   "retry": "重试",
   "back": "返回",
   "you": "你",
@@ -15,10 +14,6 @@
   "connectionIssueSubtitle": "重新连接以继续或退出登录以选择其他服务器。",
   "@connectionIssueSubtitle": {
     "description": "当无法访问服务器时解释可用操作的副标题"
-  },
-  "stillOfflineMessage": "我们仍然无法访问服务器。请仔细检查您的连接并重试。",
-  "@stillOfflineMessage": {
-    "description": "重试后连接未恢复时的状态消息"
   },
   "account": "账户",
   "supportConduit": "支持 Conduit",
@@ -37,32 +32,14 @@
   "noResults": "无结果",
   "searchModels": "搜索模型...",
   "errorMessage": "出了点问题。请重试。",
-  "loginButton": "登录",
-  "menuItem": "设置",
-  "dynamicContentWithPlaceholder": "欢迎，{name}！",
-  "itemsCount": "{count, plural, =0{无项目} other{{count} 个项目}}",
   "closeButtonSemantic": "关闭",
   "loadingContent": "加载内容中",
   "noItems": "无项目",
   "noItemsToDisplay": "无可显示的项目",
-  "loadMore": "加载更多",
-  "workspace": "工作区",
-  "recentFiles": "最近文件",
   "knowledgeBase": "知识库",
-  "noFilesYet": "尚无文件",
-  "uploadDocsPrompt": "上传文档以在您与 Conduit 的对话中引用",
-  "uploadFirstFile": "上传您的第一个文件",
   "attachments": "附件",
-  "knowledgeBaseEmpty": "知识库为空",
-  "createCollectionsPrompt": "创建相关文档集合以便于引用",
-  "chooseSourcePhoto": "选择来源",
   "takePhoto": "拍照",
-  "chooseFromGallery": "从相册中选择",
   "document": "文档",
-  "documentHint": "PDF、Word 或文本文件",
-  "uploadFileTitle": "上传文件",
-  "fileUploadComingSoon": "{type} 的文件上传即将推出！",
-  "kbCreationComingSoon": "知识库创建即将推出！",
   "backToServerSetup": "返回服务器设置",
   "connectedToServer": "已连接到服务器",
   "signIn": "登录",
@@ -125,7 +102,6 @@
   "onboardQuickSubtitle": "打开菜单在对话、工作区和个人资料之间切换。",
   "onboardQuickBullet1": "点击菜单访问对话、工作区、个人资料",
   "onboardQuickBullet2": "从顶部栏开始新对话或管理模型",
-  "addAttachment": "添加附件",
   "attachmentLabel": "附件",
   "tools": "工具",
   "voiceInput": "语音输入",
@@ -157,16 +133,12 @@
   "failedToDecodeImage": "无法解码图像",
   "invalidImageFormat": "无效的图像格式",
   "emptyImageData": "空图像数据",
-  "featureRequiresInternet": "此功能需要互联网连接",
-  "messagesWillSendWhenOnline": "当您重新上线时将发送消息",
   "confirm": "确认",
   "cancel": "取消",
   "ok": "确定",
   "inputField": "输入字段",
-  "captureDocumentOrImage": "捕获文档或图像",
   "checkConnection": "检查连接",
   "openSettings": "打开设置",
-  "chooseDifferentFile": "选择其他文件",
   "goBack": "返回",
   "technicalDetails": "技术详情",
   "save": "保存",
@@ -178,18 +150,9 @@
   "newChat": "新对话",
   "more": "更多",
   "clear": "清除",
-  "searchHint": "搜索...",
   "searchConversations": "搜索对话...",
   "create": "创建",
-  "folderCreated": "文件夹已创建",
   "failedToCreateFolder": "无法创建文件夹",
-  "movedChatToFolder": "已将「{title}」移至「{folder}」",
-  "@movedChatToFolder": {
-    "placeholders": {
-      "title": {"type": "String"},
-      "folder": {"type": "String"}
-    }
-  },
   "failedToMoveChat": "无法移动对话",
   "failedToLoadChats": "无法加载对话",
   "failedToUpdatePin": "无法更新置顶",
@@ -219,13 +182,17 @@
   "deleteMessagesMessage": "删除 {count} 条消息？",
   "@deleteMessagesMessage": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "routeNotFound": "未找到路由：{routeName}",
   "@routeNotFound": {
     "placeholders": {
-      "routeName": {"type": "String"}
+      "routeName": {
+        "type": "String"
+      }
     }
   },
   "deleteChatTitle": "删除对话",
@@ -271,29 +238,55 @@
   "headerNameTooLong": "标头名称太长（最多 64 个字符）",
   "headerNameInvalidChars": "无效的标头名称。仅使用字母、数字和这些符号：!#$&-^_`|~",
   "headerNameReserved": "无法覆盖保留的标头「{key}」",
-  "@headerNameReserved": {"placeholders": {"key": {"type": "String"}}},
+  "@headerNameReserved": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "headerValueEmpty": "标头值不能为空",
   "headerValueTooLong": "标头值太长（最多 1024 个字符）",
   "headerValueInvalidChars": "标头值包含无效字符。仅使用可打印的 ASCII。",
   "headerValueUnsafe": "标头值似乎包含潜在的不安全内容",
   "headerAlreadyExists": "标头「{key}」已存在。首先删除它以更新。",
-  "@headerAlreadyExists": {"placeholders": {"key": {"type": "String"}}},
+  "@headerAlreadyExists": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "maxHeadersReachedDetail": "最多允许 10 个自定义标头。删除一些以添加更多。",
-  "editMessage": "编辑消息",
   "noModelsAvailable": "无可用模型",
   "followingSystem": "跟随系统：{theme}",
-  "@followingSystem": {"placeholders": {"theme": {"type": "String"}}},
+  "@followingSystem": {
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
+  },
   "themeDark": "深色",
   "themePalette": "强调色调色板",
-  "@themePalette": {"description": "选择应用颜色调色板的标题。"},
-  "themePaletteDescription": "选择用于按钮、卡片和对话气泡的强调色。",
-  "@themePaletteDescription": {"description": "解释调色板选择的帮助文本。"},
+  "@themePalette": {
+    "description": "选择应用颜色调色板的标题。"
+  },
   "themeLight": "浅色",
   "currentlyUsingDarkTheme": "当前使用深色主题",
   "currentlyUsingLightTheme": "当前使用浅色主题",
   "aboutConduit": "关于 Conduit",
   "versionLabel": "版本：{version}（{build}）",
-  "@versionLabel": {"placeholders": {"version": {"type": "String"}, "build": {"type": "String"}}},
+  "@versionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
   "githubRepository": "GitHub 仓库",
   "unableToLoadAppInfo": "无法加载应用信息",
   "thinking": "思考中...",
@@ -301,7 +294,12 @@
   "thoughtForDuration": "思考了 {duration}",
   "@thoughtForDuration": {
     "description": "显示助手在回复前思考了多长时间。",
-    "placeholders": {"duration": {"type": "String", "example": "3s"}}
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "3s"
+      }
+    }
   },
   "appCustomization": "自定义",
   "appCustomizationSubtitle": "主题、语言、语音和 quickpills",
@@ -325,12 +323,413 @@
   "display": "显示",
   "realtime": "实时",
   "transportMode": "传输模式",
-  "transportModeDescription": "选择应用如何连接以进行实时更新。",
   "mode": "模式",
   "transportModePolling": "轮询回退",
   "transportModeWs": "仅 WebSocket",
   "transportModePollingInfo": "当 WebSocket 被阻止时改用 HTTP 轮询，在条件允许时切换回 WebSocket。",
   "transportModeWsInfo": "开销较低，但可能在严格的代理/防火墙后失败。",
-  "websocketConnectionError": "无法建立实时连接。请检查您的网络和服务器配置。",
-  "websocketReconnectFailed": "实时连接失败。流式传输可能无法正常工作。"
+  "quickActionsSelectedCount": "{count, plural, =0{未选择操作} other{已选择{count}个操作}}",
+  "@quickActionsSelectedCount": {
+    "description": "Subtitle indicating how many quick actions are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "autoSelectDescription": "让应用自动选择最佳模型",
+  "@autoSelectDescription": {
+    "description": "Explains what the auto-select model setting does."
+  },
+  "ttsEngineLabel": "引擎",
+  "@ttsEngineLabel": {
+    "description": "Label for selecting the text-to-speech engine."
+  },
+  "ttsEngineDevice": "本机",
+  "@ttsEngineDevice": {
+    "description": "Chip label for using on-device text-to-speech."
+  },
+  "ttsEngineServer": "服务器",
+  "@ttsEngineServer": {
+    "description": "Chip label for using server-side text-to-speech."
+  },
+  "modelCapabilityMultimodal": "多模态",
+  "@modelCapabilityMultimodal": {
+    "description": "Capability chip label for models that support multimodal input."
+  },
+  "modelCapabilityReasoning": "推理",
+  "@modelCapabilityReasoning": {
+    "description": "Capability chip label for models that support reasoning features."
+  },
+  "voiceCallTitle": "语音通话",
+  "@voiceCallTitle": {
+    "description": "Title displayed on the voice call screen."
+  },
+  "voiceCallPause": "暂停",
+  "@voiceCallPause": {
+    "description": "Button label to pause a voice call."
+  },
+  "voiceCallResume": "继续",
+  "@voiceCallResume": {
+    "description": "Button label to resume a paused voice call."
+  },
+  "voiceCallStop": "停止",
+  "@voiceCallStop": {
+    "description": "Button label to stop the active voice call."
+  },
+  "voiceCallEnd": "结束通话",
+  "@voiceCallEnd": {
+    "description": "Button label to end the voice call session."
+  },
+  "chooseDifferentFile": "选择其他文件",
+  "@chooseDifferentFile": {
+    "description": "Action label prompting the user to pick another file."
+  },
+  "errorWithMessage": "错误：{message}",
+  "@errorWithMessage": {
+    "description": "Error label with appended message text.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "networkTimeoutError": "连接超时。请检查网络后重试。",
+  "@networkTimeoutError": {
+    "description": "User-facing message when a network request times out."
+  },
+  "networkUnreachableError": "无法连接服务器。请检查服务器地址和网络。",
+  "@networkUnreachableError": {
+    "description": "User-facing message when the server cannot be reached."
+  },
+  "networkServerNotResponding": "服务器没有响应。请确认服务器正在运行且可访问。",
+  "@networkServerNotResponding": {
+    "description": "User-facing message when the server does not respond to a request."
+  },
+  "networkGenericError": "网络连接出现问题。请检查网络连接。",
+  "@networkGenericError": {
+    "description": "Fallback message for generic network errors."
+  },
+  "serverError500": "服务器出现问题，通常是暂时的。",
+  "@serverError500": {
+    "description": "Message when a 500 error is encountered."
+  },
+  "serverErrorUnavailable": "服务器暂时不可用。请稍后再试。",
+  "@serverErrorUnavailable": {
+    "description": "Message when a 502/503 error is encountered."
+  },
+  "serverErrorTimeout": "服务器响应超时。请重试。",
+  "@serverErrorTimeout": {
+    "description": "Message when the server times out."
+  },
+  "serverErrorGeneric": "服务器出现故障。请稍后再试。",
+  "@serverErrorGeneric": {
+    "description": "Fallback server error message."
+  },
+  "authSessionExpired": "会话已过期，请重新登录。",
+  "@authSessionExpired": {
+    "description": "Message when an authentication session expires."
+  },
+  "authForbidden": "您没有执行此操作的权限。",
+  "@authForbidden": {
+    "description": "Message when the user lacks required permissions."
+  },
+  "authInvalidToken": "认证令牌无效，请重新登录。",
+  "@authInvalidToken": {
+    "description": "Message when the authentication token is invalid."
+  },
+  "authGenericError": "认证出现问题，请重新登录。",
+  "@authGenericError": {
+    "description": "Fallback authentication error message."
+  },
+  "validationInvalidEmail": "请输入有效的邮箱地址。",
+  "@validationInvalidEmail": {
+    "description": "Validation message for invalid email input."
+  },
+  "validationWeakPassword": "密码不符合要求，请检查后重试。",
+  "@validationWeakPassword": {
+    "description": "Validation message for weak passwords."
+  },
+  "validationMissingRequired": "请填写所有必填项。",
+  "@validationMissingRequired": {
+    "description": "Validation message when required fields are missing."
+  },
+  "validationFormatError": "部分信息格式不正确，请检查后重试。",
+  "@validationFormatError": {
+    "description": "Validation message for generic formatting issues."
+  },
+  "validationGenericError": "请检查输入内容并重试。",
+  "@validationGenericError": {
+    "description": "Fallback validation message."
+  },
+  "fileNotFound": "未找到文件，可能已移动或删除。",
+  "@fileNotFound": {
+    "description": "Message when a file cannot be located."
+  },
+  "fileAccessDenied": "无法访问文件，请检查权限。",
+  "@fileAccessDenied": {
+    "description": "Message when file access is denied."
+  },
+  "fileTooLarge": "文件过大，请选择较小的文件。",
+  "@fileTooLarge": {
+    "description": "Message when a file exceeds size limits."
+  },
+  "fileGenericError": "文件出现问题，请尝试其他文件。",
+  "@fileGenericError": {
+    "description": "Fallback file error message."
+  },
+  "permissionCameraRequired": "需要相机权限，请在设置中开启。",
+  "@permissionCameraRequired": {
+    "description": "Message when camera permission is missing."
+  },
+  "permissionStorageRequired": "需要存储权限，请在设置中开启。",
+  "@permissionStorageRequired": {
+    "description": "Message when storage permission is missing."
+  },
+  "permissionMicrophoneRequired": "需要麦克风权限，请在设置中开启。",
+  "@permissionMicrophoneRequired": {
+    "description": "Message when microphone permission is missing."
+  },
+  "permissionGenericError": "需要权限，请在设置中检查应用权限。",
+  "@permissionGenericError": {
+    "description": "Fallback permission error message."
+  },
+  "actionRetryRequest": "请再次尝试该请求。",
+  "@actionRetryRequest": {
+    "description": "Description for retrying a failed request."
+  },
+  "actionVerifyConnection": "请检查网络连接。",
+  "@actionVerifyConnection": {
+    "description": "Description for checking internet connectivity."
+  },
+  "actionRetryOperation": "请重试此操作。",
+  "@actionRetryOperation": {
+    "description": "Description for retrying the same operation."
+  },
+  "actionRetryAfterDelay": "稍等片刻再试一次。",
+  "@actionRetryAfterDelay": {
+    "description": "Description suggesting a short delay before retrying."
+  },
+  "actionSignInToAccount": "登录到您的账户。",
+  "@actionSignInToAccount": {
+    "description": "Description for signing back into the app."
+  },
+  "actionSelectAnotherFile": "请选择其他文件。",
+  "@actionSelectAnotherFile": {
+    "description": "Description for choosing a different file."
+  },
+  "actionOpenAppSettings": "打开应用设置以授予权限。",
+  "@actionOpenAppSettings": {
+    "description": "Description for opening system or app settings."
+  },
+  "actionRetryAfterPermission": "授予权限后请重试。",
+  "@actionRetryAfterPermission": {
+    "description": "Description for retrying once permissions are granted."
+  },
+  "actionReturnToPrevious": "返回上一屏。",
+  "@actionReturnToPrevious": {
+    "description": "Description for navigating back to the prior screen."
+  },
+  "continueAction": "继续",
+  "@continueAction": {
+    "description": "Button label to continue an action or flow."
+  },
+  "loadingShort": "加载中",
+  "@loadingShort": {
+    "description": "Short loading label used for accessibility."
+  },
+  "loadingAnnouncement": "正在加载：{message}",
+  "@loadingAnnouncement": {
+    "description": "Screen reader announcement when loading a resource.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
+  "errorAnnouncement": "错误：{error}",
+  "@errorAnnouncement": {
+    "description": "Screen reader announcement for an error.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "errorAnnouncementWithSuggestion": "错误：{error}。{suggestion}",
+  "@errorAnnouncementWithSuggestion": {
+    "description": "Screen reader announcement for an error with a follow-up suggestion.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      },
+      "suggestion": {
+        "type": "String",
+        "example": "Please try again later."
+      }
+    }
+  },
+  "successAnnouncement": "成功：{message}",
+  "@successAnnouncement": {
+    "description": "Screen reader announcement for successful actions.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Profile updated"
+      }
+    }
+  },
+  "requiredFieldLabel": "{label} *",
+  "@requiredFieldLabel": {
+    "description": "Label text indicating a required field.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Email"
+      }
+    }
+  },
+  "requiredFieldHelper": "必填项",
+  "@requiredFieldHelper": {
+    "description": "Helper text indicating that the field is required."
+  },
+  "switchOnLabel": "开启",
+  "@switchOnLabel": {
+    "description": "Semantic label when a switch is enabled."
+  },
+  "switchOffLabel": "关闭",
+  "@switchOffLabel": {
+    "description": "Semantic label when a switch is disabled."
+  },
+  "dialogSemanticLabel": "对话框：{title}",
+  "@dialogSemanticLabel": {
+    "description": "Semantic label describing the dialog title.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
+  "previousLabel": "上一步",
+  "@previousLabel": {
+    "description": "Label for navigating to the previous item."
+  },
+  "nextLabel": "下一步",
+  "@nextLabel": {
+    "description": "Label for navigating to the next item."
+  },
+  "themePaletteConduitLabel": "Conduit",
+  "@themePaletteConduitLabel": {
+    "description": "Palette name for the default Conduit theme."
+  },
+  "themePaletteConduitDescription": "为 Conduit 设计的简洁中性色主题。",
+  "@themePaletteConduitDescription": {
+    "description": "Description of the Conduit palette."
+  },
+  "themePaletteClaudeLabel": "Claude",
+  "@themePaletteClaudeLabel": {
+    "description": "Palette name inspired by the Claude web client."
+  },
+  "themePaletteClaudeDescription": "源自 Claude 网页端的温暖触感配色。",
+  "@themePaletteClaudeDescription": {
+    "description": "Description of the Claude palette."
+  },
+  "themePaletteT3ChatLabel": "T3 Chat",
+  "@themePaletteT3ChatLabel": {
+    "description": "Palette name inspired by the T3 Stack brand."
+  },
+  "themePaletteT3ChatDescription": "灵感来自 T3 Stack 品牌的活泼渐变。",
+  "@themePaletteT3ChatDescription": {
+    "description": "Description of the T3 Chat palette."
+  },
+  "themePaletteCatppuccinLabel": "Catppuccin",
+  "@themePaletteCatppuccinLabel": {
+    "description": "Palette name for Catppuccin colors."
+  },
+  "themePaletteCatppuccinDescription": "柔和的马卡龙色调。",
+  "@themePaletteCatppuccinDescription": {
+    "description": "Description of the Catppuccin palette."
+  },
+  "themePaletteTangerineLabel": "Tangerine",
+  "@themePaletteTangerineLabel": {
+    "description": "Palette name for Tangerine colors."
+  },
+  "themePaletteTangerineDescription": "温暖的橙色与石板色调。",
+  "@themePaletteTangerineDescription": {
+    "description": "Description of the Tangerine palette."
+  },
+  "@onboardStartTitle": {
+    "description": "Onboarding card: start chatting title.",
+    "placeholders": {
+      "username": {
+        "type": "String",
+        "example": "Alex"
+      }
+    }
+  },
+  "@notAnImageFile": {
+    "description": "Error when a referenced file is not an image.",
+    "placeholders": {
+      "fileName": {
+        "type": "String",
+        "example": "image.txt"
+      }
+    }
+  },
+  "@failedToLoadImage": {
+    "description": "Error including the underlying reason when image loading fails.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "@ttsVoicesForLanguage": {
+    "description": "Section header for voices matching the app language",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "EN"
+      }
+    }
+  },
+  "voiceCallReady": "已就绪",
+  "@voiceCallReady": {
+    "description": "Status label shown when the voice call is ready to start."
+  },
+  "voiceCallConnecting": "正在连接...",
+  "@voiceCallConnecting": {
+    "description": "Status label shown while the voice call is connecting."
+  },
+  "voiceCallListening": "正在聆听",
+  "@voiceCallListening": {
+    "description": "Status label shown while the call is listening for input."
+  },
+  "voiceCallPaused": "已暂停",
+  "@voiceCallPaused": {
+    "description": "Status label shown when the call is paused."
+  },
+  "voiceCallProcessing": "正在思考...",
+  "@voiceCallProcessing": {
+    "description": "Status label shown while the call processes a response."
+  },
+  "voiceCallSpeaking": "正在讲话",
+  "@voiceCallSpeaking": {
+    "description": "Status label shown while the assistant is speaking."
+  },
+  "voiceCallDisconnected": "已断开",
+  "@voiceCallDisconnected": {
+    "description": "Status label shown when the voice call has ended or disconnected."
+  },
+  "voiceCallErrorHelp": "请检查：\n• 已授予麦克风权限\n• 设备支持语音识别\n• 已连接到服务器",
+  "@voiceCallErrorHelp": {
+    "description": "Guidance shown when the voice call encounters an error."
+  }
 }

@@ -116,12 +116,6 @@ abstract class AppLocalizations {
   /// **'Conduit'**
   String get appTitle;
 
-  /// Shown if the app fails to initialize critical services.
-  ///
-  /// In en, this message translates to:
-  /// **'Initialization Failed'**
-  String get initializationFailed;
-
   /// Button label to try an action again.
   ///
   /// In en, this message translates to:
@@ -169,12 +163,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reconnect to continue or sign out to choose a different server.'**
   String get connectionIssueSubtitle;
-
-  /// Status message after a retry when connectivity has not been restored
-  ///
-  /// In en, this message translates to:
-  /// **'We still can\'t reach the server. Double-check your connection and try again.'**
-  String get stillOfflineMessage;
 
   /// Section header for account-related options.
   ///
@@ -260,6 +248,18 @@ abstract class AppLocalizations {
   /// **'Available Models'**
   String get availableModels;
 
+  /// Capability chip label for models that support multimodal input.
+  ///
+  /// In en, this message translates to:
+  /// **'Multimodal'**
+  String get modelCapabilityMultimodal;
+
+  /// Capability chip label for models that support reasoning features.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoning'**
+  String get modelCapabilityReasoning;
+
   /// Shown when a search returns no matches.
   ///
   /// In en, this message translates to:
@@ -278,30 +278,6 @@ abstract class AppLocalizations {
   /// **'Something went wrong. Please try again.'**
   String get errorMessage;
 
-  /// Button text for the login action.
-  ///
-  /// In en, this message translates to:
-  /// **'Login'**
-  String get loginButton;
-
-  /// Generic settings menu item label.
-  ///
-  /// In en, this message translates to:
-  /// **'Settings'**
-  String get menuItem;
-
-  /// Greeting message with a dynamic user name.
-  ///
-  /// In en, this message translates to:
-  /// **'Welcome, {name}!'**
-  String dynamicContentWithPlaceholder(String name);
-
-  /// Pluralized count of items.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =0{No items} one{1 item} other{{count} items}}'**
-  String itemsCount(int count);
-
   /// Accessible label for a generic Close button.
   ///
   /// In en, this message translates to:
@@ -313,6 +289,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading content'**
   String get loadingContent;
+
+  /// Short loading label used for accessibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading'**
+  String get loadingShort;
+
+  /// Screen reader announcement when loading a resource.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading: {message}'**
+  String loadingAnnouncement(String message);
+
+  /// Screen reader announcement for an error.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String errorAnnouncement(String error);
+
+  /// Screen reader announcement for an error with a follow-up suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}. {suggestion}'**
+  String errorAnnouncementWithSuggestion(String error, String suggestion);
+
+  /// Screen reader announcement for successful actions.
+  ///
+  /// In en, this message translates to:
+  /// **'Success: {message}'**
+  String successAnnouncement(String message);
 
   /// Placeholder text when a list is empty.
   ///
@@ -326,47 +332,11 @@ abstract class AppLocalizations {
   /// **'No items to display'**
   String get noItemsToDisplay;
 
-  /// Button label to load additional items in a paged list.
-  ///
-  /// In en, this message translates to:
-  /// **'Load More'**
-  String get loadMore;
-
-  /// Section/tab label for documents and files.
-  ///
-  /// In en, this message translates to:
-  /// **'Workspace'**
-  String get workspace;
-
-  /// Header for recently accessed files.
-  ///
-  /// In en, this message translates to:
-  /// **'Recent Files'**
-  String get recentFiles;
-
   /// Section for knowledge base content.
   ///
   /// In en, this message translates to:
   /// **'Knowledge Base'**
   String get knowledgeBase;
-
-  /// Empty state when no files are present.
-  ///
-  /// In en, this message translates to:
-  /// **'No files yet'**
-  String get noFilesYet;
-
-  /// Prompt encouraging users to upload documents.
-  ///
-  /// In en, this message translates to:
-  /// **'Upload documents to reference in your conversations with Conduit'**
-  String get uploadDocsPrompt;
-
-  /// CTA to add the first file.
-  ///
-  /// In en, this message translates to:
-  /// **'Upload your first file'**
-  String get uploadFirstFile;
 
   /// Header above list of attached files in compose area.
   ///
@@ -374,65 +344,17 @@ abstract class AppLocalizations {
   /// **'Attachments'**
   String get attachments;
 
-  /// Empty state title for the knowledge base section.
-  ///
-  /// In en, this message translates to:
-  /// **'Knowledge base is empty'**
-  String get knowledgeBaseEmpty;
-
-  /// Prompt describing the benefit of creating collections.
-  ///
-  /// In en, this message translates to:
-  /// **'Create collections of related documents for easy reference'**
-  String get createCollectionsPrompt;
-
-  /// Sheet title to pick camera or photo library.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose your source'**
-  String get chooseSourcePhoto;
-
   /// Action to open camera and capture a new photo.
   ///
   /// In en, this message translates to:
   /// **'Take a photo'**
   String get takePhoto;
 
-  /// Action to pick an existing photo from library.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose from your photos'**
-  String get chooseFromGallery;
-
   /// Generic document label used in UI.
   ///
   /// In en, this message translates to:
   /// **'Document'**
   String get document;
-
-  /// Helper hint listing supported document types.
-  ///
-  /// In en, this message translates to:
-  /// **'PDF, Word, or text file'**
-  String get documentHint;
-
-  /// Dialog/sheet title for file upload.
-  ///
-  /// In en, this message translates to:
-  /// **'Upload File'**
-  String get uploadFileTitle;
-
-  /// Temporary message for upcoming upload feature by type
-  ///
-  /// In en, this message translates to:
-  /// **'File upload for {type} is coming soon!'**
-  String fileUploadComingSoon(String type);
-
-  /// Temporary message indicating KB creation feature is not yet available.
-  ///
-  /// In en, this message translates to:
-  /// **'Knowledge base creation is coming soon!'**
-  String get kbCreationComingSoon;
 
   /// Button/back label to return to server configuration flow.
   ///
@@ -806,12 +728,6 @@ abstract class AppLocalizations {
   /// **'Start New Chat or manage models from the top bar'**
   String get onboardQuickBullet2;
 
-  /// Button to add an attachment (file/photo).
-  ///
-  /// In en, this message translates to:
-  /// **'Add attachment'**
-  String get addAttachment;
-
   /// Label shown beside attachment chips in messages.
   ///
   /// In en, this message translates to:
@@ -890,6 +806,84 @@ abstract class AppLocalizations {
   /// **'Start'**
   String get voiceActionStart;
 
+  /// Title displayed on the voice call screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Call'**
+  String get voiceCallTitle;
+
+  /// Button label to pause a voice call.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get voiceCallPause;
+
+  /// Button label to resume a paused voice call.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get voiceCallResume;
+
+  /// Button label to stop the active voice call.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get voiceCallStop;
+
+  /// Button label to end the voice call session.
+  ///
+  /// In en, this message translates to:
+  /// **'End Call'**
+  String get voiceCallEnd;
+
+  /// Status label shown when the voice call is ready to start.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get voiceCallReady;
+
+  /// Status label shown while the voice call is connecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get voiceCallConnecting;
+
+  /// Status label shown while the call is listening for input.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening'**
+  String get voiceCallListening;
+
+  /// Status label shown when the call is paused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get voiceCallPaused;
+
+  /// Status label shown while the call processes a response.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking...'**
+  String get voiceCallProcessing;
+
+  /// Status label shown while the assistant is speaking.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaking'**
+  String get voiceCallSpeaking;
+
+  /// Status label shown when the voice call has ended or disconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnected'**
+  String get voiceCallDisconnected;
+
+  /// Guidance shown when the voice call encounters an error.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check:\n• Microphone permissions are granted\n• Speech recognition is available on your device\n• You are connected to the server'**
+  String get voiceCallErrorHelp;
+
   /// Accessibility label for the message input.
   ///
   /// In en, this message translates to:
@@ -937,6 +931,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'File'**
   String get file;
+
+  /// Action label prompting the user to pick another file.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Different File'**
+  String get chooseDifferentFile;
 
   /// A photo item or attachment type label.
   ///
@@ -998,23 +998,17 @@ abstract class AppLocalizations {
   /// **'Empty image data'**
   String get emptyImageData;
 
-  /// Informational text explaining internet requirement.
-  ///
-  /// In en, this message translates to:
-  /// **'This feature requires an internet connection'**
-  String get featureRequiresInternet;
-
-  /// Queue behavior notice while offline.
-  ///
-  /// In en, this message translates to:
-  /// **'Messages will be sent when you\'re back online'**
-  String get messagesWillSendWhenOnline;
-
   /// Confirmation button label.
   ///
   /// In en, this message translates to:
   /// **'Confirm'**
   String get confirm;
+
+  /// Button label to continue an action or flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueAction;
 
   /// Cancel button label.
   ///
@@ -1028,17 +1022,23 @@ abstract class AppLocalizations {
   /// **'OK'**
   String get ok;
 
+  /// Label for navigating to the previous item.
+  ///
+  /// In en, this message translates to:
+  /// **'Prev'**
+  String get previousLabel;
+
+  /// Label for navigating to the next item.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get nextLabel;
+
   /// Accessibility label describing an input field.
   ///
   /// In en, this message translates to:
   /// **'Input field'**
   String get inputField;
-
-  /// Action to capture a document or image using camera.
-  ///
-  /// In en, this message translates to:
-  /// **'Capture a document or image'**
-  String get captureDocumentOrImage;
 
   /// CTA to verify network connectivity.
   ///
@@ -1052,12 +1052,6 @@ abstract class AppLocalizations {
   /// **'Open Settings'**
   String get openSettings;
 
-  /// CTA to pick an alternative file.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose Different File'**
-  String get chooseDifferentFile;
-
   /// CTA to navigate back.
   ///
   /// In en, this message translates to:
@@ -1069,6 +1063,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Technical Details'**
   String get technicalDetails;
+
+  /// Label text indicating a required field.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} *'**
+  String requiredFieldLabel(String label);
+
+  /// Helper text indicating that the field is required.
+  ///
+  /// In en, this message translates to:
+  /// **'Required field'**
+  String get requiredFieldHelper;
+
+  /// Semantic label when a switch is enabled.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get switchOnLabel;
+
+  /// Semantic label when a switch is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get switchOffLabel;
+
+  /// Semantic label describing the dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialog: {title}'**
+  String dialogSemanticLabel(String title);
 
   /// Primary action to save changes.
   ///
@@ -1124,12 +1148,6 @@ abstract class AppLocalizations {
   /// **'Clear'**
   String get clear;
 
-  /// Generic search input hint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search...'**
-  String get searchHint;
-
   /// Search input hint scoped to conversations.
   ///
   /// In en, this message translates to:
@@ -1142,23 +1160,11 @@ abstract class AppLocalizations {
   /// **'Create'**
   String get create;
 
-  /// Toast/notice after successfully creating a folder.
-  ///
-  /// In en, this message translates to:
-  /// **'Folder created'**
-  String get folderCreated;
-
   /// Error notice when folder creation fails.
   ///
   /// In en, this message translates to:
   /// **'Failed to create folder'**
   String get failedToCreateFolder;
-
-  /// Toast indicating a chat titled {title} was moved to folder {folder}.
-  ///
-  /// In en, this message translates to:
-  /// **'Moved \"{title}\" to \"{folder}\"'**
-  String movedChatToFolder(String title, String folder);
 
   /// Error notice when moving a chat fails.
   ///
@@ -1586,12 +1592,6 @@ abstract class AppLocalizations {
   /// **'Maximum of 10 custom headers allowed. Remove some to add more.'**
   String get maxHeadersReachedDetail;
 
-  /// Action to edit a previously sent message.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit Message'**
-  String get editMessage;
-
   /// Shown when model list is empty or failed to load.
   ///
   /// In en, this message translates to:
@@ -1616,11 +1616,65 @@ abstract class AppLocalizations {
   /// **'Accent palette'**
   String get themePalette;
 
-  /// Helper text explaining palette selection.
+  /// Palette name for the default Conduit theme.
   ///
   /// In en, this message translates to:
-  /// **'Choose the accent colors used for buttons, cards, and chat bubbles.'**
-  String get themePaletteDescription;
+  /// **'Conduit'**
+  String get themePaletteConduitLabel;
+
+  /// Description of the Conduit palette.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean neutral theme designed for Conduit.'**
+  String get themePaletteConduitDescription;
+
+  /// Palette name inspired by the Claude web client.
+  ///
+  /// In en, this message translates to:
+  /// **'Claude'**
+  String get themePaletteClaudeLabel;
+
+  /// Description of the Claude palette.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm, tactile palette lifted from the Claude web client.'**
+  String get themePaletteClaudeDescription;
+
+  /// Palette name inspired by the T3 Stack brand.
+  ///
+  /// In en, this message translates to:
+  /// **'T3 Chat'**
+  String get themePaletteT3ChatLabel;
+
+  /// Description of the T3 Chat palette.
+  ///
+  /// In en, this message translates to:
+  /// **'Playful gradients inspired by the T3 Stack brand.'**
+  String get themePaletteT3ChatDescription;
+
+  /// Palette name for Catppuccin colors.
+  ///
+  /// In en, this message translates to:
+  /// **'Catppuccin'**
+  String get themePaletteCatppuccinLabel;
+
+  /// Description of the Catppuccin palette.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft pastel palette.'**
+  String get themePaletteCatppuccinDescription;
+
+  /// Palette name for Tangerine colors.
+  ///
+  /// In en, this message translates to:
+  /// **'Tangerine'**
+  String get themePaletteTangerineLabel;
+
+  /// Description of the Tangerine palette.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm orange-and-slate palette.'**
+  String get themePaletteTangerineDescription;
 
   /// Theme label for light appearance.
   ///
@@ -1700,6 +1754,18 @@ abstract class AppLocalizations {
   /// **'Quickpills in chat'**
   String get quickActionsDescription;
 
+  /// Subtitle indicating how many quick actions are selected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No actions selected} one{1 action selected} other{{count} actions selected}}'**
+  String quickActionsSelectedCount(int count);
+
+  /// Explains what the auto-select model setting does.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the app choose the best model'**
+  String get autoSelectDescription;
+
   /// Section header for chat-related customization options.
   ///
   /// In en, this message translates to:
@@ -1717,6 +1783,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available'**
   String get sendOnEnterDescription;
+
+  /// Label for selecting the text-to-speech engine.
+  ///
+  /// In en, this message translates to:
+  /// **'Engine'**
+  String get ttsEngineLabel;
+
+  /// Chip label for using on-device text-to-speech.
+  ///
+  /// In en, this message translates to:
+  /// **'On device'**
+  String get ttsEngineDevice;
+
+  /// Chip label for using server-side text-to-speech.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get ttsEngineServer;
 
   /// Section header for TTS-related customization options.
   ///
@@ -1796,6 +1880,216 @@ abstract class AppLocalizations {
   /// **'Error'**
   String get error;
 
+  /// Error label with appended message text.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {message}'**
+  String errorWithMessage(String message);
+
+  /// User-facing message when a network request times out.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection timed out. Please check your internet connection and try again.'**
+  String get networkTimeoutError;
+
+  /// User-facing message when the server cannot be reached.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot reach the server. Please check your server URL and internet connection.'**
+  String get networkUnreachableError;
+
+  /// User-facing message when the server does not respond to a request.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is not responding. Please verify the server is running and accessible.'**
+  String get networkServerNotResponding;
+
+  /// Fallback message for generic network errors.
+  ///
+  /// In en, this message translates to:
+  /// **'Network connection problem. Please check your internet connection.'**
+  String get networkGenericError;
+
+  /// Message when a 500 error is encountered.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is experiencing issues. This is usually temporary.'**
+  String get serverError500;
+
+  /// Message when a 502/503 error is encountered.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is temporarily unavailable. Please try again in a moment.'**
+  String get serverErrorUnavailable;
+
+  /// Message when the server times out.
+  ///
+  /// In en, this message translates to:
+  /// **'Server took too long to respond. Please try again.'**
+  String get serverErrorTimeout;
+
+  /// Fallback server error message.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is having problems. Please try again later.'**
+  String get serverErrorGeneric;
+
+  /// Message when an authentication session expires.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Please sign in again.'**
+  String get authSessionExpired;
+
+  /// Message when the user lacks required permissions.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have permission to perform this action.'**
+  String get authForbidden;
+
+  /// Message when the authentication token is invalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication token is invalid. Please sign in again.'**
+  String get authInvalidToken;
+
+  /// Fallback authentication error message.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication problem. Please sign in again.'**
+  String get authGenericError;
+
+  /// Validation message for invalid email input.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address.'**
+  String get validationInvalidEmail;
+
+  /// Validation message for weak passwords.
+  ///
+  /// In en, this message translates to:
+  /// **'Password doesn\'t meet requirements. Please check and try again.'**
+  String get validationWeakPassword;
+
+  /// Validation message when required fields are missing.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in all required fields.'**
+  String get validationMissingRequired;
+
+  /// Validation message for generic formatting issues.
+  ///
+  /// In en, this message translates to:
+  /// **'Some information is in the wrong format. Please check and try again.'**
+  String get validationFormatError;
+
+  /// Fallback validation message.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your input and try again.'**
+  String get validationGenericError;
+
+  /// Message when a file cannot be located.
+  ///
+  /// In en, this message translates to:
+  /// **'File not found. It may have been moved or deleted.'**
+  String get fileNotFound;
+
+  /// Message when file access is denied.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot access the file. Please check permissions.'**
+  String get fileAccessDenied;
+
+  /// Message when a file exceeds size limits.
+  ///
+  /// In en, this message translates to:
+  /// **'File is too large. Please choose a smaller file.'**
+  String get fileTooLarge;
+
+  /// Fallback file error message.
+  ///
+  /// In en, this message translates to:
+  /// **'Problem with the file. Please try a different file.'**
+  String get fileGenericError;
+
+  /// Message when camera permission is missing.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is required. Please enable it in settings.'**
+  String get permissionCameraRequired;
+
+  /// Message when storage permission is missing.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage permission is required. Please enable it in settings.'**
+  String get permissionStorageRequired;
+
+  /// Message when microphone permission is missing.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission is required. Please enable it in settings.'**
+  String get permissionMicrophoneRequired;
+
+  /// Fallback permission error message.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission required. Please check app permissions in settings.'**
+  String get permissionGenericError;
+
+  /// Description for retrying a failed request.
+  ///
+  /// In en, this message translates to:
+  /// **'Try the request again.'**
+  String get actionRetryRequest;
+
+  /// Description for checking internet connectivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your internet connection.'**
+  String get actionVerifyConnection;
+
+  /// Description for retrying the same operation.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry the operation.'**
+  String get actionRetryOperation;
+
+  /// Description suggesting a short delay before retrying.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait a moment then try again.'**
+  String get actionRetryAfterDelay;
+
+  /// Description for signing back into the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to your account.'**
+  String get actionSignInToAccount;
+
+  /// Description for choosing a different file.
+  ///
+  /// In en, this message translates to:
+  /// **'Select another file.'**
+  String get actionSelectAnotherFile;
+
+  /// Description for opening system or app settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app settings to grant permissions.'**
+  String get actionOpenAppSettings;
+
+  /// Description for retrying once permissions are granted.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry after granting permission.'**
+  String get actionRetryAfterPermission;
+
+  /// Description for navigating back to the prior screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to previous screen.'**
+  String get actionReturnToPrevious;
+
   /// Section header for visual and layout related settings.
   ///
   /// In en, this message translates to:
@@ -1813,12 +2107,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transport mode'**
   String get transportMode;
-
-  /// Helper text explaining the transport setting.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose how the app connects for realtime updates.'**
-  String get transportModeDescription;
 
   /// Form field label for transport mode dropdown.
   ///
@@ -1849,18 +2137,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lower overhead, but may fail behind strict proxies/firewalls.'**
   String get transportModeWsInfo;
-
-  /// Error message shown when WebSocket connection fails initially.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to establish real-time connection. Please check your network and server configuration.'**
-  String get websocketConnectionError;
-
-  /// Error message shown when WebSocket reconnection attempts fail.
-  ///
-  /// In en, this message translates to:
-  /// **'Real-time connection failed. Streaming may not work properly.'**
-  String get websocketReconnectFailed;
 }
 
 class _AppLocalizationsDelegate

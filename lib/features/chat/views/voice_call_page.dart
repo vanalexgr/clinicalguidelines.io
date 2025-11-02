@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/markdown_to_text.dart';
+import '../../../l10n/app_localizations.dart';
 import '../services/voice_call_service.dart';
 
 class VoiceCallPage extends ConsumerStatefulWidget {
@@ -102,21 +103,24 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Error'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              if (mounted) {
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        final dialogL10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(dialogL10n.error),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text(dialogL10n.ok),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -139,11 +143,12 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
     final primaryColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
     final textColor = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text('Voice Call'),
+        title: Text(l10n.voiceCallTitle),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.xmark),
           onPressed: () async {
@@ -198,10 +203,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
                         vertical: 16,
                       ),
                       child: Text(
-                        'Please check:\n'
-                        '• Microphone permissions are granted\n'
-                        '• Speech recognition is available on your device\n'
-                        '• You are connected to the server',
+                        l10n.voiceCallErrorHelp,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
@@ -217,7 +219,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
             // Control buttons
             Padding(
               padding: const EdgeInsets.all(32),
-              child: _buildControlButtons(primaryColor),
+              child: _buildControlButtons(primaryColor, l10n),
             ),
           ],
         ),
@@ -345,7 +347,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
     );
   }
 
-  Widget _buildControlButtons(Color primaryColor) {
+  Widget _buildControlButtons(Color primaryColor, AppLocalizations l10n) {
     final errorColor = Theme.of(context).colorScheme.error;
     final warningColor = Colors.orange;
     final successColor = Theme.of(context).colorScheme.secondary;
@@ -357,7 +359,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
       buttons.add(
         _buildActionButton(
           icon: CupertinoIcons.arrow_clockwise,
-          label: 'Retry',
+          label: l10n.retry,
           color: primaryColor,
           onPressed: () async {
             await _initializeCall();
@@ -373,7 +375,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
       buttons.add(
         _buildActionButton(
           icon: CupertinoIcons.pause_fill,
-          label: 'Pause',
+          label: l10n.voiceCallPause,
           color: warningColor,
           onPressed: () async {
             await _service?.pauseListening();
@@ -384,7 +386,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
       buttons.add(
         _buildActionButton(
           icon: CupertinoIcons.play_fill,
-          label: 'Resume',
+          label: l10n.voiceCallResume,
           color: successColor,
           onPressed: () async {
             await _service?.resumeListening();
@@ -398,7 +400,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
       buttons.add(
         _buildActionButton(
           icon: CupertinoIcons.stop_fill,
-          label: 'Stop',
+          label: l10n.voiceCallStop,
           color: warningColor,
           onPressed: () async {
             await _service?.cancelSpeaking();
@@ -411,7 +413,7 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
     buttons.add(
       _buildActionButton(
         icon: CupertinoIcons.phone_down_fill,
-        label: 'End Call',
+        label: l10n.voiceCallEnd,
         color: errorColor,
         onPressed: () async {
           await _service?.stopCall();
@@ -453,23 +455,24 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
   }
 
   String _getStateLabel() {
+    final l10n = AppLocalizations.of(context)!;
     switch (_currentState) {
       case VoiceCallState.idle:
-        return 'Ready';
+        return l10n.voiceCallReady;
       case VoiceCallState.connecting:
-        return 'Connecting...';
+        return l10n.voiceCallConnecting;
       case VoiceCallState.listening:
-        return 'Listening';
+        return l10n.voiceCallListening;
       case VoiceCallState.paused:
-        return 'Paused';
+        return l10n.voiceCallPaused;
       case VoiceCallState.processing:
-        return 'Thinking...';
+        return l10n.voiceCallProcessing;
       case VoiceCallState.speaking:
-        return 'Speaking';
+        return l10n.voiceCallSpeaking;
       case VoiceCallState.error:
-        return 'Error';
+        return l10n.error;
       case VoiceCallState.disconnected:
-        return 'Disconnected';
+        return l10n.voiceCallDisconnected;
     }
   }
 }

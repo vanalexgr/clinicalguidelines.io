@@ -2209,14 +2209,18 @@ class _ModelSelectorSheetState extends ConsumerState<_ModelSelectorSheet> {
                               icon: Platform.isIOS
                                   ? CupertinoIcons.photo
                                   : Icons.image,
-                              label: 'Multimodal',
+                              label: AppLocalizations.of(
+                                context,
+                              )!.modelCapabilityMultimodal,
                             ),
                           if (_modelSupportsReasoning(model))
                             _capabilityChip(
                               icon: Platform.isIOS
                                   ? CupertinoIcons.lightbulb
                                   : Icons.psychology_alt,
-                              label: 'Reasoning',
+                              label: AppLocalizations.of(
+                                context,
+                              )!.modelCapabilityReasoning,
                             ),
                         ],
                       ),

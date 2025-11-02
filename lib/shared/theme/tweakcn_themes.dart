@@ -1,3 +1,4 @@
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Represents a single tweakcn theme variant (light or dark) and exposes the
@@ -88,16 +89,16 @@ class TweakcnThemeVariant {
 class TweakcnThemeDefinition {
   const TweakcnThemeDefinition({
     required this.id,
-    required this.label,
-    required this.description,
+    required this.labelBuilder,
+    required this.descriptionBuilder,
     required this.light,
     required this.dark,
     required this.preview,
   });
 
   final String id;
-  final String label;
-  final String description;
+  final String Function(AppLocalizations) labelBuilder;
+  final String Function(AppLocalizations) descriptionBuilder;
   final TweakcnThemeVariant light;
   final TweakcnThemeVariant dark;
   final List<Color> preview;
@@ -105,6 +106,10 @@ class TweakcnThemeDefinition {
   TweakcnThemeVariant variantFor(Brightness brightness) {
     return brightness == Brightness.dark ? dark : light;
   }
+
+  String label(AppLocalizations l10n) => labelBuilder(l10n);
+
+  String description(AppLocalizations l10n) => descriptionBuilder(l10n);
 }
 
 Color mix(Color a, Color b, double amount) {
@@ -771,8 +776,8 @@ class TweakcnThemes {
 
   static final TweakcnThemeDefinition claude = TweakcnThemeDefinition(
     id: 'claude',
-    label: 'Claude',
-    description: 'Warm, tactile palette lifted from the Claude web client.',
+    labelBuilder: (l10n) => l10n.themePaletteClaudeLabel,
+    descriptionBuilder: (l10n) => l10n.themePaletteClaudeDescription,
     light: _claudeLight,
     dark: _claudeDark,
     preview: const <Color>[
@@ -784,8 +789,8 @@ class TweakcnThemes {
 
   static final TweakcnThemeDefinition t3Chat = TweakcnThemeDefinition(
     id: 't3_chat',
-    label: 'T3 Chat',
-    description: 'Playful gradients inspired by the T3 Stack brand.',
+    labelBuilder: (l10n) => l10n.themePaletteT3ChatLabel,
+    descriptionBuilder: (l10n) => l10n.themePaletteT3ChatDescription,
     light: _t3ChatLight,
     dark: _t3ChatDark,
     preview: const <Color>[
@@ -797,8 +802,8 @@ class TweakcnThemes {
 
   static final TweakcnThemeDefinition conduit = TweakcnThemeDefinition(
     id: 'conduit',
-    label: 'Conduit',
-    description: 'Clean neutral theme designed for Conduit.',
+    labelBuilder: (l10n) => l10n.themePaletteConduitLabel,
+    descriptionBuilder: (l10n) => l10n.themePaletteConduitDescription,
     light: _conduitLight,
     dark: _conduitDark,
     preview: const <Color>[
@@ -810,8 +815,8 @@ class TweakcnThemes {
 
   static final TweakcnThemeDefinition catppuccin = TweakcnThemeDefinition(
     id: 'catppuccin',
-    label: 'Catppuccin',
-    description: 'Soft pastel palette.',
+    labelBuilder: (l10n) => l10n.themePaletteCatppuccinLabel,
+    descriptionBuilder: (l10n) => l10n.themePaletteCatppuccinDescription,
     light: _catppuccinLight,
     dark: _catppuccinDark,
     preview: const <Color>[
@@ -823,8 +828,8 @@ class TweakcnThemes {
 
   static final TweakcnThemeDefinition tangerine = TweakcnThemeDefinition(
     id: 'tangerine',
-    label: 'Tangerine',
-    description: 'Warm orange-and-slate palette.',
+    labelBuilder: (l10n) => l10n.themePaletteTangerineLabel,
+    descriptionBuilder: (l10n) => l10n.themePaletteTangerineDescription,
     light: _tangerineLight,
     dark: _tangerineDark,
     preview: const <Color>[

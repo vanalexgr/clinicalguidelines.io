@@ -23,17 +23,18 @@ class AppCustomizationPage extends ConsumerWidget {
     final settings = ref.watch(appSettingsProvider);
     final themeMode = ref.watch(appThemeModeProvider);
     final platformBrightness = MediaQuery.platformBrightnessOf(context);
+    final l10n = AppLocalizations.of(context)!;
     final themeDescription = () {
       if (themeMode == ThemeMode.system) {
         final systemThemeLabel = platformBrightness == Brightness.dark
-            ? AppLocalizations.of(context)!.themeDark
-            : AppLocalizations.of(context)!.themeLight;
-        return AppLocalizations.of(context)!.followingSystem(systemThemeLabel);
+            ? l10n.themeDark
+            : l10n.themeLight;
+        return l10n.followingSystem(systemThemeLabel);
       }
       if (themeMode == ThemeMode.dark) {
-        return AppLocalizations.of(context)!.currentlyUsingDarkTheme;
+        return l10n.currentlyUsingDarkTheme;
       }
-      return AppLocalizations.of(context)!.currentlyUsingLightTheme;
+      return l10n.currentlyUsingLightTheme;
     }();
     final locale = ref.watch(appLocaleProvider);
     final currentLanguageCode = locale?.languageCode ?? 'system';
@@ -237,11 +238,12 @@ class AppCustomizationPage extends ConsumerWidget {
     WidgetRef ref,
     TweakcnThemeDefinition activeTheme,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final palettes = TweakcnThemes.all;
 
     return _ExpandableCard(
-      title: AppLocalizations.of(context)!.themePalette,
-      subtitle: activeTheme.label,
+      title: l10n.themePalette,
+      subtitle: activeTheme.label(l10n),
       icon: UiUtils.platformIcon(
         ios: CupertinoIcons.square_fill_on_square_fill,
         android: Icons.palette,
@@ -252,6 +254,7 @@ class AppCustomizationPage extends ConsumerWidget {
           for (final palette in palettes)
             _PaletteOption(
               themeDefinition: palette,
+              l10n: l10n,
               activeId: activeTheme.id,
               onSelect: () => ref
                   .read(appThemePaletteProvider.notifier)
@@ -333,9 +336,7 @@ class AppCustomizationPage extends ConsumerWidget {
     }
 
     final l10n = AppLocalizations.of(context)!;
-    final selectedCountText = selectedCount == 0
-        ? 'No actions'
-        : '$selectedCount action${selectedCount == 1 ? '' : 's'} selected';
+    final selectedCountText = l10n.quickActionsSelectedCount(selectedCount);
 
     return _ExpandableCard(
       title: l10n.quickActionsDescription,
@@ -499,13 +500,13 @@ class AppCustomizationPage extends ConsumerWidget {
                     ),
                     color: theme.buttonPrimary,
                   ),
-                  const SizedBox(width: Spacing.sm),
+                  const SizedBox(width: Spacing.md),
                   Text(
-                    'Engine',
+                    l10n.ttsEngineLabel,
                     style:
                         theme.bodyMedium?.copyWith(
                           color: theme.sidebarForeground,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ) ??
                         TextStyle(color: theme.sidebarForeground, fontSize: 14),
                   ),
@@ -514,7 +515,7 @@ class AppCustomizationPage extends ConsumerWidget {
                     spacing: Spacing.sm,
                     children: [
                       ChoiceChip(
-                        label: const Text('On Device'),
+                        label: Text(l10n.ttsEngineDevice),
                         selected: settings.ttsEngine == TtsEngine.device,
                         showCheckmark: false,
                         selectedColor: theme.buttonPrimary,
@@ -541,7 +542,7 @@ class AppCustomizationPage extends ConsumerWidget {
                         },
                       ),
                       ChoiceChip(
-                        label: const Text('Server'),
+                        label: Text(l10n.ttsEngineServer),
                         selected: settings.ttsEngine == TtsEngine.server,
                         showCheckmark: false,
                         selectedColor: theme.buttonPrimary,
@@ -1078,7 +1079,7 @@ class AppCustomizationPage extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${l10n.error}: $e'),
+          content: Text(l10n.errorWithMessage(e.toString())),
           backgroundColor: theme.error,
         ),
       );
@@ -1509,11 +1510,13 @@ class _PaletteOption extends StatelessWidget {
     required this.themeDefinition,
     required this.activeId,
     required this.onSelect,
+    required this.l10n,
   });
 
   final TweakcnThemeDefinition themeDefinition;
   final String activeId;
   final VoidCallback onSelect;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -1544,7 +1547,7 @@ class _PaletteOption extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          themeDefinition.label,
+                          themeDefinition.label(l10n),
                           style: theme.bodyMedium?.copyWith(
                             color: theme.sidebarForeground,
                             fontWeight: isSelected
@@ -1567,7 +1570,7 @@ class _PaletteOption extends StatelessWidget {
                   ),
                   const SizedBox(height: Spacing.xxs),
                   Text(
-                    themeDefinition.description,
+                    themeDefinition.description(l10n),
                     style:
                         theme.bodySmall?.copyWith(
                           color: theme.sidebarForeground.withValues(

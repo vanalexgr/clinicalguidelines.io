@@ -71,7 +71,7 @@ Future<void> main(List<String> args) async {
   }
 
   // Unused keys (best-effort) — WARNINGS only
-  final usedKeys = await _scanUsedLocalizationKeys();
+  final usedKeys = await _scanUsedLocalizationKeys(baseKeys);
   final unused = baseKeys.difference(usedKeys);
   if (unused.isNotEmpty) {
     warnings.add('Unused keys in EN (best-effort): ${unused.toList()..sort()}');
@@ -120,22 +120,34 @@ Map<String, Set<String>> _placeholdersMap(Map<String, dynamic> m) {
 
 // Duplicate detection intentionally omitted (see note above).
 
-Future<Set<String>> _scanUsedLocalizationKeys() async {
-  final libDir = Directory('lib');
+Future<Set<String>> _scanUsedLocalizationKeys(Set<String> baseKeys) async {
   final used = <String>{};
-  final dartFiles = await libDir
-      .list(recursive: true)
-      .where((e) => e.path.endsWith('.dart'))
-      .map((e) => File(e.path))
-      .toList();
 
-  final regex = RegExp(r'AppLocalizations\.of\([^)]*\)!\.([a-zA-Z0-9_]+)');
-  for (final f in dartFiles) {
-    final text = await f.readAsString();
-    for (final m in regex.allMatches(text)) {
-      final key = m.group(1);
-      if (key != null) used.add(key);
+  Future<bool> keyIsUsed(String key) async {
+    final result = await Process.run('rg', [
+      '--fixed-strings',
+      '--quiet',
+      '--glob=*.dart',
+      '--glob=!lib/l10n/app_localizations*.dart',
+      key,
+      'lib',
+    ]);
+    if (result.exitCode == 0) {
+      return true;
+    }
+    if (result.exitCode > 1) {
+      stderr.writeln(
+        'warning: failed to search for key "$key": ${result.stderr}'.trim(),
+      );
+    }
+    return false;
+  }
+
+  for (final key in baseKeys) {
+    if (await keyIsUsed(key)) {
+      used.add(key);
     }
   }
+
   return used;
 }
