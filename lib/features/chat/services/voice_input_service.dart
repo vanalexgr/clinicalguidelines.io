@@ -44,6 +44,8 @@ class VoiceInputService {
       _intensityController?.stream ?? const Stream<int>.empty();
   int _lastIntensity = 0;
   Timer? _intensityDecayTimer;
+  Timer? _silenceTimer;
+  bool _hasDetectedSpeech = false;
 
   /// Public stream of partial/final transcript strings and special audio tokens.
   Stream<String> get textStream =>
@@ -331,6 +333,9 @@ class VoiceInputService {
     _autoStopTimer?.cancel();
     _autoStopTimer = null;
 
+    _silenceTimer?.cancel();
+    _silenceTimer = null;
+
     if (_usingServerStt) {
       await _finalizeServerRecording();
     } else {
@@ -354,6 +359,7 @@ class VoiceInputService {
     _serverRecorderActive = false;
     _serverRecordingPath = null;
     _serverRecordingMimeType = null;
+    _hasDetectedSpeech = false;
   }
 
   Future<void> _stopLocalStt() async {
@@ -425,6 +431,7 @@ class VoiceInputService {
 
     await _recorder.start(config, path: path);
     _serverRecorderActive = true;
+    _hasDetectedSpeech = false;
 
     await _ampSub?.cancel();
     _ampSub = _recorder
@@ -435,7 +442,32 @@ class VoiceInputService {
           try {
             _intensityController?.add(_lastIntensity);
           } catch (_) {}
+
+          // Detect silence and auto-stop for server-side STT
+          _handleServerAmplitude(amplitude.current);
         }, onError: (_) {});
+  }
+
+  void _handleServerAmplitude(double? amplitude) {
+    if (!_usingServerStt || !_isListening) return;
+
+    // Threshold for detecting speech (in dB)
+    const double speechThreshold = -45.0;
+    final double currentDb = amplitude ?? -100.0;
+
+    // If we detect speech, mark it and reset silence timer
+    if (currentDb > speechThreshold) {
+      _hasDetectedSpeech = true;
+      _silenceTimer?.cancel();
+      _silenceTimer = null;
+    } else if (_hasDetectedSpeech && _silenceTimer == null) {
+      // Start silence timer only after we've detected speech at least once
+      _silenceTimer = Timer(const Duration(seconds: 2), () {
+        if (_isListening && _usingServerStt) {
+          unawaited(_stopListening());
+        }
+      });
+    }
   }
 
   Future<(String, String)> _createRecordingTarget() async {
@@ -657,6 +689,7 @@ class VoiceInputService {
 
   void dispose() {
     stopListening();
+    _silenceTimer?.cancel();
     try {
       _speech.dispose().catchError((_) {});
     } catch (_) {}
