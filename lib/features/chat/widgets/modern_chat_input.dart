@@ -2460,7 +2460,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     HapticFeedback.selectionClick();
   }
 
-  // Server transcription removed; only on-device STT updates the input text
+  // When on-device STT is unavailable we rely on server transcription.
 
   void _showVoiceUnavailable(String message) {
     if (!mounted) return;

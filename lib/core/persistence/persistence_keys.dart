@@ -11,6 +11,7 @@ final class PreferenceKeys {
   static const String voiceLocaleId = 'voice_locale_id';
   static const String voiceHoldToTalk = 'voice_hold_to_talk';
   static const String voiceAutoSendFinal = 'voice_auto_send_final';
+  static const String voiceSttPreference = 'voice_stt_preference';
   static const String socketTransportMode = 'socket_transport_mode';
   static const String quickPills = 'quick_pills';
   static const String sendOnEnterKey = 'send_on_enter';

@@ -14,6 +14,7 @@ import '../../../shared/utils/ui_utils.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../chat/providers/text_to_speech_provider.dart';
+import '../../chat/services/voice_input_service.dart';
 
 class AppCustomizationPage extends ConsumerWidget {
   const AppCustomizationPage({super.key});
@@ -69,6 +70,8 @@ class AppCustomizationPage extends ConsumerWidget {
               currentLanguageCode,
               languageLabel,
             ),
+            const SizedBox(height: Spacing.xl),
+            _buildSttSection(context, ref, settings),
             const SizedBox(height: Spacing.xl),
             _buildTtsDropdownSection(context, ref, settings),
             const SizedBox(height: Spacing.xl),
@@ -468,6 +471,226 @@ class AppCustomizationPage extends ConsumerWidget {
     );
   }
 
+  Widget _buildSttSection(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) {
+    final theme = context.conduitTheme;
+    final l10n = AppLocalizations.of(context)!;
+    final localSupport = ref.watch(localVoiceRecognitionAvailableProvider);
+    final bool localAvailable = localSupport.maybeWhen(
+      data: (value) => value,
+      orElse: () => false,
+    );
+    final bool localLoading = localSupport.isLoading;
+    final bool serverAvailable = ref.watch(
+      serverVoiceRecognitionAvailableProvider,
+    );
+    final notifier = ref.read(appSettingsProvider.notifier);
+    final description = _sttPreferenceDescription(l10n, settings.sttPreference);
+
+    final warnings = <String>[];
+    if (settings.sttPreference == SttPreference.deviceOnly &&
+        !localAvailable &&
+        !localLoading) {
+      warnings.add(l10n.sttDeviceUnavailableWarning);
+    }
+    if (settings.sttPreference == SttPreference.serverOnly &&
+        !serverAvailable) {
+      warnings.add(l10n.sttServerUnavailableWarning);
+    }
+
+    final bool autoSelectable =
+        localAvailable || serverAvailable || localLoading;
+    final bool deviceSelectable = localAvailable || localLoading;
+    final bool serverSelectable = serverAvailable;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.sttSettings,
+          style:
+              theme.headingSmall?.copyWith(color: theme.sidebarForeground) ??
+              TextStyle(color: theme.sidebarForeground, fontSize: 18),
+        ),
+        const SizedBox(height: Spacing.sm),
+        ConduitCard(
+          padding: const EdgeInsets.all(Spacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _buildIconBadge(
+                    context,
+                    UiUtils.platformIcon(
+                      ios: CupertinoIcons.mic,
+                      android: Icons.mic,
+                    ),
+                    color: theme.buttonPrimary,
+                  ),
+                  const SizedBox(width: Spacing.md),
+                  Expanded(
+                    child: Text(
+                      l10n.sttEngineLabel,
+                      style:
+                          theme.bodyMedium?.copyWith(
+                            color: theme.sidebarForeground,
+                            fontWeight: FontWeight.w600,
+                          ) ??
+                          TextStyle(
+                            color: theme.sidebarForeground,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Spacing.sm),
+              Wrap(
+                spacing: Spacing.sm,
+                runSpacing: Spacing.sm,
+                children: [
+                  ChoiceChip(
+                    label: Text(l10n.sttEngineAuto),
+                    selected: settings.sttPreference == SttPreference.auto,
+                    showCheckmark: false,
+                    selectedColor: theme.buttonPrimary,
+                    backgroundColor: theme.cardBackground,
+                    side: BorderSide(
+                      color: settings.sttPreference == SttPreference.auto
+                          ? theme.buttonPrimary.withValues(alpha: 0.6)
+                          : theme.textPrimary.withValues(alpha: 0.2),
+                    ),
+                    labelStyle: TextStyle(
+                      color: settings.sttPreference == SttPreference.auto
+                          ? theme.buttonPrimaryText
+                          : theme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: autoSelectable
+                        ? (value) {
+                            if (value) {
+                              notifier.setSttPreference(SttPreference.auto);
+                            }
+                          }
+                        : null,
+                  ),
+                  ChoiceChip(
+                    label: Text(l10n.sttEngineDevice),
+                    selected:
+                        settings.sttPreference == SttPreference.deviceOnly,
+                    showCheckmark: false,
+                    selectedColor: theme.buttonPrimary,
+                    backgroundColor: theme.cardBackground,
+                    side: BorderSide(
+                      color: settings.sttPreference == SttPreference.deviceOnly
+                          ? theme.buttonPrimary.withValues(alpha: 0.6)
+                          : theme.textPrimary.withValues(alpha: 0.2),
+                    ),
+                    labelStyle: TextStyle(
+                      color: settings.sttPreference == SttPreference.deviceOnly
+                          ? theme.buttonPrimaryText
+                          : theme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: deviceSelectable
+                        ? (value) {
+                            if (value) {
+                              notifier.setSttPreference(
+                                SttPreference.deviceOnly,
+                              );
+                            }
+                          }
+                        : null,
+                  ),
+                  ChoiceChip(
+                    label: Text(l10n.sttEngineServer),
+                    selected:
+                        settings.sttPreference == SttPreference.serverOnly,
+                    showCheckmark: false,
+                    selectedColor: theme.buttonPrimary,
+                    backgroundColor: theme.cardBackground,
+                    side: BorderSide(
+                      color: settings.sttPreference == SttPreference.serverOnly
+                          ? theme.buttonPrimary.withValues(alpha: 0.6)
+                          : theme.textPrimary.withValues(alpha: 0.2),
+                    ),
+                    labelStyle: TextStyle(
+                      color: settings.sttPreference == SttPreference.serverOnly
+                          ? theme.buttonPrimaryText
+                          : theme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: serverSelectable
+                        ? (value) {
+                            if (value) {
+                              notifier.setSttPreference(
+                                SttPreference.serverOnly,
+                              );
+                            }
+                          }
+                        : null,
+                  ),
+                ],
+              ),
+              if (localLoading) ...[
+                const SizedBox(height: Spacing.sm),
+                LinearProgressIndicator(
+                  minHeight: 3,
+                  color: theme.buttonPrimary,
+                  backgroundColor: theme.cardBorder.withValues(alpha: 0.4),
+                ),
+              ],
+              const SizedBox(height: Spacing.sm),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Text(
+                  description,
+                  key: ValueKey<String>(
+                    'stt-desc-${settings.sttPreference.name}',
+                  ),
+                  style:
+                      theme.bodyMedium?.copyWith(
+                        color: theme.sidebarForeground.withValues(alpha: 0.9),
+                      ) ??
+                      TextStyle(
+                        color: theme.sidebarForeground.withValues(alpha: 0.9),
+                        fontSize: 14,
+                      ),
+                ),
+              ),
+              if (warnings.isNotEmpty) ...[
+                const SizedBox(height: Spacing.sm),
+                ...warnings.map(
+                  (warning) => Padding(
+                    padding: const EdgeInsets.only(top: Spacing.xs),
+                    child: Text(
+                      warning,
+                      style:
+                          theme.bodySmall?.copyWith(
+                            color: theme.error,
+                            fontWeight: FontWeight.w600,
+                          ) ??
+                          TextStyle(
+                            color: theme.error,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTtsDropdownSection(
     BuildContext context,
     WidgetRef ref,
@@ -689,6 +912,20 @@ class AppCustomizationPage extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  String _sttPreferenceDescription(
+    AppLocalizations l10n,
+    SttPreference preference,
+  ) {
+    switch (preference) {
+      case SttPreference.auto:
+        return l10n.sttEngineAutoDescription;
+      case SttPreference.deviceOnly:
+        return l10n.sttEngineDeviceDescription;
+      case SttPreference.serverOnly:
+        return l10n.sttEngineServerDescription;
+    }
   }
 
   Widget _buildSliderTile(

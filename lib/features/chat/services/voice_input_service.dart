@@ -1,14 +1,19 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:record/record.dart';
 import 'package:stts/stts.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+import '../../../core/providers/app_providers.dart';
+import '../../../core/services/api_service.dart';
+import '../../../core/services/settings_service.dart';
 
 part 'voice_input_service.g.dart';
-// Removed path imports as server transcription fallback was removed
 
 // Lightweight replacement for previous stt.LocaleName used across the UI
 class LocaleName {
@@ -20,9 +25,15 @@ class LocaleName {
 class VoiceInputService {
   final AudioRecorder _recorder = AudioRecorder();
   final Stt _speech = Stt();
+  final ApiService? _api;
   bool _isInitialized = false;
   bool _isListening = false;
   bool _localSttAvailable = false;
+  SttPreference _preference = SttPreference.auto;
+  bool _usingServerStt = false;
+  bool _serverRecorderActive = false;
+  String? _serverRecordingPath;
+  String? _serverRecordingMimeType;
   String? _selectedLocaleId;
   List<LocaleName> _locales = const [];
   StreamController<String>? _textStreamController;
@@ -43,6 +54,17 @@ class VoiceInputService {
   StreamSubscription<SttState>? _sttStateSub;
 
   bool get isSupportedPlatform => Platform.isAndroid || Platform.isIOS;
+  bool get hasServerStt => _api != null;
+  SttPreference get preference => _preference;
+  bool get allowsServerFallback => _preference != SttPreference.deviceOnly;
+  bool get prefersServerOnly => _preference == SttPreference.serverOnly;
+  bool get prefersDeviceOnly => _preference == SttPreference.deviceOnly;
+
+  VoiceInputService({ApiService? api}) : _api = api;
+
+  void updatePreference(SttPreference preference) {
+    _preference = preference;
+  }
 
   Future<bool> initialize() async {
     if (_isInitialized) return true;
@@ -97,7 +119,8 @@ class VoiceInputService {
   }
 
   bool get isListening => _isListening;
-  bool get isAvailable => _isInitialized; // service usable (local or fallback)
+  bool get isAvailable =>
+      _isInitialized && (_localSttAvailable || hasServerStt);
   bool get hasLocalStt => _localSttAvailable;
 
   // Add a method to check if on-device STT is properly supported
@@ -166,7 +189,7 @@ class VoiceInputService {
     }
 
     if (_isListening) {
-      stopListening();
+      unawaited(stopListening());
     }
 
     _textStreamController = StreamController<String>.broadcast();
@@ -174,82 +197,112 @@ class VoiceInputService {
     _isListening = true;
     _intensityController = StreamController<int>.broadcast();
     _lastIntensity = 0;
+    _usingServerStt = false;
+    _serverRecorderActive = false;
+    _serverRecordingPath = null;
+    _serverRecordingMimeType = null;
 
-    // Begin a gentle decay timer so the UI level bars fall when silent
-    _intensityDecayTimer?.cancel();
-    _intensityDecayTimer = Timer.periodic(const Duration(milliseconds: 120), (
-      t,
-    ) {
-      if (!_isListening) return;
-      if (_lastIntensity <= 0) return;
-      _lastIntensity = (_lastIntensity - 1).clamp(0, 10);
-      try {
-        _intensityController?.add(_lastIntensity);
-      } catch (_) {}
-    });
+    _startIntensityDecayTimer();
 
-    // Check if speech recognition is available before trying to use it
-    if (_localSttAvailable) {
-      // Schedule a check for speech recognition availability
+    final bool canUseLocal = _localSttAvailable;
+    final bool serverAvailable = hasServerStt;
+    final bool shouldUseLocal =
+        canUseLocal && _preference != SttPreference.serverOnly;
+    final bool shouldUseServer =
+        serverAvailable &&
+        (_preference == SttPreference.serverOnly || !shouldUseLocal);
+
+    if (shouldUseLocal) {
+      _autoStopTimer?.cancel();
+      _autoStopTimer = Timer(const Duration(seconds: 60), () {
+        if (_isListening) {
+          unawaited(_stopListening());
+        }
+      });
+
       Future.microtask(() async {
         try {
           final isStillAvailable = await _speech.isSupported();
           if (!isStillAvailable && _isListening) {
-            // Speech recognition no longer available; stop listening
             _localSttAvailable = false;
-            _stopListening();
-            return;
+            if (hasServerStt && allowsServerFallback) {
+              unawaited(_beginServerFallback());
+            } else {
+              unawaited(_stopListening());
+            }
           }
-        } catch (e) {
+        } catch (_) {
           // ignore availability check errors
         }
       });
 
-      // Local on-device STT path
-      _autoStopTimer?.cancel();
-      _autoStopTimer = Timer(const Duration(seconds: 60), () {
-        if (_isListening) {
-          _stopListening();
-        }
-      });
-
-      // Listen for results and state changes; keep subscriptions so we can cancel later
       _sttResultSub = _speech.onResultChanged.listen((SttRecognition result) {
         if (!_isListening) return;
         final prevLen = _currentText.length;
         _currentText = result.text;
         _textStreamController?.add(_currentText);
-        // Map number of new characters to a rough 0..10 intensity
         final delta = (_currentText.length - prevLen).clamp(0, 50);
-        final mapped = (delta / 5.0).ceil(); // 0 chars -> 0, 1-5 -> 1, ...
+        final mapped = (delta / 5.0).ceil();
         _lastIntensity = mapped.clamp(0, 10);
         try {
           _intensityController?.add(_lastIntensity);
         } catch (_) {}
         if (result.isFinal) {
-          _stopListening();
+          unawaited(_stopListening());
         }
       }, onError: (_) {});
 
       _sttStateSub = _speech.onStateChanged.listen((_) {}, onError: (_) {});
 
-      try {
-        if (_selectedLocaleId != null) {
-          _speech.setLanguage(_selectedLocaleId!).catchError((_) {});
-        }
-        // Start recognition (no await blocking the sync flow)
-        _speech.start(SttRecognitionOptions(punctuation: true)).catchError((_) {
-          // On-device STT failed; stop listening entirely as server transcription is removed
+      Future(() async {
+        try {
+          if (_selectedLocaleId != null) {
+            await _speech.setLanguage(_selectedLocaleId!);
+          }
+          await _speech.start(SttRecognitionOptions(punctuation: true));
+        } catch (error) {
           _localSttAvailable = false;
-          _stopListening();
-        });
-      } catch (e) {
-        _localSttAvailable = false;
-        _stopListening();
-      }
+          if (!_isListening) return;
+          if (hasServerStt && allowsServerFallback) {
+            await _beginServerFallback();
+          } else {
+            _textStreamController?.addError(error);
+            await _stopListening();
+          }
+        }
+      });
+    } else if (shouldUseServer) {
+      _usingServerStt = true;
+      _autoStopTimer?.cancel();
+      _autoStopTimer = Timer(const Duration(seconds: 90), () {
+        if (_isListening) {
+          unawaited(_stopListening());
+        }
+      });
+      Future(() async {
+        try {
+          await _startServerRecording();
+        } catch (error) {
+          if (!_isListening) return;
+          _textStreamController?.addError(error);
+          await _stopListening();
+        }
+      });
     } else {
-      // No local STT available; stop immediately since server transcription is removed
-      _stopListening();
+      final Exception error;
+      if (prefersDeviceOnly) {
+        error = Exception(
+          'On-device speech recognition required but unavailable',
+        );
+      } else if (prefersServerOnly) {
+        error = Exception('Server speech-to-text is not configured');
+      } else {
+        error = Exception('Speech recognition not available on this device');
+      }
+      Future.microtask(() {
+        _textStreamController?.addError(error);
+        unawaited(_stopListening());
+      });
     }
 
     return _textStreamController!.stream;
@@ -258,14 +311,11 @@ class VoiceInputService {
   /// Centralized entry point to begin voice recognition.
   /// Ensures initialization and microphone permission before starting.
   Future<Stream<String>> beginListening() async {
-    // Ensure service is ready
     await initialize();
-    // Ensure microphone permission (triggers OS prompt if needed)
     final hasMic = await checkPermissions();
     if (!hasMic) {
       throw Exception('Microphone permission not granted');
     }
-    // Start listening and return the transcript stream
     return startListening();
   }
 
@@ -277,37 +327,332 @@ class VoiceInputService {
     if (!_isListening) return;
 
     _isListening = false;
-    if (_localSttAvailable) {
-      try {
-        await _speech.stop();
-      } catch (_) {}
-      // Cancel STT subscriptions
-      try {
-        _sttResultSub?.cancel();
-      } catch (_) {}
-      _sttResultSub = null;
-      try {
-        _sttStateSub?.cancel();
-      } catch (_) {}
-      _sttStateSub = null;
-    }
 
     _autoStopTimer?.cancel();
     _autoStopTimer = null;
-    _ampSub?.cancel();
+
+    if (_usingServerStt) {
+      await _finalizeServerRecording();
+    } else {
+      await _stopLocalStt();
+    }
+
+    await _ampSub?.cancel();
     _ampSub = null;
+
     _intensityDecayTimer?.cancel();
     _intensityDecayTimer = null;
     _lastIntensity = 0;
 
-    if (_currentText.isNotEmpty) {
+    if (!_usingServerStt && _currentText.isNotEmpty) {
       _textStreamController?.add(_currentText);
     }
 
-    _textStreamController?.close();
-    _textStreamController = null;
-    _intensityController?.close();
-    _intensityController = null;
+    await _closeControllers();
+
+    _usingServerStt = false;
+    _serverRecorderActive = false;
+    _serverRecordingPath = null;
+    _serverRecordingMimeType = null;
+  }
+
+  Future<void> _stopLocalStt() async {
+    if (_sttResultSub != null) {
+      try {
+        await _sttResultSub?.cancel();
+      } catch (_) {}
+      _sttResultSub = null;
+    }
+    if (_sttStateSub != null) {
+      try {
+        await _sttStateSub?.cancel();
+      } catch (_) {}
+      _sttStateSub = null;
+    }
+
+    if (_localSttAvailable) {
+      try {
+        await _speech.stop();
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _beginServerFallback() async {
+    if (!allowsServerFallback) {
+      _textStreamController?.addError(
+        Exception('Server speech-to-text disabled in preferences'),
+      );
+      await _stopListening();
+      return;
+    }
+    await _stopLocalStt();
+    if (!hasServerStt) {
+      _textStreamController?.addError(
+        Exception('Server speech-to-text unavailable'),
+      );
+      await _stopListening();
+      return;
+    }
+
+    _usingServerStt = true;
+    _autoStopTimer?.cancel();
+    _autoStopTimer = Timer(const Duration(seconds: 90), () {
+      if (_isListening) {
+        unawaited(_stopListening());
+      }
+    });
+
+    try {
+      await _startServerRecording();
+    } catch (error) {
+      _textStreamController?.addError(error);
+      await _stopListening();
+    }
+  }
+
+  Future<void> _startServerRecording() async {
+    final (path, mimeType) = await _createRecordingTarget();
+    _serverRecordingPath = path;
+    _serverRecordingMimeType = mimeType;
+
+    final config = RecordConfig(
+      encoder: AudioEncoder.aacLc,
+      sampleRate: 44100,
+      bitRate: 96000,
+      numChannels: 1,
+      noiseSuppress: true,
+    );
+
+    await _recorder.start(config, path: path);
+    _serverRecorderActive = true;
+
+    await _ampSub?.cancel();
+    _ampSub = _recorder
+        .onAmplitudeChanged(const Duration(milliseconds: 140))
+        .listen((Amplitude amplitude) {
+          if (!_isListening) return;
+          _lastIntensity = _amplitudeToIntensity(amplitude.current);
+          try {
+            _intensityController?.add(_lastIntensity);
+          } catch (_) {}
+        }, onError: (_) {});
+  }
+
+  Future<(String, String)> _createRecordingTarget() async {
+    final directory = await getTemporaryDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    const extension = 'm4a';
+    final fileName = 'conduit_voice_$timestamp.$extension';
+    final path = p.join(directory.path, fileName);
+    return (path, 'audio/mp4');
+  }
+
+  Future<void> _finalizeServerRecording() async {
+    final api = _api;
+    if (api == null) {
+      return;
+    }
+
+    String? path;
+    try {
+      if (_serverRecorderActive && await _recorder.isRecording()) {
+        path = await _recorder.stop();
+      } else {
+        path = _serverRecordingPath;
+      }
+    } catch (_) {
+      path = _serverRecordingPath;
+    } finally {
+      _serverRecorderActive = false;
+    }
+
+    final resolvedPath = path;
+    if (resolvedPath == null || resolvedPath.isEmpty) {
+      return;
+    }
+
+    final file = File(resolvedPath);
+    try {
+      if (!await file.exists()) {
+        return;
+      }
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) {
+        return;
+      }
+
+      final response = await api.transcribeSpeech(
+        audioBytes: bytes,
+        fileName: p.basename(resolvedPath),
+        mimeType: _serverRecordingMimeType,
+        language: _languageForServer(),
+      );
+
+      final transcript = _extractTranscriptionText(response);
+      if (transcript != null && transcript.trim().isNotEmpty) {
+        _currentText = transcript.trim();
+        _textStreamController?.add(_currentText);
+      } else {
+        throw StateError('Empty transcription result');
+      }
+    } catch (error) {
+      _textStreamController?.addError(error);
+    } finally {
+      unawaited(_cleanupRecordingFile(file));
+    }
+  }
+
+  Future<void> _cleanupRecordingFile(File file) async {
+    try {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {}
+  }
+
+  String? _languageForServer() {
+    final locale = _selectedLocaleId;
+    if (locale != null && locale.isNotEmpty) {
+      final primary = locale.split(RegExp('[-_]')).first.toLowerCase();
+      if (primary.length >= 2) {
+        return primary;
+      }
+    }
+    try {
+      final fallback = WidgetsBinding.instance.platformDispatcher.locale;
+      final primary = fallback.languageCode.toLowerCase();
+      if (primary.isNotEmpty) {
+        return primary;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  String? _extractTranscriptionText(Map<String, dynamic> data) {
+    final direct = data['text'];
+    if (direct is String && direct.trim().isNotEmpty) {
+      return direct;
+    }
+
+    final display = data['display_text'] ?? data['DisplayText'];
+    if (display is String && display.trim().isNotEmpty) {
+      return display;
+    }
+
+    final result = data['result'];
+    if (result is Map<String, dynamic>) {
+      final resultText = result['text'];
+      if (resultText is String && resultText.trim().isNotEmpty) {
+        return resultText;
+      }
+    }
+
+    final combined = data['combinedRecognizedPhrases'];
+    if (combined is List && combined.isNotEmpty) {
+      final first = combined.first;
+      if (first is Map<String, dynamic>) {
+        final candidate =
+            first['display'] ??
+            first['Display'] ??
+            first['transcript'] ??
+            first['text'];
+        if (candidate is String && candidate.trim().isNotEmpty) {
+          return candidate;
+        }
+      } else if (first is String && first.trim().isNotEmpty) {
+        return first;
+      }
+    }
+
+    final results = data['results'];
+    if (results is Map<String, dynamic>) {
+      final channels = results['channels'];
+      if (channels is List && channels.isNotEmpty) {
+        final channel = channels.first;
+        if (channel is Map<String, dynamic>) {
+          final alternatives = channel['alternatives'];
+          if (alternatives is List && alternatives.isNotEmpty) {
+            final alternative = alternatives.first;
+            if (alternative is Map<String, dynamic>) {
+              final transcript =
+                  alternative['transcript'] ?? alternative['text'];
+              if (transcript is String && transcript.trim().isNotEmpty) {
+                return transcript;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    final segments = data['segments'];
+    if (segments is List && segments.isNotEmpty) {
+      final buffer = StringBuffer();
+      for (final segment in segments) {
+        if (segment is Map<String, dynamic>) {
+          final text = segment['text'];
+          if (text is String && text.trim().isNotEmpty) {
+            buffer.write(text.trim());
+            buffer.write(' ');
+          }
+        } else if (segment is String && segment.trim().isNotEmpty) {
+          buffer.write(segment.trim());
+          buffer.write(' ');
+        }
+      }
+      final combinedText = buffer.toString().trim();
+      if (combinedText.isNotEmpty) {
+        return combinedText;
+      }
+    }
+
+    return null;
+  }
+
+  int _amplitudeToIntensity(double? value) {
+    if (value == null || value.isNaN || value.isInfinite) {
+      return 0;
+    }
+    const minDb = -55.0;
+    const maxDb = 0.0;
+    final double clamped = value.clamp(minDb, maxDb).toDouble();
+    final double normalized = ((clamped - minDb) / (maxDb - minDb)).clamp(
+      0.0,
+      1.0,
+    );
+    final int scaled = (normalized * 10).round();
+    if (scaled <= 0) return 0;
+    if (scaled >= 10) return 10;
+    return scaled;
+  }
+
+  Future<void> _closeControllers() async {
+    if (_textStreamController != null) {
+      try {
+        await _textStreamController?.close();
+      } catch (_) {}
+      _textStreamController = null;
+    }
+    if (_intensityController != null) {
+      try {
+        await _intensityController?.close();
+      } catch (_) {}
+      _intensityController = null;
+    }
+  }
+
+  void _startIntensityDecayTimer() {
+    _intensityDecayTimer?.cancel();
+    _intensityDecayTimer = Timer.periodic(const Duration(milliseconds: 120), (
+      _,
+    ) {
+      if (!_isListening) return;
+      if (_lastIntensity <= 0) return;
+      _lastIntensity = (_lastIntensity - 1).clamp(0, 10);
+      try {
+        _intensityController?.add(_lastIntensity);
+      } catch (_) {}
+    });
   }
 
   void dispose() {
@@ -315,15 +660,24 @@ class VoiceInputService {
     try {
       _speech.dispose().catchError((_) {});
     } catch (_) {}
+    try {
+      _recorder.dispose().catchError((_) {});
+    } catch (_) {}
   }
-
-  // Recording fallback removed; only on-device STT is supported now
-
-  // Native locales not used in server transcription mode
 }
 
 final voiceInputServiceProvider = Provider<VoiceInputService>((ref) {
-  return VoiceInputService();
+  final api = ref.watch(apiServiceProvider);
+  final service = VoiceInputService(api: api);
+  final currentSettings = ref.read(appSettingsProvider);
+  service.updatePreference(currentSettings.sttPreference);
+  ref.listen<AppSettings>(appSettingsProvider, (previous, next) {
+    if (previous?.sttPreference != next.sttPreference) {
+      service.updatePreference(next.sttPreference);
+    }
+  });
+  ref.onDispose(service.dispose);
+  return service;
 });
 
 @Riverpod(keepAlive: true)
@@ -332,8 +686,16 @@ Future<bool> voiceInputAvailable(Ref ref) async {
   if (!service.isSupportedPlatform) return false;
   final initialized = await service.initialize();
   if (!initialized) return false;
-  // If local STT exists, we consider it available; otherwise ensure mic permission for fallback
-  if (service.hasLocalStt) return true;
+  switch (service.preference) {
+    case SttPreference.deviceOnly:
+      return service.hasLocalStt;
+    case SttPreference.serverOnly:
+      return service.hasServerStt;
+    case SttPreference.auto:
+      if (service.hasLocalStt) return true;
+      if (!service.hasServerStt) return false;
+      break;
+  }
   final hasPermission = await service.checkPermissions();
   if (!hasPermission) return false;
   return service.isAvailable;
@@ -348,4 +710,19 @@ final voiceInputStreamProvider = StreamProvider<String>((ref) {
 final voiceIntensityStreamProvider = StreamProvider<int>((ref) {
   final service = ref.watch(voiceInputServiceProvider);
   return service.intensityStream;
+});
+
+final localVoiceRecognitionAvailableProvider = FutureProvider<bool>((
+  ref,
+) async {
+  final service = ref.watch(voiceInputServiceProvider);
+  final initialized = await service.initialize();
+  if (!initialized) return false;
+  if (service.hasLocalStt) return true;
+  return service.checkOnDeviceSupport();
+});
+
+final serverVoiceRecognitionAvailableProvider = Provider<bool>((ref) {
+  final service = ref.watch(voiceInputServiceProvider);
+  return service.hasServerStt;
 });

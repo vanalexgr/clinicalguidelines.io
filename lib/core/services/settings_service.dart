@@ -8,6 +8,9 @@ import 'animation_service.dart';
 
 part 'settings_service.g.dart';
 
+/// Speech-to-text preference selection.
+enum SttPreference { auto, deviceOnly, serverOnly }
+
 /// TTS engine selection
 enum TtsEngine { device, server }
 
@@ -151,6 +154,9 @@ class SettingsService {
         ttsServerVoiceId: box.get(PreferenceKeys.ttsServerVoiceId) as String?,
         ttsServerVoiceName:
             box.get(PreferenceKeys.ttsServerVoiceName) as String?,
+        sttPreference: _parseSttPreference(
+          box.get(PreferenceKeys.voiceSttPreference) as String?,
+        ),
       ),
     );
   }
@@ -174,6 +180,7 @@ class SettingsService {
       PreferenceKeys.ttsPitch: settings.ttsPitch,
       PreferenceKeys.ttsVolume: settings.ttsVolume,
       PreferenceKeys.ttsEngine: settings.ttsEngine.name,
+      PreferenceKeys.voiceSttPreference: settings.sttPreference.name,
     };
 
     await box.putAll(updates);
@@ -221,6 +228,22 @@ class SettingsService {
       case 'device':
       default:
         return TtsEngine.device;
+    }
+  }
+
+  static SttPreference _parseSttPreference(String? raw) {
+    switch ((raw ?? '').toLowerCase()) {
+      case 'deviceonly':
+      case 'device_only':
+      case 'device':
+        return SttPreference.deviceOnly;
+      case 'serveronly':
+      case 'server_only':
+      case 'server':
+        return SttPreference.serverOnly;
+      case 'auto':
+      default:
+        return SttPreference.auto;
     }
   }
 
@@ -359,6 +382,7 @@ class AppSettings {
   final String socketTransportMode; // 'polling' or 'ws'
   final List<String> quickPills; // e.g., ['web','image']
   final bool sendOnEnter;
+  final SttPreference sttPreference;
   final String? ttsVoice;
   final double ttsSpeechRate;
   final double ttsPitch;
@@ -380,6 +404,7 @@ class AppSettings {
     this.socketTransportMode = 'ws',
     this.quickPills = const [],
     this.sendOnEnter = false,
+    this.sttPreference = SttPreference.auto,
     this.ttsVoice,
     this.ttsSpeechRate = 0.5,
     this.ttsPitch = 1.0,
@@ -403,6 +428,7 @@ class AppSettings {
     String? socketTransportMode,
     List<String>? quickPills,
     bool? sendOnEnter,
+    SttPreference? sttPreference,
     Object? ttsVoice = const _DefaultValue(),
     double? ttsSpeechRate,
     double? ttsPitch,
@@ -429,6 +455,7 @@ class AppSettings {
       socketTransportMode: socketTransportMode ?? this.socketTransportMode,
       quickPills: quickPills ?? this.quickPills,
       sendOnEnter: sendOnEnter ?? this.sendOnEnter,
+      sttPreference: sttPreference ?? this.sttPreference,
       ttsVoice: ttsVoice is _DefaultValue ? this.ttsVoice : ttsVoice as String?,
       ttsSpeechRate: ttsSpeechRate ?? this.ttsSpeechRate,
       ttsPitch: ttsPitch ?? this.ttsPitch,
@@ -457,6 +484,7 @@ class AppSettings {
         other.voiceLocaleId == voiceLocaleId &&
         other.voiceHoldToTalk == voiceHoldToTalk &&
         other.voiceAutoSendFinal == voiceAutoSendFinal &&
+        other.sttPreference == sttPreference &&
         other.sendOnEnter == sendOnEnter &&
         other.ttsVoice == ttsVoice &&
         other.ttsSpeechRate == ttsSpeechRate &&
@@ -471,7 +499,7 @@ class AppSettings {
 
   @override
   int get hashCode {
-    return Object.hash(
+    return Object.hashAll([
       reduceMotion,
       animationSpeed,
       hapticFeedback,
@@ -482,6 +510,7 @@ class AppSettings {
       voiceLocaleId,
       voiceHoldToTalk,
       voiceAutoSendFinal,
+      sttPreference,
       socketTransportMode,
       sendOnEnter,
       ttsVoice,
@@ -492,7 +521,7 @@ class AppSettings {
       ttsServerVoiceId,
       ttsServerVoiceName,
       Object.hashAllUnordered(quickPills),
-    );
+    ]);
   }
 }
 
@@ -601,6 +630,14 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
   Future<void> setSendOnEnter(bool value) async {
     state = state.copyWith(sendOnEnter: value);
     await SettingsService.setSendOnEnter(value);
+  }
+
+  Future<void> setSttPreference(SttPreference preference) async {
+    if (state.sttPreference == preference) {
+      return;
+    }
+    state = state.copyWith(sttPreference: preference);
+    await SettingsService.saveSettings(state);
   }
 
   Future<void> setTtsVoice(String? voice) async {

@@ -2380,7 +2380,7 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
     }
   }
 
-  // Server transcription removed; only on-device STT is supported
+  // When on-device STT is unavailable we fall back to server transcription.
 
   Future<void> _stopListening() async {
     _intensitySub?.cancel();

@@ -108,11 +108,18 @@ class VoiceCallService {
       throw Exception('Voice input initialization failed');
     }
 
-    // Check if local STT is available
+    // Check if preferred STT path is available
     final hasLocalStt = _voiceInput.hasLocalStt;
-    if (!hasLocalStt) {
+    final hasServerStt = _voiceInput.hasServerStt;
+    final ready = switch (_voiceInput.preference) {
+      SttPreference.deviceOnly => hasLocalStt,
+      SttPreference.serverOnly => hasServerStt,
+      SttPreference.auto => hasLocalStt || hasServerStt,
+    };
+
+    if (!ready) {
       _updateState(VoiceCallState.error);
-      throw Exception('Speech recognition not available on this device');
+      throw Exception('Preferred speech recognition engine is unavailable');
     }
 
     // Check microphone permissions
@@ -202,10 +209,18 @@ class VoiceCallService {
       _listeningPaused = false;
       _accumulatedTranscript = '';
 
-      // Check if voice input is available
-      if (!_voiceInput.hasLocalStt) {
+      final hasLocalStt = _voiceInput.hasLocalStt;
+      final hasServerStt = _voiceInput.hasServerStt;
+      final pref = _voiceInput.preference;
+      final engineAvailable = switch (pref) {
+        SttPreference.deviceOnly => hasLocalStt,
+        SttPreference.serverOnly => hasServerStt,
+        SttPreference.auto => hasLocalStt || hasServerStt,
+      };
+
+      if (!engineAvailable) {
         _updateState(VoiceCallState.error);
-        throw Exception('Voice input not available on this device');
+        throw Exception('Preferred speech recognition engine is unavailable');
       }
 
       _updateState(VoiceCallState.listening);
