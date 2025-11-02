@@ -19,6 +19,7 @@ class TextToSpeechService {
   TtsEngine _engine = TtsEngine.auto;
   String? _preferredVoice;
   String? _serverPreferredVoice;
+  double _speechRate = 0.5;
   bool _initialized = false;
   bool _available = false;
   bool _voiceConfigured = false;
@@ -171,6 +172,7 @@ class TextToSpeechService {
   }) async {
     if (_initialized) {
       _engine = engine;
+      _speechRate = speechRate;
       if (deviceVoice != null) {
         _preferredVoice = deviceVoice;
         _voiceConfigured = false;
@@ -183,6 +185,7 @@ class TextToSpeechService {
     }
 
     _engine = engine;
+    _speechRate = speechRate;
     _preferredVoice = deviceVoice;
     _serverPreferredVoice = serverVoice;
     _voiceConfigured = false;
@@ -352,6 +355,7 @@ class TextToSpeechService {
       if (engine != null) _engine = engine;
       if (voiceProvided) _preferredVoice = voiceValue;
       if (serverVoiceProvided) _serverPreferredVoice = serverVoiceValue;
+      if (speechRate != null) _speechRate = speechRate;
       return;
     }
 
@@ -369,6 +373,7 @@ class TextToSpeechService {
         await _tts.setVolume(volume);
       }
       if (speechRate != null) {
+        _speechRate = speechRate;
         await _tts.setSpeechRate(speechRate);
       }
       if (pitch != null) {
@@ -645,7 +650,11 @@ class TextToSpeechService {
     String? voice,
     int session,
   ) async {
-    return await _api!.generateSpeech(text: text, voice: voice);
+    return await _api!.generateSpeech(
+      text: text,
+      voice: voice,
+      speed: _speechRate,
+    );
   }
 
   Future<void> _onAudioComplete() async {

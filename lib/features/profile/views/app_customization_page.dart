@@ -944,7 +944,7 @@ class AppCustomizationPage extends ConsumerWidget {
                 value: settings.ttsSpeechRate,
                 min: 0.25,
                 max: 2.0,
-                divisions: 7,
+                divisions: 35,
                 label: '${(settings.ttsSpeechRate * 100).round()}%',
                 onChanged: (value) => ref
                     .read(appSettingsProvider.notifier)

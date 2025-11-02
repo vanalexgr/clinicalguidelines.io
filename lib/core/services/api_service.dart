@@ -1659,12 +1659,17 @@ class ApiService {
   Future<({Uint8List bytes, String mimeType})> generateSpeech({
     required String text,
     String? voice,
+    double? speed,
   }) async {
     final textPreview = text.length > 50 ? text.substring(0, 50) : text;
     _traceApi('Generating speech for text: $textPreview...');
     final response = await _dio.post(
       '/api/v1/audio/speech',
-      data: {'input': text, if (voice != null) 'voice': voice},
+      data: {
+        'input': text,
+        if (voice != null) 'voice': voice,
+        if (speed != null) 'speed': speed,
+      },
       options: Options(responseType: ResponseType.bytes),
     );
 
