@@ -500,13 +500,13 @@ class AppCustomizationPage extends ConsumerWidget {
                     ),
                     color: theme.buttonPrimary,
                   ),
-                  const SizedBox(width: Spacing.sm),
+                  const SizedBox(width: Spacing.md),
                   Text(
                     l10n.ttsEngineLabel,
                     style:
                         theme.bodyMedium?.copyWith(
                           color: theme.sidebarForeground,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ) ??
                         TextStyle(color: theme.sidebarForeground, fontSize: 14),
                   ),
