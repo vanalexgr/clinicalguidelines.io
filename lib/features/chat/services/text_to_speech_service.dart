@@ -16,8 +16,9 @@ class TextToSpeechService {
   final FlutterTts _tts = FlutterTts();
   final AudioPlayer _player = AudioPlayer();
   final ApiService? _api;
-  TtsEngine _engine = TtsEngine.device;
+  TtsEngine _engine = TtsEngine.auto;
   String? _preferredVoice;
+  String? _serverPreferredVoice;
   bool _initialized = false;
   bool _available = false;
   bool _voiceConfigured = false;
@@ -41,6 +42,8 @@ class TextToSpeechService {
 
   bool get isInitialized => _initialized;
   bool get isAvailable => _available;
+  bool get deviceEngineAvailable => _deviceEngineAvailable;
+  bool get serverEngineAvailable => _api != null;
 
   TextToSpeechService({ApiService? api}) : _api = api {
     // Wire minimal player events to callbacks
@@ -57,6 +60,69 @@ class TextToSpeechService {
           break;
       }
     });
+  }
+
+  Future<void> _configureDeviceEngine({
+    required String? voice,
+    required double speechRate,
+    required double pitch,
+    required double volume,
+  }) async {
+    _deviceEngineAvailable = false;
+    try {
+      await _tts.awaitSpeakCompletion(false);
+      await _tts.setVolume(volume);
+      await _tts.setSpeechRate(speechRate);
+      await _tts.setPitch(pitch);
+
+      if (!kIsWeb && Platform.isIOS) {
+        await _tts.setSharedInstance(true);
+        await _tts.setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
+          IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+          IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+          IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+          IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+        ]);
+      }
+
+      if (_engine != TtsEngine.server) {
+        await _setVoiceByName(_preferredVoice);
+      } else {
+        _voiceConfigured = false;
+      }
+
+      _deviceEngineAvailable = true;
+    } catch (e) {
+      _voiceConfigured = false;
+      _deviceEngineAvailable = false;
+      rethrow;
+    }
+  }
+
+  bool _computeAvailability() {
+    final serverAvailable = _api != null;
+    switch (_engine) {
+      case TtsEngine.device:
+        return _deviceEngineAvailable;
+      case TtsEngine.server:
+        return serverAvailable;
+      case TtsEngine.auto:
+        return _deviceEngineAvailable || serverAvailable;
+    }
+  }
+
+  bool _shouldUseServer() {
+    if (_engine == TtsEngine.server) {
+      return _api != null;
+    }
+    if (_engine == TtsEngine.device) {
+      return false;
+    }
+    // Auto: prefer device when available, otherwise fall back to server
+    if (_deviceEngineAvailable) {
+      return false;
+    }
+    return _api != null;
   }
 
   /// Register callbacks for TTS lifecycle events
@@ -96,56 +162,58 @@ class TextToSpeechService {
 
   /// Initialize the native TTS engine lazily
   Future<bool> initialize({
-    String? voice,
+    String? deviceVoice,
+    String? serverVoice,
     double speechRate = 0.5,
     double pitch = 1.0,
     double volume = 1.0,
-    TtsEngine engine = TtsEngine.device,
+    TtsEngine engine = TtsEngine.auto,
   }) async {
     if (_initialized) {
+      _engine = engine;
+      if (deviceVoice != null) {
+        _preferredVoice = deviceVoice;
+        _voiceConfigured = false;
+      }
+      if (serverVoice != null) {
+        _serverPreferredVoice = serverVoice;
+      }
+      _available = _computeAvailability();
       return _available;
     }
 
-    try {
-      _engine = engine;
-      _preferredVoice = voice;
-      await _tts.awaitSpeakCompletion(false);
+    _engine = engine;
+    _preferredVoice = deviceVoice;
+    _serverPreferredVoice = serverVoice;
+    _voiceConfigured = false;
 
-      // Set volume
-      await _tts.setVolume(volume);
-
-      // Set speech rate
-      await _tts.setSpeechRate(speechRate);
-
-      // Set pitch
-      await _tts.setPitch(pitch);
-
-      if (!kIsWeb && Platform.isIOS) {
-        await _tts.setSharedInstance(true);
-        await _tts.setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
-          IosTextToSpeechAudioCategoryOptions.mixWithOthers,
-          IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
-          IosTextToSpeechAudioCategoryOptions.allowBluetooth,
-          IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
-        ]);
+    if (_engine != TtsEngine.server || _api == null) {
+      try {
+        await _configureDeviceEngine(
+          voice: deviceVoice,
+          speechRate: speechRate,
+          pitch: pitch,
+          volume: volume,
+        );
+      } catch (e) {
+        if (_engine == TtsEngine.device) {
+          _available = false;
+          _onError?.call(e.toString());
+          _initialized = true;
+          return _available;
+        }
       }
-
-      // Set the voice (specific or default) when using device engine
-      if (_engine == TtsEngine.device) {
-        await _setVoiceByName(voice);
-      }
-      _deviceEngineAvailable = true;
-    } catch (e) {
+    } else {
       _deviceEngineAvailable = false;
-      if (_engine != TtsEngine.server) {
-        _available = false;
-        _onError?.call(e.toString());
-        _initialized = true;
-        return _available;
-      }
+      try {
+        await _tts.awaitSpeakCompletion(false);
+        await _tts.setVolume(volume);
+        await _tts.setSpeechRate(speechRate);
+        await _tts.setPitch(pitch);
+      } catch (_) {}
     }
 
-    _available = _engine == TtsEngine.server || _deviceEngineAvailable;
+    _available = _computeAvailability();
     _initialized = true;
     return _available;
   }
@@ -156,10 +224,23 @@ class TextToSpeechService {
     }
 
     if (!_initialized) {
-      await initialize(voice: _preferredVoice, engine: _engine);
+      await initialize(
+        deviceVoice: _preferredVoice,
+        serverVoice: _serverPreferredVoice,
+        engine: _engine,
+      );
     }
 
-    if (_engine == TtsEngine.server && _api != null) {
+    final bool useServer = _shouldUseServer();
+
+    if (useServer) {
+      if (_api == null) {
+        if (_deviceEngineAvailable) {
+          await _speakOnDevice(text);
+          return;
+        }
+        throw StateError('Server text-to-speech is unavailable');
+      }
       // Server-backed TTS with sentence chunking & queued playback
       try {
         await _startServerChunkedPlayback(text);
@@ -196,7 +277,7 @@ class TextToSpeechService {
   Future<void> pause() async {
     if (!_initialized) return;
     try {
-      if (_engine == TtsEngine.server) {
+      if (_shouldUseServer()) {
         await _player.pause();
         _handlePause();
       } else if (_deviceEngineAvailable) {
@@ -210,7 +291,7 @@ class TextToSpeechService {
   Future<void> resume() async {
     if (!_initialized) return;
     try {
-      if (_engine == TtsEngine.server) {
+      if (_shouldUseServer()) {
         if (_waitingNext && (_currentIndex + 1) < _buffered.length) {
           _waitingNext = false;
           await _playNextIfBuffered(_session);
@@ -235,7 +316,7 @@ class TextToSpeechService {
       _expectedChunks = 0;
       _currentIndex = -1;
       _waitingNext = false;
-      if (_engine == TtsEngine.server) {
+      if (_shouldUseServer()) {
         await _player.stop();
         _handleCancel();
       } else {
@@ -254,17 +335,23 @@ class TextToSpeechService {
   /// Update TTS settings on-the-fly
   Future<void> updateSettings({
     Object? voice = const _VoiceNotProvided(),
+    Object? serverVoice = const _VoiceNotProvided(),
     double? speechRate,
     double? pitch,
     double? volume,
     TtsEngine? engine,
   }) async {
     final voiceProvided = voice is! _VoiceNotProvided;
+    final serverVoiceProvided = serverVoice is! _VoiceNotProvided;
     final voiceValue = voiceProvided ? voice as String? : null;
+    final serverVoiceValue = serverVoiceProvided
+        ? serverVoice as String?
+        : null;
     if (!_initialized || !_available) {
       // Allow engine and voice to update before init
       if (engine != null) _engine = engine;
       if (voiceProvided) _preferredVoice = voiceValue;
+      if (serverVoiceProvided) _serverPreferredVoice = serverVoiceValue;
       return;
     }
 
@@ -275,6 +362,9 @@ class TextToSpeechService {
       if (voiceProvided) {
         _preferredVoice = voiceValue;
       }
+      if (serverVoiceProvided) {
+        _serverPreferredVoice = serverVoiceValue;
+      }
       if (volume != null) {
         await _tts.setVolume(volume);
       }
@@ -284,13 +374,15 @@ class TextToSpeechService {
       if (pitch != null) {
         await _tts.setPitch(pitch);
       }
-      // Set specific voice by name on device engine
-      if (_engine == TtsEngine.device && voiceProvided) {
+      // Set specific voice by name on device-capable engines
+      if (_engine != TtsEngine.server && voiceProvided) {
         await _setVoiceByName(_preferredVoice);
       }
     } catch (e) {
       _onError?.call(e.toString());
     }
+
+    _available = _computeAvailability();
   }
 
   /// Set voice by name, or use system default if null
@@ -343,7 +435,11 @@ class TextToSpeechService {
   /// Get available voices from the TTS engine
   Future<List<Map<String, dynamic>>> getAvailableVoices() async {
     if (!_initialized) {
-      await initialize(voice: _preferredVoice, engine: _engine);
+      await initialize(
+        deviceVoice: _preferredVoice,
+        serverVoice: _serverPreferredVoice,
+        engine: _engine,
+      );
     }
 
     if (_engine == TtsEngine.server && _api != null) {
@@ -425,6 +521,10 @@ class TextToSpeechService {
   }
 
   Future<String?> _resolveServerVoice() async {
+    final serverSelected = _serverPreferredVoice?.trim();
+    if (serverSelected != null && serverSelected.isNotEmpty) {
+      return serverSelected;
+    }
     final selected = _preferredVoice?.trim();
     if (selected != null && selected.isNotEmpty) {
       return selected;

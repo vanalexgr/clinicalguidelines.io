@@ -956,7 +956,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get sttEngineServerDescription =>
-      'Sendet Aufnahmen immer an deinen Conduit-Server zur Transkription.';
+      'Sendet Aufnahmen immer an deinen OpenWebUI-Server zur Transkription.';
 
   @override
   String get sttDeviceUnavailableWarning =>
@@ -970,10 +970,33 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ttsEngineLabel => 'Engine';
 
   @override
+  String get ttsEngineAuto => 'Automatisch';
+
+  @override
   String get ttsEngineDevice => 'Auf dem Gerät';
 
   @override
   String get ttsEngineServer => 'Server';
+
+  @override
+  String get ttsEngineAutoDescription =>
+      'Verwendet die Sprachausgabe auf dem Gerät, wenn verfügbar, und greift sonst auf deinen Server zurück.';
+
+  @override
+  String get ttsEngineDeviceDescription =>
+      'Behält die Ausgabe auf diesem Gerät. Sprachausgabe funktioniert nicht, wenn das Gerät keine TTS-Unterstützung bietet.';
+
+  @override
+  String get ttsEngineServerDescription =>
+      'Sendet die Ausgabe immer an deinen OpenWebUI-Server.';
+
+  @override
+  String get ttsDeviceUnavailableWarning =>
+      'Sprachausgabe auf dem Gerät steht auf diesem Gerät nicht zur Verfügung.';
+
+  @override
+  String get ttsServerUnavailableWarning =>
+      'Verbinde dich mit einem Server mit aktivierter Sprachausgabe, um diese Option zu nutzen.';
 
   @override
   String get ttsSettings => 'Text zu Sprache';

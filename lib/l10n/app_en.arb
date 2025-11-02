@@ -1247,7 +1247,7 @@
   "@sttEngineDeviceDescription": {
     "description": "Description shown when on-device speech-to-text preference is active."
   },
-  "sttEngineServerDescription": "Always send recordings to your Conduit server for transcription.",
+  "sttEngineServerDescription": "Always send recordings to your OpenWebUI server for transcription.",
   "@sttEngineServerDescription": {
     "description": "Description shown when server speech-to-text preference is active."
   },
@@ -1263,6 +1263,10 @@
   "@ttsEngineLabel": {
     "description": "Label for selecting the text-to-speech engine."
   },
+  "ttsEngineAuto": "Auto",
+  "@ttsEngineAuto": {
+    "description": "Chip label for automatically selecting the text-to-speech engine."
+  },
   "ttsEngineDevice": "On device",
   "@ttsEngineDevice": {
     "description": "Chip label for using on-device text-to-speech."
@@ -1270,6 +1274,26 @@
   "ttsEngineServer": "Server",
   "@ttsEngineServer": {
     "description": "Chip label for using server-side text-to-speech."
+  },
+  "ttsEngineAutoDescription": "Use on-device speech when available and fall back to your server.",
+  "@ttsEngineAutoDescription": {
+    "description": "Description shown when automatic text-to-speech preference is active."
+  },
+  "ttsEngineDeviceDescription": "Keep synthesis on this device. Voice playback stops working if on-device TTS isn’t supported.",
+  "@ttsEngineDeviceDescription": {
+    "description": "Description shown when on-device text-to-speech preference is active."
+  },
+  "ttsEngineServerDescription": "Always request audio from your OpenWebUI server.",
+  "@ttsEngineServerDescription": {
+    "description": "Description shown when server text-to-speech preference is active."
+  },
+  "ttsDeviceUnavailableWarning": "On-device text-to-speech isn’t available on this device.",
+  "@ttsDeviceUnavailableWarning": {
+    "description": "Warning shown when on-device text-to-speech is unavailable."
+  },
+  "ttsServerUnavailableWarning": "Connect to a server with text-to-speech enabled to use this option.",
+  "@ttsServerUnavailableWarning": {
+    "description": "Warning shown when server text-to-speech is unavailable."
   },
   "ttsSettings": "Text to Speech",
   "@ttsSettings": {

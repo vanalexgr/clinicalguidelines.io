@@ -12,7 +12,7 @@ part 'settings_service.g.dart';
 enum SttPreference { auto, deviceOnly, serverOnly }
 
 /// TTS engine selection
-enum TtsEngine { device, server }
+enum TtsEngine { auto, device, server }
 
 /// Service for managing app-wide settings including accessibility preferences
 class SettingsService {
@@ -223,11 +223,15 @@ class SettingsService {
 
   static TtsEngine _parseTtsEngine(String? raw) {
     switch ((raw ?? '').toLowerCase()) {
+      case 'auto':
+      case '':
+        return TtsEngine.auto;
       case 'server':
         return TtsEngine.server;
       case 'device':
-      default:
         return TtsEngine.device;
+      default:
+        return TtsEngine.auto;
     }
   }
 
@@ -409,7 +413,7 @@ class AppSettings {
     this.ttsSpeechRate = 0.5,
     this.ttsPitch = 1.0,
     this.ttsVolume = 1.0,
-    this.ttsEngine = TtsEngine.device,
+    this.ttsEngine = TtsEngine.auto,
     this.ttsServerVoiceId,
     this.ttsServerVoiceName,
   });

@@ -132,9 +132,8 @@ class VoiceCallService {
     // Initialize TTS with current app settings (engine/voice/rate/pitch/volume)
     final settings = _ref.read(appSettingsProvider);
     await _tts.initialize(
-      voice: settings.ttsEngine == TtsEngine.server
-          ? settings.ttsServerVoiceId
-          : settings.ttsVoice,
+      deviceVoice: settings.ttsVoice,
+      serverVoice: settings.ttsServerVoiceId,
       speechRate: settings.ttsSpeechRate,
       pitch: settings.ttsPitch,
       volume: settings.ttsVolume,
@@ -587,11 +586,9 @@ VoiceCallService voiceCallService(Ref ref) {
   // Keep TTS settings in sync with app settings during a call
   ref.listen<AppSettings>(appSettingsProvider, (previous, next) {
     // Update voice/engine and runtime parameters
-    final selectedVoice = next.ttsEngine == TtsEngine.server
-        ? next.ttsServerVoiceId
-        : next.ttsVoice;
     service._tts.updateSettings(
-      voice: selectedVoice,
+      voice: next.ttsVoice,
+      serverVoice: next.ttsServerVoiceId,
       speechRate: next.ttsSpeechRate,
       pitch: next.ttsPitch,
       volume: next.ttsVolume,

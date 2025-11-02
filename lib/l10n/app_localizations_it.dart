@@ -954,7 +954,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get sttEngineServerDescription =>
-      'Invia sempre le registrazioni al tuo server Conduit per la trascrizione.';
+      'Invia sempre le registrazioni al tuo server OpenWebUI per la trascrizione.';
 
   @override
   String get sttDeviceUnavailableWarning =>
@@ -968,10 +968,33 @@ class AppLocalizationsIt extends AppLocalizations {
   String get ttsEngineLabel => 'Motore';
 
   @override
+  String get ttsEngineAuto => 'Automatico';
+
+  @override
   String get ttsEngineDevice => 'Sul dispositivo';
 
   @override
   String get ttsEngineServer => 'Server';
+
+  @override
+  String get ttsEngineAutoDescription =>
+      'Usa la sintesi sul dispositivo quando disponibile e altrimenti passa al tuo server.';
+
+  @override
+  String get ttsEngineDeviceDescription =>
+      'Mantiene la sintesi su questo dispositivo. La riproduzione vocale non funziona se il dispositivo non supporta il TTS.';
+
+  @override
+  String get ttsEngineServerDescription =>
+      'Richiede sempre l\'audio dal tuo server OpenWebUI.';
+
+  @override
+  String get ttsDeviceUnavailableWarning =>
+      'La sintesi vocale sul dispositivo non è disponibile su questo dispositivo.';
+
+  @override
+  String get ttsServerUnavailableWarning =>
+      'Collegati a un server con la sintesi vocale abilitata per usare questa opzione.';
 
   @override
   String get ttsSettings => 'Sintesi vocale';

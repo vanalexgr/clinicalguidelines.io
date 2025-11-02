@@ -950,7 +950,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sttEngineServerDescription =>
-      'Always send recordings to your Conduit server for transcription.';
+      'Always send recordings to your OpenWebUI server for transcription.';
 
   @override
   String get sttDeviceUnavailableWarning =>
@@ -964,10 +964,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsEngineLabel => 'Engine';
 
   @override
+  String get ttsEngineAuto => 'Auto';
+
+  @override
   String get ttsEngineDevice => 'On device';
 
   @override
   String get ttsEngineServer => 'Server';
+
+  @override
+  String get ttsEngineAutoDescription =>
+      'Use on-device speech when available and fall back to your server.';
+
+  @override
+  String get ttsEngineDeviceDescription =>
+      'Keep synthesis on this device. Voice playback stops working if on-device TTS isn’t supported.';
+
+  @override
+  String get ttsEngineServerDescription =>
+      'Always request audio from your OpenWebUI server.';
+
+  @override
+  String get ttsDeviceUnavailableWarning =>
+      'On-device text-to-speech isn’t available on this device.';
+
+  @override
+  String get ttsServerUnavailableWarning =>
+      'Connect to a server with text-to-speech enabled to use this option.';
 
   @override
   String get ttsSettings => 'Text to Speech';

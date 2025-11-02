@@ -1829,7 +1829,7 @@ abstract class AppLocalizations {
   /// Description shown when server speech-to-text preference is active.
   ///
   /// In en, this message translates to:
-  /// **'Always send recordings to your Conduit server for transcription.'**
+  /// **'Always send recordings to your OpenWebUI server for transcription.'**
   String get sttEngineServerDescription;
 
   /// Warning shown when the user selects on-device speech recognition but it is unavailable.
@@ -1850,6 +1850,12 @@ abstract class AppLocalizations {
   /// **'Engine'**
   String get ttsEngineLabel;
 
+  /// Chip label for automatically selecting the text-to-speech engine.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get ttsEngineAuto;
+
   /// Chip label for using on-device text-to-speech.
   ///
   /// In en, this message translates to:
@@ -1861,6 +1867,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Server'**
   String get ttsEngineServer;
+
+  /// Description shown when automatic text-to-speech preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Use on-device speech when available and fall back to your server.'**
+  String get ttsEngineAutoDescription;
+
+  /// Description shown when on-device text-to-speech preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep synthesis on this device. Voice playback stops working if on-device TTS isn’t supported.'**
+  String get ttsEngineDeviceDescription;
+
+  /// Description shown when server text-to-speech preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Always request audio from your OpenWebUI server.'**
+  String get ttsEngineServerDescription;
+
+  /// Warning shown when on-device text-to-speech is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'On-device text-to-speech isn’t available on this device.'**
+  String get ttsDeviceUnavailableWarning;
+
+  /// Warning shown when server text-to-speech is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a server with text-to-speech enabled to use this option.'**
+  String get ttsServerUnavailableWarning;
 
   /// Section header for TTS-related customization options.
   ///

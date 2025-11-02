@@ -107,11 +107,9 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
     // Listen to settings changes and update TTS when initialized
     ref.listen<AppSettings>(appSettingsProvider, (previous, next) {
       if (_service.isInitialized && _service.isAvailable) {
-        final selectedVoice = next.ttsEngine == TtsEngine.server
-            ? next.ttsServerVoiceId
-            : next.ttsVoice;
         _service.updateSettings(
-          voice: selectedVoice,
+          voice: next.ttsVoice,
+          serverVoice: next.ttsServerVoiceId,
           speechRate: next.ttsSpeechRate,
           pitch: next.ttsPitch,
           volume: next.ttsVolume,
@@ -137,9 +135,8 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
     final settings = ref.read(appSettingsProvider);
     final future = _service
         .initialize(
-          voice: settings.ttsEngine == TtsEngine.server
-              ? settings.ttsServerVoiceId
-              : settings.ttsVoice,
+          deviceVoice: settings.ttsVoice,
+          serverVoice: settings.ttsServerVoiceId,
           speechRate: settings.ttsSpeechRate,
           pitch: settings.ttsPitch,
           volume: settings.ttsVolume,
