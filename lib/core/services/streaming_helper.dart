@@ -277,6 +277,13 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
     )..start();
   }
 
+  Timer? imageCollectionDebounce;
+  String? pendingImageContent;
+  String? pendingImageMessageId;
+  String? pendingImageSignature;
+  String? lastProcessedImageSignature;
+  int imageCollectionRequestId = 0;
+
   void disposeSocketSubscriptions() {
     if (socketSubscriptions.isEmpty) {
       return;
@@ -287,56 +294,119 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       } catch (_) {}
     }
     socketSubscriptions.clear();
+    imageCollectionDebounce?.cancel();
+    imageCollectionDebounce = null;
+    pendingImageContent = null;
+    pendingImageMessageId = null;
+    pendingImageSignature = null;
+    lastProcessedImageSignature = null;
+    imageCollectionRequestId = 0;
     socketWatchdog?.stop();
   }
 
   bool isSearching = false;
 
+  void runPendingImageCollection() {
+    imageCollectionDebounce?.cancel();
+    imageCollectionDebounce = null;
+
+    final content = pendingImageContent;
+    final targetMessageId = pendingImageMessageId;
+    final signature = pendingImageSignature;
+    if (content == null || targetMessageId == null || signature == null) {
+      return;
+    }
+
+    pendingImageContent = null;
+    pendingImageMessageId = null;
+    pendingImageSignature = null;
+
+    final requestId = ++imageCollectionRequestId;
+    unawaited(
+      workerManager
+          .schedule<String, List<Map<String, dynamic>>>(
+            _collectImageReferencesWorker,
+            content,
+            debugLabel: 'stream_collect_images',
+          )
+          .then((collected) {
+            if (requestId != imageCollectionRequestId) {
+              return;
+            }
+
+            final currentMessages = getMessages();
+            if (currentMessages.isEmpty) {
+              return;
+            }
+            final last = currentMessages.last;
+            if (last.id != targetMessageId || last.role != 'assistant') {
+              return;
+            }
+
+            lastProcessedImageSignature = signature;
+
+            if (collected.isEmpty) {
+              return;
+            }
+
+            final existing = last.files ?? <Map<String, dynamic>>[];
+            final seen = <String>{
+              for (final f in existing)
+                if (f['url'] is String) (f['url'] as String) else '',
+            }..removeWhere((e) => e.isEmpty);
+
+            final merged = <Map<String, dynamic>>[...existing];
+            for (final f in collected) {
+              final url = f['url'] as String?;
+              if (url != null && url.isNotEmpty && !seen.contains(url)) {
+                merged.add({'type': 'image', 'url': url});
+                seen.add(url);
+              }
+            }
+
+            if (merged.length != existing.length) {
+              updateLastMessageWith((m) => m.copyWith(files: merged));
+            }
+          })
+          .catchError((_) {}),
+    );
+  }
+
   void updateImagesFromCurrentContent() {
     try {
       final msgs = getMessages();
       if (msgs.isEmpty || msgs.last.role != 'assistant') return;
-      final content = msgs.last.content;
+      final last = msgs.last;
+      final content = last.content;
       if (content.isEmpty) return;
 
-      final targetMessageId = msgs.last.id;
-      unawaited(
-        workerManager
-            .schedule<String, List<Map<String, dynamic>>>(
-              _collectImageReferencesWorker,
-              content,
-              debugLabel: 'stream_collect_images',
-            )
-            .then((collected) {
-              if (collected.isEmpty) return;
-              final currentMessages = getMessages();
-              if (currentMessages.isEmpty) return;
-              final last = currentMessages.last;
-              if (last.id != targetMessageId || last.role != 'assistant') {
-                return;
-              }
+      final targetMessageId = last.id;
+      final signature =
+          '$targetMessageId:${content.hashCode}:${content.length}';
 
-              final existing = last.files ?? <Map<String, dynamic>>[];
-              final seen = <String>{
-                for (final f in existing)
-                  if (f['url'] is String) (f['url'] as String) else '',
-              }..removeWhere((e) => e.isEmpty);
+      if (signature == lastProcessedImageSignature &&
+          pendingImageSignature == null) {
+        return;
+      }
+      if (signature == pendingImageSignature) {
+        return;
+      }
 
-              final merged = <Map<String, dynamic>>[...existing];
-              for (final f in collected) {
-                final url = f['url'] as String?;
-                if (url != null && url.isNotEmpty && !seen.contains(url)) {
-                  merged.add({'type': 'image', 'url': url});
-                  seen.add(url);
-                }
-              }
+      pendingImageMessageId = targetMessageId;
+      pendingImageContent = content;
+      pendingImageSignature = signature;
 
-              if (merged.length != existing.length) {
-                updateLastMessageWith((m) => m.copyWith(files: merged));
-              }
-            })
-            .catchError((_) {}),
-      );
+      final shouldDelay = last.isStreaming;
+
+      imageCollectionDebounce?.cancel();
+      if (shouldDelay) {
+        imageCollectionDebounce = Timer(
+          const Duration(milliseconds: 200),
+          runPendingImageCollection,
+        );
+      } else {
+        runPendingImageCollection();
+      }
     } catch (_) {}
   }
 

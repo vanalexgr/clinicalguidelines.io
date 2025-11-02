@@ -647,13 +647,6 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
       return;
     }
 
-    // Log content replacement for debugging
-    DebugLogger.log(
-      'Replacing message content: messageId=${lastMessage.id}, '
-      'oldLength=${lastMessage.content.length}, newLength=${content.length}',
-      scope: 'chat/providers',
-    );
-
     _ensureFormatterForMessage(lastMessage);
 
     // Defensive check: ensure the formatter is for the correct message

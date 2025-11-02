@@ -871,19 +871,13 @@ class AppCustomizationPage extends ConsumerWidget {
                 duration: const Duration(milliseconds: 200),
                 child: Text(
                   ttsDescription,
-                  key: ValueKey<String>(
-                    'tts-desc-${settings.ttsEngine.name}',
-                  ),
+                  key: ValueKey<String>('tts-desc-${settings.ttsEngine.name}'),
                   style:
                       theme.bodyMedium?.copyWith(
-                        color: theme.sidebarForeground.withValues(
-                          alpha: 0.9,
-                        ),
+                        color: theme.sidebarForeground.withValues(alpha: 0.9),
                       ) ??
                       TextStyle(
-                        color: theme.sidebarForeground.withValues(
-                          alpha: 0.9,
-                        ),
+                        color: theme.sidebarForeground.withValues(alpha: 0.9),
                         fontSize: 14,
                       ),
                 ),
