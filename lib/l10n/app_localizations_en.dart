@@ -12,9 +12,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Conduit';
 
   @override
-  String get initializationFailed => 'Initialization Failed';
-
-  @override
   String get retry => 'Retry';
 
   @override
@@ -39,10 +36,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get connectionIssueSubtitle =>
       'Reconnect to continue or sign out to choose a different server.';
-
-  @override
-  String get stillOfflineMessage =>
-      'We still can\'t reach the server. Double-check your connection and try again.';
 
   @override
   String get account => 'Account';
@@ -89,6 +82,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availableModels => 'Available Models';
 
   @override
+  String get modelCapabilityMultimodal => 'Multimodal';
+
+  @override
+  String get modelCapabilityReasoning => 'Reasoning';
+
+  @override
   String get noResults => 'No results';
 
   @override
@@ -98,33 +97,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorMessage => 'Something went wrong. Please try again.';
 
   @override
-  String get loginButton => 'Login';
-
-  @override
-  String get menuItem => 'Settings';
-
-  @override
-  String dynamicContentWithPlaceholder(String name) {
-    return 'Welcome, $name!';
-  }
-
-  @override
-  String itemsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count items',
-      one: '1 item',
-      zero: 'No items',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get closeButtonSemantic => 'Close';
 
   @override
   String get loadingContent => 'Loading content';
+
+  @override
+  String get loadingShort => 'Loading';
+
+  @override
+  String loadingAnnouncement(String message) {
+    return 'Loading: $message';
+  }
+
+  @override
+  String errorAnnouncement(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String errorAnnouncementWithSuggestion(String error, String suggestion) {
+    return 'Error: $error. $suggestion';
+  }
+
+  @override
+  String successAnnouncement(String message) {
+    return 'Success: $message';
+  }
 
   @override
   String get noItems => 'No items';
@@ -133,62 +132,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noItemsToDisplay => 'No items to display';
 
   @override
-  String get loadMore => 'Load More';
-
-  @override
-  String get workspace => 'Workspace';
-
-  @override
-  String get recentFiles => 'Recent Files';
-
-  @override
   String get knowledgeBase => 'Knowledge Base';
-
-  @override
-  String get noFilesYet => 'No files yet';
-
-  @override
-  String get uploadDocsPrompt =>
-      'Upload documents to reference in your conversations with Conduit';
-
-  @override
-  String get uploadFirstFile => 'Upload your first file';
 
   @override
   String get attachments => 'Attachments';
 
   @override
-  String get knowledgeBaseEmpty => 'Knowledge base is empty';
-
-  @override
-  String get createCollectionsPrompt =>
-      'Create collections of related documents for easy reference';
-
-  @override
-  String get chooseSourcePhoto => 'Choose your source';
-
-  @override
   String get takePhoto => 'Take a photo';
 
   @override
-  String get chooseFromGallery => 'Choose from your photos';
-
-  @override
   String get document => 'Document';
-
-  @override
-  String get documentHint => 'PDF, Word, or text file';
-
-  @override
-  String get uploadFileTitle => 'Upload File';
-
-  @override
-  String fileUploadComingSoon(String type) {
-    return 'File upload for $type is coming soon!';
-  }
-
-  @override
-  String get kbCreationComingSoon => 'Knowledge base creation is coming soon!';
 
   @override
   String get backToServerSetup => 'Back to server setup';
@@ -398,9 +351,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Start New Chat or manage models from the top bar';
 
   @override
-  String get addAttachment => 'Add attachment';
-
-  @override
   String get attachmentLabel => 'Attachment';
 
   @override
@@ -440,6 +390,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceActionStart => 'Start';
 
   @override
+  String get voiceCallTitle => 'Voice Call';
+
+  @override
+  String get voiceCallPause => 'Pause';
+
+  @override
+  String get voiceCallResume => 'Resume';
+
+  @override
+  String get voiceCallStop => 'Stop';
+
+  @override
+  String get voiceCallEnd => 'End Call';
+
+  @override
+  String get voiceCallReady => 'Ready';
+
+  @override
+  String get voiceCallConnecting => 'Connecting...';
+
+  @override
+  String get voiceCallListening => 'Listening';
+
+  @override
+  String get voiceCallPaused => 'Paused';
+
+  @override
+  String get voiceCallProcessing => 'Thinking...';
+
+  @override
+  String get voiceCallSpeaking => 'Speaking';
+
+  @override
+  String get voiceCallDisconnected => 'Disconnected';
+
+  @override
+  String get voiceCallErrorHelp =>
+      'Please check:\n• Microphone permissions are granted\n• Speech recognition is available on your device\n• You are connected to the server';
+
+  @override
   String get messageInputLabel => 'Message input';
 
   @override
@@ -462,6 +452,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get file => 'File';
+
+  @override
+  String get chooseDifferentFile => 'Choose Different File';
 
   @override
   String get photo => 'Photo';
@@ -498,15 +491,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyImageData => 'Empty image data';
 
   @override
-  String get featureRequiresInternet =>
-      'This feature requires an internet connection';
-
-  @override
-  String get messagesWillSendWhenOnline =>
-      'Messages will be sent when you\'re back online';
-
-  @override
   String get confirm => 'Confirm';
+
+  @override
+  String get continueAction => 'Continue';
 
   @override
   String get cancel => 'Cancel';
@@ -515,10 +503,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ok => 'OK';
 
   @override
-  String get inputField => 'Input field';
+  String get previousLabel => 'Prev';
 
   @override
-  String get captureDocumentOrImage => 'Capture a document or image';
+  String get nextLabel => 'Next';
+
+  @override
+  String get inputField => 'Input field';
 
   @override
   String get checkConnection => 'Check Connection';
@@ -527,13 +518,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openSettings => 'Open Settings';
 
   @override
-  String get chooseDifferentFile => 'Choose Different File';
-
-  @override
   String get goBack => 'Go Back';
 
   @override
   String get technicalDetails => 'Technical Details';
+
+  @override
+  String requiredFieldLabel(String label) {
+    return '$label *';
+  }
+
+  @override
+  String get requiredFieldHelper => 'Required field';
+
+  @override
+  String get switchOnLabel => 'On';
+
+  @override
+  String get switchOffLabel => 'Off';
+
+  @override
+  String dialogSemanticLabel(String title) {
+    return 'Dialog: $title';
+  }
 
   @override
   String get save => 'Save';
@@ -563,24 +570,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clear => 'Clear';
 
   @override
-  String get searchHint => 'Search...';
-
-  @override
   String get searchConversations => 'Search conversations...';
 
   @override
   String get create => 'Create';
 
   @override
-  String get folderCreated => 'Folder created';
-
-  @override
   String get failedToCreateFolder => 'Failed to create folder';
-
-  @override
-  String movedChatToFolder(String title, String folder) {
-    return 'Moved \"$title\" to \"$folder\"';
-  }
 
   @override
   String get failedToMoveChat => 'Failed to move chat';
@@ -813,9 +809,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Maximum of 10 custom headers allowed. Remove some to add more.';
 
   @override
-  String get editMessage => 'Edit Message';
-
-  @override
   String get noModelsAvailable => 'No models available';
 
   @override
@@ -830,8 +823,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themePalette => 'Accent palette';
 
   @override
-  String get themePaletteDescription =>
-      'Choose the accent colors used for buttons, cards, and chat bubbles.';
+  String get themePaletteConduitLabel => 'Conduit';
+
+  @override
+  String get themePaletteConduitDescription =>
+      'Clean neutral theme designed for Conduit.';
+
+  @override
+  String get themePaletteClaudeLabel => 'Claude';
+
+  @override
+  String get themePaletteClaudeDescription =>
+      'Warm, tactile palette lifted from the Claude web client.';
+
+  @override
+  String get themePaletteT3ChatLabel => 'T3 Chat';
+
+  @override
+  String get themePaletteT3ChatDescription =>
+      'Playful gradients inspired by the T3 Stack brand.';
+
+  @override
+  String get themePaletteCatppuccinLabel => 'Catppuccin';
+
+  @override
+  String get themePaletteCatppuccinDescription => 'Soft pastel palette.';
+
+  @override
+  String get themePaletteTangerineLabel => 'Tangerine';
+
+  @override
+  String get themePaletteTangerineDescription =>
+      'Warm orange-and-slate palette.';
 
   @override
   String get themeLight => 'Light';
@@ -878,6 +901,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quickActionsDescription => 'Quickpills in chat';
 
   @override
+  String quickActionsSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count actions selected',
+      one: '1 action selected',
+      zero: 'No actions selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get autoSelectDescription => 'Let the app choose the best model';
+
+  @override
   String get chatSettings => 'Chat';
 
   @override
@@ -886,6 +924,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get sendOnEnterDescription =>
       'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available';
+
+  @override
+  String get ttsEngineLabel => 'Engine';
+
+  @override
+  String get ttsEngineDevice => 'On device';
+
+  @override
+  String get ttsEngineServer => 'Server';
 
   @override
   String get ttsSettings => 'Text to Speech';
@@ -929,6 +976,134 @@ class AppLocalizationsEn extends AppLocalizations {
   String get error => 'Error';
 
   @override
+  String errorWithMessage(String message) {
+    return 'Error: $message';
+  }
+
+  @override
+  String get networkTimeoutError =>
+      'Connection timed out. Please check your internet connection and try again.';
+
+  @override
+  String get networkUnreachableError =>
+      'Cannot reach the server. Please check your server URL and internet connection.';
+
+  @override
+  String get networkServerNotResponding =>
+      'Server is not responding. Please verify the server is running and accessible.';
+
+  @override
+  String get networkGenericError =>
+      'Network connection problem. Please check your internet connection.';
+
+  @override
+  String get serverError500 =>
+      'Server is experiencing issues. This is usually temporary.';
+
+  @override
+  String get serverErrorUnavailable =>
+      'Server is temporarily unavailable. Please try again in a moment.';
+
+  @override
+  String get serverErrorTimeout =>
+      'Server took too long to respond. Please try again.';
+
+  @override
+  String get serverErrorGeneric =>
+      'Server is having problems. Please try again later.';
+
+  @override
+  String get authSessionExpired =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get authForbidden =>
+      'You don\'t have permission to perform this action.';
+
+  @override
+  String get authInvalidToken =>
+      'Authentication token is invalid. Please sign in again.';
+
+  @override
+  String get authGenericError =>
+      'Authentication problem. Please sign in again.';
+
+  @override
+  String get validationInvalidEmail => 'Please enter a valid email address.';
+
+  @override
+  String get validationWeakPassword =>
+      'Password doesn\'t meet requirements. Please check and try again.';
+
+  @override
+  String get validationMissingRequired => 'Please fill in all required fields.';
+
+  @override
+  String get validationFormatError =>
+      'Some information is in the wrong format. Please check and try again.';
+
+  @override
+  String get validationGenericError => 'Please check your input and try again.';
+
+  @override
+  String get fileNotFound =>
+      'File not found. It may have been moved or deleted.';
+
+  @override
+  String get fileAccessDenied =>
+      'Cannot access the file. Please check permissions.';
+
+  @override
+  String get fileTooLarge => 'File is too large. Please choose a smaller file.';
+
+  @override
+  String get fileGenericError =>
+      'Problem with the file. Please try a different file.';
+
+  @override
+  String get permissionCameraRequired =>
+      'Camera permission is required. Please enable it in settings.';
+
+  @override
+  String get permissionStorageRequired =>
+      'Storage permission is required. Please enable it in settings.';
+
+  @override
+  String get permissionMicrophoneRequired =>
+      'Microphone permission is required. Please enable it in settings.';
+
+  @override
+  String get permissionGenericError =>
+      'Permission required. Please check app permissions in settings.';
+
+  @override
+  String get actionRetryRequest => 'Try the request again.';
+
+  @override
+  String get actionVerifyConnection => 'Verify your internet connection.';
+
+  @override
+  String get actionRetryOperation => 'Retry the operation.';
+
+  @override
+  String get actionRetryAfterDelay => 'Wait a moment then try again.';
+
+  @override
+  String get actionSignInToAccount => 'Sign in to your account.';
+
+  @override
+  String get actionSelectAnotherFile => 'Select another file.';
+
+  @override
+  String get actionOpenAppSettings => 'Open app settings to grant permissions.';
+
+  @override
+  String get actionRetryAfterPermission => 'Retry after granting permission.';
+
+  @override
+  String get actionReturnToPrevious => 'Return to previous screen.';
+
+  @override
   String get display => 'Display';
 
   @override
@@ -936,10 +1111,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transportMode => 'Transport mode';
-
-  @override
-  String get transportModeDescription =>
-      'Choose how the app connects for realtime updates.';
 
   @override
   String get mode => 'Mode';
@@ -957,12 +1128,4 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get transportModeWsInfo =>
       'Lower overhead, but may fail behind strict proxies/firewalls.';
-
-  @override
-  String get websocketConnectionError =>
-      'Unable to establish real-time connection. Please check your network and server configuration.';
-
-  @override
-  String get websocketReconnectFailed =>
-      'Real-time connection failed. Streaming may not work properly.';
 }

@@ -1,7 +1,6 @@
 {
   "@@locale": "nl",
   "appTitle": "Conduit",
-  "initializationFailed": "Initialisatie mislukt",
   "retry": "Opnieuw proberen",
   "back": "Terug",
   "you": "Jij",
@@ -15,10 +14,6 @@
   "connectionIssueSubtitle": "Maak opnieuw verbinding om door te gaan of log uit om een andere server te kiezen.",
   "@connectionIssueSubtitle": {
     "description": "Ondertitel die beschikbare acties uitlegt wanneer de server niet bereikbaar is"
-  },
-  "stillOfflineMessage": "We kunnen de server nog steeds niet bereiken. Controleer je verbinding en probeer het opnieuw.",
-  "@stillOfflineMessage": {
-    "description": "Statusbericht na een herhaalde poging wanneer de verbinding niet is hersteld"
   },
   "account": "Account",
   "supportConduit": "Ondersteun Conduit",
@@ -37,32 +32,14 @@
   "noResults": "Geen resultaten",
   "searchModels": "Modellen zoeken...",
   "errorMessage": "Er is iets misgegaan. Probeer het opnieuw.",
-  "loginButton": "Inloggen",
-  "menuItem": "Instellingen",
-  "dynamicContentWithPlaceholder": "Welkom, {name}!",
-  "itemsCount": "{count, plural, =0{Geen items} one{1 item} other{{count} items}}",
   "closeButtonSemantic": "Sluiten",
   "loadingContent": "Inhoud laden",
   "noItems": "Geen items",
   "noItemsToDisplay": "Geen items om weer te geven",
-  "loadMore": "Meer laden",
-  "workspace": "Werkruimte",
-  "recentFiles": "Recente bestanden",
   "knowledgeBase": "Kennisbank",
-  "noFilesYet": "Nog geen bestanden",
-  "uploadDocsPrompt": "Upload documenten om te gebruiken in je gesprekken met Conduit",
-  "uploadFirstFile": "Upload je eerste bestand",
   "attachments": "Bijlagen",
-  "knowledgeBaseEmpty": "Kennisbank is leeg",
-  "createCollectionsPrompt": "Maak verzamelingen van gerelateerde documenten voor eenvoudige verwijzing",
-  "chooseSourcePhoto": "Kies je bron",
   "takePhoto": "Foto maken",
-  "chooseFromGallery": "Kies uit je foto's",
   "document": "Document",
-  "documentHint": "PDF, Word of tekstbestand",
-  "uploadFileTitle": "Bestand uploaden",
-  "fileUploadComingSoon": "Bestand uploaden voor {type} komt binnenkort!",
-  "kbCreationComingSoon": "Kennisbank aanmaken komt binnenkort!",
   "backToServerSetup": "Terug naar serverinstelling",
   "connectedToServer": "Verbonden met server",
   "signIn": "Inloggen",
@@ -125,7 +102,6 @@
   "onboardQuickSubtitle": "Open het menu om te schakelen tussen Chats, Werkruimte en Profiel.",
   "onboardQuickBullet1": "Tik op het menu voor toegang tot Chats, Werkruimte, Profiel",
   "onboardQuickBullet2": "Start Nieuwe chat of beheer modellen vanuit de bovenbalk",
-  "addAttachment": "Bijlage toevoegen",
   "attachmentLabel": "Bijlage",
   "tools": "Hulpmiddelen",
   "voiceInput": "Spraakinvoer",
@@ -157,16 +133,12 @@
   "failedToDecodeImage": "Kan afbeelding niet decoderen",
   "invalidImageFormat": "Ongeldig afbeeldingsformaat",
   "emptyImageData": "Lege afbeeldingsgegevens",
-  "featureRequiresInternet": "Deze functie vereist een internetverbinding",
-  "messagesWillSendWhenOnline": "Berichten worden verzonden wanneer je weer online bent",
   "confirm": "Bevestigen",
   "cancel": "Annuleren",
   "ok": "OK",
   "inputField": "Invoerveld",
-  "captureDocumentOrImage": "Document of afbeelding vastleggen",
   "checkConnection": "Verbinding controleren",
   "openSettings": "Instellingen openen",
-  "chooseDifferentFile": "Ander bestand kiezen",
   "goBack": "Terug",
   "technicalDetails": "Technische details",
   "save": "Opslaan",
@@ -178,18 +150,9 @@
   "newChat": "Nieuwe chat",
   "more": "Meer",
   "clear": "Wissen",
-  "searchHint": "Zoeken...",
   "searchConversations": "Gesprekken zoeken...",
   "create": "Aanmaken",
-  "folderCreated": "Map aangemaakt",
   "failedToCreateFolder": "Kan map niet aanmaken",
-  "movedChatToFolder": "'{title}' verplaatst naar '{folder}'",
-  "@movedChatToFolder": {
-    "placeholders": {
-      "title": {"type": "String"},
-      "folder": {"type": "String"}
-    }
-  },
   "failedToMoveChat": "Kan chat niet verplaatsen",
   "failedToLoadChats": "Kan chats niet laden",
   "failedToUpdatePin": "Kan vastpinning niet bijwerken",
@@ -219,13 +182,17 @@
   "deleteMessagesMessage": "{count} berichten verwijderen?",
   "@deleteMessagesMessage": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "routeNotFound": "Route niet gevonden: {routeName}",
   "@routeNotFound": {
     "placeholders": {
-      "routeName": {"type": "String"}
+      "routeName": {
+        "type": "String"
+      }
     }
   },
   "deleteChatTitle": "Chat verwijderen",
@@ -271,29 +238,55 @@
   "headerNameTooLong": "Header-naam te lang (max 64 tekens)",
   "headerNameInvalidChars": "Ongeldige header-naam. Gebruik alleen letters, cijfers en deze symbolen: !#$&-^_`|~",
   "headerNameReserved": "Kan gereserveerde header '{key}' niet overschrijven",
-  "@headerNameReserved": {"placeholders": {"key": {"type": "String"}}},
+  "@headerNameReserved": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "headerValueEmpty": "Header-waarde mag niet leeg zijn",
   "headerValueTooLong": "Header-waarde te lang (max 1024 tekens)",
   "headerValueInvalidChars": "Header-waarde bevat ongeldige tekens. Gebruik alleen afdrukbare ASCII.",
   "headerValueUnsafe": "Header-waarde lijkt mogelijk onveilige inhoud te bevatten",
   "headerAlreadyExists": "Header '{key}' bestaat al. Verwijder deze eerst om bij te werken.",
-  "@headerAlreadyExists": {"placeholders": {"key": {"type": "String"}}},
+  "@headerAlreadyExists": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "maxHeadersReachedDetail": "Maximaal 10 aangepaste headers toegestaan. Verwijder er enkele om meer toe te voegen.",
-  "editMessage": "Bericht bewerken",
   "noModelsAvailable": "Geen modellen beschikbaar",
   "followingSystem": "Volgt systeem: {theme}",
-  "@followingSystem": {"placeholders": {"theme": {"type": "String"}}},
+  "@followingSystem": {
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
+  },
   "themeDark": "Donker",
   "themePalette": "Accentpalet",
-  "@themePalette": {"description": "Titel voor het selecteren van het app-kleurenpalet."},
-  "themePaletteDescription": "Kies de accentkleuren voor knoppen, kaarten en chatballonnen.",
-  "@themePaletteDescription": {"description": "Hulptekst die de paletselectie uitlegt."},
+  "@themePalette": {
+    "description": "Titel voor het selecteren van het app-kleurenpalet."
+  },
   "themeLight": "Licht",
   "currentlyUsingDarkTheme": "Momenteel donker thema in gebruik",
   "currentlyUsingLightTheme": "Momenteel licht thema in gebruik",
   "aboutConduit": "Over Conduit",
   "versionLabel": "Versie: {version} ({build})",
-  "@versionLabel": {"placeholders": {"version": {"type": "String"}, "build": {"type": "String"}}},
+  "@versionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
   "githubRepository": "GitHub-repository",
   "unableToLoadAppInfo": "Kan app-info niet laden",
   "thinking": "Denken...",
@@ -301,7 +294,12 @@
   "thoughtForDuration": "Dacht {duration}",
   "@thoughtForDuration": {
     "description": "Toont hoe lang de assistent dacht voordat hij antwoordde.",
-    "placeholders": {"duration": {"type": "String", "example": "3s"}}
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "3s"
+      }
+    }
   },
   "appCustomization": "Aanpassing",
   "appCustomizationSubtitle": "Thema, taal, stem en quickpills",
@@ -325,12 +323,413 @@
   "display": "Weergave",
   "realtime": "Realtime",
   "transportMode": "Transportmodus",
-  "transportModeDescription": "Kies hoe de app verbindt voor realtime updates.",
   "mode": "Modus",
   "transportModePolling": "Polling-fallback",
   "transportModeWs": "Alleen WebSocket",
   "transportModePollingInfo": "Valt terug op HTTP-polling wanneer WebSocket geblokkeerd is. Upgrade naar WebSocket zodra dat kan.",
   "transportModeWsInfo": "Lagere overhead, maar kan mislukken achter strikte proxies/firewalls.",
-  "websocketConnectionError": "Kan geen realtime verbinding maken. Controleer uw netwerk en serverconfiguratie.",
-  "websocketReconnectFailed": "Realtime verbinding mislukt. Streaming werkt mogelijk niet goed."
+  "quickActionsSelectedCount": "{count, plural, =0{Geen acties geselecteerd} one{{count} actie geselecteerd} other{{count} acties geselecteerd}}",
+  "@quickActionsSelectedCount": {
+    "description": "Subtitle indicating how many quick actions are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "autoSelectDescription": "Laat de app het beste model kiezen",
+  "@autoSelectDescription": {
+    "description": "Explains what the auto-select model setting does."
+  },
+  "ttsEngineLabel": "Engine",
+  "@ttsEngineLabel": {
+    "description": "Label for selecting the text-to-speech engine."
+  },
+  "ttsEngineDevice": "Op het apparaat",
+  "@ttsEngineDevice": {
+    "description": "Chip label for using on-device text-to-speech."
+  },
+  "ttsEngineServer": "Server",
+  "@ttsEngineServer": {
+    "description": "Chip label for using server-side text-to-speech."
+  },
+  "modelCapabilityMultimodal": "Multimodaal",
+  "@modelCapabilityMultimodal": {
+    "description": "Capability chip label for models that support multimodal input."
+  },
+  "modelCapabilityReasoning": "Redeneren",
+  "@modelCapabilityReasoning": {
+    "description": "Capability chip label for models that support reasoning features."
+  },
+  "voiceCallTitle": "Spraakoproep",
+  "@voiceCallTitle": {
+    "description": "Title displayed on the voice call screen."
+  },
+  "voiceCallPause": "Pauze",
+  "@voiceCallPause": {
+    "description": "Button label to pause a voice call."
+  },
+  "voiceCallResume": "Hervatten",
+  "@voiceCallResume": {
+    "description": "Button label to resume a paused voice call."
+  },
+  "voiceCallStop": "Stoppen",
+  "@voiceCallStop": {
+    "description": "Button label to stop the active voice call."
+  },
+  "voiceCallEnd": "Oproep beëindigen",
+  "@voiceCallEnd": {
+    "description": "Button label to end the voice call session."
+  },
+  "chooseDifferentFile": "Ander bestand kiezen",
+  "@chooseDifferentFile": {
+    "description": "Action label prompting the user to pick another file."
+  },
+  "errorWithMessage": "Fout: {message}",
+  "@errorWithMessage": {
+    "description": "Error label with appended message text.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "networkTimeoutError": "De verbinding is verlopen. Controleer je internetverbinding en probeer het opnieuw.",
+  "@networkTimeoutError": {
+    "description": "User-facing message when a network request times out."
+  },
+  "networkUnreachableError": "Server niet bereikbaar. Controleer de server-URL en je internetverbinding.",
+  "@networkUnreachableError": {
+    "description": "User-facing message when the server cannot be reached."
+  },
+  "networkServerNotResponding": "Server reageert niet. Controleer of de server actief en bereikbaar is.",
+  "@networkServerNotResponding": {
+    "description": "User-facing message when the server does not respond to a request."
+  },
+  "networkGenericError": "Netwerkprobleem. Controleer je internetverbinding.",
+  "@networkGenericError": {
+    "description": "Fallback message for generic network errors."
+  },
+  "serverError500": "De server heeft problemen. Dit is meestal tijdelijk.",
+  "@serverError500": {
+    "description": "Message when a 500 error is encountered."
+  },
+  "serverErrorUnavailable": "Server tijdelijk niet beschikbaar. Probeer het zo weer.",
+  "@serverErrorUnavailable": {
+    "description": "Message when a 502/503 error is encountered."
+  },
+  "serverErrorTimeout": "De server deed te lang over een antwoord. Probeer het opnieuw.",
+  "@serverErrorTimeout": {
+    "description": "Message when the server times out."
+  },
+  "serverErrorGeneric": "De server ondervindt problemen. Probeer het later opnieuw.",
+  "@serverErrorGeneric": {
+    "description": "Fallback server error message."
+  },
+  "authSessionExpired": "Je sessie is verlopen. Log opnieuw in.",
+  "@authSessionExpired": {
+    "description": "Message when an authentication session expires."
+  },
+  "authForbidden": "Je hebt geen toestemming voor deze actie.",
+  "@authForbidden": {
+    "description": "Message when the user lacks required permissions."
+  },
+  "authInvalidToken": "Authenticatietoken is ongeldig. Log opnieuw in.",
+  "@authInvalidToken": {
+    "description": "Message when the authentication token is invalid."
+  },
+  "authGenericError": "Authenticatieprobleem. Log opnieuw in.",
+  "@authGenericError": {
+    "description": "Fallback authentication error message."
+  },
+  "validationInvalidEmail": "Voer een geldig e-mailadres in.",
+  "@validationInvalidEmail": {
+    "description": "Validation message for invalid email input."
+  },
+  "validationWeakPassword": "Het wachtwoord voldoet niet aan de vereisten. Controleer het en probeer opnieuw.",
+  "@validationWeakPassword": {
+    "description": "Validation message for weak passwords."
+  },
+  "validationMissingRequired": "Vul alle verplichte velden in.",
+  "@validationMissingRequired": {
+    "description": "Validation message when required fields are missing."
+  },
+  "validationFormatError": "Sommige informatie heeft het verkeerde formaat. Controleer en probeer opnieuw.",
+  "@validationFormatError": {
+    "description": "Validation message for generic formatting issues."
+  },
+  "validationGenericError": "Controleer je invoer en probeer opnieuw.",
+  "@validationGenericError": {
+    "description": "Fallback validation message."
+  },
+  "fileNotFound": "Bestand niet gevonden. Het is mogelijk verplaatst of verwijderd.",
+  "@fileNotFound": {
+    "description": "Message when a file cannot be located."
+  },
+  "fileAccessDenied": "Kan geen toegang krijgen tot het bestand. Controleer de rechten.",
+  "@fileAccessDenied": {
+    "description": "Message when file access is denied."
+  },
+  "fileTooLarge": "Het bestand is te groot. Kies een kleiner bestand.",
+  "@fileTooLarge": {
+    "description": "Message when a file exceeds size limits."
+  },
+  "fileGenericError": "Probleem met het bestand. Probeer een ander bestand.",
+  "@fileGenericError": {
+    "description": "Fallback file error message."
+  },
+  "permissionCameraRequired": "Cameratoegang is vereist. Schakel dit in via de instellingen.",
+  "@permissionCameraRequired": {
+    "description": "Message when camera permission is missing."
+  },
+  "permissionStorageRequired": "Opslagtoegang is vereist. Schakel dit in via de instellingen.",
+  "@permissionStorageRequired": {
+    "description": "Message when storage permission is missing."
+  },
+  "permissionMicrophoneRequired": "Microfoontoegang is vereist. Schakel dit in via de instellingen.",
+  "@permissionMicrophoneRequired": {
+    "description": "Message when microphone permission is missing."
+  },
+  "permissionGenericError": "Toestemming vereist. Controleer de app-machtigingen in de instellingen.",
+  "@permissionGenericError": {
+    "description": "Fallback permission error message."
+  },
+  "actionRetryRequest": "Probeer de aanvraag opnieuw.",
+  "@actionRetryRequest": {
+    "description": "Description for retrying a failed request."
+  },
+  "actionVerifyConnection": "Controleer je internetverbinding.",
+  "@actionVerifyConnection": {
+    "description": "Description for checking internet connectivity."
+  },
+  "actionRetryOperation": "Probeer de actie opnieuw.",
+  "@actionRetryOperation": {
+    "description": "Description for retrying the same operation."
+  },
+  "actionRetryAfterDelay": "Wacht even en probeer het opnieuw.",
+  "@actionRetryAfterDelay": {
+    "description": "Description suggesting a short delay before retrying."
+  },
+  "actionSignInToAccount": "Log in op je account.",
+  "@actionSignInToAccount": {
+    "description": "Description for signing back into the app."
+  },
+  "actionSelectAnotherFile": "Kies een ander bestand.",
+  "@actionSelectAnotherFile": {
+    "description": "Description for choosing a different file."
+  },
+  "actionOpenAppSettings": "Open de app-instellingen om toestemming te geven.",
+  "@actionOpenAppSettings": {
+    "description": "Description for opening system or app settings."
+  },
+  "actionRetryAfterPermission": "Probeer opnieuw nadat je toestemming hebt gegeven.",
+  "@actionRetryAfterPermission": {
+    "description": "Description for retrying once permissions are granted."
+  },
+  "actionReturnToPrevious": "Keer terug naar het vorige scherm.",
+  "@actionReturnToPrevious": {
+    "description": "Description for navigating back to the prior screen."
+  },
+  "continueAction": "Doorgaan",
+  "@continueAction": {
+    "description": "Button label to continue an action or flow."
+  },
+  "loadingShort": "Laden",
+  "@loadingShort": {
+    "description": "Short loading label used for accessibility."
+  },
+  "loadingAnnouncement": "Laden: {message}",
+  "@loadingAnnouncement": {
+    "description": "Screen reader announcement when loading a resource.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
+  "errorAnnouncement": "Fout: {error}",
+  "@errorAnnouncement": {
+    "description": "Screen reader announcement for an error.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "errorAnnouncementWithSuggestion": "Fout: {error}. {suggestion}",
+  "@errorAnnouncementWithSuggestion": {
+    "description": "Screen reader announcement for an error with a follow-up suggestion.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      },
+      "suggestion": {
+        "type": "String",
+        "example": "Please try again later."
+      }
+    }
+  },
+  "successAnnouncement": "Succes: {message}",
+  "@successAnnouncement": {
+    "description": "Screen reader announcement for successful actions.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Profile updated"
+      }
+    }
+  },
+  "requiredFieldLabel": "{label} *",
+  "@requiredFieldLabel": {
+    "description": "Label text indicating a required field.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Email"
+      }
+    }
+  },
+  "requiredFieldHelper": "Verplicht veld",
+  "@requiredFieldHelper": {
+    "description": "Helper text indicating that the field is required."
+  },
+  "switchOnLabel": "Aan",
+  "@switchOnLabel": {
+    "description": "Semantic label when a switch is enabled."
+  },
+  "switchOffLabel": "Uit",
+  "@switchOffLabel": {
+    "description": "Semantic label when a switch is disabled."
+  },
+  "dialogSemanticLabel": "Dialoog: {title}",
+  "@dialogSemanticLabel": {
+    "description": "Semantic label describing the dialog title.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
+  "previousLabel": "Vorige",
+  "@previousLabel": {
+    "description": "Label for navigating to the previous item."
+  },
+  "nextLabel": "Volgende",
+  "@nextLabel": {
+    "description": "Label for navigating to the next item."
+  },
+  "themePaletteConduitLabel": "Conduit",
+  "@themePaletteConduitLabel": {
+    "description": "Palette name for the default Conduit theme."
+  },
+  "themePaletteConduitDescription": "Strak neutraal thema ontworpen voor Conduit.",
+  "@themePaletteConduitDescription": {
+    "description": "Description of the Conduit palette."
+  },
+  "themePaletteClaudeLabel": "Claude",
+  "@themePaletteClaudeLabel": {
+    "description": "Palette name inspired by the Claude web client."
+  },
+  "themePaletteClaudeDescription": "Warm, tactiel palet geïnspireerd op de Claude-webclient.",
+  "@themePaletteClaudeDescription": {
+    "description": "Description of the Claude palette."
+  },
+  "themePaletteT3ChatLabel": "T3 Chat",
+  "@themePaletteT3ChatLabel": {
+    "description": "Palette name inspired by the T3 Stack brand."
+  },
+  "themePaletteT3ChatDescription": "Speelse verlopen geïnspireerd op het T3 Stack-merk.",
+  "@themePaletteT3ChatDescription": {
+    "description": "Description of the T3 Chat palette."
+  },
+  "themePaletteCatppuccinLabel": "Catppuccin",
+  "@themePaletteCatppuccinLabel": {
+    "description": "Palette name for Catppuccin colors."
+  },
+  "themePaletteCatppuccinDescription": "Zacht pastelkleurig palet.",
+  "@themePaletteCatppuccinDescription": {
+    "description": "Description of the Catppuccin palette."
+  },
+  "themePaletteTangerineLabel": "Tangerine",
+  "@themePaletteTangerineLabel": {
+    "description": "Palette name for Tangerine colors."
+  },
+  "themePaletteTangerineDescription": "Warm oranje-en-leisteenpalet.",
+  "@themePaletteTangerineDescription": {
+    "description": "Description of the Tangerine palette."
+  },
+  "@onboardStartTitle": {
+    "description": "Onboarding card: start chatting title.",
+    "placeholders": {
+      "username": {
+        "type": "String",
+        "example": "Alex"
+      }
+    }
+  },
+  "@notAnImageFile": {
+    "description": "Error when a referenced file is not an image.",
+    "placeholders": {
+      "fileName": {
+        "type": "String",
+        "example": "image.txt"
+      }
+    }
+  },
+  "@failedToLoadImage": {
+    "description": "Error including the underlying reason when image loading fails.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "@ttsVoicesForLanguage": {
+    "description": "Section header for voices matching the app language",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "EN"
+      }
+    }
+  },
+  "voiceCallReady": "Gereed",
+  "@voiceCallReady": {
+    "description": "Status label shown when the voice call is ready to start."
+  },
+  "voiceCallConnecting": "Verbinding maken...",
+  "@voiceCallConnecting": {
+    "description": "Status label shown while the voice call is connecting."
+  },
+  "voiceCallListening": "Luistert",
+  "@voiceCallListening": {
+    "description": "Status label shown while the call is listening for input."
+  },
+  "voiceCallPaused": "Gepauzeerd",
+  "@voiceCallPaused": {
+    "description": "Status label shown when the call is paused."
+  },
+  "voiceCallProcessing": "Denkt na...",
+  "@voiceCallProcessing": {
+    "description": "Status label shown while the call processes a response."
+  },
+  "voiceCallSpeaking": "Spreekt",
+  "@voiceCallSpeaking": {
+    "description": "Status label shown while the assistant is speaking."
+  },
+  "voiceCallDisconnected": "Verbinding verbroken",
+  "@voiceCallDisconnected": {
+    "description": "Status label shown when the voice call has ended or disconnected."
+  },
+  "voiceCallErrorHelp": "Controleer het volgende:\n• Microfoonmachtigingen zijn toegestaan\n• Spraakherkenning is beschikbaar op je apparaat\n• Je bent verbonden met de server",
+  "@voiceCallErrorHelp": {
+    "description": "Guidance shown when the voice call encounters an error."
+  }
 }

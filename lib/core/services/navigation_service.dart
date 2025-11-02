@@ -1,3 +1,4 @@
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../shared/widgets/themed_dialogs.dart';
@@ -57,18 +58,21 @@ class NavigationService {
   static Future<bool> confirmNavigation({
     required String title,
     required String message,
-    String confirmText = 'Continue',
-    String cancelText = 'Cancel',
+    String? confirmText,
+    String? cancelText,
   }) async {
     final ctx = context;
     if (ctx == null) return false;
+    final l10n = AppLocalizations.of(ctx);
+    final resolvedConfirm = confirmText ?? l10n?.continueAction ?? 'Continue';
+    final resolvedCancel = cancelText ?? l10n?.cancel ?? 'Cancel';
 
     final result = await ThemedDialogs.confirm(
       ctx,
       title: title,
       message: message,
-      confirmText: confirmText,
-      cancelText: cancelText,
+      confirmText: resolvedConfirm,
+      cancelText: resolvedCancel,
       barrierDismissible: false,
     );
 

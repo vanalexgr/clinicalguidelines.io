@@ -12,48 +12,57 @@ class UserFriendlyErrorHandler {
   factory UserFriendlyErrorHandler() => _instance;
   UserFriendlyErrorHandler._internal();
 
+  AppLocalizations? get _l10n {
+    final ctx = NavigationService.context;
+    if (ctx == null) return null;
+    return AppLocalizations.of(ctx);
+  }
+
   /// Convert technical errors to user-friendly messages
   String getUserMessage(dynamic error) {
     final errorString = error.toString().toLowerCase();
+    final l10n = _l10n;
 
     if (_isNetworkError(errorString)) {
-      return _getNetworkErrorMessage(errorString);
+      return _getNetworkErrorMessage(errorString, l10n);
     } else if (_isValidationError(errorString)) {
-      return _getValidationErrorMessage(errorString);
+      return _getValidationErrorMessage(errorString, l10n);
     } else if (_isServerError(errorString)) {
-      return _getServerErrorMessage(errorString);
+      return _getServerErrorMessage(errorString, l10n);
     } else if (_isAuthenticationError(errorString)) {
-      return _getAuthenticationErrorMessage(errorString);
+      return _getAuthenticationErrorMessage(errorString, l10n);
     } else if (_isFileError(errorString)) {
-      return _getFileErrorMessage(errorString);
+      return _getFileErrorMessage(errorString, l10n);
     } else if (_isPermissionError(errorString)) {
-      return _getPermissionErrorMessage(errorString);
+      return _getPermissionErrorMessage(errorString, l10n);
     }
 
     // Log technical details for debugging
     _logError(error);
 
     // Return generic user-friendly message
-    return 'Something unexpected happened. Please try again.';
+    return l10n?.errorMessage ??
+        'Something unexpected happened. Please try again.';
   }
 
   /// Get recovery actions for the error
   List<ErrorRecoveryAction> getRecoveryActions(dynamic error) {
     final errorString = error.toString().toLowerCase();
+    final l10n = _l10n;
 
     if (_isNetworkError(errorString)) {
-      return _getNetworkRecoveryActions();
+      return _getNetworkRecoveryActions(l10n);
     } else if (_isServerError(errorString)) {
-      return _getServerRecoveryActions();
+      return _getServerRecoveryActions(l10n);
     } else if (_isAuthenticationError(errorString)) {
-      return _getAuthRecoveryActions();
+      return _getAuthRecoveryActions(l10n);
     } else if (_isFileError(errorString)) {
-      return _getFileRecoveryActions();
+      return _getFileRecoveryActions(l10n);
     } else if (_isPermissionError(errorString)) {
-      return _getPermissionRecoveryActions();
+      return _getPermissionRecoveryActions(l10n);
     }
 
-    return _getGenericRecoveryActions();
+    return _getGenericRecoveryActions(l10n);
   }
 
   /// Build error widget with recovery options
@@ -135,28 +144,33 @@ class UserFriendlyErrorHandler {
         error.contains('no address associated');
   }
 
-  String _getNetworkErrorMessage(String error) {
+  String _getNetworkErrorMessage(String error, AppLocalizations? l10n) {
     if (error.contains('timeout')) {
-      return 'Connection timed out. Please check your internet connection and try again.';
+      return l10n?.networkTimeoutError ??
+          'Connection timed out. Please check your internet connection and try again.';
     } else if (error.contains('no address associated')) {
-      return 'Cannot reach the server. Please check your server URL and internet connection.';
+      return l10n?.networkUnreachableError ??
+          'Cannot reach the server. Please check your server URL and internet connection.';
     } else if (error.contains('connection refused')) {
-      return 'Server is not responding. Please verify the server is running and accessible.';
+      return l10n?.networkServerNotResponding ??
+          'Server is not responding. Please verify the server is running and accessible.';
     }
-    return 'Network connection problem. Please check your internet connection.';
+    return l10n?.networkGenericError ??
+        'Network connection problem. Please check your internet connection.';
   }
 
-  List<ErrorRecoveryAction> _getNetworkRecoveryActions() {
+  List<ErrorRecoveryAction> _getNetworkRecoveryActions(AppLocalizations? l10n) {
     return [
       ErrorRecoveryAction(
-        label: 'Retry',
+        label: l10n?.retry ?? 'Retry',
         action: ErrorActionType.retry,
-        description: 'Try the request again',
+        description: l10n?.actionRetryRequest ?? 'Try the request again',
       ),
       ErrorRecoveryAction(
-        label: 'Check Connection',
+        label: l10n?.checkConnection ?? 'Check Connection',
         action: ErrorActionType.checkConnection,
-        description: 'Verify your internet connection',
+        description:
+            l10n?.actionVerifyConnection ?? 'Verify your internet connection',
       ),
     ];
   }
@@ -171,28 +185,33 @@ class UserFriendlyErrorHandler {
         error.contains('internal server error');
   }
 
-  String _getServerErrorMessage(String error) {
+  String _getServerErrorMessage(String error, AppLocalizations? l10n) {
     if (error.contains('500')) {
-      return 'Server is experiencing issues. This is usually temporary.';
+      return l10n?.serverError500 ??
+          'Server is experiencing issues. This is usually temporary.';
     } else if (error.contains('502') || error.contains('503')) {
-      return 'Server is temporarily unavailable. Please try again in a moment.';
+      return l10n?.serverErrorUnavailable ??
+          'Server is temporarily unavailable. Please try again in a moment.';
     } else if (error.contains('504')) {
-      return 'Server took too long to respond. Please try again.';
+      return l10n?.serverErrorTimeout ??
+          'Server took too long to respond. Please try again.';
     }
-    return 'Server is having problems. Please try again later.';
+    return l10n?.serverErrorGeneric ??
+        'Server is having problems. Please try again later.';
   }
 
-  List<ErrorRecoveryAction> _getServerRecoveryActions() {
+  List<ErrorRecoveryAction> _getServerRecoveryActions(AppLocalizations? l10n) {
     return [
       ErrorRecoveryAction(
-        label: 'Retry',
+        label: l10n?.retry ?? 'Retry',
         action: ErrorActionType.retry,
-        description: 'Retry your request',
+        description: l10n?.actionRetryRequest ?? 'Retry your request',
       ),
       ErrorRecoveryAction(
-        label: 'Retry',
+        label: l10n?.retry ?? 'Retry',
         action: ErrorActionType.retryLater,
-        description: 'Wait a moment then try again',
+        description:
+            l10n?.actionRetryAfterDelay ?? 'Wait a moment then try again',
       ),
     ];
   }
@@ -207,28 +226,32 @@ class UserFriendlyErrorHandler {
         error.contains('token');
   }
 
-  String _getAuthenticationErrorMessage(String error) {
+  String _getAuthenticationErrorMessage(String error, AppLocalizations? l10n) {
     if (error.contains('401') || error.contains('unauthorized')) {
-      return 'Your session has expired. Please sign in again.';
+      return l10n?.authSessionExpired ??
+          'Your session has expired. Please sign in again.';
     } else if (error.contains('403') || error.contains('forbidden')) {
-      return 'You don\'t have permission to perform this action.';
+      return l10n?.authForbidden ??
+          'You don\'t have permission to perform this action.';
     } else if (error.contains('token')) {
-      return 'Authentication token is invalid. Please sign in again.';
+      return l10n?.authInvalidToken ??
+          'Authentication token is invalid. Please sign in again.';
     }
-    return 'Authentication problem. Please sign in again.';
+    return l10n?.authGenericError ??
+        'Authentication problem. Please sign in again.';
   }
 
-  List<ErrorRecoveryAction> _getAuthRecoveryActions() {
+  List<ErrorRecoveryAction> _getAuthRecoveryActions(AppLocalizations? l10n) {
     return [
       ErrorRecoveryAction(
-        label: 'Sign In',
+        label: l10n?.signIn ?? 'Sign In',
         action: ErrorActionType.signIn,
-        description: 'Sign in to your account',
+        description: l10n?.actionSignInToAccount ?? 'Sign in to your account',
       ),
       ErrorRecoveryAction(
-        label: 'Retry',
+        label: l10n?.retry ?? 'Retry',
         action: ErrorActionType.retry,
-        description: 'Retry the request',
+        description: l10n?.actionRetryOperation ?? 'Retry the request',
       ),
     ];
   }
@@ -242,17 +265,22 @@ class UserFriendlyErrorHandler {
         error.contains('400');
   }
 
-  String _getValidationErrorMessage(String error) {
+  String _getValidationErrorMessage(String error, AppLocalizations? l10n) {
     if (error.contains('email')) {
-      return 'Please enter a valid email address.';
+      return l10n?.validationInvalidEmail ??
+          'Please enter a valid email address.';
     } else if (error.contains('password')) {
-      return 'Password doesn\'t meet requirements. Please check and try again.';
+      return l10n?.validationWeakPassword ??
+          'Password doesn\'t meet requirements. Please check and try again.';
     } else if (error.contains('required')) {
-      return 'Please fill in all required fields.';
+      return l10n?.validationMissingRequired ??
+          'Please fill in all required fields.';
     } else if (error.contains('format')) {
-      return 'Some information is in the wrong format. Please check and try again.';
+      return l10n?.validationFormatError ??
+          'Some information is in the wrong format. Please check and try again.';
     }
-    return 'Please check your input and try again.';
+    return l10n?.validationGenericError ??
+        'Please check your input and try again.';
   }
 
   // File error detection and handling
@@ -264,28 +292,32 @@ class UserFriendlyErrorHandler {
         error.contains('access denied');
   }
 
-  String _getFileErrorMessage(String error) {
+  String _getFileErrorMessage(String error, AppLocalizations? l10n) {
     if (error.contains('not found')) {
-      return 'File not found. It may have been moved or deleted.';
+      return l10n?.fileNotFound ??
+          'File not found. It may have been moved or deleted.';
     } else if (error.contains('access denied')) {
-      return 'Cannot access the file. Please check permissions.';
+      return l10n?.fileAccessDenied ??
+          'Cannot access the file. Please check permissions.';
     } else if (error.contains('too large')) {
-      return 'File is too large. Please choose a smaller file.';
+      return l10n?.fileTooLarge ??
+          'File is too large. Please choose a smaller file.';
     }
-    return 'Problem with the file. Please try a different file.';
+    return l10n?.fileGenericError ??
+        'Problem with the file. Please try a different file.';
   }
 
-  List<ErrorRecoveryAction> _getFileRecoveryActions() {
+  List<ErrorRecoveryAction> _getFileRecoveryActions(AppLocalizations? l10n) {
     return [
       ErrorRecoveryAction(
-        label: 'Choose Different File',
+        label: l10n?.chooseDifferentFile ?? 'Choose Different File',
         action: ErrorActionType.chooseFile,
-        description: 'Select another file',
+        description: l10n?.actionSelectAnotherFile ?? 'Select another file',
       ),
       ErrorRecoveryAction(
-        label: 'Retry',
+        label: l10n?.retry ?? 'Retry',
         action: ErrorActionType.retry,
-        description: 'Retry the operation',
+        description: l10n?.actionRetryOperation ?? 'Retry the operation',
       ),
     ];
   }
@@ -298,43 +330,54 @@ class UserFriendlyErrorHandler {
         error.contains('access');
   }
 
-  String _getPermissionErrorMessage(String error) {
+  String _getPermissionErrorMessage(String error, AppLocalizations? l10n) {
     if (error.contains('camera')) {
-      return 'Camera permission is required. Please enable it in settings.';
+      return l10n?.permissionCameraRequired ??
+          'Camera permission is required. Please enable it in settings.';
     } else if (error.contains('storage')) {
-      return 'Storage permission is required. Please enable it in settings.';
+      return l10n?.permissionStorageRequired ??
+          'Storage permission is required. Please enable it in settings.';
     } else if (error.contains('microphone')) {
-      return 'Microphone permission is required. Please enable it in settings.';
+      return l10n?.permissionMicrophoneRequired ??
+          'Microphone permission is required. Please enable it in settings.';
     }
-    return 'Permission required. Please check app permissions in settings.';
+    return l10n?.permissionGenericError ??
+        'Permission required. Please check app permissions in settings.';
   }
 
-  List<ErrorRecoveryAction> _getPermissionRecoveryActions() {
+  List<ErrorRecoveryAction> _getPermissionRecoveryActions(
+    AppLocalizations? l10n,
+  ) {
     return [
       ErrorRecoveryAction(
-        label: 'Open Settings',
+        label: l10n?.openSettings ?? 'Open Settings',
         action: ErrorActionType.openSettings,
-        description: 'Open app settings to grant permissions',
+        description:
+            l10n?.actionOpenAppSettings ??
+            'Open app settings to grant permissions',
       ),
       ErrorRecoveryAction(
-        label: 'Retry',
+        label: l10n?.retry ?? 'Retry',
         action: ErrorActionType.retry,
-        description: 'Retry after granting permission',
+        description:
+            l10n?.actionRetryAfterPermission ??
+            'Retry after granting permission',
       ),
     ];
   }
 
-  List<ErrorRecoveryAction> _getGenericRecoveryActions() {
+  List<ErrorRecoveryAction> _getGenericRecoveryActions(AppLocalizations? l10n) {
     return [
       ErrorRecoveryAction(
-        label: 'Retry',
+        label: l10n?.retry ?? 'Retry',
         action: ErrorActionType.retry,
-        description: 'Retry the operation',
+        description: l10n?.actionRetryOperation ?? 'Retry the operation',
       ),
       ErrorRecoveryAction(
-        label: 'Go Back',
+        label: l10n?.back ?? 'Go Back',
         action: ErrorActionType.goBack,
-        description: 'Return to previous screen',
+        description:
+            l10n?.actionReturnToPrevious ?? 'Return to previous screen',
       ),
     ];
   }

@@ -1,12 +1,20 @@
 import 'dart:math' as math;
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/semantics.dart';
 import '../../shared/theme/tweakcn_themes.dart';
 import '../../shared/theme/theme_extensions.dart';
+import 'navigation_service.dart';
 
 /// Enhanced accessibility service for WCAG 2.2 AA compliance
 class EnhancedAccessibilityService {
+  static AppLocalizations? get _l10n {
+    final ctx = NavigationService.context;
+    if (ctx == null) return null;
+    return AppLocalizations.of(ctx);
+  }
+
   /// Announce text to screen readers
   static void announce(
     String message, {
@@ -17,20 +25,28 @@ class EnhancedAccessibilityService {
 
   /// Announce loading state
   static void announceLoading(String loadingMessage) {
-    announce('Loading: $loadingMessage');
+    final l10n = _l10n;
+    final message =
+        l10n?.loadingAnnouncement(loadingMessage) ?? 'Loading: $loadingMessage';
+    announce(message);
   }
 
   /// Announce error with helpful context
   static void announceError(String error, {String? suggestion}) {
+    final l10n = _l10n;
     final message = suggestion != null
-        ? 'Error: $error. $suggestion'
-        : 'Error: $error';
+        ? l10n?.errorAnnouncementWithSuggestion(error, suggestion) ??
+              'Error: $error. $suggestion'
+        : l10n?.errorAnnouncement(error) ?? 'Error: $error';
     announce(message);
   }
 
   /// Announce success with context
   static void announceSuccess(String successMessage) {
-    announce('Success: $successMessage');
+    final l10n = _l10n;
+    announce(
+      l10n?.successAnnouncement(successMessage) ?? 'Success: $successMessage',
+    );
   }
 
   /// Check if reduce motion is enabled
@@ -117,7 +133,10 @@ class EnhancedAccessibilityService {
     bool obscureText = false,
     ValueChanged<String>? onChanged,
   }) {
-    final effectiveLabel = isRequired ? '$label *' : label;
+    final l10n = _l10n;
+    final effectiveLabel = isRequired
+        ? l10n?.requiredFieldLabel(label) ?? '$label *'
+        : label;
 
     return Semantics(
       label: effectiveLabel,
@@ -132,7 +151,9 @@ class EnhancedAccessibilityService {
           labelText: effectiveLabel,
           hintText: hintText,
           errorText: errorText,
-          helperText: isRequired ? '* Required field' : null,
+          helperText: isRequired
+              ? l10n?.requiredFieldHelper ?? 'Required field'
+              : null,
           prefixIcon: errorText != null
               ? Builder(
                   builder: (context) => Icon(
@@ -176,8 +197,9 @@ class EnhancedAccessibilityService {
     String? loadingMessage,
     double size = 24,
   }) {
+    final l10n = _l10n;
     return Semantics(
-      label: loadingMessage ?? 'Loading',
+      label: loadingMessage ?? l10n?.loadingShort ?? 'Loading',
       liveRegion: true,
       child: SizedBox(
         width: size,
@@ -217,10 +239,13 @@ class EnhancedAccessibilityService {
     required String label,
     String? description,
   }) {
+    final l10n = _l10n;
+    final onLabel = l10n?.switchOnLabel ?? 'On';
+    final offLabel = l10n?.switchOffLabel ?? 'Off';
     return Builder(
       builder: (context) => Semantics(
         label: label,
-        value: value ? 'On' : 'Off',
+        value: value ? onLabel : offLabel,
         hint: description,
         toggled: value,
         onTap: onChanged != null ? () => onChanged(!value) : null,
@@ -291,15 +316,18 @@ class EnhancedAccessibilityService {
     return showDialog<T>(
       context: context,
       barrierDismissible: barrierDismissible,
-      builder: (context) => Semantics(
-        scopesRoute: true,
-        explicitChildNodes: true,
-        label: 'Dialog: $title',
-        child: AlertDialog(
-          title: Semantics(header: true, child: Text(title)),
-          content: child,
-        ),
-      ),
+      builder: (dialogContext) {
+        final dialogL10n = AppLocalizations.of(dialogContext);
+        return Semantics(
+          scopesRoute: true,
+          explicitChildNodes: true,
+          label: dialogL10n?.dialogSemanticLabel(title) ?? 'Dialog: $title',
+          child: AlertDialog(
+            title: Semantics(header: true, child: Text(title)),
+            content: child,
+          ),
+        );
+      },
     );
   }
 

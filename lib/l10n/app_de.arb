@@ -1,7 +1,6 @@
 {
   "@@locale": "de",
   "appTitle": "Conduit",
-  "initializationFailed": "Initialisierung fehlgeschlagen",
   "retry": "Erneut versuchen",
   "back": "Zurück",
   "you": "Du",
@@ -15,10 +14,6 @@
   "connectionIssueSubtitle": "Verbindung wiederherstellen oder abmelden, um einen anderen Server zu wählen.",
   "@connectionIssueSubtitle": {
     "description": "Untertitel mit den verfügbaren Aktionen, wenn der Server nicht erreichbar ist"
-  },
-  "stillOfflineMessage": "Der Server ist weiterhin nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
-  "@stillOfflineMessage": {
-    "description": "Statusnachricht nach einem erneuten Versuch ohne wiederhergestellte Verbindung"
   },
   "account": "Konto",
   "supportConduit": "Conduit unterstützen",
@@ -37,32 +32,14 @@
   "noResults": "Keine Ergebnisse",
   "searchModels": "Modelle suchen...",
   "errorMessage": "Etwas ist schief gelaufen. Bitte versuche es erneut.",
-  "loginButton": "Anmelden",
-  "menuItem": "Einstellungen",
-  "dynamicContentWithPlaceholder": "Willkommen, {name}!",
-  "itemsCount": "{count, plural, =0{Keine Elemente} one{1 Element} other{{count} Elemente}}",
   "closeButtonSemantic": "Schließen",
   "loadingContent": "Inhalt wird geladen",
   "noItems": "Keine Elemente",
   "noItemsToDisplay": "Keine Elemente zum Anzeigen",
-  "loadMore": "Mehr laden",
-  "workspace": "Arbeitsbereich",
-  "recentFiles": "Zuletzt verwendete Dateien",
   "knowledgeBase": "Wissensdatenbank",
-  "noFilesYet": "Noch keine Dateien",
-  "uploadDocsPrompt": "Lade Dokumente hoch, um sie in deinen Unterhaltungen mit Conduit zu verwenden",
-  "uploadFirstFile": "Erste Datei hochladen",
   "attachments": "Anhänge",
-  "knowledgeBaseEmpty": "Wissensdatenbank ist leer",
-  "createCollectionsPrompt": "Erstelle Sammlungen verwandter Dokumente zur einfachen Referenz",
-  "chooseSourcePhoto": "Quelle auswählen",
   "takePhoto": "Foto aufnehmen",
-  "chooseFromGallery": "Aus Fotos auswählen",
   "document": "Dokument",
-  "documentHint": "PDF-, Word- oder Textdatei",
-  "uploadFileTitle": "Datei hochladen",
-  "fileUploadComingSoon": "Dateiupload für {type} kommt bald!",
-  "kbCreationComingSoon": "Erstellung der Wissensdatenbank kommt bald!",
   "backToServerSetup": "Zur Servereinrichtung zurück",
   "connectedToServer": "Mit Server verbunden",
   "signIn": "Anmelden",
@@ -124,9 +101,7 @@
   "onboardQuickTitle": "Schnellaktionen",
   "onboardQuickSubtitle": "Menü öffnen, um zwischen Chats, Arbeitsbereich und Profil zu wechseln.",
   "onboardQuickBullet1": "Menü tippen für Chats, Arbeitsbereich, Profil",
-  "onboardQuickBullet2": "Neuer Chat starten oder Modelle oben verwalten"
-  ,
-  "addAttachment": "Anhang hinzufügen",
+  "onboardQuickBullet2": "Neuer Chat starten oder Modelle oben verwalten",
   "attachmentLabel": "Anhang",
   "tools": "Werkzeuge",
   "voiceInput": "Spracheingabe",
@@ -157,19 +132,13 @@
   "invalidDataUrl": "Ungültiges Data-URL-Format",
   "failedToDecodeImage": "Bild konnte nicht decodiert werden",
   "invalidImageFormat": "Ungültiges Bildformat",
-  "emptyImageData": "Leere Bilddaten"
-  ,
-  "featureRequiresInternet": "Diese Funktion erfordert eine Internetverbindung",
-  "messagesWillSendWhenOnline": "Nachrichten werden gesendet, sobald du wieder online bist",
+  "emptyImageData": "Leere Bilddaten",
   "confirm": "Bestätigen",
-  "cancel": "Abbrechen"
-  ,
+  "cancel": "Abbrechen",
   "ok": "OK",
   "inputField": "Eingabefeld",
-  "captureDocumentOrImage": "Dokument oder Bild aufnehmen",
   "checkConnection": "Verbindung prüfen",
   "openSettings": "Einstellungen öffnen",
-  "chooseDifferentFile": "Andere Datei wählen",
   "goBack": "Zurück",
   "technicalDetails": "Technische Details",
   "save": "Speichern",
@@ -181,18 +150,9 @@
   "newChat": "Neuer Chat",
   "more": "Mehr",
   "clear": "Leeren",
-  "searchHint": "Suchen...",
   "searchConversations": "Konversationen durchsuchen...",
   "create": "Erstellen",
-  "folderCreated": "Ordner erstellt",
   "failedToCreateFolder": "Ordner konnte nicht erstellt werden",
-  "movedChatToFolder": "\"{title}\" nach \"{folder}\" verschoben",
-  "@movedChatToFolder": {
-    "placeholders": {
-      "title": {"type": "String"},
-      "folder": {"type": "String"}
-    }
-  },
   "failedToMoveChat": "Chat konnte nicht verschoben werden",
   "failedToLoadChats": "Chats konnten nicht geladen werden",
   "failedToUpdatePin": "Pin konnte nicht aktualisiert werden",
@@ -208,7 +168,7 @@
   "archive": "Archivieren",
   "pin": "Anheften",
   "unpin": "Lösen",
-  "recent": "Zuletzt", 
+  "recent": "Zuletzt",
   "system": "System",
   "english": "Englisch",
   "deutsch": "Deutsch",
@@ -222,13 +182,17 @@
   "deleteMessagesMessage": "{count} Nachrichten löschen?",
   "@deleteMessagesMessage": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "routeNotFound": "Route nicht gefunden: {routeName}",
   "@routeNotFound": {
     "placeholders": {
-      "routeName": {"type": "String"}
+      "routeName": {
+        "type": "String"
+      }
     }
   },
   "deleteChatTitle": "Chat löschen",
@@ -254,8 +218,7 @@
   "ttsStop": "Stoppen",
   "edit": "Bearbeiten",
   "regenerate": "Neu generieren",
-  "noConversationsYet": "Noch keine Unterhaltungen"
-  ,
+  "noConversationsYet": "Noch keine Unterhaltungen",
   "usernameOrEmailHint": "Gib deinen Benutzernamen oder deine E‑Mail ein",
   "passwordHint": "Gib dein Passwort ein",
   "enterApiKey": "Gib deinen API-Schlüssel ein",
@@ -275,31 +238,55 @@
   "headerNameTooLong": "Header-Name zu lang (max. 64 Zeichen)",
   "headerNameInvalidChars": "Ungültiger Header-Name. Verwende nur Buchstaben, Zahlen und diese Zeichen: !#$&-^_`|~",
   "headerNameReserved": "Reservierten Header \"{key}\" kann nicht überschrieben werden",
-  "@headerNameReserved": {"placeholders": {"key": {"type": "String"}}},
+  "@headerNameReserved": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "headerValueEmpty": "Header-Wert darf nicht leer sein",
   "headerValueTooLong": "Header-Wert zu lang (max. 1024 Zeichen)",
   "headerValueInvalidChars": "Header-Wert enthält ungültige Zeichen. Nur druckbare ASCII-Zeichen verwenden.",
   "headerValueUnsafe": "Header-Wert scheint potenziell unsicheren Inhalt zu enthalten",
   "headerAlreadyExists": "Header \"{key}\" existiert bereits. Zum Aktualisieren zuerst entfernen.",
-  "@headerAlreadyExists": {"placeholders": {"key": {"type": "String"}}},
-  "maxHeadersReachedDetail": "Maximal 10 benutzerdefinierte Header zulässig. Einige entfernen, um mehr hinzuzufügen."
-  ,
-  "editMessage": "Nachricht bearbeiten"
-  ,
+  "@headerAlreadyExists": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "maxHeadersReachedDetail": "Maximal 10 benutzerdefinierte Header zulässig. Einige entfernen, um mehr hinzuzufügen.",
   "noModelsAvailable": "Keine Modelle verfügbar",
   "followingSystem": "Dem System folgen: {theme}",
-  "@followingSystem": {"placeholders": {"theme": {"type": "String"}}},
+  "@followingSystem": {
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
+  },
   "themeDark": "Dunkel",
   "themePalette": "Farbpalette",
-  "@themePalette": {"description": "Titel für die Auswahl der App-Farbpalette."},
-  "themePaletteDescription": "Wählen Sie die Akzentfarben für Schaltflächen, Karten und Chatblasen.",
-  "@themePaletteDescription": {"description": "Hilfetext zur Erklärung der Palettenauswahl."},
+  "@themePalette": {
+    "description": "Titel für die Auswahl der App-Farbpalette."
+  },
   "themeLight": "Hell",
   "currentlyUsingDarkTheme": "Aktuell dunkles Thema",
   "currentlyUsingLightTheme": "Aktuell helles Thema",
   "aboutConduit": "Über Conduit",
   "versionLabel": "Version: {version} ({build})",
-  "@versionLabel": {"placeholders": {"version": {"type": "String"}, "build": {"type": "String"}}},
+  "@versionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
   "githubRepository": "GitHub-Repository",
   "unableToLoadAppInfo": "App-Informationen konnten nicht geladen werden",
   "thinking": "Denkt…",
@@ -307,9 +294,13 @@
   "thoughtForDuration": "Gedacht für {duration}",
   "@thoughtForDuration": {
     "description": "Zeigt an, wie lange der Assistent nachgedacht hat.",
-    "placeholders": {"duration": {"type": "String", "example": "3 s"}}
-  }
-  ,
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "3 s"
+      }
+    }
+  },
   "appCustomization": "Anpassung",
   "appCustomizationSubtitle": "Design, Sprache, Stimme und Quick Pills",
   "quickActionsDescription": "Schnellzugriffe im Chat",
@@ -332,12 +323,413 @@
   "display": "Anzeige",
   "realtime": "Echtzeit",
   "transportMode": "Transportmodus",
-  "transportModeDescription": "Wähle, wie die App für Echtzeit-Updates verbindet.",
   "mode": "Modus",
   "transportModePolling": "Polling-Fallback",
   "transportModeWs": "Nur WebSocket",
   "transportModePollingInfo": "Fällt auf HTTP-Polling zurück, wenn WebSockets blockiert sind. Wechselt nach Möglichkeit zu WebSocket.",
   "transportModeWsInfo": "Geringerer Overhead, kann jedoch hinter strikten Proxys/Firewalls fehlschlagen.",
-  "websocketConnectionError": "Echtzeit-Verbindung konnte nicht hergestellt werden. Bitte überprüfen Sie Ihr Netzwerk und die Serverkonfiguration.",
-  "websocketReconnectFailed": "Echtzeit-Verbindung fehlgeschlagen. Streaming funktioniert möglicherweise nicht ordnungsgemäß."
+  "quickActionsSelectedCount": "{count, plural, =0{Keine Aktionen ausgewählt} one{{count} Aktion ausgewählt} other{{count} Aktionen ausgewählt}}",
+  "@quickActionsSelectedCount": {
+    "description": "Subtitle indicating how many quick actions are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "autoSelectDescription": "Lass die App das beste Modell auswählen",
+  "@autoSelectDescription": {
+    "description": "Explains what the auto-select model setting does."
+  },
+  "ttsEngineLabel": "Engine",
+  "@ttsEngineLabel": {
+    "description": "Label for selecting the text-to-speech engine."
+  },
+  "ttsEngineDevice": "Auf dem Gerät",
+  "@ttsEngineDevice": {
+    "description": "Chip label for using on-device text-to-speech."
+  },
+  "ttsEngineServer": "Server",
+  "@ttsEngineServer": {
+    "description": "Chip label for using server-side text-to-speech."
+  },
+  "modelCapabilityMultimodal": "Multimodal",
+  "@modelCapabilityMultimodal": {
+    "description": "Capability chip label for models that support multimodal input."
+  },
+  "modelCapabilityReasoning": "Reasoning",
+  "@modelCapabilityReasoning": {
+    "description": "Capability chip label for models that support reasoning features."
+  },
+  "voiceCallTitle": "Sprachanruf",
+  "@voiceCallTitle": {
+    "description": "Title displayed on the voice call screen."
+  },
+  "voiceCallPause": "Pause",
+  "@voiceCallPause": {
+    "description": "Button label to pause a voice call."
+  },
+  "voiceCallResume": "Fortsetzen",
+  "@voiceCallResume": {
+    "description": "Button label to resume a paused voice call."
+  },
+  "voiceCallStop": "Stopp",
+  "@voiceCallStop": {
+    "description": "Button label to stop the active voice call."
+  },
+  "voiceCallEnd": "Anruf beenden",
+  "@voiceCallEnd": {
+    "description": "Button label to end the voice call session."
+  },
+  "chooseDifferentFile": "Andere Datei auswählen",
+  "@chooseDifferentFile": {
+    "description": "Action label prompting the user to pick another file."
+  },
+  "errorWithMessage": "Fehler: {message}",
+  "@errorWithMessage": {
+    "description": "Error label with appended message text.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "networkTimeoutError": "Verbindung abgelaufen. Bitte überprüfe deine Internetverbindung und versuche es erneut.",
+  "@networkTimeoutError": {
+    "description": "User-facing message when a network request times out."
+  },
+  "networkUnreachableError": "Server nicht erreichbar. Bitte überprüfe die Server-URL und deine Internetverbindung.",
+  "@networkUnreachableError": {
+    "description": "User-facing message when the server cannot be reached."
+  },
+  "networkServerNotResponding": "Server reagiert nicht. Bitte stelle sicher, dass der Server läuft und erreichbar ist.",
+  "@networkServerNotResponding": {
+    "description": "User-facing message when the server does not respond to a request."
+  },
+  "networkGenericError": "Netzwerkproblem. Bitte überprüfe deine Internetverbindung.",
+  "@networkGenericError": {
+    "description": "Fallback message for generic network errors."
+  },
+  "serverError500": "Der Server hat Probleme. Das ist meist nur vorübergehend.",
+  "@serverError500": {
+    "description": "Message when a 500 error is encountered."
+  },
+  "serverErrorUnavailable": "Server vorübergehend nicht verfügbar. Bitte versuche es gleich noch einmal.",
+  "@serverErrorUnavailable": {
+    "description": "Message when a 502/503 error is encountered."
+  },
+  "serverErrorTimeout": "Der Server hat zu lange für eine Antwort gebraucht. Bitte versuche es erneut.",
+  "@serverErrorTimeout": {
+    "description": "Message when the server times out."
+  },
+  "serverErrorGeneric": "Der Server hat Schwierigkeiten. Bitte versuche es später erneut.",
+  "@serverErrorGeneric": {
+    "description": "Fallback server error message."
+  },
+  "authSessionExpired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+  "@authSessionExpired": {
+    "description": "Message when an authentication session expires."
+  },
+  "authForbidden": "Du hast keine Berechtigung für diese Aktion.",
+  "@authForbidden": {
+    "description": "Message when the user lacks required permissions."
+  },
+  "authInvalidToken": "Der Authentifizierungstoken ist ungültig. Bitte melde dich erneut an.",
+  "@authInvalidToken": {
+    "description": "Message when the authentication token is invalid."
+  },
+  "authGenericError": "Authentifizierungsproblem. Bitte melde dich erneut an.",
+  "@authGenericError": {
+    "description": "Fallback authentication error message."
+  },
+  "validationInvalidEmail": "Bitte gib eine gültige E-Mail-Adresse ein.",
+  "@validationInvalidEmail": {
+    "description": "Validation message for invalid email input."
+  },
+  "validationWeakPassword": "Das Passwort erfüllt die Anforderungen nicht. Bitte überprüfe es und versuche es erneut.",
+  "@validationWeakPassword": {
+    "description": "Validation message for weak passwords."
+  },
+  "validationMissingRequired": "Bitte fülle alle Pflichtfelder aus.",
+  "@validationMissingRequired": {
+    "description": "Validation message when required fields are missing."
+  },
+  "validationFormatError": "Einige Angaben haben ein falsches Format. Bitte überprüfe sie und versuche es erneut.",
+  "@validationFormatError": {
+    "description": "Validation message for generic formatting issues."
+  },
+  "validationGenericError": "Bitte überprüfe deine Eingaben und versuche es erneut.",
+  "@validationGenericError": {
+    "description": "Fallback validation message."
+  },
+  "fileNotFound": "Datei nicht gefunden. Vielleicht wurde sie verschoben oder gelöscht.",
+  "@fileNotFound": {
+    "description": "Message when a file cannot be located."
+  },
+  "fileAccessDenied": "Datei kann nicht geöffnet werden. Bitte prüfe die Berechtigungen.",
+  "@fileAccessDenied": {
+    "description": "Message when file access is denied."
+  },
+  "fileTooLarge": "Datei ist zu groß. Bitte wähle eine kleinere Datei.",
+  "@fileTooLarge": {
+    "description": "Message when a file exceeds size limits."
+  },
+  "fileGenericError": "Problem mit der Datei. Bitte versuche eine andere Datei.",
+  "@fileGenericError": {
+    "description": "Fallback file error message."
+  },
+  "permissionCameraRequired": "Kamerazugriff erforderlich. Bitte aktiviere ihn in den Einstellungen.",
+  "@permissionCameraRequired": {
+    "description": "Message when camera permission is missing."
+  },
+  "permissionStorageRequired": "Speicherzugriff erforderlich. Bitte aktiviere ihn in den Einstellungen.",
+  "@permissionStorageRequired": {
+    "description": "Message when storage permission is missing."
+  },
+  "permissionMicrophoneRequired": "Mikrofonzugriff erforderlich. Bitte aktiviere ihn in den Einstellungen.",
+  "@permissionMicrophoneRequired": {
+    "description": "Message when microphone permission is missing."
+  },
+  "permissionGenericError": "Berechtigung erforderlich. Bitte prüfe die App-Berechtigungen in den Einstellungen.",
+  "@permissionGenericError": {
+    "description": "Fallback permission error message."
+  },
+  "actionRetryRequest": "Versuche die Anfrage erneut.",
+  "@actionRetryRequest": {
+    "description": "Description for retrying a failed request."
+  },
+  "actionVerifyConnection": "Überprüfe deine Internetverbindung.",
+  "@actionVerifyConnection": {
+    "description": "Description for checking internet connectivity."
+  },
+  "actionRetryOperation": "Wiederhole den Vorgang.",
+  "@actionRetryOperation": {
+    "description": "Description for retrying the same operation."
+  },
+  "actionRetryAfterDelay": "Warte einen Moment und versuche es dann erneut.",
+  "@actionRetryAfterDelay": {
+    "description": "Description suggesting a short delay before retrying."
+  },
+  "actionSignInToAccount": "Melde dich bei deinem Konto an.",
+  "@actionSignInToAccount": {
+    "description": "Description for signing back into the app."
+  },
+  "actionSelectAnotherFile": "Wähle eine andere Datei.",
+  "@actionSelectAnotherFile": {
+    "description": "Description for choosing a different file."
+  },
+  "actionOpenAppSettings": "Öffne die App-Einstellungen, um Berechtigungen zu erteilen.",
+  "@actionOpenAppSettings": {
+    "description": "Description for opening system or app settings."
+  },
+  "actionRetryAfterPermission": "Versuche es erneut, nachdem du die Berechtigung erteilt hast.",
+  "@actionRetryAfterPermission": {
+    "description": "Description for retrying once permissions are granted."
+  },
+  "actionReturnToPrevious": "Zur vorherigen Ansicht zurückkehren.",
+  "@actionReturnToPrevious": {
+    "description": "Description for navigating back to the prior screen."
+  },
+  "continueAction": "Weiter",
+  "@continueAction": {
+    "description": "Button label to continue an action or flow."
+  },
+  "loadingShort": "Laden",
+  "@loadingShort": {
+    "description": "Short loading label used for accessibility."
+  },
+  "loadingAnnouncement": "Laden: {message}",
+  "@loadingAnnouncement": {
+    "description": "Screen reader announcement when loading a resource.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
+  "errorAnnouncement": "Fehler: {error}",
+  "@errorAnnouncement": {
+    "description": "Screen reader announcement for an error.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "errorAnnouncementWithSuggestion": "Fehler: {error}. {suggestion}",
+  "@errorAnnouncementWithSuggestion": {
+    "description": "Screen reader announcement for an error with a follow-up suggestion.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      },
+      "suggestion": {
+        "type": "String",
+        "example": "Please try again later."
+      }
+    }
+  },
+  "successAnnouncement": "Erfolg: {message}",
+  "@successAnnouncement": {
+    "description": "Screen reader announcement for successful actions.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Profile updated"
+      }
+    }
+  },
+  "requiredFieldLabel": "{label} *",
+  "@requiredFieldLabel": {
+    "description": "Label text indicating a required field.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Email"
+      }
+    }
+  },
+  "requiredFieldHelper": "Pflichtfeld",
+  "@requiredFieldHelper": {
+    "description": "Helper text indicating that the field is required."
+  },
+  "switchOnLabel": "Ein",
+  "@switchOnLabel": {
+    "description": "Semantic label when a switch is enabled."
+  },
+  "switchOffLabel": "Aus",
+  "@switchOffLabel": {
+    "description": "Semantic label when a switch is disabled."
+  },
+  "dialogSemanticLabel": "Dialog: {title}",
+  "@dialogSemanticLabel": {
+    "description": "Semantic label describing the dialog title.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
+  "previousLabel": "Zurück",
+  "@previousLabel": {
+    "description": "Label for navigating to the previous item."
+  },
+  "nextLabel": "Weiter",
+  "@nextLabel": {
+    "description": "Label for navigating to the next item."
+  },
+  "themePaletteConduitLabel": "Conduit",
+  "@themePaletteConduitLabel": {
+    "description": "Palette name for the default Conduit theme."
+  },
+  "themePaletteConduitDescription": "Schlichtes neutrales Design für Conduit.",
+  "@themePaletteConduitDescription": {
+    "description": "Description of the Conduit palette."
+  },
+  "themePaletteClaudeLabel": "Claude",
+  "@themePaletteClaudeLabel": {
+    "description": "Palette name inspired by the Claude web client."
+  },
+  "themePaletteClaudeDescription": "Warmes, haptisches Farbschema aus dem Claude-Webclient.",
+  "@themePaletteClaudeDescription": {
+    "description": "Description of the Claude palette."
+  },
+  "themePaletteT3ChatLabel": "T3 Chat",
+  "@themePaletteT3ChatLabel": {
+    "description": "Palette name inspired by the T3 Stack brand."
+  },
+  "themePaletteT3ChatDescription": "Verspielte Verläufe inspiriert vom T3-Stack.",
+  "@themePaletteT3ChatDescription": {
+    "description": "Description of the T3 Chat palette."
+  },
+  "themePaletteCatppuccinLabel": "Catppuccin",
+  "@themePaletteCatppuccinLabel": {
+    "description": "Palette name for Catppuccin colors."
+  },
+  "themePaletteCatppuccinDescription": "Sanfte Pastellpalette.",
+  "@themePaletteCatppuccinDescription": {
+    "description": "Description of the Catppuccin palette."
+  },
+  "themePaletteTangerineLabel": "Tangerine",
+  "@themePaletteTangerineLabel": {
+    "description": "Palette name for Tangerine colors."
+  },
+  "themePaletteTangerineDescription": "Warmes Orange-Schiefer-Farbschema.",
+  "@themePaletteTangerineDescription": {
+    "description": "Description of the Tangerine palette."
+  },
+  "@onboardStartTitle": {
+    "description": "Onboarding card: start chatting title.",
+    "placeholders": {
+      "username": {
+        "type": "String",
+        "example": "Alex"
+      }
+    }
+  },
+  "@notAnImageFile": {
+    "description": "Error when a referenced file is not an image.",
+    "placeholders": {
+      "fileName": {
+        "type": "String",
+        "example": "image.txt"
+      }
+    }
+  },
+  "@failedToLoadImage": {
+    "description": "Error including the underlying reason when image loading fails.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "@ttsVoicesForLanguage": {
+    "description": "Section header for voices matching the app language",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "EN"
+      }
+    }
+  },
+  "voiceCallReady": "Bereit",
+  "@voiceCallReady": {
+    "description": "Status label shown when the voice call is ready to start."
+  },
+  "voiceCallConnecting": "Verbinden...",
+  "@voiceCallConnecting": {
+    "description": "Status label shown while the voice call is connecting."
+  },
+  "voiceCallListening": "Zuhören",
+  "@voiceCallListening": {
+    "description": "Status label shown while the call is listening for input."
+  },
+  "voiceCallPaused": "Pausiert",
+  "@voiceCallPaused": {
+    "description": "Status label shown when the call is paused."
+  },
+  "voiceCallProcessing": "Denkt...",
+  "@voiceCallProcessing": {
+    "description": "Status label shown while the call processes a response."
+  },
+  "voiceCallSpeaking": "Spricht",
+  "@voiceCallSpeaking": {
+    "description": "Status label shown while the assistant is speaking."
+  },
+  "voiceCallDisconnected": "Getrennt",
+  "@voiceCallDisconnected": {
+    "description": "Status label shown when the voice call has ended or disconnected."
+  },
+  "voiceCallErrorHelp": "Bitte prüfe:\n• Mikrofonberechtigungen sind erteilt\n• Spracherkennung ist auf deinem Gerät verfügbar\n• Du bist mit dem Server verbunden",
+  "@voiceCallErrorHelp": {
+    "description": "Guidance shown when the voice call encounters an error."
+  }
 }

@@ -12,9 +12,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get appTitle => 'Conduit';
 
   @override
-  String get initializationFailed => 'Inizializzazione non riuscita';
-
-  @override
   String get retry => 'Riprova';
 
   @override
@@ -38,10 +35,6 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get connectionIssueSubtitle =>
       'Riconnettiti per continuare oppure esci per scegliere un server diverso.';
-
-  @override
-  String get stillOfflineMessage =>
-      'Non riusciamo ancora a raggiungere il server. Controlla la connessione e riprova.';
 
   @override
   String get account => 'Account';
@@ -89,6 +82,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get availableModels => 'Modelli disponibili';
 
   @override
+  String get modelCapabilityMultimodal => 'Multimodale';
+
+  @override
+  String get modelCapabilityReasoning => 'Ragionamento';
+
+  @override
   String get noResults => 'Nessun risultato';
 
   @override
@@ -98,33 +97,33 @@ class AppLocalizationsIt extends AppLocalizations {
   String get errorMessage => 'Qualcosa è andato storto. Riprova.';
 
   @override
-  String get loginButton => 'Accedi';
-
-  @override
-  String get menuItem => 'Impostazioni';
-
-  @override
-  String dynamicContentWithPlaceholder(String name) {
-    return 'Benvenuto, $name!';
-  }
-
-  @override
-  String itemsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count elementi',
-      one: '1 elemento',
-      zero: 'Nessun elemento',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get closeButtonSemantic => 'Chiudi';
 
   @override
   String get loadingContent => 'Caricamento contenuto';
+
+  @override
+  String get loadingShort => 'Caricamento';
+
+  @override
+  String loadingAnnouncement(String message) {
+    return 'Caricamento: $message';
+  }
+
+  @override
+  String errorAnnouncement(String error) {
+    return 'Errore: $error';
+  }
+
+  @override
+  String errorAnnouncementWithSuggestion(String error, String suggestion) {
+    return 'Errore: $error. $suggestion';
+  }
+
+  @override
+  String successAnnouncement(String message) {
+    return 'Operazione riuscita: $message';
+  }
 
   @override
   String get noItems => 'Nessun elemento';
@@ -133,63 +132,16 @@ class AppLocalizationsIt extends AppLocalizations {
   String get noItemsToDisplay => 'Nessun elemento da visualizzare';
 
   @override
-  String get loadMore => 'Carica altro';
-
-  @override
-  String get workspace => 'Spazio di lavoro';
-
-  @override
-  String get recentFiles => 'File recenti';
-
-  @override
   String get knowledgeBase => 'Base di conoscenza';
-
-  @override
-  String get noFilesYet => 'Ancora nessun file';
-
-  @override
-  String get uploadDocsPrompt =>
-      'Carica documenti da usare nelle conversazioni con Conduit';
-
-  @override
-  String get uploadFirstFile => 'Carica il tuo primo file';
 
   @override
   String get attachments => 'Allegati';
 
   @override
-  String get knowledgeBaseEmpty => 'La base di conoscenza è vuota';
-
-  @override
-  String get createCollectionsPrompt =>
-      'Crea raccolte di documenti correlati per un rapido riferimento';
-
-  @override
-  String get chooseSourcePhoto => 'Scegli origine';
-
-  @override
   String get takePhoto => 'Scatta una foto';
 
   @override
-  String get chooseFromGallery => 'Scegli dalle foto';
-
-  @override
   String get document => 'Documento';
-
-  @override
-  String get documentHint => 'File PDF, Word o di testo';
-
-  @override
-  String get uploadFileTitle => 'Carica file';
-
-  @override
-  String fileUploadComingSoon(String type) {
-    return 'Il caricamento file per $type arriverà presto!';
-  }
-
-  @override
-  String get kbCreationComingSoon =>
-      'La creazione della base di conoscenza arriverà presto!';
 
   @override
   String get backToServerSetup => 'Torna alla configurazione del server';
@@ -400,9 +352,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Avvia Nuova chat o gestisci i modelli dalla barra';
 
   @override
-  String get addAttachment => 'Aggiungi allegato';
-
-  @override
   String get attachmentLabel => 'Allegato';
 
   @override
@@ -442,6 +391,46 @@ class AppLocalizationsIt extends AppLocalizations {
   String get voiceActionStart => 'Avvia';
 
   @override
+  String get voiceCallTitle => 'Chiamata vocale';
+
+  @override
+  String get voiceCallPause => 'Pausa';
+
+  @override
+  String get voiceCallResume => 'Riprendi';
+
+  @override
+  String get voiceCallStop => 'Stop';
+
+  @override
+  String get voiceCallEnd => 'Termina chiamata';
+
+  @override
+  String get voiceCallReady => 'Pronto';
+
+  @override
+  String get voiceCallConnecting => 'Connessione...';
+
+  @override
+  String get voiceCallListening => 'In ascolto';
+
+  @override
+  String get voiceCallPaused => 'In pausa';
+
+  @override
+  String get voiceCallProcessing => 'Elaborazione...';
+
+  @override
+  String get voiceCallSpeaking => 'Sta parlando';
+
+  @override
+  String get voiceCallDisconnected => 'Disconnesso';
+
+  @override
+  String get voiceCallErrorHelp =>
+      'Controlla:\n• Sono state concesse le autorizzazioni del microfono\n• Il riconoscimento vocale è disponibile sul dispositivo\n• Sei connesso al server';
+
+  @override
   String get messageInputLabel => 'Input messaggio';
 
   @override
@@ -464,6 +453,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get file => 'File';
+
+  @override
+  String get chooseDifferentFile => 'Scegli un altro file';
 
   @override
   String get photo => 'Foto';
@@ -500,15 +492,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get emptyImageData => 'Dati immagine vuoti';
 
   @override
-  String get featureRequiresInternet =>
-      'Questa funzione richiede una connessione Internet';
-
-  @override
-  String get messagesWillSendWhenOnline =>
-      'I messaggi verranno inviati quando tornerai online';
-
-  @override
   String get confirm => 'Conferma';
+
+  @override
+  String get continueAction => 'Continua';
 
   @override
   String get cancel => 'Annulla';
@@ -517,10 +504,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get ok => 'OK';
 
   @override
-  String get inputField => 'Campo di input';
+  String get previousLabel => 'Precedente';
 
   @override
-  String get captureDocumentOrImage => 'Acquisisci un documento o un\'immagine';
+  String get nextLabel => 'Successivo';
+
+  @override
+  String get inputField => 'Campo di input';
 
   @override
   String get checkConnection => 'Controlla connessione';
@@ -529,13 +519,29 @@ class AppLocalizationsIt extends AppLocalizations {
   String get openSettings => 'Apri impostazioni';
 
   @override
-  String get chooseDifferentFile => 'Scegli un altro file';
-
-  @override
   String get goBack => 'Indietro';
 
   @override
   String get technicalDetails => 'Dettagli tecnici';
+
+  @override
+  String requiredFieldLabel(String label) {
+    return '$label *';
+  }
+
+  @override
+  String get requiredFieldHelper => 'Campo obbligatorio';
+
+  @override
+  String get switchOnLabel => 'Attivo';
+
+  @override
+  String get switchOffLabel => 'Disattivo';
+
+  @override
+  String dialogSemanticLabel(String title) {
+    return 'Dialogo: $title';
+  }
 
   @override
   String get save => 'Salva';
@@ -565,24 +571,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get clear => 'Pulisci';
 
   @override
-  String get searchHint => 'Cerca...';
-
-  @override
   String get searchConversations => 'Cerca conversazioni...';
 
   @override
   String get create => 'Crea';
 
   @override
-  String get folderCreated => 'Cartella creata';
-
-  @override
   String get failedToCreateFolder => 'Impossibile creare la cartella';
-
-  @override
-  String movedChatToFolder(String title, String folder) {
-    return '\"$title\" spostata in \"$folder\"';
-  }
 
   @override
   String get failedToMoveChat => 'Impossibile spostare la chat';
@@ -816,9 +811,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Massimo 10 header personalizzati consentiti. Rimuovine alcuni per aggiungerne altri.';
 
   @override
-  String get editMessage => 'Modifica messaggio';
-
-  @override
   String get noModelsAvailable => 'Nessun modello disponibile';
 
   @override
@@ -833,8 +825,39 @@ class AppLocalizationsIt extends AppLocalizations {
   String get themePalette => 'Palette di colori';
 
   @override
-  String get themePaletteDescription =>
-      'Scegli i colori di accento usati per pulsanti, schede e bolle di chat.';
+  String get themePaletteConduitLabel => 'Conduit';
+
+  @override
+  String get themePaletteConduitDescription =>
+      'Tema neutro e pulito progettato per Conduit.';
+
+  @override
+  String get themePaletteClaudeLabel => 'Claude';
+
+  @override
+  String get themePaletteClaudeDescription =>
+      'Palette calda e tattile ispirata al client web Claude.';
+
+  @override
+  String get themePaletteT3ChatLabel => 'T3 Chat';
+
+  @override
+  String get themePaletteT3ChatDescription =>
+      'Sfumature vivaci ispirate al brand T3 Stack.';
+
+  @override
+  String get themePaletteCatppuccinLabel => 'Catppuccin';
+
+  @override
+  String get themePaletteCatppuccinDescription =>
+      'Palette morbida di tonalità pastello.';
+
+  @override
+  String get themePaletteTangerineLabel => 'Tangerine';
+
+  @override
+  String get themePaletteTangerineDescription =>
+      'Palette calda arancione e ardesia.';
 
   @override
   String get themeLight => 'Chiaro';
@@ -881,6 +904,22 @@ class AppLocalizationsIt extends AppLocalizations {
   String get quickActionsDescription => 'Scorciatoie nella chat';
 
   @override
+  String quickActionsSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count azioni selezionate',
+      one: '$count azione selezionata',
+      zero: 'Nessuna azione selezionata',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get autoSelectDescription =>
+      'Lascia che l\'app scelga il modello migliore';
+
+  @override
   String get chatSettings => 'Chat';
 
   @override
@@ -889,6 +928,15 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get sendOnEnterDescription =>
       'Invio invia (tastiera software). Cmd/Ctrl+Invio disponibile';
+
+  @override
+  String get ttsEngineLabel => 'Motore';
+
+  @override
+  String get ttsEngineDevice => 'Sul dispositivo';
+
+  @override
+  String get ttsEngineServer => 'Server';
 
   @override
   String get ttsSettings => 'Sintesi vocale';
@@ -932,6 +980,135 @@ class AppLocalizationsIt extends AppLocalizations {
   String get error => 'Errore';
 
   @override
+  String errorWithMessage(String message) {
+    return 'Errore: $message';
+  }
+
+  @override
+  String get networkTimeoutError =>
+      'Connessione scaduta. Controlla la tua connessione Internet e riprova.';
+
+  @override
+  String get networkUnreachableError =>
+      'Impossibile raggiungere il server. Controlla l\'URL del server e la connessione Internet.';
+
+  @override
+  String get networkServerNotResponding =>
+      'Il server non risponde. Verifica che sia attivo e raggiungibile.';
+
+  @override
+  String get networkGenericError =>
+      'Problema di connessione di rete. Controlla la connessione Internet.';
+
+  @override
+  String get serverError500 =>
+      'Il server sta avendo problemi. Di solito è temporaneo.';
+
+  @override
+  String get serverErrorUnavailable =>
+      'Il server è temporaneamente non disponibile. Riprova tra poco.';
+
+  @override
+  String get serverErrorTimeout =>
+      'Il server ha impiegato troppo tempo a rispondere. Riprova.';
+
+  @override
+  String get serverErrorGeneric =>
+      'Il server è in difficoltà. Riprova più tardi.';
+
+  @override
+  String get authSessionExpired => 'La sessione è scaduta. Accedi di nuovo.';
+
+  @override
+  String get authForbidden =>
+      'Non hai l\'autorizzazione per eseguire questa azione.';
+
+  @override
+  String get authInvalidToken =>
+      'Il token di autenticazione non è valido. Accedi di nuovo.';
+
+  @override
+  String get authGenericError => 'Problema di autenticazione. Accedi di nuovo.';
+
+  @override
+  String get validationInvalidEmail => 'Inserisci un indirizzo email valido.';
+
+  @override
+  String get validationWeakPassword =>
+      'La password non soddisfa i requisiti. Controllala e riprova.';
+
+  @override
+  String get validationMissingRequired => 'Compila tutti i campi obbligatori.';
+
+  @override
+  String get validationFormatError =>
+      'Alcune informazioni non sono nel formato corretto. Controllale e riprova.';
+
+  @override
+  String get validationGenericError => 'Controlla i dati inseriti e riprova.';
+
+  @override
+  String get fileNotFound =>
+      'File non trovato. Potrebbe essere stato spostato o eliminato.';
+
+  @override
+  String get fileAccessDenied =>
+      'Impossibile accedere al file. Controlla i permessi.';
+
+  @override
+  String get fileTooLarge =>
+      'Il file è troppo grande. Scegline uno più piccolo.';
+
+  @override
+  String get fileGenericError =>
+      'Problema con il file. Prova con un file diverso.';
+
+  @override
+  String get permissionCameraRequired =>
+      'È necessario il permesso della fotocamera. Attivalo nelle impostazioni.';
+
+  @override
+  String get permissionStorageRequired =>
+      'È necessario il permesso di archiviazione. Attivalo nelle impostazioni.';
+
+  @override
+  String get permissionMicrophoneRequired =>
+      'È necessario il permesso del microfono. Attivalo nelle impostazioni.';
+
+  @override
+  String get permissionGenericError =>
+      'È necessaria un\'autorizzazione. Controlla i permessi dell\'app nelle impostazioni.';
+
+  @override
+  String get actionRetryRequest => 'Riprova la richiesta.';
+
+  @override
+  String get actionVerifyConnection => 'Verifica la connessione a Internet.';
+
+  @override
+  String get actionRetryOperation => 'Riprova l\'operazione.';
+
+  @override
+  String get actionRetryAfterDelay => 'Attendi un momento e riprova.';
+
+  @override
+  String get actionSignInToAccount => 'Accedi al tuo account.';
+
+  @override
+  String get actionSelectAnotherFile => 'Seleziona un altro file.';
+
+  @override
+  String get actionOpenAppSettings =>
+      'Apri le impostazioni dell\'app per concedere i permessi.';
+
+  @override
+  String get actionRetryAfterPermission =>
+      'Riprova dopo aver concesso il permesso.';
+
+  @override
+  String get actionReturnToPrevious => 'Torna alla schermata precedente.';
+
+  @override
   String get display => 'Schermo';
 
   @override
@@ -939,10 +1116,6 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get transportMode => 'Modalità di trasporto';
-
-  @override
-  String get transportModeDescription =>
-      'Scegli come l\'app si connette per gli aggiornamenti in tempo reale.';
 
   @override
   String get mode => 'Modalità';
@@ -960,12 +1133,4 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get transportModeWsInfo =>
       'Minore overhead, ma può fallire dietro proxy/firewall restrittivi.';
-
-  @override
-  String get websocketConnectionError =>
-      'Impossibile stabilire una connessione in tempo reale. Si prega di controllare la rete e la configurazione del server.';
-
-  @override
-  String get websocketReconnectFailed =>
-      'Connessione in tempo reale fallita. Lo streaming potrebbe non funzionare correttamente.';
 }

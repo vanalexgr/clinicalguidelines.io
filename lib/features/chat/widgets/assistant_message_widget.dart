@@ -1162,7 +1162,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           // Inline version toggle: Prev [1/n] Next
           ChatActionButton(
             icon: Icons.chevron_left,
-            label: 'Prev',
+            label: l10n.previousLabel,
             onTap: () {
               setState(() {
                 if (_activeVersionIndex < 0) {
@@ -1181,7 +1181,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           ),
           ChatActionButton(
             icon: Icons.chevron_right,
-            label: 'Next',
+            label: l10n.nextLabel,
             onTap: () {
               setState(() {
                 if (_activeVersionIndex < 0) return; // already live

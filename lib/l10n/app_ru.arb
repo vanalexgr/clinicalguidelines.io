@@ -1,7 +1,6 @@
 {
   "@@locale": "ru",
   "appTitle": "Conduit",
-  "initializationFailed": "Ошибка инициализации",
   "retry": "Повторить",
   "back": "Назад",
   "you": "Вы",
@@ -15,10 +14,6 @@
   "connectionIssueSubtitle": "Переподключитесь, чтобы продолжить, или выйдите, чтобы выбрать другой сервер.",
   "@connectionIssueSubtitle": {
     "description": "Подзаголовок с доступными действиями при недоступности сервера"
-  },
-  "stillOfflineMessage": "Мы все еще не можем подключиться к серверу. Проверьте соединение и повторите попытку.",
-  "@stillOfflineMessage": {
-    "description": "Сообщение после повторной попытки, когда соединение не восстановлено"
   },
   "account": "Аккаунт",
   "supportConduit": "Поддержать Conduit",
@@ -37,32 +32,14 @@
   "noResults": "Нет результатов",
   "searchModels": "Поиск моделей...",
   "errorMessage": "Что-то пошло не так. Пожалуйста, попробуйте еще раз.",
-  "loginButton": "Войти",
-  "menuItem": "Настройки",
-  "dynamicContentWithPlaceholder": "Добро пожаловать, {name}!",
-  "itemsCount": "{count, plural, =0{Нет элементов} one{{count} элемент} few{{count} элемента} other{{count} элементов}}",
   "closeButtonSemantic": "Закрыть",
   "loadingContent": "Загрузка содержимого",
   "noItems": "Нет элементов",
   "noItemsToDisplay": "Нет элементов для отображения",
-  "loadMore": "Загрузить еще",
-  "workspace": "Рабочее пространство",
-  "recentFiles": "Недавние файлы",
   "knowledgeBase": "База знаний",
-  "noFilesYet": "Пока нет файлов",
-  "uploadDocsPrompt": "Загрузите документы для использования в разговорах с Conduit",
-  "uploadFirstFile": "Загрузить первый файл",
   "attachments": "Вложения",
-  "knowledgeBaseEmpty": "База знаний пуста",
-  "createCollectionsPrompt": "Создайте коллекции связанных документов для удобной ссылки",
-  "chooseSourcePhoto": "Выберите источник",
   "takePhoto": "Сделать фото",
-  "chooseFromGallery": "Выбрать из галереи",
   "document": "Документ",
-  "documentHint": "PDF, Word или текстовый файл",
-  "uploadFileTitle": "Загрузить файл",
-  "fileUploadComingSoon": "Загрузка файлов для {type} скоро появится!",
-  "kbCreationComingSoon": "Создание базы знаний скоро появится!",
   "backToServerSetup": "Вернуться к настройке сервера",
   "connectedToServer": "Подключено к серверу",
   "signIn": "Войти",
@@ -125,7 +102,6 @@
   "onboardQuickSubtitle": "Откройте меню для переключения между чатами, рабочим пространством и профилем.",
   "onboardQuickBullet1": "Нажмите на меню для доступа к чатам, рабочему пространству, профилю",
   "onboardQuickBullet2": "Начните новый чат или управляйте моделями из верхней панели",
-  "addAttachment": "Добавить вложение",
   "attachmentLabel": "Вложение",
   "tools": "Инструменты",
   "voiceInput": "Голосовой ввод",
@@ -157,16 +133,12 @@
   "failedToDecodeImage": "Не удалось декодировать изображение",
   "invalidImageFormat": "Неверный формат изображения",
   "emptyImageData": "Пустые данные изображения",
-  "featureRequiresInternet": "Эта функция требует подключения к интернету",
-  "messagesWillSendWhenOnline": "Сообщения будут отправлены, когда вы снова будете онлайн",
   "confirm": "Подтвердить",
   "cancel": "Отмена",
   "ok": "OK",
   "inputField": "Поле ввода",
-  "captureDocumentOrImage": "Сфотографировать документ или изображение",
   "checkConnection": "Проверить соединение",
   "openSettings": "Открыть настройки",
-  "chooseDifferentFile": "Выбрать другой файл",
   "goBack": "Назад",
   "technicalDetails": "Технические детали",
   "save": "Сохранить",
@@ -178,18 +150,9 @@
   "newChat": "Новый чат",
   "more": "Еще",
   "clear": "Очистить",
-  "searchHint": "Поиск...",
   "searchConversations": "Поиск разговоров...",
   "create": "Создать",
-  "folderCreated": "Папка создана",
   "failedToCreateFolder": "Не удалось создать папку",
-  "movedChatToFolder": "Перемещено «{title}» в «{folder}»",
-  "@movedChatToFolder": {
-    "placeholders": {
-      "title": {"type": "String"},
-      "folder": {"type": "String"}
-    }
-  },
   "failedToMoveChat": "Не удалось переместить чат",
   "failedToLoadChats": "Не удалось загрузить чаты",
   "failedToUpdatePin": "Не удалось обновить закрепление",
@@ -219,13 +182,17 @@
   "deleteMessagesMessage": "Удалить {count, plural, one{{count} сообщение} few{{count} сообщения} other{{count} сообщений}}?",
   "@deleteMessagesMessage": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "routeNotFound": "Маршрут не найден: {routeName}",
   "@routeNotFound": {
     "placeholders": {
-      "routeName": {"type": "String"}
+      "routeName": {
+        "type": "String"
+      }
     }
   },
   "deleteChatTitle": "Удалить чат",
@@ -271,29 +238,55 @@
   "headerNameTooLong": "Имя заголовка слишком длинное (максимум 64 символа)",
   "headerNameInvalidChars": "Недопустимое имя заголовка. Используйте только буквы, цифры и эти символы: !#$&-^_`|~",
   "headerNameReserved": "Невозможно переопределить зарезервированный заголовок «{key}»",
-  "@headerNameReserved": {"placeholders": {"key": {"type": "String"}}},
+  "@headerNameReserved": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "headerValueEmpty": "Значение заголовка не может быть пустым",
   "headerValueTooLong": "Значение заголовка слишком длинное (максимум 1024 символа)",
   "headerValueInvalidChars": "Значение заголовка содержит недопустимые символы. Используйте только печатаемые ASCII.",
   "headerValueUnsafe": "Значение заголовка содержит потенциально небезопасное содержимое",
   "headerAlreadyExists": "Заголовок «{key}» уже существует. Сначала удалите его для обновления.",
-  "@headerAlreadyExists": {"placeholders": {"key": {"type": "String"}}},
+  "@headerAlreadyExists": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "maxHeadersReachedDetail": "Разрешено максимум 10 пользовательских заголовков. Удалите некоторые, чтобы добавить больше.",
-  "editMessage": "Редактировать сообщение",
   "noModelsAvailable": "Нет доступных моделей",
   "followingSystem": "Следует за системой: {theme}",
-  "@followingSystem": {"placeholders": {"theme": {"type": "String"}}},
+  "@followingSystem": {
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
+  },
   "themeDark": "Темная",
   "themePalette": "Цветовая палитра",
-  "@themePalette": {"description": "Заголовок для выбора цветовой палитры приложения."},
-  "themePaletteDescription": "Выберите акцентные цвета для кнопок, карточек и пузырьков чата.",
-  "@themePaletteDescription": {"description": "Вспомогательный текст, объясняющий выбор палитры."},
+  "@themePalette": {
+    "description": "Заголовок для выбора цветовой палитры приложения."
+  },
   "themeLight": "Светлая",
   "currentlyUsingDarkTheme": "Используется темная тема",
   "currentlyUsingLightTheme": "Используется светлая тема",
   "aboutConduit": "О Conduit",
   "versionLabel": "Версия: {version} ({build})",
-  "@versionLabel": {"placeholders": {"version": {"type": "String"}, "build": {"type": "String"}}},
+  "@versionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
   "githubRepository": "Репозиторий GitHub",
   "unableToLoadAppInfo": "Не удалось загрузить информацию о приложении",
   "thinking": "Думаю...",
@@ -301,7 +294,12 @@
   "thoughtForDuration": "Думал {duration}",
   "@thoughtForDuration": {
     "description": "Показывает, сколько времени ассистент думал перед ответом.",
-    "placeholders": {"duration": {"type": "String", "example": "3с"}}
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "3с"
+      }
+    }
   },
   "appCustomization": "Настройка",
   "appCustomizationSubtitle": "Тема, язык, голос и quickpills",
@@ -325,12 +323,413 @@
   "display": "Отображение",
   "realtime": "Реальное время",
   "transportMode": "Режим транспорта",
-  "transportModeDescription": "Выберите, как приложение подключается для обновлений в реальном времени.",
   "mode": "Режим",
   "transportModePolling": "Опрос (резерв)",
   "transportModeWs": "Только WebSocket",
   "transportModePollingInfo": "Переходит на HTTP-опрос, если WebSocket заблокирован. Возвращается к WebSocket, когда это возможно.",
   "transportModeWsInfo": "Меньше накладных расходов, но может не работать за строгими прокси/брандмауэрами.",
-  "websocketConnectionError": "Не удалось установить соединение в реальном времени. Пожалуйста, проверьте сеть и конфигурацию сервера.",
-  "websocketReconnectFailed": "Сбой соединения в реальном времени. Потоковая передача может работать неправильно."
+  "quickActionsSelectedCount": "{count, plural, =0{Действия не выбраны} one{{count} действие выбрано} few{{count} действия выбраны} many{{count} действий выбрано} other{{count} действий выбрано}}",
+  "@quickActionsSelectedCount": {
+    "description": "Subtitle indicating how many quick actions are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "autoSelectDescription": "Позвольте приложению выбрать лучшую модель",
+  "@autoSelectDescription": {
+    "description": "Explains what the auto-select model setting does."
+  },
+  "ttsEngineLabel": "Движок",
+  "@ttsEngineLabel": {
+    "description": "Label for selecting the text-to-speech engine."
+  },
+  "ttsEngineDevice": "На устройстве",
+  "@ttsEngineDevice": {
+    "description": "Chip label for using on-device text-to-speech."
+  },
+  "ttsEngineServer": "Сервер",
+  "@ttsEngineServer": {
+    "description": "Chip label for using server-side text-to-speech."
+  },
+  "modelCapabilityMultimodal": "Мультимодальность",
+  "@modelCapabilityMultimodal": {
+    "description": "Capability chip label for models that support multimodal input."
+  },
+  "modelCapabilityReasoning": "Рассуждения",
+  "@modelCapabilityReasoning": {
+    "description": "Capability chip label for models that support reasoning features."
+  },
+  "voiceCallTitle": "Голосовой звонок",
+  "@voiceCallTitle": {
+    "description": "Title displayed on the voice call screen."
+  },
+  "voiceCallPause": "Пауза",
+  "@voiceCallPause": {
+    "description": "Button label to pause a voice call."
+  },
+  "voiceCallResume": "Продолжить",
+  "@voiceCallResume": {
+    "description": "Button label to resume a paused voice call."
+  },
+  "voiceCallStop": "Остановить",
+  "@voiceCallStop": {
+    "description": "Button label to stop the active voice call."
+  },
+  "voiceCallEnd": "Завершить звонок",
+  "@voiceCallEnd": {
+    "description": "Button label to end the voice call session."
+  },
+  "chooseDifferentFile": "Выбрать другой файл",
+  "@chooseDifferentFile": {
+    "description": "Action label prompting the user to pick another file."
+  },
+  "errorWithMessage": "Ошибка: {message}",
+  "@errorWithMessage": {
+    "description": "Error label with appended message text.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "networkTimeoutError": "Время соединения истекло. Проверьте подключение к интернету и повторите попытку.",
+  "@networkTimeoutError": {
+    "description": "User-facing message when a network request times out."
+  },
+  "networkUnreachableError": "Не удаётся связаться с сервером. Проверьте URL сервера и подключение к интернету.",
+  "@networkUnreachableError": {
+    "description": "User-facing message when the server cannot be reached."
+  },
+  "networkServerNotResponding": "Сервер не отвечает. Убедитесь, что он запущен и доступен.",
+  "@networkServerNotResponding": {
+    "description": "User-facing message when the server does not respond to a request."
+  },
+  "networkGenericError": "Проблема с подключением. Проверьте подключение к интернету.",
+  "@networkGenericError": {
+    "description": "Fallback message for generic network errors."
+  },
+  "serverError500": "На сервере возникли проблемы. Обычно это временно.",
+  "@serverError500": {
+    "description": "Message when a 500 error is encountered."
+  },
+  "serverErrorUnavailable": "Сервер временно недоступен. Повторите попытку чуть позже.",
+  "@serverErrorUnavailable": {
+    "description": "Message when a 502/503 error is encountered."
+  },
+  "serverErrorTimeout": "Сервер слишком долго отвечает. Повторите попытку.",
+  "@serverErrorTimeout": {
+    "description": "Message when the server times out."
+  },
+  "serverErrorGeneric": "Сервер испытывает трудности. Повторите попытку позже.",
+  "@serverErrorGeneric": {
+    "description": "Fallback server error message."
+  },
+  "authSessionExpired": "Сессия истекла. Выполните вход снова.",
+  "@authSessionExpired": {
+    "description": "Message when an authentication session expires."
+  },
+  "authForbidden": "У вас нет прав для выполнения этого действия.",
+  "@authForbidden": {
+    "description": "Message when the user lacks required permissions."
+  },
+  "authInvalidToken": "Токен аутентификации недействителен. Выполните вход снова.",
+  "@authInvalidToken": {
+    "description": "Message when the authentication token is invalid."
+  },
+  "authGenericError": "Проблема с аутентификацией. Выполните вход снова.",
+  "@authGenericError": {
+    "description": "Fallback authentication error message."
+  },
+  "validationInvalidEmail": "Введите корректный адрес электронной почты.",
+  "@validationInvalidEmail": {
+    "description": "Validation message for invalid email input."
+  },
+  "validationWeakPassword": "Пароль не соответствует требованиям. Проверьте его и повторите попытку.",
+  "@validationWeakPassword": {
+    "description": "Validation message for weak passwords."
+  },
+  "validationMissingRequired": "Заполните все обязательные поля.",
+  "@validationMissingRequired": {
+    "description": "Validation message when required fields are missing."
+  },
+  "validationFormatError": "Некоторые данные указаны в неверном формате. Проверьте и повторите попытку.",
+  "@validationFormatError": {
+    "description": "Validation message for generic formatting issues."
+  },
+  "validationGenericError": "Проверьте введённые данные и повторите попытку.",
+  "@validationGenericError": {
+    "description": "Fallback validation message."
+  },
+  "fileNotFound": "Файл не найден. Возможно, он был перемещён или удалён.",
+  "@fileNotFound": {
+    "description": "Message when a file cannot be located."
+  },
+  "fileAccessDenied": "Нет доступа к файлу. Проверьте разрешения.",
+  "@fileAccessDenied": {
+    "description": "Message when file access is denied."
+  },
+  "fileTooLarge": "Файл слишком большой. Выберите файл меньшего размера.",
+  "@fileTooLarge": {
+    "description": "Message when a file exceeds size limits."
+  },
+  "fileGenericError": "Проблема с файлом. Попробуйте другой файл.",
+  "@fileGenericError": {
+    "description": "Fallback file error message."
+  },
+  "permissionCameraRequired": "Требуется доступ к камере. Включите его в настройках.",
+  "@permissionCameraRequired": {
+    "description": "Message when camera permission is missing."
+  },
+  "permissionStorageRequired": "Требуется доступ к хранилищу. Включите его в настройках.",
+  "@permissionStorageRequired": {
+    "description": "Message when storage permission is missing."
+  },
+  "permissionMicrophoneRequired": "Требуется доступ к микрофону. Включите его в настройках.",
+  "@permissionMicrophoneRequired": {
+    "description": "Message when microphone permission is missing."
+  },
+  "permissionGenericError": "Требуется разрешение. Проверьте разрешения приложения в настройках.",
+  "@permissionGenericError": {
+    "description": "Fallback permission error message."
+  },
+  "actionRetryRequest": "Повторите запрос.",
+  "@actionRetryRequest": {
+    "description": "Description for retrying a failed request."
+  },
+  "actionVerifyConnection": "Проверьте подключение к интернету.",
+  "@actionVerifyConnection": {
+    "description": "Description for checking internet connectivity."
+  },
+  "actionRetryOperation": "Повторите операцию.",
+  "@actionRetryOperation": {
+    "description": "Description for retrying the same operation."
+  },
+  "actionRetryAfterDelay": "Подождите немного и попробуйте снова.",
+  "@actionRetryAfterDelay": {
+    "description": "Description suggesting a short delay before retrying."
+  },
+  "actionSignInToAccount": "Войдите в свою учётную запись.",
+  "@actionSignInToAccount": {
+    "description": "Description for signing back into the app."
+  },
+  "actionSelectAnotherFile": "Выберите другой файл.",
+  "@actionSelectAnotherFile": {
+    "description": "Description for choosing a different file."
+  },
+  "actionOpenAppSettings": "Откройте настройки приложения, чтобы предоставить разрешения.",
+  "@actionOpenAppSettings": {
+    "description": "Description for opening system or app settings."
+  },
+  "actionRetryAfterPermission": "Повторите попытку после предоставления разрешения.",
+  "@actionRetryAfterPermission": {
+    "description": "Description for retrying once permissions are granted."
+  },
+  "actionReturnToPrevious": "Вернуться на предыдущий экран.",
+  "@actionReturnToPrevious": {
+    "description": "Description for navigating back to the prior screen."
+  },
+  "continueAction": "Продолжить",
+  "@continueAction": {
+    "description": "Button label to continue an action or flow."
+  },
+  "loadingShort": "Загрузка",
+  "@loadingShort": {
+    "description": "Short loading label used for accessibility."
+  },
+  "loadingAnnouncement": "Загрузка: {message}",
+  "@loadingAnnouncement": {
+    "description": "Screen reader announcement when loading a resource.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
+  "errorAnnouncement": "Ошибка: {error}",
+  "@errorAnnouncement": {
+    "description": "Screen reader announcement for an error.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
+  "errorAnnouncementWithSuggestion": "Ошибка: {error}. {suggestion}",
+  "@errorAnnouncementWithSuggestion": {
+    "description": "Screen reader announcement for an error with a follow-up suggestion.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      },
+      "suggestion": {
+        "type": "String",
+        "example": "Please try again later."
+      }
+    }
+  },
+  "successAnnouncement": "Успешно: {message}",
+  "@successAnnouncement": {
+    "description": "Screen reader announcement for successful actions.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Profile updated"
+      }
+    }
+  },
+  "requiredFieldLabel": "{label} *",
+  "@requiredFieldLabel": {
+    "description": "Label text indicating a required field.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Email"
+      }
+    }
+  },
+  "requiredFieldHelper": "Обязательное поле",
+  "@requiredFieldHelper": {
+    "description": "Helper text indicating that the field is required."
+  },
+  "switchOnLabel": "Вкл.",
+  "@switchOnLabel": {
+    "description": "Semantic label when a switch is enabled."
+  },
+  "switchOffLabel": "Выкл.",
+  "@switchOffLabel": {
+    "description": "Semantic label when a switch is disabled."
+  },
+  "dialogSemanticLabel": "Диалог: {title}",
+  "@dialogSemanticLabel": {
+    "description": "Semantic label describing the dialog title.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
+  "previousLabel": "Назад",
+  "@previousLabel": {
+    "description": "Label for navigating to the previous item."
+  },
+  "nextLabel": "Далее",
+  "@nextLabel": {
+    "description": "Label for navigating to the next item."
+  },
+  "themePaletteConduitLabel": "Conduit",
+  "@themePaletteConduitLabel": {
+    "description": "Palette name for the default Conduit theme."
+  },
+  "themePaletteConduitDescription": "Нейтральная чистая тема, созданная для Conduit.",
+  "@themePaletteConduitDescription": {
+    "description": "Description of the Conduit palette."
+  },
+  "themePaletteClaudeLabel": "Claude",
+  "@themePaletteClaudeLabel": {
+    "description": "Palette name inspired by the Claude web client."
+  },
+  "themePaletteClaudeDescription": "Тёплая тактильная палитра из веб-клиента Claude.",
+  "@themePaletteClaudeDescription": {
+    "description": "Description of the Claude palette."
+  },
+  "themePaletteT3ChatLabel": "T3 Chat",
+  "@themePaletteT3ChatLabel": {
+    "description": "Palette name inspired by the T3 Stack brand."
+  },
+  "themePaletteT3ChatDescription": "Игривые градиенты, вдохновлённые брендом T3 Stack.",
+  "@themePaletteT3ChatDescription": {
+    "description": "Description of the T3 Chat palette."
+  },
+  "themePaletteCatppuccinLabel": "Catppuccin",
+  "@themePaletteCatppuccinLabel": {
+    "description": "Palette name for Catppuccin colors."
+  },
+  "themePaletteCatppuccinDescription": "Мягкая пастельная палитра.",
+  "@themePaletteCatppuccinDescription": {
+    "description": "Description of the Catppuccin palette."
+  },
+  "themePaletteTangerineLabel": "Tangerine",
+  "@themePaletteTangerineLabel": {
+    "description": "Palette name for Tangerine colors."
+  },
+  "themePaletteTangerineDescription": "Тёплая палитра оранжевых и сланцевых оттенков.",
+  "@themePaletteTangerineDescription": {
+    "description": "Description of the Tangerine palette."
+  },
+  "@onboardStartTitle": {
+    "description": "Onboarding card: start chatting title.",
+    "placeholders": {
+      "username": {
+        "type": "String",
+        "example": "Alex"
+      }
+    }
+  },
+  "@notAnImageFile": {
+    "description": "Error when a referenced file is not an image.",
+    "placeholders": {
+      "fileName": {
+        "type": "String",
+        "example": "image.txt"
+      }
+    }
+  },
+  "@failedToLoadImage": {
+    "description": "Error including the underlying reason when image loading fails.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "@ttsVoicesForLanguage": {
+    "description": "Section header for voices matching the app language",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "EN"
+      }
+    }
+  },
+  "voiceCallReady": "Готово",
+  "@voiceCallReady": {
+    "description": "Status label shown when the voice call is ready to start."
+  },
+  "voiceCallConnecting": "Подключение...",
+  "@voiceCallConnecting": {
+    "description": "Status label shown while the voice call is connecting."
+  },
+  "voiceCallListening": "Слушает",
+  "@voiceCallListening": {
+    "description": "Status label shown while the call is listening for input."
+  },
+  "voiceCallPaused": "Пауза",
+  "@voiceCallPaused": {
+    "description": "Status label shown when the call is paused."
+  },
+  "voiceCallProcessing": "Обрабатывает...",
+  "@voiceCallProcessing": {
+    "description": "Status label shown while the call processes a response."
+  },
+  "voiceCallSpeaking": "Говорит",
+  "@voiceCallSpeaking": {
+    "description": "Status label shown while the assistant is speaking."
+  },
+  "voiceCallDisconnected": "Отключено",
+  "@voiceCallDisconnected": {
+    "description": "Status label shown when the voice call has ended or disconnected."
+  },
+  "voiceCallErrorHelp": "Проверьте:\n• Разрешение на микрофон предоставлено\n• Распознавание речи доступно на устройстве\n• Есть подключение к серверу",
+  "@voiceCallErrorHelp": {
+    "description": "Guidance shown when the voice call encounters an error."
+  }
 }
