@@ -1,1 +1,1 @@
-Versión parche: Corrección de TTS del lado del servidor
+STS del servidor, mejoras de rendimiento y correcciones de streaming

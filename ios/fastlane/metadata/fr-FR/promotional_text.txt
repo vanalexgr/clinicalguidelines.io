@@ -1,1 +1,1 @@
-Version de correctif : Correction de la TTS côté serveur
+STS côté serveur, améliorations de performance et corrections de streaming

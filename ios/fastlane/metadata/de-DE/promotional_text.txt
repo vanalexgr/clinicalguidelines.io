@@ -1,1 +1,1 @@
-Patch-Release: Behebung von serverseitiger TTS
+Serverseitiges STS, Leistungsverbesserungen und Streaming-Fixes
