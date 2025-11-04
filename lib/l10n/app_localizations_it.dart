@@ -930,13 +930,78 @@ class AppLocalizationsIt extends AppLocalizations {
       'Invio invia (tastiera software). Cmd/Ctrl+Invio disponibile';
 
   @override
+  String get sttSettings => 'Voce in testo';
+
+  @override
+  String get sttEngineLabel => 'Motore di riconoscimento';
+
+  @override
+  String get sttEngineAuto => 'Automatico';
+
+  @override
+  String get sttEngineDevice => 'Sul dispositivo';
+
+  @override
+  String get sttEngineServer => 'Server';
+
+  @override
+  String get sttEngineAutoDescription =>
+      'Usa il riconoscimento sul dispositivo quando disponibile e altrimenti passa al tuo server.';
+
+  @override
+  String get sttEngineDeviceDescription =>
+      'Mantiene l’audio su questo dispositivo. L’input vocale non funziona se il dispositivo non supporta il riconoscimento vocale.';
+
+  @override
+  String get sttEngineServerDescription =>
+      'Invia sempre le registrazioni al tuo server OpenWebUI per la trascrizione.';
+
+  @override
+  String get sttDeviceUnavailableWarning =>
+      'Il riconoscimento vocale sul dispositivo non è disponibile su questo dispositivo.';
+
+  @override
+  String get sttServerUnavailableWarning =>
+      'Collegati a un server con la trascrizione abilitata per usare questa opzione.';
+
+  @override
+  String get sttSilenceDuration => 'Durata del silenzio';
+
+  @override
+  String get sttSilenceDurationDescription =>
+      'Tempo di attesa dopo il silenzio prima di fermare automaticamente la registrazione';
+
+  @override
   String get ttsEngineLabel => 'Motore';
+
+  @override
+  String get ttsEngineAuto => 'Automatico';
 
   @override
   String get ttsEngineDevice => 'Sul dispositivo';
 
   @override
   String get ttsEngineServer => 'Server';
+
+  @override
+  String get ttsEngineAutoDescription =>
+      'Usa la sintesi sul dispositivo quando disponibile e altrimenti passa al tuo server.';
+
+  @override
+  String get ttsEngineDeviceDescription =>
+      'Mantiene la sintesi su questo dispositivo. La riproduzione vocale non funziona se il dispositivo non supporta il TTS.';
+
+  @override
+  String get ttsEngineServerDescription =>
+      'Richiede sempre l\'audio dal tuo server OpenWebUI.';
+
+  @override
+  String get ttsDeviceUnavailableWarning =>
+      'La sintesi vocale sul dispositivo non è disponibile su questo dispositivo.';
+
+  @override
+  String get ttsServerUnavailableWarning =>
+      'Collegati a un server con la sintesi vocale abilitata per usare questa opzione.';
 
   @override
   String get ttsSettings => 'Sintesi vocale';

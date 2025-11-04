@@ -8,8 +8,11 @@ import 'animation_service.dart';
 
 part 'settings_service.g.dart';
 
+/// Speech-to-text preference selection.
+enum SttPreference { auto, deviceOnly, serverOnly }
+
 /// TTS engine selection
-enum TtsEngine { device, server }
+enum TtsEngine { auto, device, server }
 
 /// Service for managing app-wide settings including accessibility preferences
 class SettingsService {
@@ -32,6 +35,9 @@ class SettingsService {
       .quickPills; // StringList of identifiers e.g. ['web','image','tools']
   // Chat input behavior
   static const String _sendOnEnterKey = PreferenceKeys.sendOnEnterKey;
+  // Voice silence duration for auto-stop (milliseconds)
+  static const String _voiceSilenceDurationKey =
+      PreferenceKeys.voiceSilenceDuration;
   static Box<dynamic> _preferencesBox() =>
       Hive.box<dynamic>(HiveBoxNames.preferences);
 
@@ -151,6 +157,11 @@ class SettingsService {
         ttsServerVoiceId: box.get(PreferenceKeys.ttsServerVoiceId) as String?,
         ttsServerVoiceName:
             box.get(PreferenceKeys.ttsServerVoiceName) as String?,
+        sttPreference: _parseSttPreference(
+          box.get(PreferenceKeys.voiceSttPreference) as String?,
+        ),
+        voiceSilenceDuration:
+            (box.get(_voiceSilenceDurationKey) as int? ?? 2000).clamp(300, 3000),
       ),
     );
   }
@@ -174,6 +185,8 @@ class SettingsService {
       PreferenceKeys.ttsPitch: settings.ttsPitch,
       PreferenceKeys.ttsVolume: settings.ttsVolume,
       PreferenceKeys.ttsEngine: settings.ttsEngine.name,
+      PreferenceKeys.voiceSttPreference: settings.sttPreference.name,
+      _voiceSilenceDurationKey: settings.voiceSilenceDuration,
     };
 
     await box.putAll(updates);
@@ -216,11 +229,31 @@ class SettingsService {
 
   static TtsEngine _parseTtsEngine(String? raw) {
     switch ((raw ?? '').toLowerCase()) {
+      case 'auto':
+      case '':
+        return TtsEngine.auto;
       case 'server':
         return TtsEngine.server;
       case 'device':
-      default:
         return TtsEngine.device;
+      default:
+        return TtsEngine.auto;
+    }
+  }
+
+  static SttPreference _parseSttPreference(String? raw) {
+    switch ((raw ?? '').toLowerCase()) {
+      case 'deviceonly':
+      case 'device_only':
+      case 'device':
+        return SttPreference.deviceOnly;
+      case 'serveronly':
+      case 'server_only':
+      case 'server':
+        return SttPreference.serverOnly;
+      case 'auto':
+      default:
+        return SttPreference.auto;
     }
   }
 
@@ -304,6 +337,16 @@ class SettingsService {
     return _preferencesBox().put(_sendOnEnterKey, value);
   }
 
+  static Future<int> getVoiceSilenceDuration() {
+    final value = _preferencesBox().get(_voiceSilenceDurationKey) as int?;
+    return Future.value((value ?? 2000).clamp(300, 3000));
+  }
+
+  static Future<void> setVoiceSilenceDuration(int milliseconds) {
+    final sanitized = milliseconds.clamp(300, 3000);
+    return _preferencesBox().put(_voiceSilenceDurationKey, sanitized);
+  }
+
   /// Get effective animation duration considering all settings
   static Duration getEffectiveAnimationDuration(
     BuildContext context,
@@ -359,6 +402,7 @@ class AppSettings {
   final String socketTransportMode; // 'polling' or 'ws'
   final List<String> quickPills; // e.g., ['web','image']
   final bool sendOnEnter;
+  final SttPreference sttPreference;
   final String? ttsVoice;
   final double ttsSpeechRate;
   final double ttsPitch;
@@ -366,6 +410,7 @@ class AppSettings {
   final TtsEngine ttsEngine;
   final String? ttsServerVoiceId;
   final String? ttsServerVoiceName;
+  final int voiceSilenceDuration;
   const AppSettings({
     this.reduceMotion = false,
     this.animationSpeed = 1.0,
@@ -380,13 +425,15 @@ class AppSettings {
     this.socketTransportMode = 'ws',
     this.quickPills = const [],
     this.sendOnEnter = false,
+    this.sttPreference = SttPreference.auto,
     this.ttsVoice,
     this.ttsSpeechRate = 0.5,
     this.ttsPitch = 1.0,
     this.ttsVolume = 1.0,
-    this.ttsEngine = TtsEngine.device,
+    this.ttsEngine = TtsEngine.auto,
     this.ttsServerVoiceId,
     this.ttsServerVoiceName,
+    this.voiceSilenceDuration = 2000,
   });
 
   AppSettings copyWith({
@@ -403,6 +450,7 @@ class AppSettings {
     String? socketTransportMode,
     List<String>? quickPills,
     bool? sendOnEnter,
+    SttPreference? sttPreference,
     Object? ttsVoice = const _DefaultValue(),
     double? ttsSpeechRate,
     double? ttsPitch,
@@ -410,6 +458,7 @@ class AppSettings {
     TtsEngine? ttsEngine,
     Object? ttsServerVoiceId = const _DefaultValue(),
     Object? ttsServerVoiceName = const _DefaultValue(),
+    int? voiceSilenceDuration,
   }) {
     return AppSettings(
       reduceMotion: reduceMotion ?? this.reduceMotion,
@@ -429,6 +478,7 @@ class AppSettings {
       socketTransportMode: socketTransportMode ?? this.socketTransportMode,
       quickPills: quickPills ?? this.quickPills,
       sendOnEnter: sendOnEnter ?? this.sendOnEnter,
+      sttPreference: sttPreference ?? this.sttPreference,
       ttsVoice: ttsVoice is _DefaultValue ? this.ttsVoice : ttsVoice as String?,
       ttsSpeechRate: ttsSpeechRate ?? this.ttsSpeechRate,
       ttsPitch: ttsPitch ?? this.ttsPitch,
@@ -440,6 +490,7 @@ class AppSettings {
       ttsServerVoiceName: ttsServerVoiceName is _DefaultValue
           ? this.ttsServerVoiceName
           : ttsServerVoiceName as String?,
+      voiceSilenceDuration: voiceSilenceDuration ?? this.voiceSilenceDuration,
     );
   }
 
@@ -457,6 +508,7 @@ class AppSettings {
         other.voiceLocaleId == voiceLocaleId &&
         other.voiceHoldToTalk == voiceHoldToTalk &&
         other.voiceAutoSendFinal == voiceAutoSendFinal &&
+        other.sttPreference == sttPreference &&
         other.sendOnEnter == sendOnEnter &&
         other.ttsVoice == ttsVoice &&
         other.ttsSpeechRate == ttsSpeechRate &&
@@ -465,13 +517,14 @@ class AppSettings {
         other.ttsEngine == ttsEngine &&
         other.ttsServerVoiceId == ttsServerVoiceId &&
         other.ttsServerVoiceName == ttsServerVoiceName &&
+        other.voiceSilenceDuration == voiceSilenceDuration &&
         _listEquals(other.quickPills, quickPills);
     // socketTransportMode intentionally not included in == to avoid frequent rebuilds
   }
 
   @override
   int get hashCode {
-    return Object.hash(
+    return Object.hashAll([
       reduceMotion,
       animationSpeed,
       hapticFeedback,
@@ -482,6 +535,7 @@ class AppSettings {
       voiceLocaleId,
       voiceHoldToTalk,
       voiceAutoSendFinal,
+      sttPreference,
       socketTransportMode,
       sendOnEnter,
       ttsVoice,
@@ -491,8 +545,9 @@ class AppSettings {
       ttsEngine,
       ttsServerVoiceId,
       ttsServerVoiceName,
+      voiceSilenceDuration,
       Object.hashAllUnordered(quickPills),
-    );
+    ]);
   }
 }
 
@@ -603,6 +658,14 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await SettingsService.setSendOnEnter(value);
   }
 
+  Future<void> setSttPreference(SttPreference preference) async {
+    if (state.sttPreference == preference) {
+      return;
+    }
+    state = state.copyWith(sttPreference: preference);
+    await SettingsService.saveSettings(state);
+  }
+
   Future<void> setTtsVoice(String? voice) async {
     state = state.copyWith(ttsVoice: voice);
     await SettingsService.saveSettings(state);
@@ -636,6 +699,11 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
   Future<void> setTtsServerVoiceId(String? id) async {
     state = state.copyWith(ttsServerVoiceId: id);
     await SettingsService.saveSettings(state);
+  }
+
+  Future<void> setVoiceSilenceDuration(int milliseconds) async {
+    state = state.copyWith(voiceSilenceDuration: milliseconds);
+    await SettingsService.setVoiceSilenceDuration(milliseconds);
   }
 
   Future<void> resetToDefaults() async {

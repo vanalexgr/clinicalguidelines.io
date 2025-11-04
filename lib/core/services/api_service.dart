@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
-// import 'package:http_parser/http_parser.dart';
+import 'package:http_parser/http_parser.dart';
 // Removed legacy websocket/socket.io imports
 import 'package:uuid/uuid.dart';
 import '../models/backend_config.dart';
@@ -1607,15 +1607,69 @@ class ApiService {
     return [];
   }
 
+  Future<Map<String, dynamic>> transcribeSpeech({
+    required Uint8List audioBytes,
+    String? fileName,
+    String? mimeType,
+    String? language,
+  }) async {
+    if (audioBytes.isEmpty) {
+      throw ArgumentError('audioBytes cannot be empty for transcription');
+    }
+
+    final sanitizedFileName = (fileName != null && fileName.trim().isNotEmpty
+        ? fileName.trim()
+        : 'audio.m4a');
+    final resolvedMimeType = (mimeType != null && mimeType.trim().isNotEmpty)
+        ? mimeType.trim()
+        : _inferMimeTypeFromName(sanitizedFileName);
+
+    _traceApi(
+      'Uploading $sanitizedFileName (${audioBytes.length} bytes) for transcription',
+    );
+
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(
+        audioBytes,
+        filename: sanitizedFileName,
+        contentType: _parseMediaType(resolvedMimeType),
+      ),
+      if (language != null && language.trim().isNotEmpty)
+        'language': language.trim(),
+    });
+
+    final response = await _dio.post(
+      '/api/v1/audio/transcriptions',
+      data: formData,
+      options: Options(headers: const {'accept': 'application/json'}),
+    );
+
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+    if (data is String) {
+      return {'text': data};
+    }
+    throw StateError(
+      'Unexpected transcription response type: ${data.runtimeType}',
+    );
+  }
+
   Future<({Uint8List bytes, String mimeType})> generateSpeech({
     required String text,
     String? voice,
+    double? speed,
   }) async {
     final textPreview = text.length > 50 ? text.substring(0, 50) : text;
     _traceApi('Generating speech for text: $textPreview...');
     final response = await _dio.post(
       '/api/v1/audio/speech',
-      data: {'input': text, if (voice != null) 'voice': voice},
+      data: {
+        'input': text,
+        if (voice != null) 'voice': voice,
+        if (speed != null) 'speed': speed,
+      },
       options: Options(responseType: ResponseType.bytes),
     );
 
@@ -1690,7 +1744,43 @@ class ApiService {
     return bytes.length >= 2 && bytes[0] == 0xFF && (bytes[1] & 0xE0) == 0xE0;
   }
 
-  // Server audio transcription removed; rely on on-device STT in UI layer
+  String _inferMimeTypeFromName(String name) {
+    final dotIndex = name.lastIndexOf('.');
+    if (dotIndex == -1 || dotIndex == name.length - 1) {
+      return 'audio/mpeg';
+    }
+    final ext = name.substring(dotIndex + 1).toLowerCase();
+    switch (ext) {
+      case 'wav':
+        return 'audio/wav';
+      case 'ogg':
+        return 'audio/ogg';
+      case 'm4a':
+      case 'mp4':
+        return 'audio/mp4';
+      case 'aac':
+        return 'audio/aac';
+      case 'webm':
+        return 'audio/webm';
+      case 'flac':
+        return 'audio/flac';
+      case 'mp3':
+        return 'audio/mpeg';
+      default:
+        return 'audio/mpeg';
+    }
+  }
+
+  MediaType? _parseMediaType(String? value) {
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    try {
+      return MediaType.parse(value);
+    } catch (_) {
+      return null;
+    }
+  }
 
   // Image Generation
   Future<List<Map<String, dynamic>>> getImageModels() async {

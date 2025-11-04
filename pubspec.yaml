@@ -44,7 +44,7 @@ dependencies:
   flutter_animate: ^4.5.0
   
   # Platform Features
-  record: ^6.1.1
+  mic_stream_recorder: ^1.1.2
   stts: ^1.2.5
   flutter_tts: ^4.2.3
   audioplayers: ^6.5.1

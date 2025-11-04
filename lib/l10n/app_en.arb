@@ -1219,9 +1219,61 @@
   "@sendOnEnterDescription": {
     "description": "Explanation of how the Send on Enter toggle behaves."
   },
+  "sttSettings": "Speech to Text",
+  "@sttSettings": {
+    "description": "Section header for speech-to-text settings."
+  },
+  "sttEngineLabel": "Recognition engine",
+  "@sttEngineLabel": {
+    "description": "Label shown above the speech-to-text engine chips."
+  },
+  "sttEngineAuto": "Auto",
+  "@sttEngineAuto": {
+    "description": "Chip label for automatic speech-to-text selection."
+  },
+  "sttEngineDevice": "On device",
+  "@sttEngineDevice": {
+    "description": "Chip label for on-device speech recognition."
+  },
+  "sttEngineServer": "Server",
+  "@sttEngineServer": {
+    "description": "Chip label for server speech recognition."
+  },
+  "sttEngineAutoDescription": "Use on-device recognition when available and fall back to your server.",
+  "@sttEngineAutoDescription": {
+    "description": "Description shown when automatic speech-to-text preference is active."
+  },
+  "sttEngineDeviceDescription": "Keep audio on this device. Voice input stops working if on-device speech recognition isn’t supported.",
+  "@sttEngineDeviceDescription": {
+    "description": "Description shown when on-device speech-to-text preference is active."
+  },
+  "sttEngineServerDescription": "Always send recordings to your OpenWebUI server for transcription.",
+  "@sttEngineServerDescription": {
+    "description": "Description shown when server speech-to-text preference is active."
+  },
+  "sttDeviceUnavailableWarning": "On-device speech recognition isn’t available on this device.",
+  "@sttDeviceUnavailableWarning": {
+    "description": "Warning shown when the user selects on-device speech recognition but it is unavailable."
+  },
+  "sttServerUnavailableWarning": "Connect to a server with transcription enabled to use this option.",
+  "@sttServerUnavailableWarning": {
+    "description": "Warning shown when the user selects server speech recognition but no server is available."
+  },
+  "sttSilenceDuration": "Silence Duration",
+  "@sttSilenceDuration": {
+    "description": "Label for the silence duration setting in server speech-to-text."
+  },
+  "sttSilenceDurationDescription": "Time to wait after silence before auto-stopping recording",
+  "@sttSilenceDurationDescription": {
+    "description": "Description for the silence duration slider in server speech-to-text settings."
+  },
   "ttsEngineLabel": "Engine",
   "@ttsEngineLabel": {
     "description": "Label for selecting the text-to-speech engine."
+  },
+  "ttsEngineAuto": "Auto",
+  "@ttsEngineAuto": {
+    "description": "Chip label for automatically selecting the text-to-speech engine."
   },
   "ttsEngineDevice": "On device",
   "@ttsEngineDevice": {
@@ -1230,6 +1282,26 @@
   "ttsEngineServer": "Server",
   "@ttsEngineServer": {
     "description": "Chip label for using server-side text-to-speech."
+  },
+  "ttsEngineAutoDescription": "Use on-device speech when available and fall back to your server.",
+  "@ttsEngineAutoDescription": {
+    "description": "Description shown when automatic text-to-speech preference is active."
+  },
+  "ttsEngineDeviceDescription": "Keep synthesis on this device. Voice playback stops working if on-device TTS isn’t supported.",
+  "@ttsEngineDeviceDescription": {
+    "description": "Description shown when on-device text-to-speech preference is active."
+  },
+  "ttsEngineServerDescription": "Always request audio from your OpenWebUI server.",
+  "@ttsEngineServerDescription": {
+    "description": "Description shown when server text-to-speech preference is active."
+  },
+  "ttsDeviceUnavailableWarning": "On-device text-to-speech isn’t available on this device.",
+  "@ttsDeviceUnavailableWarning": {
+    "description": "Warning shown when on-device text-to-speech is unavailable."
+  },
+  "ttsServerUnavailableWarning": "Connect to a server with text-to-speech enabled to use this option.",
+  "@ttsServerUnavailableWarning": {
+    "description": "Warning shown when server text-to-speech is unavailable."
   },
   "ttsSettings": "Text to Speech",
   "@ttsSettings": {

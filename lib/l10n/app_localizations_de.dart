@@ -932,13 +932,78 @@ class AppLocalizationsDe extends AppLocalizations {
       'Enter sendet (Soft-Tastatur). Cmd/Ctrl+Enter ebenfalls verfügbar';
 
   @override
+  String get sttSettings => 'Sprache zu Text';
+
+  @override
+  String get sttEngineLabel => 'Erkennungs-Engine';
+
+  @override
+  String get sttEngineAuto => 'Automatisch';
+
+  @override
+  String get sttEngineDevice => 'Auf dem Gerät';
+
+  @override
+  String get sttEngineServer => 'Server';
+
+  @override
+  String get sttEngineAutoDescription =>
+      'Verwendet die Erkennung auf dem Gerät, wenn verfügbar, und greift sonst auf deinen Server zurück.';
+
+  @override
+  String get sttEngineDeviceDescription =>
+      'Behält Audio auf diesem Gerät. Spracheingabe funktioniert nicht, wenn das Gerät keine Spracherkennung unterstützt.';
+
+  @override
+  String get sttEngineServerDescription =>
+      'Sendet Aufnahmen immer an deinen OpenWebUI-Server zur Transkription.';
+
+  @override
+  String get sttDeviceUnavailableWarning =>
+      'Auf diesem Gerät steht keine Spracherkennung zur Verfügung.';
+
+  @override
+  String get sttServerUnavailableWarning =>
+      'Verbinde dich mit einem Server mit aktivierter Transkription, um diese Option zu nutzen.';
+
+  @override
+  String get sttSilenceDuration => 'Stille-Dauer';
+
+  @override
+  String get sttSilenceDurationDescription =>
+      'Zeit nach Stille warten, bevor die Aufnahme automatisch gestoppt wird';
+
+  @override
   String get ttsEngineLabel => 'Engine';
+
+  @override
+  String get ttsEngineAuto => 'Automatisch';
 
   @override
   String get ttsEngineDevice => 'Auf dem Gerät';
 
   @override
   String get ttsEngineServer => 'Server';
+
+  @override
+  String get ttsEngineAutoDescription =>
+      'Verwendet die Sprachausgabe auf dem Gerät, wenn verfügbar, und greift sonst auf deinen Server zurück.';
+
+  @override
+  String get ttsEngineDeviceDescription =>
+      'Behält die Ausgabe auf diesem Gerät. Sprachausgabe funktioniert nicht, wenn das Gerät keine TTS-Unterstützung bietet.';
+
+  @override
+  String get ttsEngineServerDescription =>
+      'Sendet die Ausgabe immer an deinen OpenWebUI-Server.';
+
+  @override
+  String get ttsDeviceUnavailableWarning =>
+      'Sprachausgabe auf dem Gerät steht auf diesem Gerät nicht zur Verfügung.';
+
+  @override
+  String get ttsServerUnavailableWarning =>
+      'Verbinde dich mit einem Server mit aktivierter Sprachausgabe, um diese Option zu nutzen.';
 
   @override
   String get ttsSettings => 'Text zu Sprache';

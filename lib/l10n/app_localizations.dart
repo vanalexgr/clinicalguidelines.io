@@ -1784,11 +1784,89 @@ abstract class AppLocalizations {
   /// **'Enter sends (soft keyboard). Cmd/Ctrl+Enter also available'**
   String get sendOnEnterDescription;
 
+  /// Section header for speech-to-text settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech to Text'**
+  String get sttSettings;
+
+  /// Label shown above the speech-to-text engine chips.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognition engine'**
+  String get sttEngineLabel;
+
+  /// Chip label for automatic speech-to-text selection.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get sttEngineAuto;
+
+  /// Chip label for on-device speech recognition.
+  ///
+  /// In en, this message translates to:
+  /// **'On device'**
+  String get sttEngineDevice;
+
+  /// Chip label for server speech recognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get sttEngineServer;
+
+  /// Description shown when automatic speech-to-text preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Use on-device recognition when available and fall back to your server.'**
+  String get sttEngineAutoDescription;
+
+  /// Description shown when on-device speech-to-text preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep audio on this device. Voice input stops working if on-device speech recognition isn’t supported.'**
+  String get sttEngineDeviceDescription;
+
+  /// Description shown when server speech-to-text preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Always send recordings to your OpenWebUI server for transcription.'**
+  String get sttEngineServerDescription;
+
+  /// Warning shown when the user selects on-device speech recognition but it is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'On-device speech recognition isn’t available on this device.'**
+  String get sttDeviceUnavailableWarning;
+
+  /// Warning shown when the user selects server speech recognition but no server is available.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a server with transcription enabled to use this option.'**
+  String get sttServerUnavailableWarning;
+
+  /// Label for the silence duration setting in server speech-to-text.
+  ///
+  /// In en, this message translates to:
+  /// **'Silence Duration'**
+  String get sttSilenceDuration;
+
+  /// Description for the silence duration slider in server speech-to-text settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Time to wait after silence before auto-stopping recording'**
+  String get sttSilenceDurationDescription;
+
   /// Label for selecting the text-to-speech engine.
   ///
   /// In en, this message translates to:
   /// **'Engine'**
   String get ttsEngineLabel;
+
+  /// Chip label for automatically selecting the text-to-speech engine.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get ttsEngineAuto;
 
   /// Chip label for using on-device text-to-speech.
   ///
@@ -1801,6 +1879,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Server'**
   String get ttsEngineServer;
+
+  /// Description shown when automatic text-to-speech preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Use on-device speech when available and fall back to your server.'**
+  String get ttsEngineAutoDescription;
+
+  /// Description shown when on-device text-to-speech preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep synthesis on this device. Voice playback stops working if on-device TTS isn’t supported.'**
+  String get ttsEngineDeviceDescription;
+
+  /// Description shown when server text-to-speech preference is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Always request audio from your OpenWebUI server.'**
+  String get ttsEngineServerDescription;
+
+  /// Warning shown when on-device text-to-speech is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'On-device text-to-speech isn’t available on this device.'**
+  String get ttsDeviceUnavailableWarning;
+
+  /// Warning shown when server text-to-speech is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a server with text-to-speech enabled to use this option.'**
+  String get ttsServerUnavailableWarning;
 
   /// Section header for TTS-related customization options.
   ///

@@ -108,11 +108,18 @@ class VoiceCallService {
       throw Exception('Voice input initialization failed');
     }
 
-    // Check if local STT is available
+    // Check if preferred STT path is available
     final hasLocalStt = _voiceInput.hasLocalStt;
-    if (!hasLocalStt) {
+    final hasServerStt = _voiceInput.hasServerStt;
+    final ready = switch (_voiceInput.preference) {
+      SttPreference.deviceOnly => hasLocalStt,
+      SttPreference.serverOnly => hasServerStt,
+      SttPreference.auto => hasLocalStt || hasServerStt,
+    };
+
+    if (!ready) {
       _updateState(VoiceCallState.error);
-      throw Exception('Speech recognition not available on this device');
+      throw Exception('Preferred speech recognition engine is unavailable');
     }
 
     // Check microphone permissions
@@ -125,9 +132,8 @@ class VoiceCallService {
     // Initialize TTS with current app settings (engine/voice/rate/pitch/volume)
     final settings = _ref.read(appSettingsProvider);
     await _tts.initialize(
-      voice: settings.ttsEngine == TtsEngine.server
-          ? settings.ttsServerVoiceId
-          : settings.ttsVoice,
+      deviceVoice: settings.ttsVoice,
+      serverVoice: settings.ttsServerVoiceId,
       speechRate: settings.ttsSpeechRate,
       pitch: settings.ttsPitch,
       volume: settings.ttsVolume,
@@ -202,10 +208,18 @@ class VoiceCallService {
       _listeningPaused = false;
       _accumulatedTranscript = '';
 
-      // Check if voice input is available
-      if (!_voiceInput.hasLocalStt) {
+      final hasLocalStt = _voiceInput.hasLocalStt;
+      final hasServerStt = _voiceInput.hasServerStt;
+      final pref = _voiceInput.preference;
+      final engineAvailable = switch (pref) {
+        SttPreference.deviceOnly => hasLocalStt,
+        SttPreference.serverOnly => hasServerStt,
+        SttPreference.auto => hasLocalStt || hasServerStt,
+      };
+
+      if (!engineAvailable) {
         _updateState(VoiceCallState.error);
-        throw Exception('Voice input not available on this device');
+        throw Exception('Preferred speech recognition engine is unavailable');
       }
 
       _updateState(VoiceCallState.listening);
@@ -572,11 +586,9 @@ VoiceCallService voiceCallService(Ref ref) {
   // Keep TTS settings in sync with app settings during a call
   ref.listen<AppSettings>(appSettingsProvider, (previous, next) {
     // Update voice/engine and runtime parameters
-    final selectedVoice = next.ttsEngine == TtsEngine.server
-        ? next.ttsServerVoiceId
-        : next.ttsVoice;
     service._tts.updateSettings(
-      voice: selectedVoice,
+      voice: next.ttsVoice,
+      serverVoice: next.ttsServerVoiceId,
       speechRate: next.ttsSpeechRate,
       pitch: next.ttsPitch,
       volume: next.ttsVolume,

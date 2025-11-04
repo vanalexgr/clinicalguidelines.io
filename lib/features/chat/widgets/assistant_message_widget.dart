@@ -71,6 +71,11 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   bool _allowTypingIndicator = false;
   Timer? _typingGateTimer;
   String _ttsPlainText = '';
+  Timer? _ttsPlainTextDebounce;
+  Map<String, dynamic>? _pendingTtsPlainTextPayload;
+  String? _pendingTtsPlainTextSource;
+  String? _lastAppliedTtsPlainTextSource;
+  int _ttsPlainTextRequestId = 0;
   // Active version index (-1 means current/live content)
   int _activeVersionIndex = -1;
   // press state handled by shared ChatActionButton
@@ -162,13 +167,11 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     final rSegs = ReasoningParser.segments(raw);
 
     final out = <MessageSegment>[];
-    final textBuf = StringBuffer();
     final textSegments = <String>[];
     if (rSegs == null || rSegs.isEmpty) {
       final tSegs = ToolCallsParser.segments(raw);
       if (tSegs == null || tSegs.isEmpty) {
         out.add(MessageSegment.text(raw));
-        textBuf.write(raw);
         textSegments.add(raw);
       } else {
         for (final s in tSegs) {
@@ -176,7 +179,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             out.add(MessageSegment.tool(s.entry!));
           } else if ((s.text ?? '').isNotEmpty) {
             out.add(MessageSegment.text(s.text!));
-            textBuf.write(s.text);
             textSegments.add(s.text!);
           }
         }
@@ -190,7 +192,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           final tSegs = ToolCallsParser.segments(t);
           if (tSegs == null || tSegs.isEmpty) {
             out.add(MessageSegment.text(t));
-            textBuf.write(t);
             textSegments.add(t);
           } else {
             for (final s in tSegs) {
@@ -198,7 +199,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                 out.add(MessageSegment.tool(s.entry!));
               } else if ((s.text ?? '').isNotEmpty) {
                 out.add(MessageSegment.text(s.text!));
-                textBuf.write(s.text);
                 textSegments.add(s.text!);
               }
             }
@@ -208,23 +208,15 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
 
     final segments = out.isEmpty ? [MessageSegment.text(raw)] : out;
-    String speechText;
-    try {
-      final worker = ref.read(workerManagerProvider);
-      speechText = await worker.schedule<Map<String, dynamic>, String>(
-        _buildTtsPlainTextWorker,
-        {'segments': textSegments, 'fallback': raw},
-        debugLabel: 'tts_plain_text',
-      );
-    } catch (_) {
-      speechText = _buildTtsPlainTextFallback(textSegments, raw);
-    }
 
     if (!mounted) return;
     setState(() {
       _segments = segments;
-      _ttsPlainText = speechText;
     });
+    _scheduleTtsPlainTextBuild(
+      List<String>.from(textSegments, growable: false),
+      raw,
+    );
     _updateTypingIndicatorGate();
   }
 
@@ -288,6 +280,96 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       return MarkdownToText.convert(fallback);
     }
     return result;
+  }
+
+  void _scheduleTtsPlainTextBuild(List<String> segments, String raw) {
+    final hasContent =
+        segments.any((segment) => segment.trim().isNotEmpty) ||
+        raw.trim().isNotEmpty;
+    if (!hasContent) {
+      _pendingTtsPlainTextPayload = null;
+      _pendingTtsPlainTextSource = null;
+      _lastAppliedTtsPlainTextSource = '';
+      if (_ttsPlainText.isNotEmpty && mounted) {
+        setState(() {
+          _ttsPlainText = '';
+        });
+      }
+      return;
+    }
+
+    if (_pendingTtsPlainTextPayload == null &&
+        raw == _lastAppliedTtsPlainTextSource) {
+      return;
+    }
+    if (raw == _pendingTtsPlainTextSource &&
+        _pendingTtsPlainTextPayload != null) {
+      return;
+    }
+
+    final pendingSegments = List<String>.from(segments, growable: false);
+    _pendingTtsPlainTextPayload = {
+      'segments': pendingSegments,
+      'fallback': raw,
+    };
+    _pendingTtsPlainTextSource = raw;
+
+    final delay = widget.isStreaming
+        ? const Duration(milliseconds: 250)
+        : Duration.zero;
+
+    _ttsPlainTextDebounce?.cancel();
+    if (delay == Duration.zero) {
+      _runPendingTtsPlainTextBuild();
+    } else {
+      _ttsPlainTextDebounce = Timer(delay, _runPendingTtsPlainTextBuild);
+    }
+  }
+
+  void _runPendingTtsPlainTextBuild() {
+    _ttsPlainTextDebounce?.cancel();
+    _ttsPlainTextDebounce = null;
+
+    final payload = _pendingTtsPlainTextPayload;
+    final source = _pendingTtsPlainTextSource;
+    if (payload == null || source == null) {
+      return;
+    }
+
+    _pendingTtsPlainTextPayload = null;
+    _pendingTtsPlainTextSource = null;
+    final requestId = ++_ttsPlainTextRequestId;
+    unawaited(_executeTtsPlainTextBuild(payload, source, requestId));
+  }
+
+  Future<void> _executeTtsPlainTextBuild(
+    Map<String, dynamic> payload,
+    String raw,
+    int requestId,
+  ) async {
+    final segments = (payload['segments'] as List).cast<String>();
+    String speechText;
+    try {
+      final worker = ref.read(workerManagerProvider);
+      speechText = await worker.schedule<Map<String, dynamic>, String>(
+        _buildTtsPlainTextWorker,
+        payload,
+        debugLabel: 'tts_plain_text',
+      );
+    } catch (_) {
+      speechText = _buildTtsPlainTextFallback(segments, raw);
+    }
+
+    if (!mounted || requestId != _ttsPlainTextRequestId) {
+      return;
+    }
+
+    _lastAppliedTtsPlainTextSource = raw;
+    if (_ttsPlainText != speechText) {
+      setState(() {
+        _ttsPlainText = speechText;
+      });
+    }
   }
 
   // No streaming-specific markdown fixes needed here; handled by Markdown widget
@@ -622,6 +704,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   @override
   void dispose() {
     _typingGateTimer?.cancel();
+    _ttsPlainTextDebounce?.cancel();
+    _pendingTtsPlainTextPayload = null;
+    _pendingTtsPlainTextSource = null;
     _fadeController.dispose();
     _slideController.dispose();
     super.dispose();
