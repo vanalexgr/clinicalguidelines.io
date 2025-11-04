@@ -684,6 +684,83 @@ class AppCustomizationPage extends ConsumerWidget {
                   ),
                 ),
               ],
+              if (settings.sttPreference == SttPreference.serverOnly ||
+                  (settings.sttPreference == SttPreference.auto &&
+                      serverAvailable)) ...[
+                const SizedBox(height: Spacing.md),
+                const Divider(),
+                const SizedBox(height: Spacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.sttSilenceDuration,
+                            style: theme.bodyMedium?.copyWith(
+                                  color: theme.sidebarForeground,
+                                  fontWeight: FontWeight.w600,
+                                ) ??
+                                TextStyle(
+                                  color: theme.sidebarForeground,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          const SizedBox(height: Spacing.xs),
+                          Text(
+                            '${settings.voiceSilenceDuration}ms',
+                            style: theme.bodySmall?.copyWith(
+                                  color: theme.sidebarForeground
+                                      .withValues(alpha: 0.7),
+                                ) ??
+                                TextStyle(
+                                  color: theme.sidebarForeground
+                                      .withValues(alpha: 0.7),
+                                  fontSize: 12,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${(settings.voiceSilenceDuration / 1000).toStringAsFixed(1)}s',
+                      style: theme.bodyMedium?.copyWith(
+                            color: theme.buttonPrimary,
+                            fontWeight: FontWeight.w600,
+                          ) ??
+                          TextStyle(
+                            color: theme.buttonPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Spacing.sm),
+                Slider(
+                  value: settings.voiceSilenceDuration.toDouble(),
+                  min: 300,
+                  max: 3000,
+                  divisions: 27,
+                  activeColor: theme.buttonPrimary,
+                  inactiveColor: theme.cardBorder.withValues(alpha: 0.4),
+                  onChanged: (value) {
+                    notifier.setVoiceSilenceDuration(value.round());
+                  },
+                ),
+                Text(
+                  l10n.sttSilenceDurationDescription,
+                  style: theme.bodySmall?.copyWith(
+                        color: theme.sidebarForeground.withValues(alpha: 0.7),
+                      ) ??
+                      TextStyle(
+                        color: theme.sidebarForeground.withValues(alpha: 0.7),
+                        fontSize: 12,
+                      ),
+                ),
+              ],
             ],
           ),
         ),

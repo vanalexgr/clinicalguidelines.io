@@ -1259,6 +1259,14 @@
   "@sttServerUnavailableWarning": {
     "description": "Warning shown when the user selects server speech recognition but no server is available."
   },
+  "sttSilenceDuration": "Silence Duration",
+  "@sttSilenceDuration": {
+    "description": "Label for the silence duration setting in server speech-to-text."
+  },
+  "sttSilenceDurationDescription": "Time to wait after silence before auto-stopping recording",
+  "@sttSilenceDurationDescription": {
+    "description": "Description for the silence duration slider in server speech-to-text settings."
+  },
   "ttsEngineLabel": "Engine",
   "@ttsEngineLabel": {
     "description": "Label for selecting the text-to-speech engine."

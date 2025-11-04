@@ -317,6 +317,8 @@
   "sttEngineServerDescription": "Envía siempre las grabaciones a tu servidor OpenWebUI para la transcripción.",
   "sttDeviceUnavailableWarning": "El reconocimiento de voz en el dispositivo no está disponible en este dispositivo.",
   "sttServerUnavailableWarning": "Conéctate a un servidor con transcripción habilitada para usar esta opción.",
+  "sttSilenceDuration": "Duración del silencio",
+  "sttSilenceDurationDescription": "Tiempo de espera después del silencio antes de detener automáticamente la grabación",
   "ttsSettings": "Texto a voz",
   "ttsEngineAuto": "Automático",
   "ttsEngineAutoDescription": "Usa la síntesis en el dispositivo cuando esté disponible y, si no, recurre a tu servidor.",

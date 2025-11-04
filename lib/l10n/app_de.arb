@@ -317,6 +317,8 @@
   "sttEngineServerDescription": "Sendet Aufnahmen immer an deinen OpenWebUI-Server zur Transkription.",
   "sttDeviceUnavailableWarning": "Auf diesem Gerät steht keine Spracherkennung zur Verfügung.",
   "sttServerUnavailableWarning": "Verbinde dich mit einem Server mit aktivierter Transkription, um diese Option zu nutzen.",
+  "sttSilenceDuration": "Stille-Dauer",
+  "sttSilenceDurationDescription": "Zeit nach Stille warten, bevor die Aufnahme automatisch gestoppt wird",
   "ttsSettings": "Text zu Sprache",
   "ttsEngineAuto": "Automatisch",
   "ttsEngineAutoDescription": "Verwendet die Sprachausgabe auf dem Gerät, wenn verfügbar, und greift sonst auf deinen Server zurück.",

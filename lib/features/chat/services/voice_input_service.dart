@@ -26,6 +26,7 @@ class VoiceInputService {
   final MicStreamRecorder _recorder = MicStreamRecorder();
   final Stt _speech = Stt();
   final ApiService? _api;
+  final Ref? _ref;
   bool _isInitialized = false;
   bool _isListening = false;
   bool _localSttAvailable = false;
@@ -59,7 +60,9 @@ class VoiceInputService {
   bool get prefersServerOnly => _preference == SttPreference.serverOnly;
   bool get prefersDeviceOnly => _preference == SttPreference.deviceOnly;
 
-  VoiceInputService({ApiService? api}) : _api = api;
+  VoiceInputService({ApiService? api, Ref? ref})
+      : _api = api,
+        _ref = ref;
 
   void updatePreference(SttPreference preference) {
     _preference = preference;
@@ -451,7 +454,8 @@ class VoiceInputService {
       _silenceTimer?.cancel();
       _silenceTimer = null;
     } else if (_hasDetectedSpeech && _silenceTimer == null) {
-      _silenceTimer = Timer(const Duration(milliseconds: 800), () {
+      final silenceDuration = _ref?.read(appSettingsProvider).voiceSilenceDuration ?? 2000;
+      _silenceTimer = Timer(Duration(milliseconds: silenceDuration), () {
         if (_isListening && _usingServerStt) {
           unawaited(_stopListening());
         }
@@ -652,7 +656,7 @@ class VoiceInputService {
 
 final voiceInputServiceProvider = Provider<VoiceInputService>((ref) {
   final api = ref.watch(apiServiceProvider);
-  final service = VoiceInputService(api: api);
+  final service = VoiceInputService(api: api, ref: ref);
   final currentSettings = ref.read(appSettingsProvider);
   service.updatePreference(currentSettings.sttPreference);
   ref.listen<AppSettings>(appSettingsProvider, (previous, next) {
