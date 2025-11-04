@@ -124,23 +124,34 @@ Future<Set<String>> _scanUsedLocalizationKeys(Set<String> baseKeys) async {
   final used = <String>{};
 
   Future<bool> keyIsUsed(String key) async {
-    final result = await Process.run('rg', [
-      '--fixed-strings',
-      '--quiet',
-      '--glob=*.dart',
-      '--glob=!lib/l10n/app_localizations*.dart',
-      key,
-      'lib',
-    ]);
-    if (result.exitCode == 0) {
-      return true;
-    }
-    if (result.exitCode > 1) {
+    try {
+      final libDir = Directory('lib');
+      if (!await libDir.exists()) {
+        return false;
+      }
+
+      await for (final entity in libDir.list(recursive: true)) {
+        if (entity is! File) continue;
+        if (!entity.path.endsWith('.dart')) continue;
+        if (entity.path.contains('lib/l10n/app_localizations')) continue;
+
+        try {
+          final content = await entity.readAsString();
+          if (content.contains(key)) {
+            return true;
+          }
+        } catch (e) {
+          // Skip files that can't be read
+          continue;
+        }
+      }
+      return false;
+    } catch (e) {
       stderr.writeln(
-        'warning: failed to search for key "$key": ${result.stderr}'.trim(),
+        'warning: failed to search for key "$key": $e',
       );
+      return false;
     }
-    return false;
   }
 
   for (final key in baseKeys) {
