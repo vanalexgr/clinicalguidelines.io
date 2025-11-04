@@ -1844,6 +1844,18 @@ abstract class AppLocalizations {
   /// **'Connect to a server with transcription enabled to use this option.'**
   String get sttServerUnavailableWarning;
 
+  /// Label for the silence duration setting in server speech-to-text.
+  ///
+  /// In en, this message translates to:
+  /// **'Silence Duration'**
+  String get sttSilenceDuration;
+
+  /// Description for the silence duration slider in server speech-to-text settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Time to wait after silence before auto-stopping recording'**
+  String get sttSilenceDurationDescription;
+
   /// Label for selecting the text-to-speech engine.
   ///
   /// In en, this message translates to:

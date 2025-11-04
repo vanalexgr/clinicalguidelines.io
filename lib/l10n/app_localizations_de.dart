@@ -967,6 +967,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Verbinde dich mit einem Server mit aktivierter Transkription, um diese Option zu nutzen.';
 
   @override
+  String get sttSilenceDuration => 'Stille-Dauer';
+
+  @override
+  String get sttSilenceDurationDescription =>
+      'Zeit nach Stille warten, bevor die Aufnahme automatisch gestoppt wird';
+
+  @override
   String get ttsEngineLabel => 'Engine';
 
   @override

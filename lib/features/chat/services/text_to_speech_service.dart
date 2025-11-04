@@ -689,43 +689,66 @@ class TextToSpeechService {
   }
 
   List<String> _splitForTts(String text) {
-    // Normalize whitespace
-    final normalized = text.replaceAll(RegExp(r"\s+"), ' ').trim();
-    if (normalized.isEmpty) return const [];
+    // Mirrors OpenWebUI's extractSentencesForAudio implementation
+    // See: src/lib/utils/index.ts lines 953-970, 907-928
 
-    // Split on sentence-ending punctuation while keeping the delimiter
-    final parts = <String>[];
-    final sentenceRegex = RegExp(r"(.+?[\.!?]+)(\s+|\$)");
-    int index = 0;
-    for (final match in sentenceRegex.allMatches('$normalized ')) {
-      final s = match.group(1) ?? '';
-      if (s.trim().isNotEmpty) parts.add(s.trim());
-      index = match.end;
-    }
-    if (index < normalized.length) {
-      final tail = normalized.substring(index).trim();
-      if (tail.isNotEmpty) parts.add(tail);
-    }
+    // 1. Preserve code blocks (replace with placeholders)
+    final codeBlocks = <String>[];
+    var processed = text;
+    var codeBlockIndex = 0;
 
-    // Fallback to length-based splits for very long segments
-    const maxLen = 300;
-    final chunks = <String>[];
-    for (final p in parts.isEmpty ? [normalized] : parts) {
-      if (p.length <= maxLen) {
-        chunks.add(p);
+    // Match triple backticks code blocks
+    final codeBlockRegex = RegExp(r'```[\s\S]*?```', multiLine: true);
+    processed = processed.replaceAllMapped(codeBlockRegex, (match) {
+      final placeholder = '\u0000$codeBlockIndex\u0000';
+      codeBlocks.add(match.group(0)!);
+      codeBlockIndex++;
+      return placeholder;
+    });
+
+    // 2. Split on sentence-ending punctuation: .!?
+    // OpenWebUI uses: /(?<=[.!?])\s+/
+    final sentences = processed
+        .split(RegExp(r'(?<=[.!?])\s+'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    // 3. Restore code blocks from placeholders
+    final restoredSentences = sentences
+        .map((sentence) {
+          return sentence.replaceAllMapped(RegExp(r'\u0000(\d+)\u0000'), (
+            match,
+          ) {
+            final idx = int.parse(match.group(1)!);
+            return idx < codeBlocks.length ? codeBlocks[idx] : '';
+          });
+        })
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    // 4. Merge short sentences (< 4 words OR < 50 chars)
+    // OpenWebUI logic from extractSentencesForAudio
+    final mergedChunks = <String>[];
+    for (final sentence in restoredSentences) {
+      if (mergedChunks.isEmpty) {
+        mergedChunks.add(sentence);
       } else {
-        // Try splitting on commas/spaces
-        var remaining = p;
-        while (remaining.length > maxLen) {
-          int cut = remaining.lastIndexOf(RegExp(r",\s|\s"), maxLen);
-          cut = cut <= 0 ? maxLen : cut;
-          chunks.add(remaining.substring(0, cut).trim());
-          remaining = remaining.substring(cut).trim();
+        final lastIndex = mergedChunks.length - 1;
+        final previousText = mergedChunks[lastIndex];
+        final wordCount = previousText.split(RegExp(r'\s+')).length;
+        final charCount = previousText.length;
+
+        // Merge if previous chunk is too short
+        if (wordCount < 4 || charCount < 50) {
+          mergedChunks[lastIndex] = '$previousText $sentence';
+        } else {
+          mergedChunks.add(sentence);
         }
-        if (remaining.isNotEmpty) chunks.add(remaining);
       }
     }
-    return chunks;
+
+    return mergedChunks.isEmpty ? [text.trim()] : mergedChunks;
   }
 
   Future<void> _configurePreferredVoice() async {

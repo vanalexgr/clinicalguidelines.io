@@ -961,6 +961,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Connect to a server with transcription enabled to use this option.';
 
   @override
+  String get sttSilenceDuration => 'Silence Duration';
+
+  @override
+  String get sttSilenceDurationDescription =>
+      'Time to wait after silence before auto-stopping recording';
+
+  @override
   String get ttsEngineLabel => 'Engine';
 
   @override
