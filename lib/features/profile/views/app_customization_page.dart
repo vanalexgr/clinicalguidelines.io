@@ -951,42 +951,6 @@ class AppCustomizationPage extends ConsumerWidget {
                     .setTtsSpeechRate(value),
               ),
               const SizedBox(height: Spacing.md),
-              // Pitch Slider
-              _buildSliderTile(
-                context,
-                ref,
-                icon: UiUtils.platformIcon(
-                  ios: CupertinoIcons.waveform,
-                  android: Icons.graphic_eq,
-                ),
-                title: l10n.ttsPitch,
-                value: settings.ttsPitch,
-                min: 0.5,
-                max: 2.0,
-                divisions: 6,
-                label: settings.ttsPitch.toStringAsFixed(1),
-                onChanged: (value) =>
-                    ref.read(appSettingsProvider.notifier).setTtsPitch(value),
-              ),
-              const SizedBox(height: Spacing.md),
-              // Volume Slider
-              _buildSliderTile(
-                context,
-                ref,
-                icon: UiUtils.platformIcon(
-                  ios: CupertinoIcons.volume_up,
-                  android: Icons.volume_up,
-                ),
-                title: l10n.ttsVolume,
-                value: settings.ttsVolume,
-                min: 0.0,
-                max: 1.0,
-                divisions: 10,
-                label: '${(settings.ttsVolume * 100).round()}%',
-                onChanged: (value) =>
-                    ref.read(appSettingsProvider.notifier).setTtsVolume(value),
-              ),
-              const SizedBox(height: Spacing.md),
               // Preview Button
               _CustomizationTile(
                 leading: _buildIconBadge(
