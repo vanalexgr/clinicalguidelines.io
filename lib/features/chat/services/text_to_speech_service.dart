@@ -657,6 +657,12 @@ class TextToSpeechService {
     );
   }
 
+  /// Splits [text] into the chunks used for playback sequencing.
+  ///
+  /// This mirrors the server-side streaming behavior so UI consumers can stay
+  /// in sync with sentence indices reported during playback.
+  List<String> splitTextForSpeech(String text) => _splitForTts(text);
+
   Future<void> _onAudioComplete() async {
     final session = _session;
     // If there are more expected chunks

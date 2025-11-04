@@ -219,8 +219,8 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
 
     // Prepare sentence split for highlighting
     final cleanText = MarkdownToText.convert(text);
-    final sentences = _splitForTts(cleanText);
-    final offsets = _computeOffsets(sentences);
+    final sentences = _service.splitTextForSpeech(cleanText);
+    final offsets = _computeOffsets(cleanText, sentences);
 
     state = state.copyWith(
       status: TtsPlaybackStatus.loading,
@@ -265,30 +265,24 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
     }
   }
 
-  List<String> _splitForTts(String text) {
-    final normalized = text.replaceAll(RegExp(r"\s+"), ' ').trim();
-    if (normalized.isEmpty) return const [];
-    final parts = <String>[];
-    final sentenceRegex = RegExp(r"(.+?[\.!?]+)(\s+|\$)");
-    int index = 0;
-    for (final match in sentenceRegex.allMatches('$normalized ')) {
-      final s = match.group(1) ?? '';
-      if (s.trim().isNotEmpty) parts.add(s.trim());
-      index = match.end;
-    }
-    if (index < normalized.length) {
-      final tail = normalized.substring(index).trim();
-      if (tail.isNotEmpty) parts.add(tail);
-    }
-    return parts;
-  }
-
-  List<int> _computeOffsets(List<String> sentences) {
+  List<int> _computeOffsets(String source, List<String> sentences) {
+    if (sentences.isEmpty) return const [];
     final offsets = <int>[];
-    int acc = 0;
-    for (final s in sentences) {
-      offsets.add(acc);
-      acc += s.length + 1; // assume a space or punctuation between
+    var cursor = 0;
+    for (final sentence in sentences) {
+      final chunk = sentence.trim();
+      if (chunk.isEmpty) {
+        offsets.add(cursor);
+        continue;
+      }
+      final index = source.indexOf(chunk, cursor);
+      if (index == -1) {
+        offsets.add(cursor);
+        cursor += chunk.length;
+      } else {
+        offsets.add(index);
+        cursor = index + chunk.length;
+      }
     }
     return offsets;
   }
