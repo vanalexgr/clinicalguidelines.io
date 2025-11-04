@@ -4,7 +4,7 @@ import 'dart:io' show File, Platform;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:record/record.dart';
+import 'package:mic_stream_recorder/mic_stream_recorder.dart';
 import 'package:stts/stts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -23,7 +23,7 @@ class LocaleName {
 }
 
 class VoiceInputService {
-  final AudioRecorder _recorder = AudioRecorder();
+  final MicStreamRecorder _recorder = MicStreamRecorder();
   final Stt _speech = Stt();
   final ApiService? _api;
   bool _isInitialized = false;
@@ -31,14 +31,10 @@ class VoiceInputService {
   bool _localSttAvailable = false;
   SttPreference _preference = SttPreference.auto;
   bool _usingServerStt = false;
-  bool _serverRecorderActive = false;
-  String? _serverRecordingPath;
-  String? _serverRecordingMimeType;
   String? _selectedLocaleId;
   List<LocaleName> _locales = const [];
   StreamController<String>? _textStreamController;
   String _currentText = '';
-  // Public stream for UI waveform visualization (emits partial text length as proxy)
   StreamController<int>? _intensityController;
   Stream<int> get intensityStream =>
       _intensityController?.stream ?? const Stream<int>.empty();
@@ -46,12 +42,13 @@ class VoiceInputService {
   Timer? _intensityDecayTimer;
   Timer? _silenceTimer;
   bool _hasDetectedSpeech = false;
+  int _amplitudeCallbackCount = 0;
+  Timer? _amplitudeFallbackTimer;
 
-  /// Public stream of partial/final transcript strings and special audio tokens.
   Stream<String> get textStream =>
       _textStreamController?.stream ?? const Stream<String>.empty();
   Timer? _autoStopTimer;
-  StreamSubscription<Amplitude>? _ampSub;
+  StreamSubscription<double>? _ampSub;
   StreamSubscription<SttRecognition>? _sttResultSub;
   StreamSubscription<SttState>? _sttStateSub;
 
@@ -111,10 +108,7 @@ class VoiceInputService {
 
   Future<bool> checkPermissions() async {
     try {
-      // Prefer stts permission check which will request microphone permission
-      final mic = await _speech.hasPermission();
-      if (mic) return true;
-      return await _recorder.hasPermission();
+      return await _speech.hasPermission();
     } catch (_) {
       return false;
     }
@@ -200,9 +194,6 @@ class VoiceInputService {
     _intensityController = StreamController<int>.broadcast();
     _lastIntensity = 0;
     _usingServerStt = false;
-    _serverRecorderActive = false;
-    _serverRecordingPath = null;
-    _serverRecordingMimeType = null;
 
     _startIntensityDecayTimer();
 
@@ -336,6 +327,9 @@ class VoiceInputService {
     _silenceTimer?.cancel();
     _silenceTimer = null;
 
+    _amplitudeFallbackTimer?.cancel();
+    _amplitudeFallbackTimer = null;
+
     if (_usingServerStt) {
       await _finalizeServerRecording();
     } else {
@@ -356,9 +350,6 @@ class VoiceInputService {
     await _closeControllers();
 
     _usingServerStt = false;
-    _serverRecorderActive = false;
-    _serverRecordingPath = null;
-    _serverRecordingMimeType = null;
     _hasDetectedSpeech = false;
   }
 
@@ -417,52 +408,50 @@ class VoiceInputService {
   }
 
   Future<void> _startServerRecording() async {
-    final (path, mimeType) = await _createRecordingTarget();
-    _serverRecordingPath = path;
-    _serverRecordingMimeType = mimeType;
-
-    final config = RecordConfig(
-      encoder: AudioEncoder.aacLc,
-      sampleRate: 44100,
-      bitRate: 96000,
-      numChannels: 1,
-      noiseSuppress: true,
-    );
-
-    await _recorder.start(config, path: path);
-    _serverRecorderActive = true;
+    final path = await _createRecordingPath();
     _hasDetectedSpeech = false;
 
-    await _ampSub?.cancel();
-    _ampSub = _recorder
-        .onAmplitudeChanged(const Duration(milliseconds: 140))
-        .listen((Amplitude amplitude) {
-          if (!_isListening) return;
-          _lastIntensity = _amplitudeToIntensity(amplitude.current);
-          try {
-            _intensityController?.add(_lastIntensity);
-          } catch (_) {}
+    await _recorder.startRecording(path);
 
-          // Detect silence and auto-stop for server-side STT
-          _handleServerAmplitude(amplitude.current);
-        }, onError: (_) {});
+    await _ampSub?.cancel();
+    _amplitudeFallbackTimer?.cancel();
+    _amplitudeCallbackCount = 0;
+
+    _ampSub = _recorder.amplitudeStream.listen((amplitude) {
+      _amplitudeCallbackCount++;
+      if (!_isListening) return;
+
+      _lastIntensity = _normalizedToIntensity(amplitude);
+      try {
+        _intensityController?.add(_lastIntensity);
+      } catch (_) {}
+
+      _handleServerAmplitude(amplitude);
+    });
+
+    _amplitudeFallbackTimer = Timer(const Duration(seconds: 1), () {
+      if (_amplitudeCallbackCount == 0) {
+        _silenceTimer = Timer(const Duration(seconds: 15), () {
+          if (_isListening && _usingServerStt) {
+            unawaited(_stopListening());
+          }
+        });
+      }
+    });
   }
 
-  void _handleServerAmplitude(double? amplitude) {
+  void _handleServerAmplitude(double amplitude) {
     if (!_usingServerStt || !_isListening) return;
 
-    // Threshold for detecting speech (in dB)
-    const double speechThreshold = -45.0;
-    final double currentDb = amplitude ?? -100.0;
+    const double speechThreshold = 0.55;
+    if (amplitude.isNaN || amplitude.isInfinite) return;
 
-    // If we detect speech, mark it and reset silence timer
-    if (currentDb > speechThreshold) {
+    if (amplitude > speechThreshold) {
       _hasDetectedSpeech = true;
       _silenceTimer?.cancel();
       _silenceTimer = null;
     } else if (_hasDetectedSpeech && _silenceTimer == null) {
-      // Start silence timer only after we've detected speech at least once
-      _silenceTimer = Timer(const Duration(seconds: 2), () {
+      _silenceTimer = Timer(const Duration(milliseconds: 800), () {
         if (_isListening && _usingServerStt) {
           unawaited(_stopListening());
         }
@@ -470,53 +459,30 @@ class VoiceInputService {
     }
   }
 
-  Future<(String, String)> _createRecordingTarget() async {
+  Future<String> _createRecordingPath() async {
     final directory = await getTemporaryDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    const extension = 'm4a';
-    final fileName = 'conduit_voice_$timestamp.$extension';
-    final path = p.join(directory.path, fileName);
-    return (path, 'audio/mp4');
+    final fileName = 'conduit_voice_$timestamp.m4a';
+    return p.join(directory.path, fileName);
   }
 
   Future<void> _finalizeServerRecording() async {
     final api = _api;
-    if (api == null) {
-      return;
-    }
+    if (api == null) return;
 
-    String? path;
+    final path = await _recorder.stopRecording();
+    if (path == null || path.isEmpty) return;
+
+    final file = File(path);
     try {
-      if (_serverRecorderActive && await _recorder.isRecording()) {
-        path = await _recorder.stop();
-      } else {
-        path = _serverRecordingPath;
-      }
-    } catch (_) {
-      path = _serverRecordingPath;
-    } finally {
-      _serverRecorderActive = false;
-    }
-
-    final resolvedPath = path;
-    if (resolvedPath == null || resolvedPath.isEmpty) {
-      return;
-    }
-
-    final file = File(resolvedPath);
-    try {
-      if (!await file.exists()) {
-        return;
-      }
+      if (!await file.exists()) return;
       final bytes = await file.readAsBytes();
-      if (bytes.isEmpty) {
-        return;
-      }
+      if (bytes.isEmpty) return;
 
       final response = await api.transcribeSpeech(
         audioBytes: bytes,
-        fileName: p.basename(resolvedPath),
-        mimeType: _serverRecordingMimeType,
+        fileName: p.basename(path),
+        mimeType: 'audio/mp4',
         language: _languageForServer(),
       );
 
@@ -641,21 +607,9 @@ class VoiceInputService {
     return null;
   }
 
-  int _amplitudeToIntensity(double? value) {
-    if (value == null || value.isNaN || value.isInfinite) {
-      return 0;
-    }
-    const minDb = -55.0;
-    const maxDb = 0.0;
-    final double clamped = value.clamp(minDb, maxDb).toDouble();
-    final double normalized = ((clamped - minDb) / (maxDb - minDb)).clamp(
-      0.0,
-      1.0,
-    );
-    final int scaled = (normalized * 10).round();
-    if (scaled <= 0) return 0;
-    if (scaled >= 10) return 10;
-    return scaled;
+  int _normalizedToIntensity(double value) {
+    if (value.isNaN || value.isInfinite) return 0;
+    return (value * 10).round().clamp(0, 10);
   }
 
   Future<void> _closeControllers() async {
@@ -692,9 +646,6 @@ class VoiceInputService {
     _silenceTimer?.cancel();
     try {
       _speech.dispose().catchError((_) {});
-    } catch (_) {}
-    try {
-      _recorder.dispose().catchError((_) {});
     } catch (_) {}
   }
 }
