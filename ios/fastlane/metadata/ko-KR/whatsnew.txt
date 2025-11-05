@@ -1,1 +1,3 @@
-https://github.com/cogwheel0/conduit/releases/tag/v2.2.1
+• 한국어 지원 및 현지화 파일 추가
+• 스크롤 시 키보드 자동 닫기
+• 대화 로컬 캐시 지속성 구현

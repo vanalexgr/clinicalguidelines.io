@@ -1,1 +1,3 @@
-https://github.com/cogwheel0/conduit/releases/tag/v2.2.1
+• Koreaanse taalondersteuning en lokalisatiebestanden toegevoegd
+• Toetsenbord sluit automatisch bij scrollen
+• Lokale cache-persistentie voor gesprekken geïmplementeerd

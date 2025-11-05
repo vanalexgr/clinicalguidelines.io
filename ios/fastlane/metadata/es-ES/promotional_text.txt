@@ -1,1 +1,1 @@
-STS del servidor, mejoras de rendimiento y correcciones de streaming
+Soporte para coreano, UX mejorada con cierre automático del teclado y caché persistente de conversaciones

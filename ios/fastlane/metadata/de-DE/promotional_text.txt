@@ -1,1 +1,1 @@
-Serverseitiges STS, Leistungsverbesserungen und Streaming-Fixes
+Koreanische Sprachunterstützung, verbesserte UX mit automatischer Tastatur-Schließung und persistenter Gesprächs-Cache

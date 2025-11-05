@@ -1,1 +1,1 @@
-Server-side STS, prestatieverbeteringen en streaming-fixes
+Koreaanse taalondersteuning, verbeterde UX met automatische toetsenbordsluiting en persistente gesprekscache

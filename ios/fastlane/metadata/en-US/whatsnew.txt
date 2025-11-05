@@ -1,1 +1,3 @@
-https://github.com/cogwheel0/conduit/releases/tag/v2.2.1
+• Added Korean language support and localization files
+• Keyboard automatically dismisses when scrolling
+• Implemented local cache persistence for conversations

@@ -1,1 +1,1 @@
-Server-side STS, performance improvements, and streaming fixes
+Korean language support, improved UX with keyboard dismiss, and persistent conversation cache
