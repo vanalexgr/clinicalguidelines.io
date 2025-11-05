@@ -1,1 +1,1 @@
-서버 측 STS, 성능 개선 및 스트리밍 수정
+https://github.com/cogwheel0/conduit/releases/tag/v2.2.1
