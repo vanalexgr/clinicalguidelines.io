@@ -655,6 +655,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get chinese => 'Cinese';
 
   @override
+  String get korean => '한국어';
+
+  @override
   String get deleteMessagesTitle => 'Elimina messaggi';
 
   @override

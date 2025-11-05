@@ -862,6 +862,10 @@
   "@chinese": {
     "description": "Language name: Chinese."
   },
+  "korean": "한국어",
+  "@korean": {
+    "description": "Language name: Korean."
+  },
   "deleteMessagesTitle": "Delete Messages",
   "@deleteMessagesTitle": {
     "description": "Dialog title asking to confirm deletion of messages."

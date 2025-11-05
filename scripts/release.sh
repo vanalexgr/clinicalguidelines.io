@@ -152,7 +152,7 @@ mkdir -p "$ANDROID_CHANGELOG_DIR"
 echo "$LINK" > "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt"
 
 # iOS whatsnew for all locales (App Store requires it for each locale)
-IOS_LOCALES=("default" "en-US" "de-DE" "es-ES" "fr-FR" "it" "nl-NL" "ru" "zh-Hans")
+IOS_LOCALES=("default" "en-US" "de-DE" "es-ES" "fr-FR" "it" "nl-NL" "ru" "zh-Hans" "ko-KR")
 IOS_WHATSNEW_FILES=()
 for locale in "${IOS_LOCALES[@]}"; do
     IOS_WHATSNEW_PATH="ios/fastlane/metadata/$locale/whatsnew.txt"
