@@ -1669,6 +1669,8 @@ class AppCustomizationPage extends ConsumerWidget {
         return AppLocalizations.of(context)!.russian;
       case 'zh':
         return AppLocalizations.of(context)!.chinese;
+      case 'kr':
+        return AppLocalizations.of(context)!.korean;
       default:
         return AppLocalizations.of(context)!.system;
     }
@@ -1900,6 +1902,11 @@ class AppCustomizationPage extends ConsumerWidget {
                 title: Text(AppLocalizations.of(context)!.chinese),
                 trailing: current == 'zh' ? const Icon(Icons.check) : null,
                 onTap: () => Navigator.pop(context, 'zh'),
+              ),
+              ListTile(
+                title: Text(AppLocalizations.of(context)!.korean),
+                trailing: current == 'kr' ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.pop(context, 'kr'),
               ),
               const SizedBox(height: Spacing.sm),
             ],
