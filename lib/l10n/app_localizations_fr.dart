@@ -663,7 +663,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get chinese => 'Chinois';
 
   @override
-  String get korean => '한국어';
+  String get korean => 'Coréen';
 
   @override
   String get deleteMessagesTitle => 'Supprimer les messages';
