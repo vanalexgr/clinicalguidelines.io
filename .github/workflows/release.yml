@@ -10,9 +10,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  generate-release-notes:
+    name: Generate Release Notes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Release with Notes
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generateReleaseNotes: true
+          makeLatest: true
+
   build-android:
     name: Build Android
     runs-on: ubuntu-latest
+    needs: generate-release-notes
     permissions:
       contents: write
 
@@ -75,20 +94,23 @@ jobs:
             build/app/outputs/flutter-apk/app-x86_64-release.apk
             build/app/outputs/bundle/release/app-release.aab
 
-      - name: Create or Update Release
+      - name: Update Release with Artifacts
         uses: ncipollo/release-action@v1
         with:
           artifacts: "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk,build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk,build/app/outputs/flutter-apk/app-x86_64-release.apk,build/app/outputs/bundle/release/app-release.aab"
           tag: ${{ github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          generateReleaseNotes: true
           allowUpdates: true
           makeLatest: true
+          omitBody: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
 
 
   build-ios:
     name: Build iOS
     runs-on: macos-latest
+    needs: generate-release-notes
     permissions:
       contents: write
 
