@@ -793,6 +793,7 @@ class Conversations extends _$Conversations {
     if (!authed) {
       DebugLogger.log('skip-unauthed', scope: 'conversations');
       _updateCacheTimestamp(null);
+      _persistConversationsAsync(const <Conversation>[]);
       return const [];
     }
 
@@ -800,7 +801,43 @@ class Conversations extends _$Conversations {
       return _demoConversations();
     }
 
-    return _loadRemoteConversations();
+    final storage = ref.read(optimizedStorageServiceProvider);
+    try {
+      final cached = await storage.getLocalConversations();
+      if (cached.isNotEmpty) {
+        final sortedCached = _sortByUpdatedAt(cached);
+        Future.microtask(() async {
+          try {
+            await refresh(includeFolders: true);
+          } catch (error, stackTrace) {
+            DebugLogger.error(
+              'warm-refresh-failed',
+              scope: 'conversations/cache',
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }
+        });
+        DebugLogger.log(
+          'cache-restored',
+          scope: 'conversations/cache',
+          data: {'count': sortedCached.length},
+        );
+        return sortedCached;
+      }
+      DebugLogger.log('cache-empty', scope: 'conversations/cache');
+    } catch (error, stackTrace) {
+      DebugLogger.error(
+        'cache-load-failed',
+        scope: 'conversations/cache',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final fresh = await _loadRemoteConversations();
+    _persistConversationsAsync(fresh);
+    return fresh;
   }
 
   Future<void> refresh({bool includeFolders = false}) async {
@@ -808,6 +845,7 @@ class Conversations extends _$Conversations {
     if (!authed) {
       _updateCacheTimestamp(null);
       state = AsyncData<List<Conversation>>(<Conversation>[]);
+      _persistConversationsAsync(const <Conversation>[]);
       if (includeFolders) {
         unawaited(ref.read(foldersProvider.notifier).refresh());
       }
@@ -824,7 +862,22 @@ class Conversations extends _$Conversations {
 
     final result = await AsyncValue.guard(_loadRemoteConversations);
     if (!ref.mounted) return;
-    state = result;
+    result.when(
+      data: (conversations) {
+        state = AsyncData<List<Conversation>>(conversations);
+        _persistConversationsAsync(conversations);
+      },
+      error: (error, stackTrace) {
+        DebugLogger.error(
+          'refresh-failed',
+          scope: 'conversations',
+          error: error,
+          stackTrace: stackTrace,
+          data: {'preservedData': state.asData != null},
+        );
+      },
+      loading: () {},
+    );
     if (includeFolders) {
       unawaited(ref.read(foldersProvider.notifier).refresh());
     }
@@ -836,7 +889,7 @@ class Conversations extends _$Conversations {
     final updated = current
         .where((conversation) => conversation.id != id)
         .toList(growable: true);
-    state = AsyncData<List<Conversation>>(_sortByUpdatedAt(updated));
+    _replaceState(updated);
   }
 
   void upsertConversation(Conversation conversation) {
@@ -850,7 +903,7 @@ class Conversations extends _$Conversations {
     } else {
       updated.add(conversation);
     }
-    state = AsyncData<List<Conversation>>(_sortByUpdatedAt(updated));
+    _replaceState(updated);
   }
 
   void updateConversation(
@@ -863,7 +916,36 @@ class Conversations extends _$Conversations {
     if (index < 0) return;
     final updated = <Conversation>[...current];
     updated[index] = transform(updated[index]);
-    state = AsyncData<List<Conversation>>(_sortByUpdatedAt(updated));
+    _replaceState(updated);
+  }
+
+  void _replaceState(List<Conversation> conversations) {
+    final sorted = _sortByUpdatedAt(conversations);
+    state = AsyncData<List<Conversation>>(sorted);
+    _persistConversationsAsync(sorted);
+  }
+
+  void _persistConversationsAsync(List<Conversation> conversations) {
+    final storage = ref.read(optimizedStorageServiceProvider);
+    unawaited(
+      Future<void>(() async {
+        try {
+          await storage.saveLocalConversations(conversations);
+          DebugLogger.log(
+            'cache-saved',
+            scope: 'conversations/cache',
+            data: {'count': conversations.length},
+          );
+        } catch (error, stackTrace) {
+          DebugLogger.error(
+            'cache-save-failed',
+            scope: 'conversations/cache',
+            error: error,
+            stackTrace: stackTrace,
+          );
+        }
+      }),
+    );
   }
 
   List<Conversation> _demoConversations() => [
