@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:uuid/uuid.dart';
 
+import '../utils/openwebui_source_parser.dart';
+
 /// Utilities for converting OpenWebUI conversation payloads into JSON maps
 /// that match the app's `Conversation` / `ChatMessage` schemas. All helpers
 /// here are isolate-safe (they only work with primitive JSON types) so they
@@ -293,9 +295,11 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
   final codeExecRaw = historyMsg != null
       ? historyMsg['code_executions'] ?? historyMsg['codeExecutions']
       : msgData['code_executions'] ?? msgData['codeExecutions'];
-  final sourcesRaw = historyMsg != null && historyMsg.containsKey('sources')
-      ? historyMsg['sources']
-      : msgData['sources'];
+  final sourcesRaw = historyMsg != null
+      ? historyMsg.containsKey('sources')
+            ? historyMsg['sources']
+            : historyMsg['citations']
+      : msgData['sources'] ?? msgData['citations'];
 
   return <String, dynamic>{
     'id': (msgData['id'] ?? _uuid.v4()).toString(),
@@ -409,21 +413,46 @@ List<Map<String, dynamic>> _parseCodeExecutionsField(dynamic raw) {
 }
 
 List<Map<String, dynamic>> _parseSourcesField(dynamic raw) {
+  final normalized = _coerceSourcesList(raw);
+  if (normalized == null || normalized.isEmpty) {
+    return const <Map<String, dynamic>>[];
+  }
+
+  final parsed = parseOpenWebUISourceList(normalized);
+  if (parsed.isNotEmpty) {
+    return parsed
+        .map((reference) => reference.toJson())
+        .toList(growable: false);
+  }
+
+  return normalized
+      .whereType<Map>()
+      .map(_coerceJsonMap)
+      .toList(growable: false);
+}
+
+List<dynamic>? _coerceSourcesList(dynamic raw) {
   if (raw is List) {
-    return raw.whereType<Map>().map(_coerceJsonMap).toList(growable: false);
+    return raw;
+  }
+  if (raw is Iterable) {
+    return raw.toList(growable: false);
   }
   if (raw is Map) {
-    return [_coerceJsonMap(raw)];
+    return [raw];
   }
-  if (raw is String) {
+  if (raw is String && raw.isNotEmpty) {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is List) {
-        return decoded.whereType<Map>().map(_coerceJsonMap).toList();
+        return decoded;
+      }
+      if (decoded is Map) {
+        return [decoded];
       }
     } catch (_) {}
   }
-  return const <Map<String, dynamic>>[];
+  return null;
 }
 
 Map<String, dynamic> _coerceJsonMap(Object? value) {

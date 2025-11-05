@@ -617,6 +617,19 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
 
       if (type == 'chat:completion' && payload != null) {
         if (payload is Map<String, dynamic>) {
+          final rawSources = payload['sources'] ?? payload['citations'];
+          final normalizedSources = _normalizeSourcesPayload(rawSources);
+          if (normalizedSources != null && normalizedSources.isNotEmpty) {
+            final parsedSources = parseOpenWebUISourceList(normalizedSources);
+            if (parsedSources.isNotEmpty) {
+              final targetId = _resolveTargetMessageId(messageId, getMessages);
+              if (targetId != null) {
+                for (final source in parsedSources) {
+                  appendSourceReference(targetId, source);
+                }
+              }
+            }
+          }
           if (payload.containsKey('tool_calls')) {
             final tc = payload['tool_calls'];
             if (tc is List) {
@@ -1383,6 +1396,33 @@ Map<String, dynamic>? _asStringMap(dynamic value) {
   }
   if (value is Map) {
     return value.map((key, val) => MapEntry(key.toString(), val));
+  }
+  return null;
+}
+
+List<dynamic>? _normalizeSourcesPayload(dynamic raw) {
+  if (raw == null) {
+    return null;
+  }
+  if (raw is List) {
+    return raw;
+  }
+  if (raw is Iterable) {
+    return raw.toList(growable: false);
+  }
+  if (raw is Map) {
+    return [raw];
+  }
+  if (raw is String && raw.isNotEmpty) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return [decoded];
+      }
+    } catch (_) {}
   }
   return null;
 }
