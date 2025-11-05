@@ -175,21 +175,17 @@ lib/
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Conduit is currently in active development. We welcome your feedback and contributions!
 
-Developer workflow:
+**How to Contribute:**
 
-```bash
-flutter analyze
-flutter pub run build_runner build --delete-conflicting-outputs
-# flutter test  # add when tests are available
-```
+- **Bug Reports**: Found a bug? Please [create an issue](https://github.com/cogwheel0/conduit/issues) with details about the problem, steps to reproduce, and your device/platform information.
 
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- **Feature Requests**: Have an idea for a new feature? Start a [discussion](https://github.com/cogwheel0/conduit/discussions) to share your ideas and gather feedback from the community.
+
+- **Questions & Feedback**: Use [GitHub Discussions](https://github.com/cogwheel0/conduit/discussions) to ask questions, share your experience, or discuss the project.
+
+**Note:** As the project is actively evolving, we're not accepting pull requests at this time. Instead, please use issues and discussions to share your ideas, report bugs, and contribute to the project's development.
 
 ## Troubleshooting
 
