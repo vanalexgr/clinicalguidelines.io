@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/widgets/error_boundary.dart';
@@ -205,6 +206,8 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
             });
           }
           final mediaQuery = MediaQuery.of(context);
+          final safeChild = child ?? const SizedBox.shrink();
+
           return MediaQuery(
             data: mediaQuery.copyWith(
               textScaler: mediaQuery.textScaler.clamp(
@@ -212,10 +215,34 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
                 maxScaleFactor: 3.0,
               ),
             ),
-            child: child ?? const SizedBox.shrink(),
+            child: _KeyboardDismissOnScroll(child: safeChild),
           );
         },
       ),
+    );
+  }
+}
+
+/// Dismisses the soft keyboard whenever the user scrolls.
+class _KeyboardDismissOnScroll extends StatelessWidget {
+  const _KeyboardDismissOnScroll({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<UserScrollNotification>(
+      onNotification: (notification) {
+        if (notification.direction == ScrollDirection.idle) {
+          return false;
+        }
+        final focusedNode = FocusManager.instance.primaryFocus;
+        if (focusedNode != null && focusedNode.hasFocus) {
+          focusedNode.unfocus();
+        }
+        return false;
+      },
+      child: child,
     );
   }
 }

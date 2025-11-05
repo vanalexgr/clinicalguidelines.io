@@ -32,9 +32,49 @@
   "loadingContent": "콘텐츠 로딩 중",
   "loadingShort": "로딩 중",
   "loadingAnnouncement": "로딩 중: {message}",
+  "@loadingAnnouncement": {
+    "description": "Screen reader announcement when loading a resource.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
   "errorAnnouncement": "오류: {error}",
+  "@errorAnnouncement": {
+    "description": "Screen reader announcement for an error.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
   "errorAnnouncementWithSuggestion": "오류: {error}. {suggestion}",
+  "@errorAnnouncementWithSuggestion": {
+    "description": "Screen reader announcement for an error with a follow-up suggestion.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network timeout"
+      },
+      "suggestion": {
+        "type": "String",
+        "example": "Please try again later."
+      }
+    }
+  },
   "successAnnouncement": "성공: {message}",
+  "@successAnnouncement": {
+    "description": "Screen reader announcement for successful actions.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Profile updated"
+      }
+    }
+  },
   "noItems": "항목 없음",
   "noItemsToDisplay": "표시할 항목이 없습니다",
   "knowledgeBase": "지식 베이스",
@@ -88,6 +128,15 @@
   "next": "다음",
   "done": "완료",
   "onboardStartTitle": "안녕하세요, {username}",
+  "@onboardStartTitle": {
+    "description": "Onboarding card: start chatting title.",
+    "placeholders": {
+      "username": {
+        "type": "String",
+        "example": "Alex"
+      }
+    }
+  },
   "onboardStartSubtitle": "모델을 선택하여 시작하세요. 언제든지 새 채팅을 탭하세요.",
   "onboardStartBullet1": "상단 바의 모델 이름을 탭하여 모델 전환",
   "onboardStartBullet2": "새 채팅을 사용하여 컨텍스트 재설정",
@@ -143,7 +192,25 @@
   "apiUnavailable": "API 서비스를 사용할 수 없습니다",
   "unableToLoadImage": "이미지를 불러올 수 없습니다",
   "notAnImageFile": "이미지 파일이 아닙니다: {fileName}",
+  "@notAnImageFile": {
+    "description": "Error when a referenced file is not an image.",
+    "placeholders": {
+      "fileName": {
+        "type": "String",
+        "example": "image.txt"
+      }
+    }
+  },
   "failedToLoadImage": "이미지 로드 실패: {error}",
+  "@failedToLoadImage": {
+    "description": "Error including the underlying reason when image loading fails.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
   "invalidDataUrl": "잘못된 데이터 URL 형식",
   "failedToDecodeImage": "이미지 디코딩 실패",
   "invalidImageFormat": "잘못된 이미지 형식",
@@ -160,10 +227,28 @@
   "goBack": "돌아가기",
   "technicalDetails": "기술 세부 정보",
   "requiredFieldLabel": "{label} *",
+  "@requiredFieldLabel": {
+    "description": "Label text indicating a required field.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Email"
+      }
+    }
+  },
   "requiredFieldHelper": "필수 필드",
   "switchOnLabel": "켜짐",
   "switchOffLabel": "꺼짐",
   "dialogSemanticLabel": "대화 상자: {title}",
+  "@dialogSemanticLabel": {
+    "description": "Semantic label describing the dialog title.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
   "save": "저장",
   "chooseModel": "모델 선택",
   "reviewerMode": "검토자 모드",
@@ -204,7 +289,23 @@
   "korean": "한국어",
   "deleteMessagesTitle": "메시지 삭제",
   "deleteMessagesMessage": "{count}개의 메시지를 삭제하시겠습니까?",
+  "@deleteMessagesMessage": {
+    "description": "Confirmation prompt asking to delete a number of messages.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "routeNotFound": "경로를 찾을 수 없습니다: {routeName}",
+  "@routeNotFound": {
+    "description": "Displayed when navigation fails to find a route name.",
+    "placeholders": {
+      "routeName": {
+        "type": "String"
+      }
+    }
+  },
   "deleteChatTitle": "채팅 삭제",
   "deleteChatMessage": "이 채팅은 영구적으로 삭제됩니다.",
   "deleteFolderTitle": "폴더 삭제",
@@ -242,14 +343,38 @@
   "headerNameTooLong": "헤더 이름이 너무 깁니다 (최대 64자)",
   "headerNameInvalidChars": "잘못된 헤더 이름입니다. 문자, 숫자 및 다음 기호만 사용하세요: !#$&-^_`|~",
   "headerNameReserved": "예약된 헤더 \"{key}\"를 재정의할 수 없습니다",
+  "@headerNameReserved": {
+    "description": "Error when attempting to override a reserved HTTP header {key}.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "headerValueEmpty": "헤더 값은 비어 있을 수 없습니다",
   "headerValueTooLong": "헤더 값이 너무 깁니다 (최대 1024자)",
   "headerValueInvalidChars": "헤더 값에 잘못된 문자가 포함되어 있습니다. 인쇄 가능한 ASCII만 사용하세요.",
   "headerValueUnsafe": "헤더 값에 잠재적으로 안전하지 않은 콘텐츠가 포함된 것으로 보입니다",
   "headerAlreadyExists": "헤더 \"{key}\"가 이미 존재합니다. 업데이트하려면 먼저 제거하세요.",
+  "@headerAlreadyExists": {
+    "description": "Error when a custom header with key {key} already exists.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "maxHeadersReachedDetail": "최대 10개의 사용자 정의 헤더가 허용됩니다. 더 추가하려면 일부를 제거하세요.",
   "noModelsAvailable": "사용 가능한 모델 없음",
   "followingSystem": "시스템 따름: {theme}",
+  "@followingSystem": {
+    "description": "Indicates the app is following the system theme (\"Dark\"/\"Light\").",
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
+  },
   "themeDark": "다크",
   "themePalette": "강조 색상 팔레트",
   "themePaletteConduitLabel": "Conduit",
@@ -267,15 +392,44 @@
   "currentlyUsingLightTheme": "현재 라이트 테마 사용 중",
   "aboutConduit": "Conduit 정보",
   "versionLabel": "버전: {version} ({build})",
+  "@versionLabel": {
+    "description": "Displays version and build number in the About dialog.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
   "githubRepository": "GitHub 저장소",
   "unableToLoadAppInfo": "앱 정보를 불러올 수 없습니다",
   "thinking": "생각 중…",
   "thoughts": "생각",
   "thoughtForDuration": "{duration} 동안 생각함",
+  "@thoughtForDuration": {
+    "description": "Shows how long the assistant thought before replying.",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "3s"
+      }
+    }
+  },
   "appCustomization": "사용자 정의",
   "appCustomizationSubtitle": "테마, 언어, 음성 및 빠른 액션",
   "quickActionsDescription": "채팅의 빠른 액션",
   "quickActionsSelectedCount": "{count, plural, =0{선택된 액션 없음} one{액션 1개 선택됨} other{{count}개 액션 선택됨}}",
+  "@quickActionsSelectedCount": {
+    "description": "Subtitle indicating how many quick actions are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
   "autoSelectDescription": "앱이 최적의 모델을 선택하도록 허용",
   "chatSettings": "채팅",
   "sendOnEnter": "Enter로 전송",
@@ -312,9 +466,27 @@
   "ttsPreviewText": "선택한 음성의 미리보기입니다.",
   "ttsNoVoicesAvailable": "사용 가능한 음성 없음",
   "ttsVoicesForLanguage": "{language} 음성",
+  "@ttsVoicesForLanguage": {
+    "description": "Section header for voices matching the app language",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "EN"
+      }
+    }
+  },
   "ttsOtherVoices": "다른 언어",
   "error": "오류",
   "errorWithMessage": "오류: {message}",
+  "@errorWithMessage": {
+    "description": "Error label with appended message text.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Network timeout"
+      }
+    }
+  },
   "networkTimeoutError": "연결 시간이 초과되었습니다. 인터넷 연결을 확인하고 다시 시도해주세요.",
   "networkUnreachableError": "서버에 연결할 수 없습니다. 서버 URL과 인터넷 연결을 확인하세요.",
   "networkServerNotResponding": "서버가 응답하지 않습니다. 서버가 실행 중이고 액세스 가능한지 확인하세요.",

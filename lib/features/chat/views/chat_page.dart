@@ -712,6 +712,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return CustomScrollView(
       key: const ValueKey('loading_messages'),
       controller: null,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       physics: const AlwaysScrollableScrollPhysics(),
       cacheExtent: 300,
       slivers: [
@@ -840,6 +841,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return CustomScrollView(
       key: const ValueKey('actual_messages'),
       controller: _scrollController,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       physics: const AlwaysScrollableScrollPhysics(),
       cacheExtent: 600,
       slivers: [
