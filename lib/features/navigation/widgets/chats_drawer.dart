@@ -1809,7 +1809,18 @@ class _ConversationTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: background,
               borderRadius: borderRadius,
-              border: Border.all(color: borderColor, width: BorderWidth.thin),
+              border: selected
+                  ? Border(
+                      top: BorderSide(
+                        color: borderColor,
+                        width: BorderWidth.thin,
+                      ),
+                      bottom: BorderSide(
+                        color: borderColor,
+                        width: BorderWidth.thin,
+                      ),
+                    )
+                  : null,
               boxShadow: shadow,
             ),
             child: ConstrainedBox(
