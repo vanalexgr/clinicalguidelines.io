@@ -677,7 +677,7 @@ class AuthStateManager extends _$AuthStateManager {
     }
   }
 
-  /// Logout user
+  /// Logout user and clear all data including server configs and custom headers
   Future<void> logout() async {
     _update(
       (current) =>
@@ -699,14 +699,20 @@ class AuthStateManager extends _$AuthStateManager {
         }
       }
 
-      // Clear all local auth data
+      // Clear all local auth data (including server configs with custom headers)
       final storage = ref.read(optimizedStorageServiceProvider);
       await storage.clearAuthData();
       _updateApiServiceToken(null);
 
       // Clear active server to force return to server connection page
       await storage.setActiveServerId(null);
+      
+      // Invalidate all auth-related providers to clear cached data
       ref.invalidate(activeServerProvider);
+      ref.invalidate(serverConfigsProvider);
+      
+      // Clear auth cache manager
+      _cacheManager.clearAuthCache();
 
       // Update state
       _update(
@@ -719,7 +725,7 @@ class AuthStateManager extends _$AuthStateManager {
         ),
       );
 
-      DebugLogger.auth('Logout complete');
+      DebugLogger.auth('Logout complete - all data cleared including server configs and custom headers');
     } catch (e, stack) {
       DebugLogger.error(
         'logout-failed',
@@ -729,8 +735,19 @@ class AuthStateManager extends _$AuthStateManager {
       );
       // Even if logout fails, clear local state where possible
       final storage = ref.read(optimizedStorageServiceProvider);
+      try {
+        await storage.clearAuthData();
+      } catch (clearError) {
+        DebugLogger.error(
+          'logout-clear-failed',
+          scope: 'auth/state',
+          error: clearError,
+        );
+      }
       await storage.setActiveServerId(null);
       ref.invalidate(activeServerProvider);
+      ref.invalidate(serverConfigsProvider);
+      _cacheManager.clearAuthCache();
 
       _update(
         (current) => current.copyWith(
@@ -739,8 +756,8 @@ class AuthStateManager extends _$AuthStateManager {
           clearToken: true,
           clearUser: true,
           error:
-              'Logout error: $e. Secure credentials may remain stored; '
-              'please clear them from your device keychain.',
+              'Logout error: $e. Some data may remain stored; '
+              'please clear app data from your device settings if needed.',
         ),
       );
       _updateApiServiceToken(null);

@@ -174,7 +174,6 @@ class ApiAuthInterceptor extends Interceptor {
 
   /// Clear auth token and notify callbacks
   /// Note: This should only be called for explicit logout, not for connection errors
-
   void _clearAuthToken() {
     _authToken = null;
     final future = onTokenInvalidated?.call();

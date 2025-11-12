@@ -12,6 +12,7 @@ import '../../../core/widgets/error_boundary.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/conduit_components.dart';
+import '../../../shared/widgets/themed_dialogs.dart';
 import '../providers/unified_auth_providers.dart';
 
 class ConnectionIssuePage extends ConsumerStatefulWidget {
@@ -248,6 +249,18 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
   }
 
   Future<void> _logout(AppLocalizations l10n) async {
+    // Show confirmation dialog before logging out
+    final confirm = await ThemedDialogs.confirm(
+      context,
+      title: l10n.signOut,
+      message: l10n.endYourSession,
+      confirmText: l10n.signOut,
+      isDestructive: true,
+    );
+
+    if (!mounted) return;
+    if (!confirm) return;
+
     setState(() {
       _isLoggingOut = true;
       _statusMessage = null;
