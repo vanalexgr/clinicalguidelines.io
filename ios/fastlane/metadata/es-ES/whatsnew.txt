@@ -1,3 +1,1 @@
-• Añadido soporte para el idioma coreano y archivos de localización
-• El teclado se cierra automáticamente al desplazarse
-• Implementada persistencia de caché local para conversaciones
+https://github.com/cogwheel0/conduit/releases/tag/v2.2.2
