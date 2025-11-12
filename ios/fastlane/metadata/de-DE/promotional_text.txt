@@ -1,1 +1,1 @@
-Erlebe ein schnelleres, intelligenteres Conduit mit optimierten Sprach-Workflows, persistenten lokalen Ordnern und erweiterter Sprachunterstützung inklusive Traditionellem Chinesisch.
+Conduit ist schneller und smarter: optimierte Sprach-Workflows, lokale Ordner bleiben bestehen und Traditionelles Chinesisch wird unterstützt.
