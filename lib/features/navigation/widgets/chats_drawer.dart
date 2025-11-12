@@ -1771,13 +1771,14 @@ class _ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.conduitTheme;
-    final borderRadius = BorderRadius.circular(AppBorderRadius.small);
+    const BorderRadius borderRadius = BorderRadius.zero;
     final Color background = selected
         ? theme.buttonPrimary.withValues(alpha: 0.1)
-        : theme.surfaceContainer;
+        : Colors.transparent;
     final Color borderColor = selected
         ? theme.buttonPrimary.withValues(alpha: 0.5)
-        : theme.surfaceContainerHighest.withValues(alpha: 0.40);
+        : Colors.transparent;
+
     final List<BoxShadow> shadow = const [];
 
     Color? overlayForStates(Set<WidgetState> states) {
