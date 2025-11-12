@@ -1,1 +1,1 @@
-Koreaanse taalondersteuning, verbeterde UX met automatische toetsenbordsluiting en persistente gesprekscache
+Ervaar een sneller en slimmer Conduit met verbeterde spraakworkflows, persistente lokale mappen en uitgebreide taalondersteuning, inclusief traditioneel Chinees.

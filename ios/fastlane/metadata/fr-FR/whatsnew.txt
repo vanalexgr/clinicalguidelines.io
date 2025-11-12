@@ -1,1 +1,4 @@
-https://github.com/cogwheel0/conduit/releases/tag/v2.2.2
+- Pipeline Mic VAD + TTS pour des interactions vocales plus fluides
+- Persistance des dossiers locaux avec mise en cache pour un accès plus rapide
+- Prise en charge du chinois traditionnel et correction du code de langue coréen
+- Meilleure gestion des erreurs d’authentification et style du tiroir de navigation mis à jour

@@ -1,1 +1,1 @@
-Korean language support, improved UX with keyboard dismiss, and persistent conversation cache
+Experience a faster, smarter Conduit with improved voice workflows, persistent local folders, and expanded language support, including Traditional Chinese.

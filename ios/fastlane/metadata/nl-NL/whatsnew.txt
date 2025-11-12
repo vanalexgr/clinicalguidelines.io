@@ -1,1 +1,4 @@
-https://github.com/cogwheel0/conduit/releases/tag/v2.2.2
+- Mic VAD + TTS-pijplijn voor soepelere spraakinteracties
+- Persistente lokale mappen met caching voor snellere toegang
+- Ondersteuning voor Traditioneel Chinees en gecorrigeerde Koreaanse taalcode
+- Verbeterde afhandeling van aanmeldingsfouten en bijgewerkt navigatiemenu

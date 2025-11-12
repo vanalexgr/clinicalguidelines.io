@@ -1,1 +1,1 @@
-Supporto per il coreano, UX migliorata con chiusura automatica della tastiera e cache persistente delle conversazioni
+Scopri un Conduit più veloce e intelligente con flussi vocali migliorati, cartelle locali persistenti e supporto linguistico ampliato, incluso il cinese tradizionale.
