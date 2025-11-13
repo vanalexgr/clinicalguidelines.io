@@ -1,4 +1,0 @@
-- Mic VAD + TTS-pijplijn voor soepelere spraakinteracties
-- Persistente lokale mappen met caching voor snellere toegang
-- Ondersteuning voor Traditioneel Chinees en gecorrigeerde Koreaanse taalcode
-- Verbeterde afhandeling van aanmeldingsfouten en bijgewerkt navigatiemenu

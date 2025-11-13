@@ -1,4 +1,0 @@
-- Mic VAD + TTS-Pipeline für flüssigere Sprachinteraktionen
-- Persistente lokale Ordner mit Caching für schnelleren Zugriff
-- Unterstützung für Traditionelles Chinesisch und korrigierte koreanische Sprachkennung
-- Verbesserte Fehlerbehandlung bei der Anmeldung und aktualisiertes Navigationsmenü
