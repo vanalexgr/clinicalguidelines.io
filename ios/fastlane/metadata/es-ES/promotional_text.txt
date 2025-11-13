@@ -1,1 +1,3 @@
-Disfruta de un Conduit más rápido e inteligente con flujos de voz mejorados, carpetas locales persistentes y soporte de idiomas ampliado, incluido chino tradicional.
+Servicio de entrada de voz mejorado con manejo de idiomas y validación de permisos
+Llamada de voz con IDs de herramientas seleccionadas
+Validación mejorada de URL de datos de imagen en base64

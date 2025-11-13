@@ -1,1 +1,3 @@
-Conduit ist schneller und smarter: optimierte Sprach-Workflows, lokale Ordner bleiben bestehen und Traditionelles Chinesisch wird unterstützt.
+Verbesserter Spracheingang-Service mit Sprachbehandlung und Berechtigungsprüfungen
+Sprachanruf mit ausgewählten Tool-IDs
+Verbesserte Base64-Bild-Daten-URL-Validierung

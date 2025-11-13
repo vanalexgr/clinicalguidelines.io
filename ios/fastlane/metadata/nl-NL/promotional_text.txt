@@ -1,1 +1,3 @@
-Ervaar een sneller en slimmer Conduit met verbeterde spraakworkflows, persistente lokale mappen en uitgebreide taalondersteuning, inclusief traditioneel Chinees.
+Verbeterde spraakinvoerservice met taalondersteuning en machtigingscontroles
+Spraakoproep met geselecteerde tool-ID's
+Verbeterde validatie van Base64-afbeeldingsdatums-URL's

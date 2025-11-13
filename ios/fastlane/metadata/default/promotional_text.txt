@@ -1,1 +1,3 @@
-Experience a faster, smarter Conduit with improved voice workflows, persistent local folders, and expanded language support, including Traditional Chinese.
+Improved voice input service with locale handling and permission checks
+Voice call with selected tool IDs
+Improved base64 image data URL parsing validation
