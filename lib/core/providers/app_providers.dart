@@ -984,198 +984,196 @@ class Conversations extends _$Conversations {
 
     try {
       DebugLogger.log('fetch-start', scope: 'conversations');
-      final conversations = await api.getConversations();
+      final conversationsFuture = api.getConversations();
+      final foldersFuture = api.getFolders().catchError((error, stackTrace) {
+        DebugLogger.error(
+          'folders-fetch-failed',
+          scope: 'conversations',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        return <Map<String, dynamic>>[];
+      });
+
+      final results = await Future.wait<dynamic>([
+        conversationsFuture,
+        foldersFuture,
+      ]);
+      final conversations = results[0] as List<Conversation>;
+      final foldersData = results[1] as List<Map<String, dynamic>>;
       DebugLogger.log(
         'fetch-ok',
         scope: 'conversations',
         data: {'count': conversations.length},
       );
+      DebugLogger.log(
+        'folders-fetched',
+        scope: 'conversations',
+        data: {'count': foldersData.length},
+      );
 
-      try {
-        final foldersData = await api.getFolders();
+      final folders = foldersData
+          .map((folderData) => Folder.fromJson(folderData))
+          .toList();
+
+      final conversationToFolder = <String, String>{};
+      for (final folder in folders) {
         DebugLogger.log(
-          'folders-fetched',
-          scope: 'conversations',
-          data: {'count': foldersData.length},
+          'folder',
+          scope: 'conversations/map',
+          data: {
+            'id': folder.id,
+            'name': folder.name,
+            'count': folder.conversationIds.length,
+          },
         );
-
-        final folders = foldersData
-            .map((folderData) => Folder.fromJson(folderData))
-            .toList();
-
-        final conversationToFolder = <String, String>{};
-        for (final folder in folders) {
+        for (final conversationId in folder.conversationIds) {
+          conversationToFolder[conversationId] = folder.id;
           DebugLogger.log(
-            'folder',
+            'map',
             scope: 'conversations/map',
-            data: {
-              'id': folder.id,
-              'name': folder.name,
-              'count': folder.conversationIds.length,
-            },
+            data: {'conversationId': conversationId, 'folderId': folder.id},
           );
-          for (final conversationId in folder.conversationIds) {
-            conversationToFolder[conversationId] = folder.id;
-            DebugLogger.log(
-              'map',
-              scope: 'conversations/map',
-              data: {'conversationId': conversationId, 'folderId': folder.id},
-            );
-          }
         }
+      }
 
-        final conversationMap = <String, Conversation>{};
+      final conversationMap = <String, Conversation>{};
 
-        for (final conversation in conversations) {
-          final explicitFolderId = conversation.folderId;
-          final mappedFolderId = conversationToFolder[conversation.id];
-          final folderIdToUse = explicitFolderId ?? mappedFolderId;
-          if (folderIdToUse != null) {
-            conversationMap[conversation.id] = conversation.copyWith(
-              folderId: folderIdToUse,
-            );
-            DebugLogger.log(
-              'update-folder',
-              scope: 'conversations/map',
-              data: {
-                'conversationId': conversation.id,
-                'folderId': folderIdToUse,
-                'explicit': explicitFolderId != null,
-              },
-            );
-          } else {
-            conversationMap[conversation.id] = conversation;
-          }
-        }
-
-        final existingIds = conversationMap.keys.toSet();
-        final missingInBase = conversationToFolder.keys
-            .where((id) => !existingIds.contains(id))
-            .toList();
-        if (missingInBase.isNotEmpty) {
-          DebugLogger.warning(
-            'missing-in-base',
+      for (final conversation in conversations) {
+        final explicitFolderId = conversation.folderId;
+        final mappedFolderId = conversationToFolder[conversation.id];
+        final folderIdToUse = explicitFolderId ?? mappedFolderId;
+        if (folderIdToUse != null) {
+          conversationMap[conversation.id] = conversation.copyWith(
+            folderId: folderIdToUse,
+          );
+          DebugLogger.log(
+            'update-folder',
             scope: 'conversations/map',
             data: {
-              'count': missingInBase.length,
-              'preview': missingInBase.take(5).toList(),
+              'conversationId': conversation.id,
+              'folderId': folderIdToUse,
+              'explicit': explicitFolderId != null,
             },
           );
         } else {
-          DebugLogger.log('folders-synced', scope: 'conversations/map');
+          conversationMap[conversation.id] = conversation;
         }
-
-        for (final folder in folders) {
-          final missingIds = folder.conversationIds
-              .where((id) => !existingIds.contains(id))
-              .toList();
-
-          final hasKnownConversations = conversationMap.values.any(
-            (conversation) => conversation.folderId == folder.id,
-          );
-
-          final shouldFetchFolder =
-              missingIds.isNotEmpty ||
-              (!hasKnownConversations && folder.conversationIds.isEmpty);
-
-          List<Conversation> folderConvs = const [];
-          if (shouldFetchFolder) {
-            try {
-              folderConvs = await api.getConversationsInFolder(folder.id);
-              DebugLogger.log(
-                'folder-sync',
-                scope: 'conversations/map',
-                data: {
-                  'folderId': folder.id,
-                  'fetched': folderConvs.length,
-                  'missingIds': missingIds.length,
-                },
-              );
-            } catch (e) {
-              DebugLogger.error(
-                'folder-fetch-failed',
-                scope: 'conversations/map',
-                error: e,
-                data: {'folderId': folder.id},
-              );
-            }
-          }
-
-          final fetchedMap = {for (final c in folderConvs) c.id: c};
-
-          for (final convId in missingIds) {
-            final fetched = fetchedMap[convId];
-            if (fetched != null) {
-              final toAdd = fetched.folderId == null
-                  ? fetched.copyWith(folderId: folder.id)
-                  : fetched;
-              conversationMap[toAdd.id] = toAdd;
-              existingIds.add(toAdd.id);
-              DebugLogger.log(
-                'add-missing',
-                scope: 'conversations/map',
-                data: {'conversationId': toAdd.id, 'folderId': folder.id},
-              );
-            } else {
-              final placeholder = Conversation(
-                id: convId,
-                title: 'Chat',
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-                messages: const [],
-                folderId: folder.id,
-              );
-              conversationMap[convId] = placeholder;
-              existingIds.add(convId);
-              DebugLogger.log(
-                'add-placeholder',
-                scope: 'conversations/map',
-                data: {'conversationId': convId, 'folderId': folder.id},
-              );
-            }
-          }
-
-          if (folderConvs.isNotEmpty && folder.conversationIds.isEmpty) {
-            for (final conv in folderConvs) {
-              final toAdd = conv.folderId == null
-                  ? conv.copyWith(folderId: folder.id)
-                  : conv;
-              conversationMap[toAdd.id] = toAdd;
-              existingIds.add(toAdd.id);
-              DebugLogger.log(
-                'add-folder-fetch',
-                scope: 'conversations/map',
-                data: {'conversationId': toAdd.id, 'folderId': folder.id},
-              );
-            }
-          }
-        }
-
-        final sortedConversations = _sortByUpdatedAt(
-          conversationMap.values.toList(),
-        );
-        DebugLogger.log(
-          'sort',
-          scope: 'conversations',
-          data: {'source': 'folder-sync'},
-        );
-        _updateCacheTimestamp(DateTime.now());
-        return sortedConversations;
-      } catch (e) {
-        DebugLogger.error(
-          'folders-fetch-failed',
-          scope: 'conversations',
-          error: e,
-        );
-        final sorted = _sortByUpdatedAt(conversations.toList());
-        DebugLogger.log(
-          'sort',
-          scope: 'conversations',
-          data: {'source': 'fallback'},
-        );
-        _updateCacheTimestamp(DateTime.now());
-        return sorted;
       }
+
+      final existingIds = conversationMap.keys.toSet();
+      final missingInBase = conversationToFolder.keys
+          .where((id) => !existingIds.contains(id))
+          .toList();
+      if (missingInBase.isNotEmpty) {
+        DebugLogger.warning(
+          'missing-in-base',
+          scope: 'conversations/map',
+          data: {
+            'count': missingInBase.length,
+            'preview': missingInBase.take(5).toList(),
+          },
+        );
+      } else {
+        DebugLogger.log('folders-synced', scope: 'conversations/map');
+      }
+
+      for (final folder in folders) {
+        final missingIds = folder.conversationIds
+            .where((id) => !existingIds.contains(id))
+            .toList();
+
+        final hasKnownConversations = conversationMap.values.any(
+          (conversation) => conversation.folderId == folder.id,
+        );
+
+        final shouldFetchFolder =
+            missingIds.isNotEmpty ||
+            (!hasKnownConversations && folder.conversationIds.isEmpty);
+
+        List<Conversation> folderConvs = const [];
+        if (shouldFetchFolder) {
+          try {
+            folderConvs = await api.getFolderConversationSummaries(folder.id);
+            DebugLogger.log(
+              'folder-sync',
+              scope: 'conversations/map',
+              data: {
+                'folderId': folder.id,
+                'fetched': folderConvs.length,
+                'missingIds': missingIds.length,
+              },
+            );
+          } catch (e) {
+            DebugLogger.error(
+              'folder-fetch-failed',
+              scope: 'conversations/map',
+              error: e,
+              data: {'folderId': folder.id},
+            );
+          }
+        }
+
+        final fetchedMap = {for (final c in folderConvs) c.id: c};
+
+        for (final convId in missingIds) {
+          final fetched = fetchedMap[convId];
+          if (fetched != null) {
+            final toAdd = fetched.folderId == null
+                ? fetched.copyWith(folderId: folder.id)
+                : fetched;
+            conversationMap[toAdd.id] = toAdd;
+            existingIds.add(toAdd.id);
+            DebugLogger.log(
+              'add-missing',
+              scope: 'conversations/map',
+              data: {'conversationId': toAdd.id, 'folderId': folder.id},
+            );
+          } else {
+            final placeholder = Conversation(
+              id: convId,
+              title: 'Chat',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              messages: const [],
+              folderId: folder.id,
+            );
+            conversationMap[convId] = placeholder;
+            existingIds.add(convId);
+            DebugLogger.log(
+              'add-placeholder',
+              scope: 'conversations/map',
+              data: {'conversationId': convId, 'folderId': folder.id},
+            );
+          }
+        }
+
+        if (folderConvs.isNotEmpty && folder.conversationIds.isEmpty) {
+          for (final conv in folderConvs) {
+            final toAdd = conv.folderId == null
+                ? conv.copyWith(folderId: folder.id)
+                : conv;
+            conversationMap[toAdd.id] = toAdd;
+            existingIds.add(toAdd.id);
+            DebugLogger.log(
+              'add-folder-fetch',
+              scope: 'conversations/map',
+              data: {'conversationId': toAdd.id, 'folderId': folder.id},
+            );
+          }
+        }
+      }
+
+      final sortedConversations = _sortByUpdatedAt(
+        conversationMap.values.toList(),
+      );
+      DebugLogger.log(
+        'sort',
+        scope: 'conversations',
+        data: {'source': 'folder-sync'},
+      );
+      _updateCacheTimestamp(DateTime.now());
+      return sortedConversations;
     } catch (e, stackTrace) {
       DebugLogger.error(
         'fetch-failed',

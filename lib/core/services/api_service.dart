@@ -409,6 +409,15 @@ class ApiService {
 
   // Conversations - Updated to use correct OpenWebUI API
   Future<List<Conversation>> getConversations({int? limit, int? skip}) async {
+    final pinnedFuture = _fetchChatCollection(
+      '/api/v1/chats/pinned',
+      debugLabel: 'pinned chats',
+    );
+    final archivedFuture = _fetchChatCollection(
+      '/api/v1/chats/archived',
+      debugLabel: 'archived chats',
+    );
+
     List<dynamic> allRegularChats = [];
 
     if (limit == null) {
@@ -422,7 +431,11 @@ class ApiService {
       while (true) {
         final response = await _dio.get(
           '/api/v1/chats/',
-          queryParameters: {'page': currentPage},
+          queryParameters: {
+            'page': currentPage,
+            'include_folders': true,
+            'include_pinned': true,
+          },
         );
 
         if (response.data is! List) {
@@ -454,14 +467,21 @@ class ApiService {
       );
     } else {
       // Original single page fetch
+      final pageQuery = <String, dynamic>{
+        'include_folders': true,
+        'include_pinned': true,
+      };
+      if (limit > 0) {
+        pageQuery['page'] = (((skip ?? 0) / limit).floor() + 1).clamp(
+          1,
+          1 << 30,
+        );
+      }
       final regularResponse = await _dio.get(
         '/api/v1/chats/',
         // Convert skip/limit to 1-based page index expected by OpenWebUI.
         // Example: skip=0 => page=1, skip=limit => page=2, etc.
-        queryParameters: {
-          if (limit > 0)
-            'page': (((skip ?? 0) / limit).floor() + 1).clamp(1, 1 << 30),
-        },
+        queryParameters: pageQuery,
       );
 
       if (regularResponse.data is! List) {
@@ -473,14 +493,12 @@ class ApiService {
       allRegularChats = regularResponse.data as List;
     }
 
-    final pinnedChatList = await _fetchChatCollection(
-      '/api/v1/chats/pinned',
-      debugLabel: 'pinned chats',
-    );
-    final archivedChatList = await _fetchChatCollection(
-      '/api/v1/chats/all/archived',
-      debugLabel: 'archived chats',
-    );
+    final pinnedAndArchived = await Future.wait<List<dynamic>>([
+      pinnedFuture,
+      archivedFuture,
+    ]);
+    final pinnedChatList = pinnedAndArchived[0];
+    final archivedChatList = pinnedAndArchived[1];
     final regularChatList = allRegularChats;
 
     DebugLogger.log(
@@ -1035,17 +1053,21 @@ class ApiService {
     );
   }
 
-  Future<List<Conversation>> getConversationsInFolder(String folderId) async {
-    _traceApi('Fetching conversations in folder: $folderId');
-    final response = await _dio.get('/api/v1/chats/folder/$folderId');
+  Future<List<Conversation>> getFolderConversationSummaries(
+    String folderId,
+  ) async {
+    _traceApi('Fetching conversation summaries in folder: $folderId');
+    final response = await _dio.get('/api/v1/chats/folder/$folderId/list');
     final data = response.data;
-    if (data is List) {
-      return _parseConversationSummaryList(
-        data,
-        debugLabel: 'parse_folder_$folderId',
-      );
+    if (data is! List) {
+      return const [];
     }
-    return [];
+    final normalized = data
+        .whereType<Map<String, dynamic>>()
+        .map(parseConversationSummary)
+        .map(Conversation.fromJson)
+        .toList(growable: false);
+    return normalized;
   }
 
   // Tags
