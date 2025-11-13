@@ -1,3 +1,1 @@
-Service d'entrée vocale amélioré avec gestion des langues et contrôle des permissions
-Appel vocal avec IDs d'outils sélectionnés
-Validation améliorée des URL de données d'image Base64
+Saisie vocale améliorée avec gestion des langues, appels vocaux et validation d'images Base64

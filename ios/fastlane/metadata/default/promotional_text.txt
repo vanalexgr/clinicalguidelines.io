@@ -1,3 +1,1 @@
-Improved voice input service with locale handling and permission checks
-Voice call with selected tool IDs
-Improved base64 image data URL parsing validation
+Improved voice input with locale handling, voice calls, and Base64 image validation

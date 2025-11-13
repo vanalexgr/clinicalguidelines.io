@@ -1,3 +1,1 @@
-Verbesserter Spracheingang-Service mit Sprachbehandlung und Berechtigungsprüfungen
-Sprachanruf mit ausgewählten Tool-IDs
-Verbesserte Base64-Bild-Daten-URL-Validierung
+Verbesserter Spracheingang mit Sprachverarbeitung, Sprachanrufen und Base64-Bildvalidierung

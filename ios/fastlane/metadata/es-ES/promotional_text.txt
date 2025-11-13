@@ -1,3 +1,1 @@
-Servicio de entrada de voz mejorado con manejo de idiomas y validación de permisos
-Llamada de voz con IDs de herramientas seleccionadas
-Validación mejorada de URL de datos de imagen en base64
+Entrada de voz mejorada con procesamiento de idiomas, llamadas de voz y validación de imágenes

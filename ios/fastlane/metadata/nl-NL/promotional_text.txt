@@ -1,3 +1,1 @@
-Verbeterde spraakinvoerservice met taalondersteuning en machtigingscontroles
-Spraakoproep met geselecteerde tool-ID's
-Verbeterde validatie van Base64-afbeeldingsdatums-URL's
+Verbeterde spraakinvoer met taalverwerking, oproepen en Base64-afbeeldingsvalidatie
