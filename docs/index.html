@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conduit - Native Mobile Client for Open-WebUI</title>
+    <meta name="description"
+        content="Conduit is an open-source, cross-platform mobile application for Open-WebUI, providing a native mobile experience for interacting with your self-hosted AI infrastructure.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="icon" type="image/png"
+        href="https://raw.githubusercontent.com/cogwheel0/conduit/main/assets/icon/icon.png">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="#" class="logo">Conduit</a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#screenshots">Screenshots</a>
+                <a href="#faq">FAQ</a>
+                <a href="https://github.com/cogwheel0/conduit" target="_blank" class="github-link">
+                    <svg height="24" width="24" viewBox="0 0 16 16" fill="currentColor">
+                        <path
+                            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+                        </path>
+                    </svg>
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">Your AI, <span class="gradient-text">Unleashed.</span></h1>
+                <p class="hero-subtitle">The premium native mobile client for Open-WebUI. Connect to your self-hosted AI
+                    infrastructure with a beautiful, fast, and secure experience.</p>
+
+                <div class="download-badges">
+                    <a href="https://play.google.com/store/apps/details?id=app.cogwheel.conduit" class="store-badge">
+                        <img src="store-badges/google.webp" alt="Get it on Google Play">
+                    </a>
+                    <a href="https://apps.apple.com/us/app/conduit-open-webui-client/id6749840287" class="store-badge">
+                        <img src="store-badges/apple.webp" alt="Download on the App Store">
+                    </a>
+                </div>
+
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">Open Source</span>
+                        <span class="stat-label">GPLv3 Licensed</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">Private</span>
+                        <span class="stat-label">Your Data, Your Control</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">Native</span>
+                        <span class="stat-label">iOS & Android</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="phone-frame">
+                    <img src="screenshots/conduit-demo.gif" alt="Conduit App Demo">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Why Conduit?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Real-time Chat</h3>
+                    <p>Stream responses from your AI models instantly with low latency WebSocket connections.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Premium Design</h3>
+                    <p>Beautifully crafted interface with light, dark, and system themes that feel right at home on your
+                        device.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔐</div>
+                    <h3>Secure Storage</h3>
+                    <p>Your credentials and API keys are stored securely using the platform's native keychain/keystore.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎙️</div>
+                    <h3>Voice Input</h3>
+                    <p>Speak naturally to your AI with integrated speech-to-text support for hands-free interaction.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📁</div>
+                    <h3>File Uploads</h3>
+                    <p>Upload images and documents for RAG (Retrieval-Augmented Generation) and vision capabilities.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛠️</div>
+                    <h3>Tool Support</h3>
+                    <p>Full support for Open-WebUI tools and function calling with rich result rendering.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="screenshots" class="screenshots">
+        <div class="container">
+            <h2 class="section-title">Experience Conduit</h2>
+            <div class="screenshot-gallery">
+                <div class="screenshot-item">
+                    <img src="screenshots/1.png" alt="Chat Interface">
+                    <p>Chat Interface</p>
+                </div>
+                <div class="screenshot-item">
+                    <img src="screenshots/2.png" alt="Model Selector">
+                    <p>Model Selector</p>
+                </div>
+                <div class="screenshot-item">
+                    <img src="screenshots/3.png" alt="Navigation Drawer">
+                    <p>Navigation</p>
+                </div>
+                <div class="screenshot-item">
+                    <img src="screenshots/4.png" alt="Settings">
+                    <p>Settings</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <h3>Conduit</h3>
+                    <p>The native mobile client for Open-WebUI.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Links</h4>
+                    <a href="https://github.com/cogwheel0/conduit">GitHub</a>
+                    <a href="https://github.com/cogwheel0/conduit/issues">Issues</a>
+                    <a href="https://github.com/cogwheel0/conduit/discussions">Discussions</a>
+                </div>
+                <div class="footer-legal">
+                    <p>&copy; 2025 Conduit. Licensed under GPLv3.</p>
+                    <p>Not affiliated with Open-WebUI.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
