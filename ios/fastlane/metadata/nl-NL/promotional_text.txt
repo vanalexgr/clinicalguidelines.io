@@ -1,1 +1,1 @@
-Verbeterde spraakinvoer met taalverwerking, oproepen en Base64-afbeeldingsvalidatie
+Snellere gesprekken met gelijktijdig laden, verbeterde navigatie en betere spraakfuncties

@@ -1,1 +1,1 @@
-Verbesserter Spracheingang mit Sprachverarbeitung, Sprachanrufen und Base64-Bildvalidierung
+Schnellere Konversationen mit gleichzeitigem Laden, verbesserter Navigation und besseren Sprachfunktionen

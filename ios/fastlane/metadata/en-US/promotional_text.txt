@@ -1,1 +1,1 @@
-Improved voice input with locale handling, voice calls, and Base64 image validation
+Faster conversations with concurrent loading, refined navigation, and better voice features

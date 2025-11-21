@@ -1,1 +1,1 @@
-Entrada de voz mejorada con procesamiento de idiomas, llamadas de voz y validación de imágenes
+Conversaciones más rápidas con carga simultánea, navegación mejorada y mejores funciones de voz

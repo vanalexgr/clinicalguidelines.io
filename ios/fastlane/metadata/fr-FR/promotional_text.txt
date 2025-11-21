@@ -1,1 +1,1 @@
-Saisie vocale améliorée avec gestion des langues, appels vocaux et validation d'images Base64
+Conversations plus rapides avec chargement concurrent, navigation affinée et meilleures fonctionnalités vocales
