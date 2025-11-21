@@ -79,6 +79,7 @@ class TextToSpeechService {
   }) async {
     _deviceEngineAvailable = false;
     try {
+      await _ensureAndroidDefaultEngine();
       await _tts.awaitSpeakCompletion(false);
       await _tts.setVolume(volume);
       await _tts.setSpeechRate(speechRate);
@@ -105,6 +106,20 @@ class TextToSpeechService {
       _voiceConfigured = false;
       _deviceEngineAvailable = false;
       rethrow;
+    }
+  }
+
+  Future<void> _ensureAndroidDefaultEngine() async {
+    if (kIsWeb || !Platform.isAndroid) {
+      return;
+    }
+    try {
+      final engine = await _tts.getDefaultEngine;
+      if (engine is String && engine.isNotEmpty) {
+        await _tts.setEngine(engine);
+      }
+    } catch (e) {
+      _onError?.call(e.toString());
     }
   }
 
@@ -808,6 +823,7 @@ class TextToSpeechService {
 
     var configured = false;
     try {
+      await _ensureAndroidDefaultEngine();
       Map<String, dynamic>? defaultVoice;
       bool voiceSet = false;
 
