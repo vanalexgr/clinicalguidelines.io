@@ -10,20 +10,48 @@ import android.app.assist.AssistContent
 class ConduitVoiceInteractionSession(context: Context) : VoiceInteractionSession(context) {
 
     private var capturedContext: String? = null
-    private var summarizeButton: android.widget.Button? = null
 
     override fun onCreateContentView(): android.view.View {
         val view = layoutInflater.inflate(app.cogwheel.conduit.R.layout.assistant_overlay, null)
-        summarizeButton = view.findViewById(app.cogwheel.conduit.R.id.btn_summarize)
+
+        // Share screen button
+        val shareScreenButton = view.findViewById<android.view.View>(app.cogwheel.conduit.R.id.btn_share_screen)
+        shareScreenButton?.setOnClickListener {
+            // TODO: Implement share screen functionality
+            launchAppWithContext()
+        }
+
+        // Summarize page button
+        val summarizeButton = view.findViewById<android.view.View>(app.cogwheel.conduit.R.id.btn_summarize)
         summarizeButton?.setOnClickListener {
             launchAppWithContext()
         }
-        
-        val closeButton = view.findViewById<android.view.View>(app.cogwheel.conduit.R.id.btn_close)
-        closeButton?.setOnClickListener {
-            finish()
+
+        // Ask about page button
+        val askAboutButton = view.findViewById<android.view.View>(app.cogwheel.conduit.R.id.btn_ask_about)
+        askAboutButton?.setOnClickListener {
+            launchAppWithContext()
         }
-        
+
+        // Input area (opens text input)
+        val inputArea = view.findViewById<android.view.View>(app.cogwheel.conduit.R.id.input_area)
+        inputArea?.setOnClickListener {
+            launchAppWithContext()
+        }
+
+        // Voice button
+        val voiceButton = view.findViewById<android.view.View>(app.cogwheel.conduit.R.id.btn_voice)
+        voiceButton?.setOnClickListener {
+            // TODO: Implement voice input functionality
+            launchAppWithContext()
+        }
+
+        // Sparkle button (AI actions)
+        val sparkleButton = view.findViewById<android.view.View>(app.cogwheel.conduit.R.id.btn_sparkle)
+        sparkleButton?.setOnClickListener {
+            launchAppWithContext()
+        }
+
         return view
     }
 
