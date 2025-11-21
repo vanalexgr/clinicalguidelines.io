@@ -34,11 +34,10 @@ class ConduitVoiceInteractionSession(context: Context) : VoiceInteractionSession
             launchApp()
         }
 
-        // Voice button
+        // Voice button - opens voice call directly
         val voiceButton = view.findViewById<android.view.View>(app.cogwheel.conduit.R.id.btn_voice)
         voiceButton?.setOnClickListener {
-            // TODO: Implement voice input functionality
-            launchAppWithContext(includeScreenshot = false)
+            launchAppForVoiceCall()
         }
 
         return view
@@ -158,13 +157,32 @@ class ConduitVoiceInteractionSession(context: Context) : VoiceInteractionSession
         }
     }
 
+    private fun launchAppForVoiceCall() {
+        try {
+            android.util.Log.d("ConduitVoiceSession", "Attempting to launch app for voice call")
+            val intent = Intent(context, MainActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+            intent.putExtra("start_voice_call", true)
+            android.util.Log.d("ConduitVoiceSession", "Voice call flag attached")
+
+            context.startActivity(intent)
+            android.util.Log.d("ConduitVoiceSession", "App launch requested for voice call")
+            finish() // Close the overlay
+        } catch (e: Exception) {
+            android.util.Log.e("ConduitVoiceSession", "Failed to launch app for voice call", e)
+        }
+    }
+
     private fun traverseNode(node: AssistStructure.ViewNode?, builder: StringBuilder) {
         if (node == null) return
 
         if (node.text != null) {
             builder.append(node.text).append("\n")
         }
-        
+
         // Also check content description for accessibility text
         if (node.contentDescription != null) {
              builder.append(node.contentDescription).append("\n")

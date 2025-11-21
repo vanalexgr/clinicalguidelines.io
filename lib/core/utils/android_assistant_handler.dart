@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
 import '../../features/chat/providers/chat_providers.dart';
 import '../../features/chat/services/file_attachment_service.dart';
+import '../../features/chat/views/voice_call_page.dart';
 import '../services/navigation_service.dart';
 import '../../shared/services/tasks/task_queue.dart';
 import '../providers/app_providers.dart';
@@ -42,6 +44,8 @@ class AndroidAssistantHandler {
     } else if (call.method == 'analyzeScreenshot') {
       final String screenshotPath = call.arguments as String;
       await _processScreenshot(screenshotPath);
+    } else if (call.method == 'startVoiceCall') {
+      await _startVoiceCall();
     }
   }
 
@@ -100,6 +104,47 @@ class AndroidAssistantHandler {
       }
     } catch (e) {
       DebugLogger.log('Failed to process screenshot: $e', scope: 'assistant');
+    }
+  }
+
+  Future<void> _startVoiceCall() async {
+    try {
+      DebugLogger.log('Starting voice call from assistant', scope: 'assistant');
+
+      // Wait for app to be ready (authenticated and model available)
+      final navState = _ref.read(authNavigationStateProvider);
+      final model = _ref.read(selectedModelProvider);
+
+      if (navState != AuthNavigationState.authenticated || model == null) {
+        DebugLogger.log('App not ready for voice call', scope: 'assistant');
+        return;
+      }
+
+      // Navigate to chat if not already there
+      final isOnChatRoute = NavigationService.currentRoute == Routes.chat;
+      if (!isOnChatRoute) {
+        // Navigation will happen via auth state
+        return;
+      }
+
+      // Get the current BuildContext from the navigation service
+      final context = NavigationService.navigatorKey.currentContext;
+      if (context == null) {
+        DebugLogger.log('No context available for voice call navigation', scope: 'assistant');
+        return;
+      }
+
+      // Navigate to voice call page
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const VoiceCallPage(),
+          fullscreenDialog: true,
+        ),
+      );
+
+      DebugLogger.log('Voice call page launched', scope: 'assistant');
+    } catch (e) {
+      DebugLogger.log('Failed to start voice call: $e', scope: 'assistant');
     }
   }
 }
