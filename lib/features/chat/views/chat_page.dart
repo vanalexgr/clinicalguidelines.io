@@ -315,12 +315,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       // Clear the context so we don't process it again
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(screenContextProvider.notifier).setContext(null);
-        // Pre-fill the input or send a message
-        // For now, let's just pre-fill the input with a prompt
-        // TODO: Ideally we should add this as a system message or attachment
+        final currentModel = ref.read(selectedModelProvider);
         _handleMessageSend(
           "Here is the content of my screen:\n\n$screenContext\n\nCan you summarize this?",
-          null,
+          currentModel,
         );
       });
     }
