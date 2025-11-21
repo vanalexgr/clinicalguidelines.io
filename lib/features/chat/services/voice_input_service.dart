@@ -65,6 +65,9 @@ class VoiceInputService {
   SttPreference get preference => _preference;
   bool get prefersServerOnly => _preference == SttPreference.serverOnly;
   bool get prefersDeviceOnly => _preference == SttPreference.deviceOnly;
+  bool get _isIosSimulator =>
+      Platform.isIOS &&
+      Platform.environment.containsKey('SIMULATOR_DEVICE_NAME');
 
   VoiceInputService({ApiService? api, Ref? ref}) : _api = api, _ref = ref;
 
@@ -75,13 +78,20 @@ class VoiceInputService {
   Future<bool> initialize() async {
     if (_isInitialized) return true;
     if (!isSupportedPlatform) return false;
+    final deviceTag = WidgetsBinding.instance.platformDispatcher.locale
+        .toLanguageTag();
+
+    if (_isIosSimulator) {
+      _localSttAvailable = false;
+      _ensureFallbackLocale(deviceTag);
+      _isInitialized = true;
+      return true;
+    }
     // Prepare local speech recognizer
     try {
       // Check permission and supported status
       _localSttAvailable = await _speech.isSupported();
       if (_localSttAvailable) {
-        final deviceTag = WidgetsBinding.instance.platformDispatcher.locale
-            .toLanguageTag();
         await _loadLocales(deviceTag);
       }
     } catch (_) {
