@@ -1438,9 +1438,14 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       container.read(chat.chatMessagesProvider.notifier).clearMessages();
 
       // Close the slide drawer for faster perceived performance
-      // (only on mobile; on tablet, drawer stays visible)
+      // (only on mobile; keep tablet drawer unless user toggles it)
       if (mounted) {
-        ResponsiveDrawerLayout.of(context)?.close();
+        final mediaQuery = MediaQuery.maybeOf(context);
+        final isTablet =
+            mediaQuery != null && mediaQuery.size.shortestSide >= 600;
+        if (!isTablet) {
+          ResponsiveDrawerLayout.of(context)?.close();
+        }
       }
 
       // Load the full conversation details in the background

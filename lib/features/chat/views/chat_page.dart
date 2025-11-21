@@ -1331,41 +1331,44 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           ),
                           onPressed: _clearSelection,
                         )
-                      : (isTablet
-                            ? null // Hide menu button on tablets (drawer is always visible)
-                            : Builder(
-                                builder: (ctx) => Padding(
-                                  padding: const EdgeInsets.only(
-                                    left: Spacing.inputPadding,
-                                  ),
-                                  child: IconButton(
-                                    onPressed: () {
-                                      // Suppress auto-focus and dismiss keyboard, then open drawer
-                                      try {
-                                        ref
-                                            .read(
-                                              composerAutofocusEnabledProvider
-                                                  .notifier,
-                                            )
-                                            .set(false);
-                                        FocusManager.instance.primaryFocus
-                                            ?.unfocus();
-                                        SystemChannels.textInput.invokeMethod(
-                                          'TextInput.hide',
-                                        );
-                                      } catch (_) {}
-                                      ResponsiveDrawerLayout.of(ctx)?.open();
-                                    },
-                                    icon: Icon(
-                                      Platform.isIOS
-                                          ? CupertinoIcons.line_horizontal_3
-                                          : Icons.menu,
-                                      color: context.conduitTheme.textPrimary,
-                                      size: IconSize.appBar,
-                                    ),
-                                  ),
-                                ),
-                              )),
+                      : Builder(
+                          builder: (ctx) => Padding(
+                            padding: const EdgeInsets.only(
+                              left: Spacing.inputPadding,
+                            ),
+                            child: IconButton(
+                              onPressed: () {
+                                final layout = ResponsiveDrawerLayout.of(ctx);
+                                if (layout == null) return;
+
+                                final isDrawerOpen = layout.isOpen;
+                                if (!isDrawerOpen) {
+                                  try {
+                                    ref
+                                        .read(
+                                          composerAutofocusEnabledProvider
+                                              .notifier,
+                                        )
+                                        .set(false);
+                                    FocusManager.instance.primaryFocus
+                                        ?.unfocus();
+                                    SystemChannels.textInput.invokeMethod(
+                                      'TextInput.hide',
+                                    );
+                                  } catch (_) {}
+                                }
+                                layout.toggle();
+                              },
+                              icon: Icon(
+                                Platform.isIOS
+                                    ? CupertinoIcons.line_horizontal_3
+                                    : Icons.menu,
+                                color: context.conduitTheme.textPrimary,
+                                size: IconSize.appBar,
+                              ),
+                            ),
+                          ),
+                        ),
                   title: _isSelectionMode
                       ? Text(
                           '${_selectedMessageIds.length} selected',
@@ -1374,225 +1377,301 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             fontWeight: FontWeight.w500,
                           ),
                         )
-                      : GestureDetector(
-                          onTap: () async {
-                            final modelsAsync = ref.read(modelsProvider);
+                      : LayoutBuilder(
+                          builder: (context, constraints) {
+                            return GestureDetector(
+                              onTap: () async {
+                                final modelsAsync = ref.read(modelsProvider);
 
-                            // Handle all async states properly
-                            if (modelsAsync.isLoading) {
-                              // If still loading, wait for it to complete
-                              try {
-                                final models = await ref.read(
-                                  modelsProvider.future,
+                                // Handle all async states properly
+                                if (modelsAsync.isLoading) {
+                                  // If still loading, wait for it to complete
+                                  try {
+                                    final models = await ref.read(
+                                      modelsProvider.future,
+                                    );
+                                    // Check mounted and use context immediately
+                                    // together
+                                    if (!mounted) return;
+                                    // ignore: use_build_context_synchronously
+                                    _showModelDropdown(context, ref, models);
+                                  } catch (e) {
+                                    DebugLogger.error(
+                                      'model-load-failed',
+                                      scope: 'chat/model-selector',
+                                      error: e,
+                                    );
+                                  }
+                                } else if (modelsAsync.hasValue) {
+                                  // If we have data, show immediately (no async
+                                  // gap)
+                                  _showModelDropdown(
+                                    context,
+                                    ref,
+                                    modelsAsync.value!,
+                                  );
+                                } else if (modelsAsync.hasError) {
+                                  // If there's an error, try to refresh and
+                                  // load
+                                  try {
+                                    ref.invalidate(modelsProvider);
+                                    final models = await ref.read(
+                                      modelsProvider.future,
+                                    );
+                                    // Check mounted and use context immediately
+                                    // together
+                                    if (!mounted) return;
+                                    // ignore: use_build_context_synchronously
+                                    _showModelDropdown(context, ref, models);
+                                  } catch (e) {
+                                    DebugLogger.error(
+                                      'model-refresh-failed',
+                                      scope: 'chat/model-selector',
+                                      error: e,
+                                    );
+                                  }
+                                }
+                              },
+                              onLongPress: () {
+                                final conversation = ref.read(
+                                  activeConversationProvider,
                                 );
-                                // Check mounted and use context immediately together
-                                if (!mounted) return;
-                                // ignore: use_build_context_synchronously
-                                _showModelDropdown(context, ref, models);
-                              } catch (e) {
-                                DebugLogger.error(
-                                  'model-load-failed',
-                                  scope: 'chat/model-selector',
-                                  error: e,
+                                if (conversation == null) return;
+                                showConversationContextMenu(
+                                  context: context,
+                                  ref: ref,
+                                  conversation: conversation,
                                 );
-                              }
-                            } else if (modelsAsync.hasValue) {
-                              // If we have data, show immediately (no async gap)
-                              _showModelDropdown(
-                                context,
-                                ref,
-                                modelsAsync.value!,
-                              );
-                            } else if (modelsAsync.hasError) {
-                              // If there's an error, try to refresh and load
-                              try {
-                                ref.invalidate(modelsProvider);
-                                final models = await ref.read(
-                                  modelsProvider.future,
-                                );
-                                // Check mounted and use context immediately together
-                                if (!mounted) return;
-                                // ignore: use_build_context_synchronously
-                                _showModelDropdown(context, ref, models);
-                              } catch (e) {
-                                DebugLogger.error(
-                                  'model-refresh-failed',
-                                  scope: 'chat/model-selector',
-                                  error: e,
-                                );
-                              }
-                            }
-                          },
-                          onLongPress: () {
-                            final conversation = ref.read(
-                              activeConversationProvider,
-                            );
-                            if (conversation == null) return;
-                            showConversationContextMenu(
-                              context: context,
-                              ref: ref,
-                              conversation: conversation,
-                            );
-                          },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 250),
-                                switchInCurve: Curves.easeOutCubic,
-                                switchOutCurve: Curves.easeInCubic,
-                                child: displayConversationTitle != null
-                                    ? Column(
-                                        key: ValueKey<String>(
-                                          displayConversationTitle,
+                              },
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.center,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 250,
                                         ),
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          StreamingTitleText(
-                                            title: displayConversationTitle,
-                                            style: AppTypography
-                                                .headlineSmallStyle
-                                                .copyWith(
+                                        switchInCurve: Curves.easeOutCubic,
+                                        switchOutCurve: Curves.easeInCubic,
+                                        child: displayConversationTitle != null
+                                            ? Column(
+                                                key: ValueKey<String>(
+                                                  displayConversationTitle,
+                                                ),
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  StreamingTitleText(
+                                                    title:
+                                                        displayConversationTitle,
+                                                    style: AppTypography
+                                                        .headlineSmallStyle
+                                                        .copyWith(
+                                                          color: context
+                                                              .conduitTheme
+                                                              .textPrimary,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 18,
+                                                          height: 1.3,
+                                                        ),
+                                                    cursorColor: context
+                                                        .conduitTheme
+                                                        .textPrimary
+                                                        .withValues(alpha: 0.8),
+                                                  ),
+                                                  const SizedBox(
+                                                    height: Spacing.xs,
+                                                  ),
+                                                ],
+                                              )
+                                            : const SizedBox.shrink(
+                                                key: ValueKey<String>(
+                                                  'empty-title',
+                                                ),
+                                              ),
+                                      ),
+                                      Transform.translate(
+                                        offset: const Offset(0, 0),
+                                        child: () {
+                                          const double iconPaddingX =
+                                              Spacing.xs;
+                                          const double iconPaddingY =
+                                              Spacing.xxs;
+                                          const double iconWidth =
+                                              IconSize.small;
+                                          const double iconBoxWidth =
+                                              (iconPaddingX * 2) +
+                                              (BorderWidth.thin * 2) +
+                                              iconWidth;
+                                          final double maxLabelWidth =
+                                              (constraints.maxWidth -
+                                                      (iconBoxWidth * 2) -
+                                                      (Spacing.xs * 2))
+                                                  .clamp(
+                                                    48.0,
+                                                    constraints.maxWidth,
+                                                  );
+
+                                          final row = Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Opacity(
+                                                opacity: 0.0,
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal:
+                                                            iconPaddingX,
+                                                        vertical: iconPaddingY,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: context
+                                                        .conduitTheme
+                                                        .surfaceBackground
+                                                        .withValues(alpha: 0.3),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          AppBorderRadius.badge,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: context
+                                                          .conduitTheme
+                                                          .dividerColor,
+                                                      width: BorderWidth.thin,
+                                                    ),
+                                                  ),
+                                                  child: Icon(
+                                                    Platform.isIOS
+                                                        ? CupertinoIcons
+                                                              .chevron_down
+                                                        : Icons
+                                                              .keyboard_arrow_down,
+                                                    color: context
+                                                        .conduitTheme
+                                                        .iconSecondary,
+                                                    size: iconWidth,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: Spacing.xs),
+                                              ConstrainedBox(
+                                                constraints: BoxConstraints(
+                                                  maxWidth: maxLabelWidth,
+                                                ),
+                                                child: MiddleEllipsisText(
+                                                  modelLabel,
+                                                  style: modelTextStyle,
+                                                  textAlign: TextAlign.center,
+                                                  semanticsLabel: modelLabel,
+                                                ),
+                                              ),
+                                              const SizedBox(width: Spacing.xs),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: iconPaddingX,
+                                                      vertical: iconPaddingY,
+                                                    ),
+                                                decoration: BoxDecoration(
                                                   color: context
                                                       .conduitTheme
-                                                      .textPrimary,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 18,
-                                                  height: 1.3,
+                                                      .surfaceBackground
+                                                      .withValues(alpha: 0.3),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        AppBorderRadius.badge,
+                                                      ),
+                                                  border: Border.all(
+                                                    color: context
+                                                        .conduitTheme
+                                                        .dividerColor,
+                                                    width: BorderWidth.thin,
+                                                  ),
                                                 ),
-                                            cursorColor: context
-                                                .conduitTheme
-                                                .textPrimary
-                                                .withValues(alpha: 0.8),
-                                          ),
-                                          const SizedBox(height: Spacing.xs),
-                                        ],
-                                      )
-                                    : const SizedBox.shrink(
-                                        key: ValueKey<String>('empty-title'),
-                                      ),
-                              ),
-                              Transform.translate(
-                                offset: const Offset(0, 0),
-                                child: () {
-                                  final row = Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Opacity(
-                                        opacity: 0.0,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: Spacing.xs,
-                                            vertical: Spacing.xxs,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: context
-                                                .conduitTheme
-                                                .surfaceBackground
-                                                .withValues(alpha: 0.3),
-                                            borderRadius: BorderRadius.circular(
-                                              AppBorderRadius.badge,
+                                                child: Icon(
+                                                  Platform.isIOS
+                                                      ? CupertinoIcons
+                                                            .chevron_down
+                                                      : Icons
+                                                            .keyboard_arrow_down,
+                                                  color: context
+                                                      .conduitTheme
+                                                      .iconSecondary,
+                                                  size: iconWidth,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                          final constrainedRow = ConstrainedBox(
+                                            constraints: BoxConstraints(
+                                              maxWidth: constraints.maxWidth,
                                             ),
-                                            border: Border.all(
+                                            child: row,
+                                          );
+                                          return hasConversationTitle
+                                              ? SizedBox(
+                                                  height: 24,
+                                                  child: constrainedRow,
+                                                )
+                                              : constrainedRow;
+                                        }(),
+                                      ),
+                                      if (isReviewerMode)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 2.0,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: Spacing.sm,
+                                              vertical: 1.0,
+                                            ),
+                                            decoration: BoxDecoration(
                                               color: context
                                                   .conduitTheme
-                                                  .dividerColor,
-                                              width: BorderWidth.thin,
+                                                  .success
+                                                  .withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    AppBorderRadius.badge,
+                                                  ),
+                                              border: Border.all(
+                                                color: context
+                                                    .conduitTheme
+                                                    .success
+                                                    .withValues(alpha: 0.3),
+                                                width: BorderWidth.thin,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'REVIEWER MODE',
+                                              style: AppTypography.captionStyle
+                                                  .copyWith(
+                                                    color: context
+                                                        .conduitTheme
+                                                        .success,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 9,
+                                                  ),
                                             ),
                                           ),
-                                          child: Icon(
-                                            Platform.isIOS
-                                                ? CupertinoIcons.chevron_down
-                                                : Icons.keyboard_arrow_down,
-                                            color: context
-                                                .conduitTheme
-                                                .iconSecondary,
-                                            size: IconSize.small,
-                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: Spacing.xs),
-                                      Flexible(
-                                        child: MiddleEllipsisText(
-                                          modelLabel,
-                                          style: modelTextStyle,
-                                          textAlign: TextAlign.center,
-                                          semanticsLabel: modelLabel,
-                                        ),
-                                      ),
-                                      const SizedBox(width: Spacing.xs),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: Spacing.xs,
-                                          vertical: Spacing.xxs,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: context
-                                              .conduitTheme
-                                              .surfaceBackground
-                                              .withValues(alpha: 0.3),
-                                          borderRadius: BorderRadius.circular(
-                                            AppBorderRadius.badge,
-                                          ),
-                                          border: Border.all(
-                                            color: context
-                                                .conduitTheme
-                                                .dividerColor,
-                                            width: BorderWidth.thin,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          Platform.isIOS
-                                              ? CupertinoIcons.chevron_down
-                                              : Icons.keyboard_arrow_down,
-                                          color: context
-                                              .conduitTheme
-                                              .iconSecondary,
-                                          size: IconSize.small,
-                                        ),
-                                      ),
                                     ],
-                                  );
-                                  return hasConversationTitle
-                                      ? SizedBox(height: 24, child: row)
-                                      : row;
-                                }(),
-                              ),
-                              if (isReviewerMode)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 2.0),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: Spacing.sm,
-                                      vertical: 1.0,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: context.conduitTheme.success
-                                          .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(
-                                        AppBorderRadius.badge,
-                                      ),
-                                      border: Border.all(
-                                        color: context.conduitTheme.success
-                                            .withValues(alpha: 0.3),
-                                        width: BorderWidth.thin,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'REVIEWER MODE',
-                                      style: AppTypography.captionStyle
-                                          .copyWith(
-                                            color: context.conduitTheme.success,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 9,
-                                          ),
-                                    ),
                                   ),
                                 ),
-                            ],
-                          ),
+                              ),
+                            );
+                          },
                         ),
                   actions: [
                     if (!_isSelectionMode) ...[

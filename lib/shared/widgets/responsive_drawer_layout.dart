@@ -8,6 +8,7 @@ import '../../shared/theme/theme_extensions.dart';
 ///
 /// On tablets (shortestSide >= 600), the drawer is always visible alongside
 /// the content. On mobile, it behaves like a standard slide drawer.
+/// Tablets can optionally dismiss the docked drawer to reclaim space.
 class ResponsiveDrawerLayout extends StatefulWidget {
   final Widget child;
   final Widget drawer;
@@ -26,6 +27,8 @@ class ResponsiveDrawerLayout extends StatefulWidget {
 
   // Tablet-specific configuration
   final double tabletDrawerWidth; // Fixed width for tablet drawer
+  final bool tabletDismissible;
+  final bool tabletInitiallyDocked;
 
   const ResponsiveDrawerLayout({
     super.key,
@@ -42,6 +45,8 @@ class ResponsiveDrawerLayout extends StatefulWidget {
     this.contentBlurSigma = 2.0,
     this.onOpenStart,
     this.tabletDrawerWidth = 320.0,
+    this.tabletDismissible = true,
+    this.tabletInitiallyDocked = true,
   });
 
   static ResponsiveDrawerLayoutState? of(BuildContext context) =>
@@ -58,6 +63,7 @@ class ResponsiveDrawerLayoutState extends State<ResponsiveDrawerLayout>
     duration: widget.duration,
     value: 0.0,
   );
+  late bool _isTabletDocked = widget.tabletInitiallyDocked;
 
   bool _isTablet(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -73,7 +79,20 @@ class ResponsiveDrawerLayoutState extends State<ResponsiveDrawerLayout>
   double get _edgeWidth =>
       MediaQuery.of(context).size.width * widget.edgeFraction;
 
-  bool get isOpen => _controller.value == 1.0;
+  bool get isOpen =>
+      _isTablet(context) ? _isTabletDocked : _controller.value == 1.0;
+
+  @override
+  void didUpdateWidget(covariant ResponsiveDrawerLayout oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.tabletDismissible && !_isTabletDocked) {
+      setState(() => _isTabletDocked = true);
+    } else if (widget.tabletInitiallyDocked !=
+            oldWidget.tabletInitiallyDocked &&
+        _isTablet(context)) {
+      setState(() => _isTabletDocked = widget.tabletInitiallyDocked);
+    }
+  }
 
   Future<void> _animateTo(
     double target, {
@@ -99,8 +118,12 @@ class ResponsiveDrawerLayoutState extends State<ResponsiveDrawerLayout>
   }
 
   void open({double velocity = 0.0}) {
-    // Only animate on mobile; on tablet, drawer is always visible
-    if (_isTablet(context)) return;
+    if (_isTablet(context)) {
+      if (!_isTabletDocked) {
+        setState(() => _isTabletDocked = true);
+      }
+      return;
+    }
 
     try {
       widget.onOpenStart?.call();
@@ -110,15 +133,23 @@ class ResponsiveDrawerLayoutState extends State<ResponsiveDrawerLayout>
   }
 
   void close({double velocity = 0.0}) {
-    // Only animate on mobile; on tablet, drawer is always visible
-    if (_isTablet(context)) return;
+    if (_isTablet(context)) {
+      if (!widget.tabletDismissible) return;
+      if (_isTabletDocked) {
+        setState(() => _isTabletDocked = false);
+      }
+      return;
+    }
 
     _animateTo(0.0, velocity: velocity, easeOut: true);
   }
 
   void toggle() {
-    // Only toggle on mobile; on tablet, drawer is always visible
-    if (_isTablet(context)) return;
+    if (_isTablet(context)) {
+      if (!widget.tabletDismissible) return;
+      setState(() => _isTabletDocked = !_isTabletDocked);
+      return;
+    }
 
     isOpen ? close() : open();
   }
@@ -189,18 +220,28 @@ class ResponsiveDrawerLayoutState extends State<ResponsiveDrawerLayout>
   }
 
   Widget _buildTabletLayout(ConduitThemeExtension theme) {
+    final targetWidth = widget.tabletDismissible && !_isTabletDocked
+        ? 0.0
+        : widget.tabletDrawerWidth;
     return Row(
       children: [
         // Persistent drawer
-        Container(
-          width: widget.tabletDrawerWidth,
+        AnimatedContainer(
+          duration: widget.duration,
+          curve: widget.curve,
+          width: targetWidth,
           decoration: BoxDecoration(
             color: theme.surfaceBackground,
             border: Border(
               right: BorderSide(color: theme.dividerColor, width: 1),
             ),
           ),
-          child: widget.drawer,
+          child: ClipRect(
+            child: IgnorePointer(
+              ignoring: widget.tabletDismissible && !_isTabletDocked,
+              child: widget.drawer,
+            ),
+          ),
         ),
         // Content
         Expanded(child: widget.child),
