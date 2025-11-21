@@ -133,9 +133,8 @@ class VoiceCallService {
     final hasLocalStt = _voiceInput.hasLocalStt;
     final hasServerStt = _voiceInput.hasServerStt;
     final ready = switch (_voiceInput.preference) {
-      SttPreference.deviceOnly => hasLocalStt,
+      SttPreference.deviceOnly => hasLocalStt || hasServerStt,
       SttPreference.serverOnly => hasServerStt,
-      SttPreference.auto => hasLocalStt || hasServerStt,
     };
 
     if (!ready) {
@@ -240,9 +239,8 @@ class VoiceCallService {
       final hasServerStt = _voiceInput.hasServerStt;
       final pref = _voiceInput.preference;
       final engineAvailable = switch (pref) {
-        SttPreference.deviceOnly => hasLocalStt,
+        SttPreference.deviceOnly => hasLocalStt || hasServerStt,
         SttPreference.serverOnly => hasServerStt,
-        SttPreference.auto => hasLocalStt || hasServerStt,
       };
 
       if (!engineAvailable) {

@@ -9,10 +9,10 @@ import 'animation_service.dart';
 part 'settings_service.g.dart';
 
 /// Speech-to-text preference selection.
-enum SttPreference { auto, deviceOnly, serverOnly }
+enum SttPreference { deviceOnly, serverOnly }
 
 /// TTS engine selection
-enum TtsEngine { auto, device, server }
+enum TtsEngine { device, server }
 
 /// Service for managing app-wide settings including accessibility preferences
 class SettingsService {
@@ -232,15 +232,12 @@ class SettingsService {
 
   static TtsEngine _parseTtsEngine(String? raw) {
     switch ((raw ?? '').toLowerCase()) {
-      case 'auto':
-      case '':
-        return TtsEngine.auto;
       case 'server':
         return TtsEngine.server;
       case 'device':
         return TtsEngine.device;
       default:
-        return TtsEngine.auto;
+        return TtsEngine.device;
     }
   }
 
@@ -254,9 +251,8 @@ class SettingsService {
       case 'server_only':
       case 'server':
         return SttPreference.serverOnly;
-      case 'auto':
       default:
-        return SttPreference.auto;
+        return SttPreference.deviceOnly;
     }
   }
 
@@ -428,12 +424,12 @@ class AppSettings {
     this.socketTransportMode = 'ws',
     this.quickPills = const [],
     this.sendOnEnter = false,
-    this.sttPreference = SttPreference.auto,
+    this.sttPreference = SttPreference.deviceOnly,
     this.ttsVoice,
     this.ttsSpeechRate = 0.5,
     this.ttsPitch = 1.0,
     this.ttsVolume = 1.0,
-    this.ttsEngine = TtsEngine.auto,
+    this.ttsEngine = TtsEngine.device,
     this.ttsServerVoiceId,
     this.ttsServerVoiceName,
     this.voiceSilenceDuration = 2000,

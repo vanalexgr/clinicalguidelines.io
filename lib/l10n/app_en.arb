@@ -1231,10 +1231,6 @@
   "@sttEngineLabel": {
     "description": "Label shown above the speech-to-text engine chips."
   },
-  "sttEngineAuto": "Auto",
-  "@sttEngineAuto": {
-    "description": "Chip label for automatic speech-to-text selection."
-  },
   "sttEngineDevice": "On device",
   "@sttEngineDevice": {
     "description": "Chip label for on-device speech recognition."
@@ -1242,10 +1238,6 @@
   "sttEngineServer": "Server",
   "@sttEngineServer": {
     "description": "Chip label for server speech recognition."
-  },
-  "sttEngineAutoDescription": "Use on-device recognition when available and fall back to your server.",
-  "@sttEngineAutoDescription": {
-    "description": "Description shown when automatic speech-to-text preference is active."
   },
   "sttEngineDeviceDescription": "Keep audio on this device. Voice input stops working if on-device speech recognition isn’t supported.",
   "@sttEngineDeviceDescription": {
@@ -1275,10 +1267,6 @@
   "@ttsEngineLabel": {
     "description": "Label for selecting the text-to-speech engine."
   },
-  "ttsEngineAuto": "Auto",
-  "@ttsEngineAuto": {
-    "description": "Chip label for automatically selecting the text-to-speech engine."
-  },
   "ttsEngineDevice": "On device",
   "@ttsEngineDevice": {
     "description": "Chip label for using on-device text-to-speech."
@@ -1286,10 +1274,6 @@
   "ttsEngineServer": "Server",
   "@ttsEngineServer": {
     "description": "Chip label for using server-side text-to-speech."
-  },
-  "ttsEngineAutoDescription": "Use on-device speech when available and fall back to your server.",
-  "@ttsEngineAutoDescription": {
-    "description": "Description shown when automatic text-to-speech preference is active."
   },
   "ttsEngineDeviceDescription": "Keep synthesis on this device. Voice playback stops working if on-device TTS isn’t supported.",
   "@ttsEngineDeviceDescription": {
