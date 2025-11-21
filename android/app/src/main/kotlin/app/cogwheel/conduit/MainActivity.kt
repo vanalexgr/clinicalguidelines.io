@@ -23,12 +23,52 @@ class MainActivity : FlutterActivity() {
         windowInsetsController.isAppearanceLightNavigationBars = false
     }
     
+    private val CHANNEL = "app.cogwheel.conduit/assistant"
+    private var methodChannel: io.flutter.plugin.common.MethodChannel? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
         // Initialize background streaming handler
         backgroundStreamingHandler = BackgroundStreamingHandler(this)
         backgroundStreamingHandler.setup(flutterEngine)
+
+        methodChannel = io.flutter.plugin.common.MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        
+        // Check if started with context
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: android.content.Intent) {
+        android.util.Log.d("MainActivity", "handleIntent called")
+        android.util.Log.d("MainActivity", "Intent extras: ${intent.extras?.keySet()}")
+
+        val screenContext = intent.getStringExtra("screen_context")
+        val screenshotPath = intent.getStringExtra("screenshot_path")
+        val startVoiceCall = intent.getBooleanExtra("start_voice_call", false)
+
+        android.util.Log.d("MainActivity", "screenContext: $screenContext")
+        android.util.Log.d("MainActivity", "screenshotPath: $screenshotPath")
+        android.util.Log.d("MainActivity", "startVoiceCall: $startVoiceCall")
+        android.util.Log.d("MainActivity", "methodChannel: $methodChannel")
+
+        if (startVoiceCall) {
+            android.util.Log.d("MainActivity", "Invoking startVoiceCall")
+            methodChannel?.invokeMethod("startVoiceCall", null)
+        } else if (screenContext != null) {
+            android.util.Log.d("MainActivity", "Invoking analyzeScreen")
+            methodChannel?.invokeMethod("analyzeScreen", screenContext)
+        } else if (screenshotPath != null) {
+            android.util.Log.d("MainActivity", "Invoking analyzeScreenshot with path: $screenshotPath")
+            methodChannel?.invokeMethod("analyzeScreenshot", screenshotPath)
+        } else {
+            android.util.Log.d("MainActivity", "No screen context or screenshot path found")
+        }
     }
     
     override fun onDestroy() {
