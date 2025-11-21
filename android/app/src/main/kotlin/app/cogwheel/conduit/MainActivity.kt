@@ -23,12 +23,32 @@ class MainActivity : FlutterActivity() {
         windowInsetsController.isAppearanceLightNavigationBars = false
     }
     
+    private val CHANNEL = "app.cogwheel.conduit/assistant"
+    private var methodChannel: io.flutter.plugin.common.MethodChannel? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
         // Initialize background streaming handler
         backgroundStreamingHandler = BackgroundStreamingHandler(this)
         backgroundStreamingHandler.setup(flutterEngine)
+
+        methodChannel = io.flutter.plugin.common.MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        
+        // Check if started with context
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: android.content.Intent) {
+        val screenContext = intent.getStringExtra("screen_context")
+        if (screenContext != null) {
+            methodChannel?.invokeMethod("analyzeScreen", screenContext)
+        }
     }
     
     override fun onDestroy() {

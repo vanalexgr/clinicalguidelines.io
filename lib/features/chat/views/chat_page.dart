@@ -17,6 +17,7 @@ import '../../../core/utils/debug_logger.dart';
 import '../../../core/utils/user_display_name.dart';
 import '../../../core/utils/model_icon_utils.dart';
 import '../../auth/providers/unified_auth_providers.dart';
+import '../../../core/utils/android_assistant_handler.dart';
 
 import '../widgets/modern_chat_input.dart';
 import '../widgets/user_message_bubble.dart';
@@ -288,6 +289,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // Initialize chat page components
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+
+      // Initialize Android Assistant Handler
+      ref.read(androidAssistantProvider);
+
       // First, ensure a model is selected
       await _checkAndAutoSelectModel();
       if (!mounted) return;
@@ -299,6 +304,26 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       // Finally, show onboarding if needed
       await _checkAndShowOnboarding();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Listen for screen context from Android Assistant
+    final screenContext = ref.watch(screenContextProvider);
+    if (screenContext != null && screenContext.isNotEmpty) {
+      // Clear the context so we don't process it again
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(screenContextProvider.notifier).setContext(null);
+        // Pre-fill the input or send a message
+        // For now, let's just pre-fill the input with a prompt
+        // TODO: Ideally we should add this as a system message or attachment
+        _handleMessageSend(
+          "Here is the content of my screen:\n\n$screenContext\n\nCan you summarize this?",
+          null,
+        );
+      });
+    }
   }
 
   @override
