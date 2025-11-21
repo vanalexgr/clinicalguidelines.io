@@ -321,8 +321,6 @@
   "sttSilenceDuration": "静音持续时间",
   "sttSilenceDurationDescription": "检测到静音后等待多久自动停止录音",
   "ttsSettings": "文本转语音",
-  "ttsEngineAuto": "自动",
-  "ttsEngineAutoDescription": "在可用时使用本机合成，否则切换到你的服务器。",
   "ttsEngineDeviceDescription": "在此设备上完成合成。如果设备不支持文本转语音，语音播放将不可用。",
   "ttsEngineServerDescription": "始终向你的 OpenWebUI 服务器请求音频。",
   "ttsDeviceUnavailableWarning": "此设备不支持本机文本转语音。",

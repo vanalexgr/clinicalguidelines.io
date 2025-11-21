@@ -501,8 +501,6 @@ class AppCustomizationPage extends ConsumerWidget {
       warnings.add(l10n.sttServerUnavailableWarning);
     }
 
-    final bool autoSelectable =
-        localAvailable || serverAvailable || localLoading;
     final bool deviceSelectable = localAvailable || localLoading;
     final bool serverSelectable = serverAvailable;
 
@@ -554,31 +552,6 @@ class AppCustomizationPage extends ConsumerWidget {
                 spacing: Spacing.sm,
                 runSpacing: Spacing.sm,
                 children: [
-                  ChoiceChip(
-                    label: Text(l10n.sttEngineAuto),
-                    selected: settings.sttPreference == SttPreference.auto,
-                    showCheckmark: false,
-                    selectedColor: theme.buttonPrimary,
-                    backgroundColor: theme.cardBackground,
-                    side: BorderSide(
-                      color: settings.sttPreference == SttPreference.auto
-                          ? theme.buttonPrimary.withValues(alpha: 0.6)
-                          : theme.textPrimary.withValues(alpha: 0.2),
-                    ),
-                    labelStyle: TextStyle(
-                      color: settings.sttPreference == SttPreference.auto
-                          ? theme.buttonPrimaryText
-                          : theme.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    onSelected: autoSelectable
-                        ? (value) {
-                            if (value) {
-                              notifier.setSttPreference(SttPreference.auto);
-                            }
-                          }
-                        : null,
-                  ),
                   ChoiceChip(
                     label: Text(l10n.sttEngineDevice),
                     selected:
@@ -684,9 +657,7 @@ class AppCustomizationPage extends ConsumerWidget {
                   ),
                 ),
               ],
-              if (settings.sttPreference == SttPreference.serverOnly ||
-                  (settings.sttPreference == SttPreference.auto &&
-                      serverAvailable)) ...[
+              if (settings.sttPreference == SttPreference.serverOnly) ...[
                 const SizedBox(height: Spacing.md),
                 const Divider(),
                 const SizedBox(height: Spacing.md),
@@ -785,20 +756,11 @@ class AppCustomizationPage extends ConsumerWidget {
     final bool deviceAvailable =
         ttsService.deviceEngineAvailable || !ttsService.isInitialized;
     final bool serverAvailable = ttsService.serverEngineAvailable;
-    final bool autoSelectable = deviceAvailable || serverAvailable;
     final bool deviceSelectable = deviceAvailable;
     final bool serverSelectable = serverAvailable;
     final ttsDescription = _ttsPreferenceDescription(l10n, settings);
     final warnings = <String>[];
     switch (settings.ttsEngine) {
-      case TtsEngine.auto:
-        if (!deviceAvailable) {
-          warnings.add(l10n.ttsDeviceUnavailableWarning);
-        }
-        if (!serverAvailable) {
-          warnings.add(l10n.ttsServerUnavailableWarning);
-        }
-        break;
       case TtsEngine.device:
         if (!deviceAvailable) {
           warnings.add(l10n.ttsDeviceUnavailableWarning);
@@ -852,37 +814,6 @@ class AppCustomizationPage extends ConsumerWidget {
                 spacing: Spacing.sm,
                 runSpacing: Spacing.sm,
                 children: [
-                  ChoiceChip(
-                    label: Text(l10n.ttsEngineAuto),
-                    selected: settings.ttsEngine == TtsEngine.auto,
-                    showCheckmark: false,
-                    selectedColor: theme.buttonPrimary,
-                    backgroundColor: theme.cardBackground,
-                    side: BorderSide(
-                      color: settings.ttsEngine == TtsEngine.auto
-                          ? theme.buttonPrimary.withValues(alpha: 0.6)
-                          : theme.textPrimary.withValues(
-                              alpha: autoSelectable ? 0.2 : 0.12,
-                            ),
-                    ),
-                    labelStyle: TextStyle(
-                      color: settings.ttsEngine == TtsEngine.auto
-                          ? theme.buttonPrimaryText
-                          : theme.textPrimary.withValues(
-                              alpha: autoSelectable ? 1.0 : 0.45,
-                            ),
-                      fontWeight: FontWeight.w600,
-                    ),
-                    onSelected: autoSelectable
-                        ? (value) {
-                            if (value) {
-                              ref
-                                  .read(appSettingsProvider.notifier)
-                                  .setTtsEngine(TtsEngine.auto);
-                            }
-                          }
-                        : null,
-                  ),
                   ChoiceChip(
                     label: Text(l10n.ttsEngineDevice),
                     selected: settings.ttsEngine == TtsEngine.device,
@@ -1060,8 +991,6 @@ class AppCustomizationPage extends ConsumerWidget {
     SttPreference preference,
   ) {
     switch (preference) {
-      case SttPreference.auto:
-        return l10n.sttEngineAutoDescription;
       case SttPreference.deviceOnly:
         return l10n.sttEngineDeviceDescription;
       case SttPreference.serverOnly:
@@ -1074,8 +1003,6 @@ class AppCustomizationPage extends ConsumerWidget {
     AppSettings settings,
   ) {
     switch (settings.ttsEngine) {
-      case TtsEngine.auto:
-        return l10n.ttsEngineAutoDescription;
       case TtsEngine.device:
         return l10n.ttsEngineDeviceDescription;
       case TtsEngine.server:
@@ -1093,8 +1020,6 @@ class AppCustomizationPage extends ConsumerWidget {
     final serverName = _getDisplayVoiceName(serverVoice, l10n.ttsSystemDefault);
 
     switch (settings.ttsEngine) {
-      case TtsEngine.auto:
-        return '${l10n.ttsEngineDevice}: $deviceName • ${l10n.ttsEngineServer}: $serverName';
       case TtsEngine.device:
         return deviceName;
       case TtsEngine.server:

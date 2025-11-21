@@ -321,8 +321,6 @@
   "sttSilenceDuration": "Stilteduur",
   "sttSilenceDurationDescription": "Tijd om te wachten na stilte voordat de opname automatisch stopt",
   "ttsSettings": "Tekst naar spraak",
-  "ttsEngineAuto": "Automatisch",
-  "ttsEngineAutoDescription": "Gebruikt spraaksynthese op het apparaat wanneer beschikbaar en valt anders terug op je server.",
   "ttsEngineDeviceDescription": "Houdt de synthese op dit apparaat. Spraakweergave werkt niet als het apparaat geen TTS ondersteunt.",
   "ttsEngineServerDescription": "Vraagt altijd audio op bij je OpenWebUI-server.",
   "ttsDeviceUnavailableWarning": "Spraaksynthese op het apparaat is niet beschikbaar op dit apparaat.",

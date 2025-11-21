@@ -1275,10 +1275,6 @@
   "@ttsEngineLabel": {
     "description": "Label for selecting the text-to-speech engine."
   },
-  "ttsEngineAuto": "Auto",
-  "@ttsEngineAuto": {
-    "description": "Chip label for automatically selecting the text-to-speech engine."
-  },
   "ttsEngineDevice": "On device",
   "@ttsEngineDevice": {
     "description": "Chip label for using on-device text-to-speech."
@@ -1286,10 +1282,6 @@
   "ttsEngineServer": "Server",
   "@ttsEngineServer": {
     "description": "Chip label for using server-side text-to-speech."
-  },
-  "ttsEngineAutoDescription": "Use on-device speech when available and fall back to your server.",
-  "@ttsEngineAutoDescription": {
-    "description": "Description shown when automatic text-to-speech preference is active."
   },
   "ttsEngineDeviceDescription": "Keep synthesis on this device. Voice playback stops working if on-device TTS isn’t supported.",
   "@ttsEngineDeviceDescription": {

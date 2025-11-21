@@ -321,8 +321,6 @@
   "sttSilenceDuration": "Duración del silencio",
   "sttSilenceDurationDescription": "Tiempo de espera después del silencio antes de detener automáticamente la grabación",
   "ttsSettings": "Texto a voz",
-  "ttsEngineAuto": "Automático",
-  "ttsEngineAutoDescription": "Usa la síntesis en el dispositivo cuando esté disponible y, si no, recurre a tu servidor.",
   "ttsEngineDeviceDescription": "Mantiene la síntesis en este dispositivo. La reproducción de voz no funciona si el dispositivo no admite TTS.",
   "ttsEngineServerDescription": "Solicita siempre el audio a tu servidor OpenWebUI.",
   "ttsDeviceUnavailableWarning": "La síntesis de voz en el dispositivo no está disponible en este dispositivo.",

@@ -23,7 +23,7 @@ class TextToSpeechService {
   final FlutterTts _tts = FlutterTts();
   final AudioPlayer _player = AudioPlayer();
   final ApiService? _api;
-  TtsEngine _engine = TtsEngine.auto;
+  TtsEngine _engine = TtsEngine.device;
   String? _preferredVoice;
   String? _serverPreferredVoice;
   double _speechRate = 0.5;
@@ -127,11 +127,9 @@ class TextToSpeechService {
     final serverAvailable = _api != null;
     switch (_engine) {
       case TtsEngine.device:
-        return _deviceEngineAvailable;
+        return _deviceEngineAvailable || serverAvailable;
       case TtsEngine.server:
         return serverAvailable;
-      case TtsEngine.auto:
-        return _deviceEngineAvailable || serverAvailable;
     }
   }
 
@@ -139,10 +137,7 @@ class TextToSpeechService {
     if (_engine == TtsEngine.server) {
       return _api != null;
     }
-    if (_engine == TtsEngine.device) {
-      return false;
-    }
-    // Auto: prefer device when available, otherwise fall back to server
+    // Device preference with graceful fallback to server if available.
     if (_deviceEngineAvailable) {
       return false;
     }
@@ -191,7 +186,7 @@ class TextToSpeechService {
     double speechRate = 0.5,
     double pitch = 1.0,
     double volume = 1.0,
-    TtsEngine engine = TtsEngine.auto,
+    TtsEngine engine = TtsEngine.device,
   }) async {
     if (_initialized) {
       _engine = engine;

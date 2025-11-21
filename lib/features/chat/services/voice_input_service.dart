@@ -36,7 +36,7 @@ class VoiceInputService {
   bool _isInitialized = false;
   bool _isListening = false;
   bool _localSttAvailable = false;
-  SttPreference _preference = SttPreference.auto;
+  SttPreference _preference = SttPreference.deviceOnly;
   bool _usingServerStt = false;
   String? _selectedLocaleId;
   List<LocaleName> _locales = const [];
@@ -63,7 +63,6 @@ class VoiceInputService {
   bool get isSupportedPlatform => Platform.isAndroid || Platform.isIOS;
   bool get hasServerStt => _api != null;
   SttPreference get preference => _preference;
-  bool get allowsServerFallback => _preference != SttPreference.deviceOnly;
   bool get prefersServerOnly => _preference == SttPreference.serverOnly;
   bool get prefersDeviceOnly => _preference == SttPreference.deviceOnly;
 
@@ -101,15 +100,9 @@ class VoiceInputService {
       try {
         final sttGranted = await _speech.hasPermission();
         if (!sttGranted) {
-          if (prefersDeviceOnly) {
-            return false;
-          }
           _localSttAvailable = false;
         }
       } catch (_) {
-        if (prefersDeviceOnly) {
-          return false;
-        }
         _localSttAvailable = false;
       }
     }
@@ -248,11 +241,6 @@ class VoiceInputService {
           ? 'Speech recognition failed'
           : message,
     );
-    if (hasServerStt && allowsServerFallback) {
-      _textStreamController?.addError(exception);
-      unawaited(_beginServerFallback());
-      return;
-    }
     _textStreamController?.addError(exception);
     unawaited(_stopListening());
   }
@@ -262,6 +250,35 @@ class VoiceInputService {
       return await _microphonePermissionProbe.hasPermission();
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<void> _startLocalRecognition({
+    required bool allowOnlineFallback,
+  }) async {
+    if (_selectedLocaleId != null) {
+      await _speech.setLanguage(_selectedLocaleId!);
+    }
+
+    Future<void> attempt(bool offline) => _speech.start(
+      SttRecognitionOptions(punctuation: true, offline: offline),
+    );
+
+    try {
+      await attempt(true);
+    } catch (error) {
+      if (Platform.isIOS && allowOnlineFallback) {
+        try {
+          await attempt(false);
+          return;
+        } catch (secondary) {
+          throw Exception(
+            'On-device speech failed ($error); '
+            'online fallback failed ($secondary).',
+          );
+        }
+      }
+      rethrow;
     }
   }
 
@@ -304,11 +321,10 @@ class VoiceInputService {
           final isStillAvailable = await _speech.isSupported();
           if (!isStillAvailable && _isListening) {
             _localSttAvailable = false;
-            if (hasServerStt && allowsServerFallback) {
-              unawaited(_beginServerFallback());
-            } else {
-              unawaited(_stopListening());
-            }
+            _textStreamController?.addError(
+              Exception('On-device speech recognition unavailable'),
+            );
+            unawaited(_stopListening());
           }
         } catch (_) {
           // ignore availability check errors
@@ -338,19 +354,12 @@ class VoiceInputService {
 
       Future(() async {
         try {
-          if (_selectedLocaleId != null) {
-            await _speech.setLanguage(_selectedLocaleId!);
-          }
-          await _speech.start(SttRecognitionOptions(punctuation: true));
+          await _startLocalRecognition(allowOnlineFallback: !prefersDeviceOnly);
         } catch (error) {
           _localSttAvailable = false;
           if (!_isListening) return;
-          if (hasServerStt && allowsServerFallback) {
-            await _beginServerFallback();
-          } else {
-            _textStreamController?.addError(error);
-            await _stopListening();
-          }
+          _textStreamController?.addError(error);
+          await _stopListening();
         }
       });
     } else if (shouldUseServer) {
@@ -454,39 +463,6 @@ class VoiceInputService {
       try {
         await _speech.stop();
       } catch (_) {}
-    }
-  }
-
-  Future<void> _beginServerFallback() async {
-    if (!allowsServerFallback) {
-      _textStreamController?.addError(
-        Exception('Server speech-to-text disabled in preferences'),
-      );
-      await _stopListening();
-      return;
-    }
-    await _stopLocalStt();
-    if (!hasServerStt) {
-      _textStreamController?.addError(
-        Exception('Server speech-to-text unavailable'),
-      );
-      await _stopListening();
-      return;
-    }
-
-    _usingServerStt = true;
-    _autoStopTimer?.cancel();
-    _autoStopTimer = Timer(const Duration(seconds: 90), () {
-      if (_isListening) {
-        unawaited(_stopListening());
-      }
-    });
-
-    try {
-      await _startServerRecording();
-    } catch (error) {
-      _textStreamController?.addError(error);
-      await _stopListening();
     }
   }
 
@@ -823,13 +799,11 @@ Future<bool> voiceInputAvailable(Ref ref) async {
   if (!initialized) return false;
   switch (service.preference) {
     case SttPreference.deviceOnly:
-      return service.hasLocalStt;
-    case SttPreference.serverOnly:
-      return service.hasServerStt;
-    case SttPreference.auto:
       if (service.hasLocalStt) return true;
       if (!service.hasServerStt) return false;
       break;
+    case SttPreference.serverOnly:
+      return service.hasServerStt;
   }
   final hasPermission = await service.checkPermissions();
   if (!hasPermission) return false;

@@ -321,8 +321,6 @@
   "sttSilenceDuration": "Stille-Dauer",
   "sttSilenceDurationDescription": "Zeit nach Stille warten, bevor die Aufnahme automatisch gestoppt wird",
   "ttsSettings": "Text zu Sprache",
-  "ttsEngineAuto": "Automatisch",
-  "ttsEngineAutoDescription": "Verwendet die Sprachausgabe auf dem Gerät, wenn verfügbar, und greift sonst auf deinen Server zurück.",
   "ttsEngineDeviceDescription": "Behält die Ausgabe auf diesem Gerät. Sprachausgabe funktioniert nicht, wenn das Gerät keine TTS-Unterstützung bietet.",
   "ttsEngineServerDescription": "Sendet die Ausgabe immer an deinen OpenWebUI-Server.",
   "ttsDeviceUnavailableWarning": "Sprachausgabe auf dem Gerät steht auf diesem Gerät nicht zur Verfügung.",

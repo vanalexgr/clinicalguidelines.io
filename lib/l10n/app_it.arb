@@ -321,8 +321,6 @@
   "sttSilenceDuration": "Durata del silenzio",
   "sttSilenceDurationDescription": "Tempo di attesa dopo il silenzio prima di fermare automaticamente la registrazione",
   "ttsSettings": "Sintesi vocale",
-  "ttsEngineAuto": "Automatico",
-  "ttsEngineAutoDescription": "Usa la sintesi sul dispositivo quando disponibile e altrimenti passa al tuo server.",
   "ttsEngineDeviceDescription": "Mantiene la sintesi su questo dispositivo. La riproduzione vocale non funziona se il dispositivo non supporta il TTS.",
   "ttsEngineServerDescription": "Richiede sempre l'audio dal tuo server OpenWebUI.",
   "ttsDeviceUnavailableWarning": "La sintesi vocale sul dispositivo non è disponibile su questo dispositivo.",
