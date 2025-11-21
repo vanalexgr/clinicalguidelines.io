@@ -45,9 +45,24 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun handleIntent(intent: android.content.Intent) {
+        android.util.Log.d("MainActivity", "handleIntent called")
+        android.util.Log.d("MainActivity", "Intent extras: ${intent.extras?.keySet()}")
+
         val screenContext = intent.getStringExtra("screen_context")
+        val screenshotPath = intent.getStringExtra("screenshot_path")
+
+        android.util.Log.d("MainActivity", "screenContext: $screenContext")
+        android.util.Log.d("MainActivity", "screenshotPath: $screenshotPath")
+        android.util.Log.d("MainActivity", "methodChannel: $methodChannel")
+
         if (screenContext != null) {
+            android.util.Log.d("MainActivity", "Invoking analyzeScreen")
             methodChannel?.invokeMethod("analyzeScreen", screenContext)
+        } else if (screenshotPath != null) {
+            android.util.Log.d("MainActivity", "Invoking analyzeScreenshot with path: $screenshotPath")
+            methodChannel?.invokeMethod("analyzeScreenshot", screenshotPath)
+        } else {
+            android.util.Log.d("MainActivity", "No screen context or screenshot path found")
         }
     }
     
