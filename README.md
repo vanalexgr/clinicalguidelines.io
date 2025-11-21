@@ -217,6 +217,7 @@ This project is licensed under the GPL3 License - see the LICENSE file for detai
 
 ## Acknowledgments
 
+- <a href="https://vercel.com/oss"><img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge.svg" /></a>
 - Open-WebUI team for creating an amazing self-hosted AI interface
 - Flutter team for the excellent mobile framework
 - All contributors and users of Conduit
