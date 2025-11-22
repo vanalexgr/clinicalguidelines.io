@@ -40,40 +40,12 @@ class AndroidAssistantHandler {
   Future<void> _handleMethodCall(MethodCall call) async {
     if (call.method == 'analyzeScreen') {
       final String context = call.arguments as String;
-      await _processScreenContext(context);
+      _ref.read(screenContextProvider.notifier).setContext(context);
     } else if (call.method == 'analyzeScreenshot') {
       final String screenshotPath = call.arguments as String;
       await _processScreenshot(screenshotPath);
     } else if (call.method == 'startVoiceCall') {
       await _startVoiceCall();
-    }
-  }
-
-  Future<void> _processScreenContext(String context) async {
-    try {
-      DebugLogger.log('Processing screen context', scope: 'assistant');
-
-      // Wait for app to be ready (authenticated and model available)
-      final navState = _ref.read(authNavigationStateProvider);
-      final model = _ref.read(selectedModelProvider);
-
-      if (navState != AuthNavigationState.authenticated || model == null) {
-        DebugLogger.log('App not ready for screen context processing', scope: 'assistant');
-        return;
-      }
-
-      // Navigate to chat if not already there
-      final isOnChatRoute = NavigationService.currentRoute == Routes.chat;
-      if (!isOnChatRoute) {
-        // Navigation will happen via auth state
-        return;
-      }
-
-      // Set the screen context
-      _ref.read(screenContextProvider.notifier).setContext(context);
-      DebugLogger.log('Screen context set successfully', scope: 'assistant');
-    } catch (e) {
-      DebugLogger.log('Failed to process screen context: $e', scope: 'assistant');
     }
   }
 
