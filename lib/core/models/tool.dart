@@ -23,4 +23,14 @@ sealed class Tool with _$Tool {
       meta: json['meta'] as Map<String, dynamic>?,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'user_id': userId,
+      'meta': meta,
+    };
+  }
 }

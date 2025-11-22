@@ -20,6 +20,18 @@ sealed class Model with _$Model {
   }) = _Model;
 
   factory Model.fromJson(Map<String, dynamic> json) {
+    final cachedIsMultimodal = switch (json['isMultimodal']) {
+      final bool value => value,
+      _ => json['is_multimodal'] is bool ? json['is_multimodal'] as bool : null,
+    };
+    final cachedSupportsStreaming = switch (json['supportsStreaming']) {
+      final bool value => value,
+      _ =>
+        json['supports_streaming'] is bool
+            ? json['supports_streaming'] as bool
+            : null,
+    };
+
     // Handle different response formats from OpenWebUI
 
     // Extract architecture info for capabilities
@@ -29,8 +41,9 @@ sealed class Model with _$Model {
 
     // Determine if multimodal based on architecture
     final isMultimodal =
-        modality?.contains('image') == true ||
-        inputModalities?.contains('image') == true;
+        cachedIsMultimodal ??
+        (modality?.contains('image') == true ||
+            inputModalities?.contains('image') == true);
 
     // Extract supported parameters robustly (top-level or nested under provider keys)
     List? supportedParams =
@@ -63,7 +76,8 @@ sealed class Model with _$Model {
     }
 
     // Determine streaming support from supported parameters if known
-    final supportsStreaming = supportedParams?.contains('stream') ?? true;
+    final supportsStreaming =
+        cachedSupportsStreaming ?? supportedParams?.contains('stream') ?? true;
 
     // Convert supported parameters to List<String> if present
     final supportedParamsList = supportedParams
@@ -153,5 +167,23 @@ sealed class Model with _$Model {
       metadata: mergedMetadata,
       toolIds: toolIds,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    final data = <String, dynamic>{
+      'id': id,
+      'name': name,
+      'description': description,
+      'isMultimodal': isMultimodal,
+      'supportsStreaming': supportsStreaming,
+      'supportsRAG': supportsRAG,
+      'supported_parameters': supportedParameters,
+      'capabilities': capabilities,
+      'metadata': metadata,
+      'architecture': capabilities?['architecture'],
+      'toolIds': toolIds,
+    };
+    data.removeWhere((_, value) => value == null);
+    return data;
   }
 }

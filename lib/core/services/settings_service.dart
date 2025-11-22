@@ -1,7 +1,10 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:hive_ce/hive.dart';
+import '../persistence/hive_bootstrap.dart';
 import '../persistence/hive_boxes.dart';
 import '../persistence/persistence_keys.dart';
 import 'animation_service.dart';
@@ -126,47 +129,7 @@ class SettingsService {
   /// Load all settings
   static Future<AppSettings> loadSettings() {
     final box = _preferencesBox();
-    return Future.value(
-      AppSettings(
-        reduceMotion: (box.get(_reduceMotionKey) as bool?) ?? false,
-        animationSpeed:
-            (box.get(_animationSpeedKey) as num?)?.toDouble() ?? 1.0,
-        hapticFeedback: (box.get(_hapticFeedbackKey) as bool?) ?? true,
-        highContrast: (box.get(_highContrastKey) as bool?) ?? false,
-        largeText: (box.get(_largeTextKey) as bool?) ?? false,
-        darkMode: (box.get(_darkModeKey) as bool?) ?? true,
-        defaultModel: box.get(_defaultModelKey) as String?,
-        voiceLocaleId: box.get(_voiceLocaleKey) as String?,
-        voiceHoldToTalk: (box.get(_voiceHoldToTalkKey) as bool?) ?? false,
-        voiceAutoSendFinal: (box.get(_voiceAutoSendKey) as bool?) ?? false,
-        socketTransportMode:
-            box.get(_socketTransportModeKey, defaultValue: 'ws') as String,
-        quickPills: List<String>.from(
-          (box.get(_quickPillsKey) as List<dynamic>?) ?? const <String>[],
-        ),
-        sendOnEnter: (box.get(_sendOnEnterKey) as bool?) ?? false,
-        ttsVoice: box.get(PreferenceKeys.ttsVoice) as String?,
-        ttsSpeechRate:
-            (box.get(PreferenceKeys.ttsSpeechRate) as num?)?.toDouble() ?? 0.5,
-        ttsPitch: (box.get(PreferenceKeys.ttsPitch) as num?)?.toDouble() ?? 1.0,
-        ttsVolume:
-            (box.get(PreferenceKeys.ttsVolume) as num?)?.toDouble() ?? 1.0,
-        ttsEngine: _parseTtsEngine(
-          box.get(PreferenceKeys.ttsEngine) as String?,
-        ),
-        ttsServerVoiceId: box.get(PreferenceKeys.ttsServerVoiceId) as String?,
-        ttsServerVoiceName:
-            box.get(PreferenceKeys.ttsServerVoiceName) as String?,
-        sttPreference: _parseSttPreference(
-          box.get(PreferenceKeys.voiceSttPreference) as String?,
-        ),
-        voiceSilenceDuration:
-            (box.get(_voiceSilenceDurationKey) as int? ?? 2000).clamp(
-              300,
-              3000,
-            ),
-      ),
-    );
+    return Future.value(_loadSettingsSync(box));
   }
 
   /// Save all settings
@@ -379,6 +342,40 @@ class SettingsService {
     // Ensure reasonable bounds
     return baseScale.clamp(0.8, 3.0);
   }
+
+  static AppSettings _loadSettingsSync(Box<dynamic> box) {
+    return AppSettings(
+      reduceMotion: (box.get(_reduceMotionKey) as bool?) ?? false,
+      animationSpeed: (box.get(_animationSpeedKey) as num?)?.toDouble() ?? 1.0,
+      hapticFeedback: (box.get(_hapticFeedbackKey) as bool?) ?? true,
+      highContrast: (box.get(_highContrastKey) as bool?) ?? false,
+      largeText: (box.get(_largeTextKey) as bool?) ?? false,
+      darkMode: (box.get(_darkModeKey) as bool?) ?? true,
+      defaultModel: box.get(_defaultModelKey) as String?,
+      voiceLocaleId: box.get(_voiceLocaleKey) as String?,
+      voiceHoldToTalk: (box.get(_voiceHoldToTalkKey) as bool?) ?? false,
+      voiceAutoSendFinal: (box.get(_voiceAutoSendKey) as bool?) ?? false,
+      socketTransportMode:
+          box.get(_socketTransportModeKey, defaultValue: 'ws') as String,
+      quickPills: List<String>.from(
+        (box.get(_quickPillsKey) as List<dynamic>?) ?? const <String>[],
+      ),
+      sendOnEnter: (box.get(_sendOnEnterKey) as bool?) ?? false,
+      ttsVoice: box.get(PreferenceKeys.ttsVoice) as String?,
+      ttsSpeechRate:
+          (box.get(PreferenceKeys.ttsSpeechRate) as num?)?.toDouble() ?? 0.5,
+      ttsPitch: (box.get(PreferenceKeys.ttsPitch) as num?)?.toDouble() ?? 1.0,
+      ttsVolume: (box.get(PreferenceKeys.ttsVolume) as num?)?.toDouble() ?? 1.0,
+      ttsEngine: _parseTtsEngine(box.get(PreferenceKeys.ttsEngine) as String?),
+      ttsServerVoiceId: box.get(PreferenceKeys.ttsServerVoiceId) as String?,
+      ttsServerVoiceName: box.get(PreferenceKeys.ttsServerVoiceName) as String?,
+      sttPreference: _parseSttPreference(
+        box.get(PreferenceKeys.voiceSttPreference) as String?,
+      ),
+      voiceSilenceDuration: (box.get(_voiceSilenceDurationKey) as int? ?? 2000)
+          .clamp(300, 3000),
+    );
+  }
 }
 
 /// Sentinel class to detect when defaultModel parameter is not provided
@@ -562,23 +559,36 @@ bool _listEquals(List<String> a, List<String> b) {
 /// Provider for app settings
 @Riverpod(keepAlive: true)
 class AppSettingsNotifier extends _$AppSettingsNotifier {
-  bool _initialized = false;
+  Future<void>? _pendingLoad;
 
   @override
   AppSettings build() {
-    if (!_initialized) {
-      _initialized = true;
-      Future.microtask(_loadSettings);
+    if (Hive.isBoxOpen(HiveBoxNames.preferences)) {
+      final box = Hive.box<dynamic>(HiveBoxNames.preferences);
+      return SettingsService._loadSettingsSync(box);
     }
+
+    _pendingLoad ??= _hydrateFromHive();
     return const AppSettings();
   }
 
-  Future<void> _loadSettings() async {
-    final settings = await SettingsService.loadSettings();
-    if (!ref.mounted) {
-      return;
+  Future<void> _hydrateFromHive() async {
+    try {
+      await HiveBootstrap.instance.ensureInitialized();
+      if (!ref.mounted) return;
+      final box = Hive.box<dynamic>(HiveBoxNames.preferences);
+      state = SettingsService._loadSettingsSync(box);
+    } catch (error, stackTrace) {
+      developer.log(
+        'Failed to hydrate settings',
+        name: 'AppSettingsNotifier',
+        level: 1000,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    } finally {
+      _pendingLoad = null;
     }
-    state = settings;
   }
 
   Future<void> setReduceMotion(bool value) async {
