@@ -57,7 +57,12 @@ class _ImprovedLoadingStateState extends State<ImprovedLoadingState>
       final l10n = AppLocalizations.of(context);
       final announcement = widget.message ?? l10n?.loadingContent ?? 'Loading';
       final direction = Directionality.maybeOf(context) ?? TextDirection.ltr;
-      SemanticsService.announce(announcement, direction);
+      final view =
+          View.maybeOf(context) ??
+          WidgetsBinding.instance.platformDispatcher.implicitView;
+      if (view != null) {
+        SemanticsService.sendAnnouncement(view, announcement, direction);
+      }
     });
   }
 
