@@ -3,9 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../persistence/persistence_providers.dart';
 import '../services/api_service.dart';
 import '../auth/auth_state_manager.dart';
 import '../../features/auth/providers/unified_auth_providers.dart';
@@ -30,37 +28,12 @@ import '../services/worker_manager.dart';
 import '../../shared/theme/tweakcn_themes.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../features/tools/providers/tools_providers.dart';
+import '../models/socket_transport_availability.dart';
+import 'storage_providers.dart';
+
+export 'storage_providers.dart';
 
 part 'app_providers.g.dart';
-
-// Storage providers
-final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
-  // Single, shared instance with explicit platform options
-  return const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-      sharedPreferencesName: 'conduit_secure_prefs',
-      preferencesKeyPrefix: 'conduit_',
-      // Avoid auto-wipe on transient errors; we handle errors in code
-      resetOnError: false,
-    ),
-    iOptions: IOSOptions(
-      accountName: 'conduit_secure_storage',
-      synchronizable: false,
-    ),
-  );
-});
-
-// Optimized storage service provider
-final optimizedStorageServiceProvider = Provider<OptimizedStorageService>((
-  ref,
-) {
-  return OptimizedStorageService(
-    secureStorage: ref.watch(secureStorageProvider),
-    boxes: ref.watch(hiveBoxesProvider),
-    workerManager: ref.watch(workerManagerProvider),
-  );
-});
 
 // Theme provider
 @Riverpod(keepAlive: true)
@@ -175,7 +148,37 @@ final serverConnectionStateProvider = Provider<bool>((ref) {
   );
 });
 
-final backendConfigProvider = FutureProvider<BackendConfig?>((ref) async {
+@Riverpod(keepAlive: true)
+class BackendConfigNotifier extends _$BackendConfigNotifier {
+  late final OptimizedStorageService _storage;
+
+  @override
+  Future<BackendConfig?> build() async {
+    _storage = ref.watch(optimizedStorageServiceProvider);
+    final cached = await _storage.getLocalBackendConfig();
+    unawaited(_refreshBackendConfig());
+    return cached;
+  }
+
+  Future<void> refresh() => _refreshBackendConfig();
+
+  Future<void> _refreshBackendConfig() async {
+    final fresh = await _loadBackendConfig(ref);
+    if (fresh == null || !ref.mounted) {
+      return;
+    }
+
+    state = AsyncData(fresh);
+    await _storage.saveLocalBackendConfig(fresh);
+
+    // Persist resolved transport options based on backend config
+    if (!ref.mounted) return;
+    final options = _resolveTransportAvailability(fresh);
+    await _storage.saveLocalTransportOptions(options);
+  }
+}
+
+Future<BackendConfig?> _loadBackendConfig(Ref ref) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) {
     return null;
@@ -205,21 +208,22 @@ final backendConfigProvider = FutureProvider<BackendConfig?>((ref) async {
   } catch (_) {
     return null;
   }
-});
-
-class SocketTransportAvailability {
-  const SocketTransportAvailability({
-    required this.allowPolling,
-    required this.allowWebsocketOnly,
-  });
-
-  final bool allowPolling;
-  final bool allowWebsocketOnly;
 }
 
+/// Provides resolved socket transport options based on backend configuration.
+///
+/// This is a synchronous provider that:
+/// - Returns cached transport options when backend config is not yet loaded
+/// - Derives transport options from backend config once available
+/// - Does NOT perform side effects (persistence is handled by BackendConfigNotifier)
+///
+/// The persistence of resolved options happens asynchronously when the
+/// backend config is refreshed, ensuring the sync provider remains pure.
 final socketTransportOptionsProvider = Provider<SocketTransportAvailability>((
   ref,
 ) {
+  final storage = ref.watch(optimizedStorageServiceProvider);
+  // Watch async backend config for proper invalidation
   final backendConfigAsync = ref.watch(backendConfigProvider);
   final config = backendConfigAsync.maybeWhen(
     data: (value) => value,
@@ -227,30 +231,16 @@ final socketTransportOptionsProvider = Provider<SocketTransportAvailability>((
   );
 
   if (config == null) {
-    return const SocketTransportAvailability(
-      allowPolling: true,
-      allowWebsocketOnly: true,
-    );
+    // Return cached value or defaults when config not available
+    return storage.getLocalTransportOptionsSync() ??
+        const SocketTransportAvailability(
+          allowPolling: true,
+          allowWebsocketOnly: true,
+        );
   }
 
-  if (config.websocketOnly) {
-    return const SocketTransportAvailability(
-      allowPolling: false,
-      allowWebsocketOnly: true,
-    );
-  }
-
-  if (config.pollingOnly) {
-    return const SocketTransportAvailability(
-      allowPolling: true,
-      allowWebsocketOnly: false,
-    );
-  }
-
-  return const SocketTransportAvailability(
-    allowPolling: true,
-    allowWebsocketOnly: true,
-  );
+  // Determine transport availability from backend config
+  return _resolveTransportAvailability(config);
 });
 
 // API Service provider with unified auth integration
@@ -551,52 +541,146 @@ final refreshAuthStateProvider = Provider<void>((ref) {
 
 // Model providers
 @Riverpod(keepAlive: true)
-Future<List<Model>> models(Ref ref) async {
-  // Reviewer mode returns mock models
-  final reviewerMode = ref.watch(reviewerModeProvider);
-  if (reviewerMode) {
-    return [
-      const Model(
-        id: 'demo/gemma-2-mini',
-        name: 'Gemma 2 Mini (Demo)',
-        description: 'Demo model for reviewer mode',
-        isMultimodal: true,
-        supportsStreaming: true,
-        supportedParameters: ['max_tokens', 'stream'],
-      ),
-      const Model(
-        id: 'demo/llama-3-8b',
-        name: 'Llama 3 8B (Demo)',
-        description: 'Fast text model for demo',
-        isMultimodal: false,
-        supportsStreaming: true,
-        supportedParameters: ['max_tokens', 'stream'],
-      ),
-    ];
-  }
-  final api = ref.watch(apiServiceProvider);
-  if (api == null) return [];
-
-  try {
-    DebugLogger.log('fetch-start', scope: 'models');
-    final models = await api.getModels();
-    DebugLogger.log(
-      'fetch-ok',
-      scope: 'models',
-      data: {'count': models.length},
-    );
-    return models;
-  } catch (e) {
-    DebugLogger.error('fetch-failed', scope: 'models', error: e);
-
-    // If models endpoint returns 403, this should now clear auth token
-    // and redirect user to login since it's marked as a core endpoint
-    if (e.toString().contains('403')) {
-      DebugLogger.warning('endpoint-403', scope: 'models');
+class Models extends _$Models {
+  @override
+  Future<List<Model>> build() async {
+    // Reviewer mode returns mock models
+    if (ref.watch(reviewerModeProvider)) {
+      return _demoModels();
     }
 
-    return [];
+    if (!ref.watch(isAuthenticatedProvider2)) {
+      DebugLogger.log('skip-unauthed', scope: 'models');
+      _persistModelsAsync(const <Model>[]);
+      return const [];
+    }
+
+    final storage = ref.watch(optimizedStorageServiceProvider);
+    try {
+      final cached = await storage.getLocalModels();
+      if (cached.isNotEmpty) {
+        DebugLogger.log(
+          'cache-restored',
+          scope: 'models/cache',
+          data: {'count': cached.length},
+        );
+        Future.microtask(() async {
+          try {
+            await refresh();
+          } catch (error, stackTrace) {
+            DebugLogger.error(
+              'warm-refresh-failed',
+              scope: 'models/cache',
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }
+        });
+        return cached;
+      }
+      DebugLogger.log('cache-empty', scope: 'models/cache');
+    } catch (error, stackTrace) {
+      DebugLogger.error(
+        'cache-load-failed',
+        scope: 'models/cache',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final api = ref.watch(apiServiceProvider);
+    if (api == null) {
+      DebugLogger.warning('api-missing', scope: 'models');
+      _persistModelsAsync(const <Model>[]);
+      return const [];
+    }
+
+    final fresh = await _load(api);
+    return fresh;
   }
+
+  Future<void> refresh() async {
+    if (ref.read(reviewerModeProvider)) {
+      state = AsyncData<List<Model>>(_demoModels());
+      return;
+    }
+    if (!ref.read(isAuthenticatedProvider2)) {
+      state = const AsyncData<List<Model>>(<Model>[]);
+      _persistModelsAsync(const <Model>[]);
+      return;
+    }
+    final api = ref.read(apiServiceProvider);
+    if (api == null) {
+      state = const AsyncData<List<Model>>(<Model>[]);
+      _persistModelsAsync(const <Model>[]);
+      return;
+    }
+    final result = await AsyncValue.guard(() => _load(api));
+    if (!ref.mounted) return;
+    state = result;
+  }
+
+  Future<List<Model>> _load(ApiService api) async {
+    try {
+      DebugLogger.log('fetch-start', scope: 'models');
+      final models = await api.getModels();
+      DebugLogger.log(
+        'fetch-ok',
+        scope: 'models',
+        data: {'count': models.length},
+      );
+      _persistModelsAsync(models);
+      return models;
+    } catch (e, stackTrace) {
+      DebugLogger.error(
+        'fetch-failed',
+        scope: 'models',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
+      // If models endpoint returns 403, this should now clear auth token
+      // and redirect user to login since it's marked as a core endpoint
+      if (e.toString().contains('403')) {
+        DebugLogger.warning('endpoint-403', scope: 'models');
+      }
+
+      return const [];
+    }
+  }
+
+  void _persistModelsAsync(List<Model> models) {
+    final storage = ref.read(optimizedStorageServiceProvider);
+    unawaited(
+      storage.saveLocalModels(models).onError((error, stack) {
+        DebugLogger.error(
+          'Failed to persist models to cache',
+          scope: 'models/cache',
+          error: error,
+          stackTrace: stack,
+        );
+      }),
+    );
+  }
+
+  List<Model> _demoModels() => const [
+    Model(
+      id: 'demo/gemma-2-mini',
+      name: 'Gemma 2 Mini (Demo)',
+      description: 'Demo model for reviewer mode',
+      isMultimodal: true,
+      supportsStreaming: true,
+      supportedParameters: ['max_tokens', 'stream'],
+    ),
+    Model(
+      id: 'demo/llama-3-8b',
+      name: 'Llama 3 8B (Demo)',
+      description: 'Fast text model for demo',
+      isMultimodal: false,
+      supportsStreaming: true,
+      supportedParameters: ['max_tokens', 'stream'],
+    ),
+  ];
 }
 
 @Riverpod(keepAlive: true)
@@ -1243,6 +1327,7 @@ Future<Model?> defaultModel(Ref ref) async {
 
   // Initialize the settings watcher (side-effect only)
   ref.read(_settingsWatcherProvider);
+  final storage = ref.read(optimizedStorageServiceProvider);
   // Read settings without subscribing to rebuilds to avoid watch/await hazards
   final reviewerMode = ref.read(reviewerModeProvider);
   if (reviewerMode) {
@@ -1287,6 +1372,20 @@ Future<Model?> defaultModel(Ref ref) async {
   DebugLogger.log('api-available', scope: 'models/default');
 
   try {
+    // Warm restore from cached resolved default model
+    try {
+      final cached = await storage.getLocalDefaultModel();
+      if (cached != null && !ref.read(isManualModelSelectionProvider)) {
+        ref.read(selectedModelProvider.notifier).set(cached);
+        DebugLogger.log(
+          'cached-default',
+          scope: 'models/default',
+          data: {'name': cached.name},
+        );
+        return cached;
+      }
+    } catch (_) {}
+
     // Respect manual selection if present
     if (ref.read(isManualModelSelectionProvider)) {
       final current = ref.read(selectedModelProvider);
@@ -1298,18 +1397,46 @@ Future<Model?> defaultModel(Ref ref) async {
       final storedDefaultId = await SettingsService.getDefaultModel();
       if (storedDefaultId != null && storedDefaultId.isNotEmpty) {
         if (!ref.read(isManualModelSelectionProvider)) {
-          final placeholder = Model(
-            id: storedDefaultId,
-            name: storedDefaultId,
-            supportsStreaming: true,
-          );
-          ref.read(selectedModelProvider.notifier).set(placeholder);
+          final cachedMatch = await selectCachedModel(storage, storedDefaultId);
+          if (cachedMatch != null) {
+            ref.read(selectedModelProvider.notifier).set(cachedMatch);
+            unawaited(
+              storage.saveLocalDefaultModel(cachedMatch).onError((
+                error,
+                stack,
+              ) {
+                DebugLogger.error(
+                  'Failed to save default model to cache',
+                  scope: 'models/default',
+                  error: error,
+                  stackTrace: stack,
+                );
+              }),
+            );
+            DebugLogger.log(
+              'cache-select',
+              scope: 'models/default',
+              data: {'name': cachedMatch.name, 'source': 'cache'},
+            );
+          } else {
+            DebugLogger.log(
+              'cache-skip-missing',
+              scope: 'models/default',
+              data: {'id': storedDefaultId},
+            );
+          }
         }
         // Reconcile against real models in background
         Future.microtask(() async {
           try {
             if (!ref.mounted) return;
-            final models = await ref.read(modelsProvider.future);
+            List<Model> models;
+            final modelsAsync = ref.read(modelsProvider);
+            if (modelsAsync.hasValue) {
+              models = modelsAsync.value ?? const <Model>[];
+            } else {
+              models = await ref.read(modelsProvider.future);
+            }
             if (!ref.mounted) return;
 
             Model? resolved;
@@ -1326,6 +1453,16 @@ Future<Model?> defaultModel(Ref ref) async {
             if (!ref.mounted) return;
             if (resolved != null && !ref.read(isManualModelSelectionProvider)) {
               ref.read(selectedModelProvider.notifier).set(resolved);
+              unawaited(
+                storage.saveLocalDefaultModel(resolved).onError((error, stack) {
+                  DebugLogger.error(
+                    'Failed to save default model to cache',
+                    scope: 'models/default',
+                    error: error,
+                    stackTrace: stack,
+                  );
+                }),
+              );
               DebugLogger.log(
                 'reconcile',
                 scope: 'models/default',
@@ -1355,6 +1492,16 @@ Future<Model?> defaultModel(Ref ref) async {
             supportsStreaming: true,
           );
           ref.read(selectedModelProvider.notifier).set(placeholder);
+          unawaited(
+            storage.saveLocalDefaultModel(placeholder).onError((error, stack) {
+              DebugLogger.error(
+                'Failed to save placeholder model to cache',
+                scope: 'models/default',
+                error: error,
+                stackTrace: stack,
+              );
+            }),
+          );
         }
         // Reconcile against real models in background
         Future.microtask(() async {
@@ -1377,6 +1524,16 @@ Future<Model?> defaultModel(Ref ref) async {
             if (!ref.mounted) return;
             if (resolved != null && !ref.read(isManualModelSelectionProvider)) {
               ref.read(selectedModelProvider.notifier).set(resolved);
+              unawaited(
+                storage.saveLocalDefaultModel(resolved).onError((error, stack) {
+                  DebugLogger.error(
+                    'Failed to save default model to cache',
+                    scope: 'models/default',
+                    error: error,
+                    stackTrace: stack,
+                  );
+                }),
+              );
               DebugLogger.log(
                 'reconcile',
                 scope: 'models/default',
@@ -1410,6 +1567,16 @@ Future<Model?> defaultModel(Ref ref) async {
     final selectedModel = models.first;
     if (!ref.read(isManualModelSelectionProvider)) {
       ref.read(selectedModelProvider.notifier).set(selectedModel);
+      unawaited(
+        storage.saveLocalDefaultModel(selectedModel).onError((error, stack) {
+          DebugLogger.error(
+            'Failed to save default model to cache',
+            scope: 'models/default',
+            error: error,
+            stackTrace: stack,
+          );
+        }),
+      );
       DebugLogger.log(
         'fallback-selected',
         scope: 'models/default',
@@ -2157,4 +2324,67 @@ Future<List<Map<String, dynamic>>> imageModels(Ref ref) async {
     DebugLogger.error('image-models-failed', scope: 'image-models', error: e);
     return [];
   }
+}
+
+/// Helper function to select cached model based on settings and available models.
+/// Used by both chat page and defaultModel provider to ensure consistent behavior.
+/// Returns a cached model if available, otherwise returns null.
+Future<Model?> selectCachedModel(
+  OptimizedStorageService storage,
+  String? desiredModelId,
+) async {
+  try {
+    final cachedModels = await storage.getLocalModels();
+    if (cachedModels.isEmpty) return null;
+
+    Model? match;
+    if (desiredModelId != null && desiredModelId.isNotEmpty) {
+      try {
+        match = cachedModels.firstWhere(
+          (model) =>
+              model.id == desiredModelId ||
+              model.name.trim() == desiredModelId.trim(),
+        );
+      } catch (_) {
+        match = null;
+      }
+    }
+
+    return match ?? cachedModels.first;
+  } catch (error, stackTrace) {
+    DebugLogger.error(
+      'cache-select-failed',
+      scope: 'models/cache',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return null;
+  }
+}
+
+/// Resolves socket transport availability from backend configuration.
+///
+/// Used by both the sync [socketTransportOptionsProvider] and the
+/// [BackendConfigNotifier] to ensure consistent resolution logic.
+SocketTransportAvailability _resolveTransportAvailability(
+  BackendConfig config,
+) {
+  if (config.websocketOnly) {
+    return const SocketTransportAvailability(
+      allowPolling: false,
+      allowWebsocketOnly: true,
+    );
+  }
+
+  if (config.pollingOnly) {
+    return const SocketTransportAvailability(
+      allowPolling: true,
+      allowWebsocketOnly: false,
+    );
+  }
+
+  return const SocketTransportAvailability(
+    allowPolling: true,
+    allowWebsocketOnly: true,
+  );
 }

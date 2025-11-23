@@ -5,9 +5,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 // Types are used through app_providers.dart
 import '../providers/app_providers.dart';
 import '../models/user.dart';
+import '../services/optimized_storage_service.dart';
 import 'token_validator.dart';
 import 'auth_cache_manager.dart';
 import '../utils/debug_logger.dart';
+import '../utils/user_avatar_utils.dart';
 
 part 'auth_state_manager.g.dart';
 
@@ -97,9 +99,60 @@ class AuthStateManager extends _$AuthStateManager {
       state.asData?.value ?? const AuthState(status: AuthStatus.initial);
 
   void _set(AuthState next, {bool cache = false}) {
+    final storage = ref.read(optimizedStorageServiceProvider);
+    if (next.user != null && next.isAuthenticated) {
+      // Persist user and avatar asynchronously without blocking state update
+      unawaited(_persistUserWithAvatar(next, storage));
+    } else if (!next.isAuthenticated) {
+      unawaited(storage.saveLocalUser(null).onError((error, stack) {
+        DebugLogger.error(
+          'Failed to clear local user on logout',
+          scope: 'auth/persistence',
+          error: error,
+          stackTrace: stack,
+        );
+      }));
+      unawaited(storage.saveLocalUserAvatar(null).onError((error, stack) {
+        DebugLogger.error(
+          'Failed to clear local user avatar on logout',
+          scope: 'auth/persistence',
+          error: error,
+          stackTrace: stack,
+        );
+      }));
+    }
     state = AsyncValue.data(next);
     if (cache) {
       _cacheManager.cacheAuthState(next);
+    }
+  }
+
+  Future<void> _persistUserWithAvatar(
+    AuthState authState,
+    OptimizedStorageService storage,
+  ) async {
+    try {
+      final api = ref.read(apiServiceProvider);
+      final user = authState.user!;
+      final resolvedAvatar = resolveUserProfileImageUrl(
+        api,
+        deriveUserProfileImage(user),
+      );
+      final userWithAvatar =
+          resolvedAvatar != null && resolvedAvatar != user.profileImage
+              ? user.copyWith(profileImage: resolvedAvatar)
+              : user;
+      await storage.saveLocalUser(userWithAvatar);
+      if (resolvedAvatar != null) {
+        await storage.saveLocalUserAvatar(resolvedAvatar);
+      }
+    } catch (error, stack) {
+      DebugLogger.error(
+        'Failed to persist user with avatar',
+        scope: 'auth/persistence',
+        error: error,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -142,6 +195,25 @@ class AuthStateManager extends _$AuthStateManager {
             ),
             cache: true,
           );
+
+          try {
+            final cachedUser = await storage.getLocalUser();
+            if (cachedUser != null) {
+              // Restore cached avatar as well
+              final cachedAvatar = await storage.getLocalUserAvatar();
+              final userWithAvatar =
+                  cachedAvatar != null &&
+                      cachedAvatar.isNotEmpty &&
+                      cachedUser.profileImage != cachedAvatar
+                  ? cachedUser.copyWith(profileImage: cachedAvatar)
+                  : cachedUser;
+              _update(
+                (current) => current.copyWith(user: userWithAvatar),
+                cache: true,
+              );
+              DebugLogger.auth('Restored user from cache');
+            }
+          } catch (_) {}
 
           // Update API service with token and kick off dependent background work
           _updateApiServiceToken(token);
@@ -706,11 +778,11 @@ class AuthStateManager extends _$AuthStateManager {
 
       // Clear active server to force return to server connection page
       await storage.setActiveServerId(null);
-      
+
       // Invalidate all auth-related providers to clear cached data
       ref.invalidate(activeServerProvider);
       ref.invalidate(serverConfigsProvider);
-      
+
       // Clear auth cache manager
       _cacheManager.clearAuthCache();
 
@@ -725,7 +797,9 @@ class AuthStateManager extends _$AuthStateManager {
         ),
       );
 
-      DebugLogger.auth('Logout complete - all data cleared including server configs and custom headers');
+      DebugLogger.auth(
+        'Logout complete - all data cleared including server configs and custom headers',
+      );
     } catch (e, stack) {
       DebugLogger.error(
         'logout-failed',

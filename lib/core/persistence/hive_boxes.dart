@@ -15,6 +15,13 @@ final class HiveStoreKeys {
 
   // Cache entries
   static const String localConversations = 'local_conversations';
+  static const String localUser = 'local_user';
+  static const String localUserAvatar = 'local_user_avatar';
+  static const String localBackendConfig = 'local_backend_config';
+  static const String localTransportOptions = 'local_transport_options';
+  static const String localTools = 'local_tools';
+  static const String localDefaultModel = 'local_default_model';
+  static const String localModels = 'local_models';
   static const String localFolders = 'local_folders';
   static const String attachmentQueueEntries = 'attachment_queue_entries';
   static const String taskQueue = 'outbound_task_queue_v1';

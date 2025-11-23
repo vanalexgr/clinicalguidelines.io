@@ -35,16 +35,27 @@ class BackendConfig {
   }
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{'enable_websocket': enableWebsocket};
+    return <String, dynamic>{
+      'enable_websocket': enableWebsocket,
+    };
   }
 
   static BackendConfig fromJson(Map<String, dynamic> json) {
     bool? enableWebsocket;
-    final features = json['features'];
-    if (features is Map<String, dynamic>) {
-      final value = features['enable_websocket'];
-      if (value is bool) {
-        enableWebsocket = value;
+    // Try canonical format first
+    final value = json['enable_websocket'];
+    if (value is bool) {
+      enableWebsocket = value;
+    }
+
+    // Fallback to nested format for backwards compatibility
+    if (enableWebsocket == null) {
+      final features = json['features'];
+      if (features is Map<String, dynamic>) {
+        final nestedValue = features['enable_websocket'];
+        if (nestedValue is bool) {
+          enableWebsocket = nestedValue;
+        }
       }
     }
 

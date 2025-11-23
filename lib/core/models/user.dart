@@ -30,4 +30,16 @@ sealed class User with _$User {
       isActive: json['is_active'] as bool? ?? json['isActive'] as bool? ?? true,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'email': email,
+      'name': name,
+      'profile_image_url': profileImage,
+      'role': role,
+      'is_active': isActive,
+    };
+  }
 }

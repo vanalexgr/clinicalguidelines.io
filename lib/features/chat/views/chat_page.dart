@@ -18,7 +18,6 @@ import '../../../core/utils/user_display_name.dart';
 import '../../../core/utils/model_icon_utils.dart';
 import '../../auth/providers/unified_auth_providers.dart';
 import '../../../core/utils/android_assistant_handler.dart';
-
 import '../widgets/modern_chat_input.dart';
 import '../widgets/user_message_bubble.dart';
 import '../widgets/assistant_message_widget.dart' as assistant;
@@ -83,6 +82,42 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return fileSize <= (maxSizeMB * 1024 * 1024);
   }
 
+  Future<Model?> _trySelectCachedModel() async {
+    final existing = ref.read(selectedModelProvider);
+    if (existing != null) {
+      return existing;
+    }
+
+    try {
+      final storage = ref.read(optimizedStorageServiceProvider);
+      // Prefer the stored default model ID/name if available
+      final settingsDesired = ref.read(appSettingsProvider).defaultModel;
+      final storedDesired = await SettingsService.getDefaultModel().catchError(
+        (_) => null,
+      );
+      final desiredId = settingsDesired ?? storedDesired;
+
+      final match = await selectCachedModel(storage, desiredId);
+      if (match != null) {
+        ref.read(selectedModelProvider.notifier).set(match);
+        DebugLogger.log(
+          'cache-select',
+          scope: 'chat/model',
+          data: {'name': match.name, 'source': 'cache'},
+        );
+      }
+      return match;
+    } catch (error, stackTrace) {
+      DebugLogger.error(
+        'cache-select-failed',
+        scope: 'chat/model',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
   void startNewChat() {
     // Clear current conversation
     ref.read(chatMessagesProvider.notifier).clearMessages();
@@ -108,6 +143,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         data: {'name': selectedModel.name},
       );
       return;
+    }
+
+    // Fast path: try cached models + stored default before waiting on providers
+    final cached = await _trySelectCachedModel();
+    if (cached != null) {
+      // Still continue to reconcile against remote models below
+      DebugLogger.log(
+        'cache-hit',
+        scope: 'chat/model',
+        data: {'name': cached.name},
+      );
     }
 
     DebugLogger.log('auto-select-start', scope: 'chat/model');
