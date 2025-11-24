@@ -178,6 +178,8 @@
   "nederlands": "Néerlandais",
   "russian": "Russe",
   "chinese": "Chinois",
+  "chineseSimplified": "Chinois (simplifié)",
+  "chineseTraditional": "Chinois (traditionnel)",
   "korean": "Coréen",
   "deleteMessagesTitle": "Supprimer les messages",
   "deleteMessagesMessage": "Supprimer {count} messages ?",

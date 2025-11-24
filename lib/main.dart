@@ -189,12 +189,8 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
           if (deviceLocales == null || deviceLocales.isEmpty) {
             return supported.first;
           }
-          for (final device in deviceLocales) {
-            for (final loc in supported) {
-              if (loc.languageCode == device.languageCode) return loc;
-            }
-          }
-          return supported.first;
+          final resolved = _resolveSupportedLocale(deviceLocales, supported);
+          return resolved ?? supported.first;
         },
         builder: (context, child) {
           final brightness = Theme.of(context).brightness;
@@ -220,6 +216,73 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
         },
       ),
     );
+  }
+
+  bool _prefersTraditionalChinese(Locale deviceLocale) {
+    final script = deviceLocale.scriptCode?.toLowerCase();
+    if (script == 'hant') return true;
+
+    final country = deviceLocale.countryCode?.toUpperCase();
+    return country == 'TW' || country == 'HK' || country == 'MO';
+  }
+
+  Locale? _resolveSupportedLocale(
+    List<Locale>? deviceLocales,
+    Iterable<Locale> supported,
+  ) {
+    if (deviceLocales == null || deviceLocales.isEmpty) return null;
+
+    for (final device in deviceLocales) {
+      final prefersTraditional = _prefersTraditionalChinese(device);
+      final deviceLanguage = device.languageCode.toLowerCase();
+      final deviceScript = device.scriptCode?.toLowerCase();
+      final deviceCountry = device.countryCode?.toUpperCase();
+
+      // Pass 1: match language with script (or preferred Traditional)
+      for (final loc in supported) {
+        final languageMatches =
+            loc.languageCode.toLowerCase() == deviceLanguage;
+        if (!languageMatches) continue;
+
+        final locScript = loc.scriptCode?.toLowerCase();
+        final scriptMatches =
+            locScript != null &&
+            locScript.isNotEmpty &&
+            (locScript == deviceScript ||
+                (loc.languageCode == 'zh' &&
+                    locScript == 'hant' &&
+                    prefersTraditional));
+        if (!scriptMatches) continue;
+
+        final locCountry = loc.countryCode?.toUpperCase();
+        final countryMatches =
+            locCountry == null ||
+            locCountry.isEmpty ||
+            locCountry == deviceCountry;
+
+        if (countryMatches) {
+          return loc;
+        }
+      }
+
+      // Pass 2: prefer Traditional Chinese when applicable
+      if (prefersTraditional) {
+        for (final loc in supported) {
+          if (loc.languageCode == 'zh' && loc.scriptCode == 'Hant') {
+            return loc;
+          }
+        }
+      }
+
+      // Pass 3: language-only match
+      for (final loc in supported) {
+        if (loc.languageCode.toLowerCase() == deviceLanguage) {
+          return loc;
+        }
+      }
+    }
+
+    return null;
   }
 }
 

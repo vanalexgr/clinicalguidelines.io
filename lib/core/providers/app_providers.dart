@@ -105,14 +105,40 @@ class AppLocale extends _$AppLocale {
     _storage = ref.watch(optimizedStorageServiceProvider);
     final code = _storage.getLocaleCode();
     if (code != null && code.isNotEmpty) {
-      return Locale(code);
+      final parsed = _parseLocaleCode(code);
+      if (parsed != null) return parsed;
     }
     return null; // system default
   }
 
   Future<void> setLocale(Locale? locale) async {
     state = locale;
-    await _storage.setLocaleCode(locale?.languageCode);
+    await _storage.setLocaleCode(locale?.toLanguageTag());
+  }
+
+  Locale? _parseLocaleCode(String code) {
+    final normalized = code.replaceAll('_', '-');
+    final parts = normalized.split('-');
+    if (parts.isEmpty || parts.first.isEmpty) return null;
+
+    final language = parts.first;
+    String? script;
+    String? country;
+
+    for (var i = 1; i < parts.length; i++) {
+      final part = parts[i];
+      if (part.length == 4) {
+        script = '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}';
+      } else if (part.length == 2 || part.length == 3) {
+        country = part.toUpperCase();
+      }
+    }
+
+    return Locale.fromSubtags(
+      languageCode: language,
+      scriptCode: script,
+      countryCode: country,
+    );
   }
 }
 

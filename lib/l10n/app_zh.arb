@@ -178,6 +178,8 @@
   "nederlands": "Nederlands",
   "russian": "Русский",
   "chinese": "中文",
+  "chineseSimplified": "简体中文",
+  "chineseTraditional": "繁體中文",
   "korean": "한국어",
   "deleteMessagesTitle": "删除消息",
   "deleteMessagesMessage": "删除 {count} 条消息？",
