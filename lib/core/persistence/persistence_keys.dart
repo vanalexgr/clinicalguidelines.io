@@ -29,6 +29,7 @@ final class PreferenceKeys {
   static const String ttsServerVoiceId = 'tts_server_voice_id';
   static const String ttsServerVoiceName = 'tts_server_voice_name';
   static const String voiceSilenceDuration = 'voice_silence_duration';
+  static const String androidAssistantTrigger = 'android_assistant_trigger';
 }
 
 final class LegacyPreferenceKeys {

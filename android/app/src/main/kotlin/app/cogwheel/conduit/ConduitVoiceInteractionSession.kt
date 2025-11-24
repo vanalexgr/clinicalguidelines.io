@@ -10,10 +10,29 @@ import android.graphics.Bitmap
 
 class ConduitVoiceInteractionSession(context: Context) : VoiceInteractionSession(context) {
 
+    companion object {
+        private const val PREFS_FILE = "FlutterSharedPreferences"
+        private const val TRIGGER_KEY = "flutter.android_assistant_trigger"
+        private const val TRIGGER_OVERLAY = "overlay"
+        private const val TRIGGER_NEW_CHAT = "new_chat"
+        private const val TRIGGER_VOICE_CALL = "voice_call"
+    }
+
     private var capturedContext: String? = null
     private var capturedScreenshot: Bitmap? = null
 
     override fun onCreateContentView(): android.view.View {
+        when (getTriggerPreference()) {
+            TRIGGER_NEW_CHAT -> {
+                launchAppForNewChat()
+                return android.view.View(context)
+            }
+            TRIGGER_VOICE_CALL -> {
+                launchAppForVoiceCall()
+                return android.view.View(context)
+            }
+        }
+
         val view = layoutInflater.inflate(app.cogwheel.conduit.R.layout.assistant_overlay, null)
 
         // Summarize page button - sends screen context
@@ -157,6 +176,25 @@ class ConduitVoiceInteractionSession(context: Context) : VoiceInteractionSession
         }
     }
 
+    private fun launchAppForNewChat() {
+        try {
+            android.util.Log.d("ConduitVoiceSession", "Attempting to launch app for new chat")
+            val intent = Intent(context, MainActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+            intent.putExtra("start_new_chat", true)
+            android.util.Log.d("ConduitVoiceSession", "New chat flag attached")
+
+            context.startActivity(intent)
+            android.util.Log.d("ConduitVoiceSession", "App launch requested for new chat")
+            finish()
+        } catch (e: Exception) {
+            android.util.Log.e("ConduitVoiceSession", "Failed to launch app for new chat", e)
+        }
+    }
+
     private fun launchAppForVoiceCall() {
         try {
             android.util.Log.d("ConduitVoiceSession", "Attempting to launch app for voice call")
@@ -173,6 +211,15 @@ class ConduitVoiceInteractionSession(context: Context) : VoiceInteractionSession
             finish() // Close the overlay
         } catch (e: Exception) {
             android.util.Log.e("ConduitVoiceSession", "Failed to launch app for voice call", e)
+        }
+    }
+
+    private fun getTriggerPreference(): String {
+        return try {
+            val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
+            prefs.getString(TRIGGER_KEY, TRIGGER_OVERLAY) ?: TRIGGER_OVERLAY
+        } catch (e: Exception) {
+            TRIGGER_OVERLAY
         }
     }
 

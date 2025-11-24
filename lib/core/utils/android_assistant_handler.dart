@@ -46,19 +46,27 @@ class AndroidAssistantHandler {
       await _processScreenshot(screenshotPath);
     } else if (call.method == 'startVoiceCall') {
       await _startVoiceCall();
+    } else if (call.method == 'startNewChat') {
+      await _startNewChat();
     }
   }
 
   Future<void> _processScreenshot(String screenshotPath) async {
     try {
-      DebugLogger.log('Processing screenshot: $screenshotPath', scope: 'assistant');
+      DebugLogger.log(
+        'Processing screenshot: $screenshotPath',
+        scope: 'assistant',
+      );
 
       // Wait for app to be ready (authenticated and model available)
       final navState = _ref.read(authNavigationStateProvider);
       final model = _ref.read(selectedModelProvider);
 
       if (navState != AuthNavigationState.authenticated || model == null) {
-        DebugLogger.log('App not ready for screenshot processing', scope: 'assistant');
+        DebugLogger.log(
+          'App not ready for screenshot processing',
+          scope: 'assistant',
+        );
         return;
       }
 
@@ -75,7 +83,10 @@ class AndroidAssistantHandler {
       // Add screenshot as attachment
       final file = File(screenshotPath);
       if (!await file.exists()) {
-        DebugLogger.log('Screenshot file not found: $screenshotPath', scope: 'assistant');
+        DebugLogger.log(
+          'Screenshot file not found: $screenshotPath',
+          scope: 'assistant',
+        );
         return;
       }
 
@@ -91,15 +102,23 @@ class AndroidAssistantHandler {
         // Enqueue upload via task queue
         final activeConv = _ref.read(activeConversationProvider);
         try {
-          await _ref.read(taskQueueProvider.notifier).enqueueUploadMedia(
+          await _ref
+              .read(taskQueueProvider.notifier)
+              .enqueueUploadMedia(
                 conversationId: activeConv?.id,
                 filePath: attachment.file.path,
                 fileName: attachment.displayName,
                 fileSize: await attachment.file.length(),
               );
-          DebugLogger.log('Screenshot uploaded successfully', scope: 'assistant');
+          DebugLogger.log(
+            'Screenshot uploaded successfully',
+            scope: 'assistant',
+          );
         } catch (e) {
-          DebugLogger.log('Failed to upload screenshot: $e', scope: 'assistant');
+          DebugLogger.log(
+            'Failed to upload screenshot: $e',
+            scope: 'assistant',
+          );
         }
       }
     } catch (e) {
@@ -130,7 +149,10 @@ class AndroidAssistantHandler {
       // Get the current BuildContext from the navigation service
       final context = NavigationService.navigatorKey.currentContext;
       if (context == null) {
-        DebugLogger.log('No context available for voice call navigation', scope: 'assistant');
+        DebugLogger.log(
+          'No context available for voice call navigation',
+          scope: 'assistant',
+        );
         return;
       }
 
@@ -145,6 +167,30 @@ class AndroidAssistantHandler {
       DebugLogger.log('Voice call page launched', scope: 'assistant');
     } catch (e) {
       DebugLogger.log('Failed to start voice call: $e', scope: 'assistant');
+    }
+  }
+
+  Future<void> _startNewChat() async {
+    try {
+      DebugLogger.log('Starting new chat from assistant', scope: 'assistant');
+
+      final navState = _ref.read(authNavigationStateProvider);
+      final model = _ref.read(selectedModelProvider);
+
+      if (navState != AuthNavigationState.authenticated || model == null) {
+        DebugLogger.log('App not ready for new chat', scope: 'assistant');
+        return;
+      }
+
+      final isOnChatRoute = NavigationService.currentRoute == Routes.chat;
+      if (!isOnChatRoute) {
+        await NavigationService.navigateToChat();
+      }
+
+      startNewChat(_ref);
+      DebugLogger.log('New chat started from assistant', scope: 'assistant');
+    } catch (e) {
+      DebugLogger.log('Failed to start new chat: $e', scope: 'assistant');
     }
   }
 }

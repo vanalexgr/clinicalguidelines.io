@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_ce/hive.dart';
 import '../persistence/hive_bootstrap.dart';
 import '../persistence/hive_boxes.dart';
@@ -16,6 +17,22 @@ enum SttPreference { deviceOnly, serverOnly }
 
 /// TTS engine selection
 enum TtsEngine { device, server }
+
+/// Action to take when the Android digital assistant is triggered.
+enum AndroidAssistantTrigger { overlay, newChat, voiceCall }
+
+extension AndroidAssistantTriggerStorage on AndroidAssistantTrigger {
+  String get storageValue {
+    switch (this) {
+      case AndroidAssistantTrigger.overlay:
+        return 'overlay';
+      case AndroidAssistantTrigger.newChat:
+        return 'new_chat';
+      case AndroidAssistantTrigger.voiceCall:
+        return 'voice_call';
+    }
+  }
+}
 
 /// Service for managing app-wide settings including accessibility preferences
 class SettingsService {
@@ -41,6 +58,8 @@ class SettingsService {
   // Voice silence duration for auto-stop (milliseconds)
   static const String _voiceSilenceDurationKey =
       PreferenceKeys.voiceSilenceDuration;
+  static const String _androidAssistantTriggerKey =
+      PreferenceKeys.androidAssistantTrigger;
   static Box<dynamic> _preferencesBox() =>
       Hive.box<dynamic>(HiveBoxNames.preferences);
 
@@ -153,6 +172,8 @@ class SettingsService {
       PreferenceKeys.ttsEngine: settings.ttsEngine.name,
       PreferenceKeys.voiceSttPreference: settings.sttPreference.name,
       _voiceSilenceDurationKey: settings.voiceSilenceDuration,
+      _androidAssistantTriggerKey:
+          settings.androidAssistantTrigger.storageValue,
     };
 
     await box.putAll(updates);
@@ -191,6 +212,8 @@ class SettingsService {
     } else {
       await box.delete(PreferenceKeys.ttsServerVoiceName);
     }
+
+    await _writeAssistantTriggerToSharedPrefs(settings.androidAssistantTrigger);
   }
 
   static TtsEngine _parseTtsEngine(String? raw) {
@@ -216,6 +239,20 @@ class SettingsService {
         return SttPreference.serverOnly;
       default:
         return SttPreference.deviceOnly;
+    }
+  }
+
+  static AndroidAssistantTrigger _parseAndroidAssistantTrigger(String? raw) {
+    switch ((raw ?? '').toLowerCase()) {
+      case 'new_chat':
+      case 'newchat':
+        return AndroidAssistantTrigger.newChat;
+      case 'voice_call':
+      case 'voicecall':
+        return AndroidAssistantTrigger.voiceCall;
+      case 'overlay':
+      default:
+        return AndroidAssistantTrigger.overlay;
     }
   }
 
@@ -309,6 +346,30 @@ class SettingsService {
     return _preferencesBox().put(_voiceSilenceDurationKey, sanitized);
   }
 
+  static Future<void> setAndroidAssistantTrigger(
+    AndroidAssistantTrigger trigger,
+  ) async {
+    await _preferencesBox().put(
+      _androidAssistantTriggerKey,
+      trigger.storageValue,
+    );
+    await _writeAssistantTriggerToSharedPrefs(trigger);
+  }
+
+  static Future<void> _writeAssistantTriggerToSharedPrefs(
+    AndroidAssistantTrigger trigger,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        PreferenceKeys.androidAssistantTrigger,
+        trigger.storageValue,
+      );
+    } catch (_) {
+      // SharedPreferences writes are best-effort for Android assistant access
+    }
+  }
+
   /// Get effective animation duration considering all settings
   static Duration getEffectiveAnimationDuration(
     BuildContext context,
@@ -372,6 +433,9 @@ class SettingsService {
       sttPreference: _parseSttPreference(
         box.get(PreferenceKeys.voiceSttPreference) as String?,
       ),
+      androidAssistantTrigger: _parseAndroidAssistantTrigger(
+        box.get(_androidAssistantTriggerKey) as String?,
+      ),
       voiceSilenceDuration: (box.get(_voiceSilenceDurationKey) as int? ?? 2000)
           .clamp(300, 3000),
     );
@@ -406,6 +470,7 @@ class AppSettings {
   final TtsEngine ttsEngine;
   final String? ttsServerVoiceId;
   final String? ttsServerVoiceName;
+  final AndroidAssistantTrigger androidAssistantTrigger;
   final int voiceSilenceDuration;
   const AppSettings({
     this.reduceMotion = false,
@@ -429,6 +494,7 @@ class AppSettings {
     this.ttsEngine = TtsEngine.device,
     this.ttsServerVoiceId,
     this.ttsServerVoiceName,
+    this.androidAssistantTrigger = AndroidAssistantTrigger.overlay,
     this.voiceSilenceDuration = 2000,
   });
 
@@ -455,6 +521,7 @@ class AppSettings {
     Object? ttsServerVoiceId = const _DefaultValue(),
     Object? ttsServerVoiceName = const _DefaultValue(),
     int? voiceSilenceDuration,
+    AndroidAssistantTrigger? androidAssistantTrigger,
   }) {
     return AppSettings(
       reduceMotion: reduceMotion ?? this.reduceMotion,
@@ -486,6 +553,8 @@ class AppSettings {
       ttsServerVoiceName: ttsServerVoiceName is _DefaultValue
           ? this.ttsServerVoiceName
           : ttsServerVoiceName as String?,
+      androidAssistantTrigger:
+          androidAssistantTrigger ?? this.androidAssistantTrigger,
       voiceSilenceDuration: voiceSilenceDuration ?? this.voiceSilenceDuration,
     );
   }
@@ -513,6 +582,7 @@ class AppSettings {
         other.ttsEngine == ttsEngine &&
         other.ttsServerVoiceId == ttsServerVoiceId &&
         other.ttsServerVoiceName == ttsServerVoiceName &&
+        other.androidAssistantTrigger == androidAssistantTrigger &&
         other.voiceSilenceDuration == voiceSilenceDuration &&
         _listEquals(other.quickPills, quickPills);
     // socketTransportMode intentionally not included in == to avoid frequent rebuilds
@@ -541,6 +611,7 @@ class AppSettings {
       ttsEngine,
       ttsServerVoiceId,
       ttsServerVoiceName,
+      androidAssistantTrigger,
       voiceSilenceDuration,
       Object.hashAllUnordered(quickPills),
     ]);
@@ -713,6 +784,16 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
   Future<void> setVoiceSilenceDuration(int milliseconds) async {
     state = state.copyWith(voiceSilenceDuration: milliseconds);
     await SettingsService.setVoiceSilenceDuration(milliseconds);
+  }
+
+  Future<void> setAndroidAssistantTrigger(
+    AndroidAssistantTrigger trigger,
+  ) async {
+    if (state.androidAssistantTrigger == trigger) {
+      return;
+    }
+    state = state.copyWith(androidAssistantTrigger: trigger);
+    await SettingsService.setAndroidAssistantTrigger(trigger);
   }
 
   Future<void> resetToDefaults() async {
