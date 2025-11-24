@@ -4,7 +4,7 @@
 submit_for_review(true)
 skip_metadata(false)
 release_notes({
-  'default' => "https://github.com/cogwheel0/conduit/releases/tag/v2.2.4",
+  'default' => "https://github.com/cogwheel0/conduit/releases/tag/v2.2.5",
 })
 skip_screenshots(true)
 run_precheck_before_submit(false)
