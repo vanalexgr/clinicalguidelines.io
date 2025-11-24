@@ -27,7 +27,12 @@ class LocaleName {
 
 class VoiceInputService {
   static const int _vadSampleRate = 16000;
-  static const int _vadFrameSamples = 1536;
+  static const int _vadFrameSamples = 512;
+  static const int _vadPreSpeechPadFrames = 16;
+  static const int _vadMinSpeechFrames = 8;
+  static const int _vadEndSpeechPadFrames = 6;
+  static const double _vadPositiveSpeechThreshold = 0.6;
+  static const double _vadNegativeSpeechThreshold = 0.35;
   static const Duration _localeFetchTimeout = Duration(seconds: 2);
   static const String _backgroundSttStreamId = 'voice-input-stt';
 
@@ -580,7 +585,6 @@ class VoiceInputService {
         category: IosAudioCategory.playAndRecord,
         options: [
           IosAudioCategoryOptions.allowBluetooth,
-          IosAudioCategoryOptions.allowBluetoothA2DP,
           IosAudioCategoryOptions.defaultToSpeaker,
           IosAudioCategoryOptions.duckOthers,
         ],
@@ -593,18 +597,21 @@ class VoiceInputService {
     await _setupVadStreams();
     final settings = _ref?.read(appSettingsProvider);
     final silenceMs = settings?.voiceSilenceDuration ?? 2000;
-    final redemptionFrames = _silenceDurationToFrames(silenceMs);
-    final endPadFrames = redemptionFrames > 4
-        ? (redemptionFrames / 4).round().clamp(1, redemptionFrames)
-        : 1;
+    final redemptionFrames = _silenceDurationToFrames(
+      silenceMs,
+      frameSamples: _vadFrameSamples,
+    );
 
     try {
       await _vadHandler.startListening(
         frameSamples: _vadFrameSamples,
+        model: 'v5',
+        minSpeechFrames: _vadMinSpeechFrames,
+        preSpeechPadFrames: _vadPreSpeechPadFrames,
         redemptionFrames: redemptionFrames,
-        endSpeechPadFrames: endPadFrames,
-        preSpeechPadFrames: 2,
-        minSpeechFrames: 3,
+        endSpeechPadFrames: _vadEndSpeechPadFrames,
+        positiveSpeechThreshold: _vadPositiveSpeechThreshold,
+        negativeSpeechThreshold: _vadNegativeSpeechThreshold,
         submitUserSpeechOnPause: true,
         recordConfig: const RecordConfig(
           encoder: AudioEncoder.pcm16bits,
@@ -612,14 +619,21 @@ class VoiceInputService {
           numChannels: 1,
           bitRate: 16,
           echoCancel: true,
-          autoGain: true,
+          autoGain: false,
           noiseSuppress: true,
           androidConfig: AndroidRecordConfig(
-            audioSource: AndroidAudioSource.voiceCommunication,
+            audioSource: AndroidAudioSource.voiceRecognition,
             audioManagerMode: AudioManagerMode.modeInCommunication,
             speakerphone: true,
             manageBluetooth: true,
             useLegacy: false,
+          ),
+          iosConfig: IosRecordConfig(
+            categoryOptions: [
+              IosAudioCategoryOption.allowBluetooth,
+              IosAudioCategoryOption.defaultToSpeaker,
+              IosAudioCategoryOption.duckOthers,
+            ],
           ),
         ),
       );
@@ -699,8 +713,9 @@ class VoiceInputService {
     }
   }
 
-  int _silenceDurationToFrames(int milliseconds) {
-    final frameDurationMs = (_vadFrameSamples / _vadSampleRate) * 1000;
+  int _silenceDurationToFrames(int milliseconds, {int? frameSamples}) {
+    final samples = frameSamples ?? _vadFrameSamples;
+    final frameDurationMs = (samples / _vadSampleRate) * 1000;
     final frames = (milliseconds / frameDurationMs).round();
     return frames.clamp(4, 50);
   }
