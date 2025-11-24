@@ -3,9 +3,31 @@ import 'package:flutter/material.dart';
 import '../theme/theme_extensions.dart';
 import 'user_avatar.dart';
 
+/// Displays a model's avatar image with automatic caching and fallback UI.
+/// 
+/// The avatar can display:
+/// - Network images from the OpenWebUI model avatar endpoint
+/// - Data URIs (base64-encoded images)
+/// - A fallback UI showing the first letter of the model name or a brain icon
+/// 
+/// Images are automatically cached using [CachedNetworkImage] with proper
+/// authentication headers. The cache respects self-signed certificates if
+/// configured.
+/// 
+/// Usage:
+/// ```dart
+/// final avatarUrl = resolveModelIconUrlForModel(apiService, model);
+/// ModelAvatar(size: 40, imageUrl: avatarUrl, label: model.name)
+/// ```
 class ModelAvatar extends StatelessWidget {
+  /// The size (width and height) of the avatar in logical pixels.
   final double size;
+  
+  /// The URL of the avatar image. Should be obtained via
+  /// [resolveModelIconUrlForModel] to use the correct OpenWebUI endpoint.
   final String? imageUrl;
+  
+  /// The model name, used for the fallback UI (shows first letter).
   final String? label;
 
   const ModelAvatar({super.key, required this.size, this.imageUrl, this.label});
