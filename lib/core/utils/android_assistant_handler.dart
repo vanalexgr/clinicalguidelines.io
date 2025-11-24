@@ -156,10 +156,10 @@ class AndroidAssistantHandler {
         return;
       }
 
-      // Navigate to voice call page
+      // Navigate to voice call page with new conversation flag
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => const VoiceCallPage(),
+          builder: (context) => const VoiceCallPage(startNewConversation: true),
           fullscreenDialog: true,
         ),
       );

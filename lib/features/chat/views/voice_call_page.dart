@@ -8,10 +8,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/markdown_to_text.dart';
 import '../../../l10n/app_localizations.dart';
+import '../providers/chat_providers.dart';
 import '../services/voice_call_service.dart';
 
 class VoiceCallPage extends ConsumerStatefulWidget {
-  const VoiceCallPage({super.key});
+  const VoiceCallPage({super.key, this.startNewConversation = false});
+
+  final bool startNewConversation;
 
   @override
   ConsumerState<VoiceCallPage> createState() => _VoiceCallPageState();
@@ -54,6 +57,11 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
 
   Future<void> _initializeCall() async {
     try {
+      // Start a new conversation if requested
+      if (widget.startNewConversation) {
+        startNewChat(ref);
+      }
+
       _service = ref.read(voiceCallServiceProvider);
 
       // Subscribe to service streams
