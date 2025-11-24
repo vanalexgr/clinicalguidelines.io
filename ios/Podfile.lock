@@ -64,6 +64,8 @@ PODS:
     - onnxruntime-c (= 1.22.0)
   - package_info_plus (0.4.5):
     - Flutter
+  - quick_actions_ios (0.0.1):
+    - Flutter
   - record_ios (1.1.0):
     - Flutter
   - SDWebImage (5.21.1):
@@ -113,6 +115,7 @@ DEPENDENCIES:
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - objective_c (from `.symlinks/plugins/objective_c/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
+  - quick_actions_ios (from `.symlinks/plugins/quick_actions_ios/ios`)
   - record_ios (from `.symlinks/plugins/record_ios/ios`)
   - share_handler_ios (from `.symlinks/plugins/share_handler_ios/ios`)
   - share_handler_ios_models (from `.symlinks/plugins/share_handler_ios/ios/Models`)
@@ -162,6 +165,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/objective_c/ios"
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
+  quick_actions_ios:
+    :path: ".symlinks/plugins/quick_actions_ios/ios"
   record_ios:
     :path: ".symlinks/plugins/record_ios/ios"
   share_handler_ios:
@@ -204,6 +209,7 @@ SPEC CHECKSUMS:
   onnxruntime-c: 7f778680e96145956c0a31945f260321eed2611a
   onnxruntime-objc: 83d28b87525bd971259a66e153ea32b5d023de19
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
+  quick_actions_ios: 500fcc11711d9f646739093395c4ae8eec25f779
   record_ios: f75fa1d57f840012775c0e93a38a7f3ceea1a374
   SDWebImage: f29024626962457f3470184232766516dee8dfea
   share_handler_ios: e2244e990f826b2c8eaa291ac3831569438ba0fb

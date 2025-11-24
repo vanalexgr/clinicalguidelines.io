@@ -362,6 +362,20 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
     );
   }
 
+  Future<void> openChatFromExternal({
+    String? prompt,
+    bool focusComposer = false,
+    bool resetChat = false,
+  }) {
+    return _prepareChatWithOptions(
+      prompt: prompt,
+      focusComposer: focusComposer,
+      resetChat: resetChat,
+    );
+  }
+
+  Future<void> startVoiceCallFromExternal() => _startVoiceCall();
+
   Future<void> _prepareChatWithOptions({
     String? prompt,
     bool focusComposer = false,
@@ -412,7 +426,7 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
 
     await navigator.push(
       MaterialPageRoute(
-        builder: (_) => const VoiceCallPage(),
+        builder: (_) => const VoiceCallPage(startNewConversation: true),
         fullscreenDialog: true,
       ),
     );
