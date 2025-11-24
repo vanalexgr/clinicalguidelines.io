@@ -1223,6 +1223,26 @@
   "@sendOnEnterDescription": {
     "description": "Explanation of how the Send on Enter toggle behaves."
   },
+  "androidAssistantTitle": "Android digital assistant",
+  "@androidAssistantTitle": {
+    "description": "Tile title for configuring the Android digital assistant trigger."
+  },
+  "androidAssistantDescription": "Choose what happens when you trigger the Android digital assistant.",
+  "@androidAssistantDescription": {
+    "description": "Helper text describing the Android digital assistant trigger setting."
+  },
+  "androidAssistantOverlayOption": "Show quick overlay (default)",
+  "@androidAssistantOverlayOption": {
+    "description": "Option label for keeping the current assistant overlay."
+  },
+  "androidAssistantNewChatOption": "Open Conduit with a new chat",
+  "@androidAssistantNewChatOption": {
+    "description": "Option label for opening the app to a fresh chat from the assistant trigger."
+  },
+  "androidAssistantVoiceCallOption": "Start a voice call",
+  "@androidAssistantVoiceCallOption": {
+    "description": "Option label for jumping straight into voice call from assistant trigger."
+  },
   "sttSettings": "Speech to Text",
   "@sttSettings": {
     "description": "Section header for speech-to-text settings."

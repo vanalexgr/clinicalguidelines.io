@@ -407,6 +407,10 @@ class AppCustomizationPage extends ConsumerWidget {
     final transportLabel = activeTransportMode == 'polling'
         ? l10n.transportModePolling
         : l10n.transportModeWs;
+    final assistantTriggerLabel = _androidAssistantTriggerLabel(
+      l10n,
+      settings.androidAssistantTrigger,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -467,7 +471,161 @@ class AppCustomizationPage extends ConsumerWidget {
               .read(appSettingsProvider.notifier)
               .setSendOnEnter(!settings.sendOnEnter),
         ),
+        if (Platform.isAndroid) ...[
+          const SizedBox(height: Spacing.sm),
+          _CustomizationTile(
+            leading: _buildIconBadge(
+              context,
+              Icons.assistant,
+              color: theme.buttonPrimary,
+            ),
+            title: l10n.androidAssistantTitle,
+            subtitle: assistantTriggerLabel,
+            onTap: () =>
+                _showAndroidAssistantTriggerSheet(context, ref, settings),
+          ),
+        ],
       ],
+    );
+  }
+
+  String _androidAssistantTriggerLabel(
+    AppLocalizations l10n,
+    AndroidAssistantTrigger trigger,
+  ) {
+    switch (trigger) {
+      case AndroidAssistantTrigger.overlay:
+        return l10n.androidAssistantOverlayOption;
+      case AndroidAssistantTrigger.newChat:
+        return l10n.androidAssistantNewChatOption;
+      case AndroidAssistantTrigger.voiceCall:
+        return l10n.androidAssistantVoiceCallOption;
+    }
+  }
+
+  Future<void> _showAndroidAssistantTriggerSheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) async {
+    final theme = context.conduitTheme;
+    final l10n = AppLocalizations.of(context)!;
+    final options = <({AndroidAssistantTrigger value, String label})>[
+      (
+        value: AndroidAssistantTrigger.overlay,
+        label: l10n.androidAssistantOverlayOption,
+      ),
+      (
+        value: AndroidAssistantTrigger.newChat,
+        label: l10n.androidAssistantNewChatOption,
+      ),
+      (
+        value: AndroidAssistantTrigger.voiceCall,
+        label: l10n.androidAssistantVoiceCallOption,
+      ),
+    ];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.sidebarBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppBorderRadius.modal),
+        ),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.lg,
+                  vertical: Spacing.md,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.androidAssistantTitle,
+                            style:
+                                theme.headingSmall?.copyWith(
+                                  color: theme.sidebarForeground,
+                                ) ??
+                                TextStyle(
+                                  color: theme.sidebarForeground,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          const SizedBox(height: Spacing.xs),
+                          Text(
+                            l10n.androidAssistantDescription,
+                            style:
+                                theme.bodySmall?.copyWith(
+                                  color: theme.sidebarForeground.withValues(
+                                    alpha: 0.7,
+                                  ),
+                                ) ??
+                                TextStyle(
+                                  color: theme.sidebarForeground.withValues(
+                                    alpha: 0.7,
+                                  ),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: theme.iconPrimary),
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              for (var i = 0; i < options.length; i++) ...[
+                () {
+                  final option = options[i];
+                  final selected =
+                      settings.androidAssistantTrigger == option.value;
+                  return ListTile(
+                    leading: Icon(
+                      selected ? Icons.check_circle : Icons.circle_outlined,
+                      color: selected
+                          ? theme.buttonPrimary
+                          : theme.iconSecondary,
+                    ),
+                    title: Text(
+                      option.label,
+                      style: theme.bodyMedium?.copyWith(
+                        color: theme.sidebarForeground,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    onTap: () {
+                      if (!selected) {
+                        ref
+                            .read(appSettingsProvider.notifier)
+                            .setAndroidAssistantTrigger(option.value);
+                      }
+                      Navigator.of(sheetContext).pop();
+                    },
+                  );
+                }(),
+                if (i != options.length - 1) const Divider(height: 1),
+              ],
+              const SizedBox(height: Spacing.lg),
+            ],
+          ),
+        );
+      },
     );
   }
 
