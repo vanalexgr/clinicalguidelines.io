@@ -1,7 +1,10 @@
 import AVFoundation
 import BackgroundTasks
 import Flutter
+import AppIntents
+import flutter_app_intents
 import UIKit
+import UniformTypeIdentifiers
 
 final class VoiceBackgroundAudioManager {
     static let shared = VoiceBackgroundAudioManager()
@@ -305,6 +308,248 @@ class BackgroundStreamingHandler: NSObject {
         NotificationCenter.default.removeObserver(self)
         endBackgroundTask()
         VoiceBackgroundAudioManager.shared.deactivate()
+  }
+}
+
+@available(iOS 16.0, *)
+enum AppIntentError: Error {
+    case executionFailed(String)
+}
+
+@available(iOS 16.0, *)
+struct AskConduitIntent: AppIntent {
+    static var title: LocalizedStringResource = "Ask Conduit"
+    static var description = IntentDescription(
+        "Start a Conduit chat with an optional prompt."
+    )
+    static var isDiscoverable = true
+    static var openAppWhenRun = true
+
+    @Parameter(
+        title: "Prompt",
+        requestValueDialog: IntentDialog("What should Conduit answer?")
+    )
+    var prompt: String?
+
+    init() {}
+
+    init(prompt: String?) {
+        self.prompt = prompt
+    }
+
+    func perform() async throws
+        -> some IntentResult & ReturnsValue<String> & OpensIntent
+    {
+        let parameters: [String: Any] = prompt?.isEmpty == false
+            ? ["prompt": prompt ?? ""]
+            : [:]
+        let plugin = FlutterAppIntentsPlugin.shared
+        let result = await plugin.handleIntentInvocation(
+            identifier: "app.cogwheel.conduit.ask_chat",
+            parameters: parameters
+        )
+
+        if let success = result["success"] as? Bool, success {
+            let value = result["value"] as? String ?? "Opening chat"
+            return .result(value: value)
+        }
+
+        let message = result["error"] as? String
+            ?? "Unable to open Conduit chat"
+        throw AppIntentError.executionFailed(message)
+    }
+}
+
+@available(iOS 16.0, *)
+struct StartVoiceCallIntent: AppIntent {
+    static var title: LocalizedStringResource = "Start Voice Call"
+    static var description = IntentDescription(
+        "Start a live voice call with Conduit."
+    )
+    static var isDiscoverable = true
+    static var openAppWhenRun = true
+
+    func perform() async throws
+        -> some IntentResult & ReturnsValue<String> & OpensIntent
+    {
+        let plugin = FlutterAppIntentsPlugin.shared
+        let result = await plugin.handleIntentInvocation(
+            identifier: "app.cogwheel.conduit.start_voice_call",
+            parameters: [:]
+        )
+
+        if let success = result["success"] as? Bool, success {
+            let value = result["value"] as? String ?? "Starting voice call"
+            return .result(value: value)
+        }
+
+        let message = result["error"] as? String
+            ?? "Unable to start voice call"
+        throw AppIntentError.executionFailed(message)
+    }
+}
+
+@available(iOS 16.0, *)
+struct ConduitSendTextIntent: AppIntent {
+    static var title: LocalizedStringResource = "Send to Conduit"
+    static var description = IntentDescription(
+        "Start a Conduit chat with provided text."
+    )
+    static var isDiscoverable = true
+    static var openAppWhenRun = true
+
+    @Parameter(
+        title: "Text",
+        requestValueDialog: IntentDialog("What should Conduit process?")
+    )
+    var text: String?
+
+    func perform() async throws
+        -> some IntentResult & ReturnsValue<String> & OpensIntent
+    {
+        let plugin = FlutterAppIntentsPlugin.shared
+        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = await plugin.handleIntentInvocation(
+            identifier: "app.cogwheel.conduit.send_text",
+            parameters: ["text": trimmed ?? ""]
+        )
+
+        if let success = result["success"] as? Bool, success {
+            let value = result["value"] as? String ?? "Sent to Conduit"
+            return .result(value: value)
+        }
+
+        let message = result["error"] as? String ?? "Unable to send text"
+        throw AppIntentError.executionFailed(message)
+    }
+}
+
+@available(iOS 16.0, *)
+struct ConduitSendUrlIntent: AppIntent {
+    static var title: LocalizedStringResource = "Send Link to Conduit"
+    static var description = IntentDescription(
+        "Send a URL into Conduit for summary or analysis."
+    )
+    static var isDiscoverable = true
+    static var openAppWhenRun = true
+
+    @Parameter(
+        title: "URL",
+        requestValueDialog: IntentDialog("Which link should Conduit analyze?")
+    )
+    var url: URL
+
+    func perform() async throws
+        -> some IntentResult & ReturnsValue<String> & OpensIntent
+    {
+        let plugin = FlutterAppIntentsPlugin.shared
+        let result = await plugin.handleIntentInvocation(
+            identifier: "app.cogwheel.conduit.send_url",
+            parameters: ["url": url.absoluteString]
+        )
+
+        if let success = result["success"] as? Bool, success {
+            let value = result["value"] as? String ?? "Sent link to Conduit"
+            return .result(value: value)
+        }
+
+        let message = result["error"] as? String ?? "Unable to send link"
+        throw AppIntentError.executionFailed(message)
+    }
+}
+
+@available(iOS 16.0, *)
+struct ConduitSendImageIntent: AppIntent {
+    static var title: LocalizedStringResource = "Send Image to Conduit"
+    static var description = IntentDescription(
+        "Send an image into Conduit for analysis."
+    )
+    static var isDiscoverable = true
+    static var openAppWhenRun = true
+
+    @Parameter(
+        title: "Image",
+        requestValueDialog: IntentDialog("Choose an image for Conduit.")
+    )
+    var image: IntentFile
+
+    func perform() async throws
+        -> some IntentResult & ReturnsValue<String> & OpensIntent
+    {
+        if let type = image.type, !type.conforms(to: .image) {
+            throw AppIntentError.executionFailed(
+                "Only image files are supported."
+            )
+        }
+
+        let data = try image.data
+        let base64 = data.base64EncodedString()
+        let name = image.filename ?? "shared_image.jpg"
+
+        let plugin = FlutterAppIntentsPlugin.shared
+        let result = await plugin.handleIntentInvocation(
+            identifier: "app.cogwheel.conduit.send_image",
+            parameters: [
+                "filename": name,
+                "bytes": base64,
+            ]
+        )
+
+        if let success = result["success"] as? Bool, success {
+            let value = result["value"] as? String ?? "Sent image to Conduit"
+            return .result(value: value)
+        }
+
+        let message = result["error"] as? String ?? "Unable to send image"
+        throw AppIntentError.executionFailed(message)
+    }
+}
+
+@available(iOS 16.0, *)
+struct AppShortcuts: AppShortcutsProvider {
+    static var appShortcuts: [AppShortcut] {
+        return [
+            AppShortcut(
+                intent: AskConduitIntent(),
+                phrases: [
+                    "Ask with \(.applicationName)",
+                    "Start chat in \(.applicationName)",
+                    "Open composer in \(.applicationName)",
+                ]
+            ),
+            AppShortcut(
+                intent: StartVoiceCallIntent(),
+                phrases: [
+                    "Start voice call in \(.applicationName)",
+                    "Call with \(.applicationName)",
+                    "Begin voice chat in \(.applicationName)",
+                ]
+            ),
+            AppShortcut(
+                intent: ConduitSendTextIntent(),
+                phrases: [
+                    "Send text to \(.applicationName)",
+                    "Share text with \(.applicationName)",
+                    "Summarize this in \(.applicationName)",
+                ]
+            ),
+            AppShortcut(
+                intent: ConduitSendUrlIntent(),
+                phrases: [
+                    "Summarize link in \(.applicationName)",
+                    "Analyze link with \(.applicationName)",
+                    "Send URL to \(.applicationName)",
+                ]
+            ),
+            AppShortcut(
+                intent: ConduitSendImageIntent(),
+                phrases: [
+                    "Send image to \(.applicationName)",
+                    "Analyze image with \(.applicationName)",
+                    "Share photo to \(.applicationName)",
+                ]
+            ),
+        ]
     }
 }
 
