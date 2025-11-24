@@ -38,7 +38,7 @@ class AppCustomizationPage extends ConsumerWidget {
       return l10n.currentlyUsingLightTheme;
     }();
     final locale = ref.watch(appLocaleProvider);
-    final currentLanguageCode = locale?.languageCode ?? 'system';
+    final currentLanguageCode = locale?.toLanguageTag() ?? 'system';
     final languageLabel = _resolveLanguageLabel(context, currentLanguageCode);
     final activeTheme = ref.watch(appThemePaletteProvider);
 
@@ -198,7 +198,7 @@ class AppCustomizationPage extends ConsumerWidget {
   Widget _buildLanguageSection(
     BuildContext context,
     WidgetRef ref,
-    String currentLanguageCode,
+    String currentLanguageTag,
     String languageLabel,
   ) {
     final theme = context.conduitTheme;
@@ -220,15 +220,16 @@ class AppCustomizationPage extends ConsumerWidget {
           onTap: () async {
             final selected = await _showLanguageSelector(
               context,
-              currentLanguageCode,
+              currentLanguageTag,
             );
             if (selected == null) return;
             if (selected == 'system') {
               await ref.read(appLocaleProvider.notifier).setLocale(null);
             } else {
+              final parsed = _parseLocaleTag(selected);
               await ref
                   .read(appLocaleProvider.notifier)
-                  .setLocale(Locale(selected));
+                  .setLocale(parsed ?? Locale(selected));
             }
           },
         ),
@@ -1741,6 +1742,8 @@ class AppCustomizationPage extends ConsumerWidget {
   }
 
   String _resolveLanguageLabel(BuildContext context, String code) {
+    final normalizedCode = code.replaceAll('_', '-');
+
     switch (code) {
       case 'en':
         return AppLocalizations.of(context)!.english;
@@ -1757,10 +1760,21 @@ class AppCustomizationPage extends ConsumerWidget {
       case 'ru':
         return AppLocalizations.of(context)!.russian;
       case 'zh':
-        return AppLocalizations.of(context)!.chinese;
+        return AppLocalizations.of(context)!.chineseSimplified;
       case 'ko':
         return AppLocalizations.of(context)!.korean;
+      case 'zh-Hant':
+        return AppLocalizations.of(context)!.chineseTraditional;
       default:
+        if (normalizedCode == 'zh-hant') {
+          return AppLocalizations.of(context)!.chineseTraditional;
+        }
+        if (normalizedCode == 'zh') {
+          return AppLocalizations.of(context)!.chineseSimplified;
+        }
+        if (normalizedCode == 'ko') {
+          return AppLocalizations.of(context)!.korean;
+        }
         return AppLocalizations.of(context)!.system;
     }
   }
@@ -1929,6 +1943,8 @@ class AppCustomizationPage extends ConsumerWidget {
   }
 
   Future<String?> _showLanguageSelector(BuildContext context, String current) {
+    final normalizedCurrent = current.replaceAll('_', '-');
+
     return showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1949,52 +1965,79 @@ class AppCustomizationPage extends ConsumerWidget {
               const SizedBox(height: Spacing.sm),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.system),
-                trailing: current == 'system' ? const Icon(Icons.check) : null,
+                trailing: normalizedCurrent == 'system'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'system'),
               ),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.english),
-                trailing: current == 'en' ? const Icon(Icons.check) : null,
+                trailing: normalizedCurrent == 'en'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'en'),
               ),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.deutsch),
-                trailing: current == 'de' ? const Icon(Icons.check) : null,
+                trailing: normalizedCurrent == 'de'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'de'),
               ),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.espanol),
-                trailing: current == 'es' ? const Icon(Icons.check) : null,
+                trailing: normalizedCurrent == 'es'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'es'),
               ),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.francais),
-                trailing: current == 'fr' ? const Icon(Icons.check) : null,
+                trailing: normalizedCurrent == 'fr'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'fr'),
               ),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.italiano),
-                trailing: current == 'it' ? const Icon(Icons.check) : null,
+                trailing: normalizedCurrent == 'it'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'it'),
               ),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.nederlands),
-                trailing: current == 'nl' ? const Icon(Icons.check) : null,
+                trailing: normalizedCurrent == 'nl'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'nl'),
               ),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.russian),
-                trailing: current == 'ru' ? const Icon(Icons.check) : null,
+                trailing: normalizedCurrent == 'ru'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'ru'),
               ),
               ListTile(
-                title: Text(AppLocalizations.of(context)!.chinese),
-                trailing: current == 'zh' ? const Icon(Icons.check) : null,
+                title: Text(AppLocalizations.of(context)!.chineseSimplified),
+                trailing: normalizedCurrent == 'zh'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'zh'),
               ),
               ListTile(
+                title: Text(AppLocalizations.of(context)!.chineseTraditional),
+                trailing: normalizedCurrent == 'zh-Hant'
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () => Navigator.pop(context, 'zh-Hant'),
+              ),
+              ListTile(
                 title: Text(AppLocalizations.of(context)!.korean),
-                trailing: current == 'ko' ? const Icon(Icons.check) : null,
+                trailing: normalizedCurrent == 'ko'
+                    ? const Icon(Icons.check)
+                    : null,
                 onTap: () => Navigator.pop(context, 'ko'),
               ),
               const SizedBox(height: Spacing.sm),
@@ -2004,6 +2047,31 @@ class AppCustomizationPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+Locale? _parseLocaleTag(String code) {
+  final normalized = code.replaceAll('_', '-');
+  final parts = normalized.split('-');
+  if (parts.isEmpty || parts.first.isEmpty) return null;
+
+  final language = parts.first;
+  String? script;
+  String? country;
+
+  for (var i = 1; i < parts.length; i++) {
+    final part = parts[i];
+    if (part.length == 4) {
+      script = '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}';
+    } else if (part.length == 2 || part.length == 3) {
+      country = part.toUpperCase();
+    }
+  }
+
+  return Locale.fromSubtags(
+    languageCode: language,
+    scriptCode: script,
+    countryCode: country,
+  );
 }
 
 class _PaletteOption extends StatelessWidget {

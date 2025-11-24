@@ -862,6 +862,14 @@
   "@chinese": {
     "description": "Language name: Chinese."
   },
+  "chineseSimplified": "Chinese (Simplified)",
+  "@chineseSimplified": {
+    "description": "Language name: Chinese (Simplified)."
+  },
+  "chineseTraditional": "Chinese (Traditional)",
+  "@chineseTraditional": {
+    "description": "Language name: Chinese (Traditional)."
+  },
   "korean": "한국어",
   "@korean": {
     "description": "Language name: Korean."
