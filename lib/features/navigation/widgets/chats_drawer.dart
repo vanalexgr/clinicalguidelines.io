@@ -17,7 +17,6 @@ import '../../../shared/widgets/themed_dialogs.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 import '../../../core/utils/user_display_name.dart';
 import '../../../core/utils/model_icon_utils.dart';
-import '../../auth/providers/unified_auth_providers.dart';
 import '../../../core/utils/user_avatar_utils.dart';
 import '../../../shared/utils/conversation_context_menu.dart';
 import '../../../shared/widgets/user_avatar.dart';
@@ -1483,8 +1482,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       data: (u) => u,
       orElse: () => null,
     );
-    final authUser = ref.watch(currentUserProvider2);
-    final user = userFromProfile ?? authUser;
+    final user = userFromProfile;
     final api = ref.watch(apiServiceProvider);
 
     String initialFor(String name) {

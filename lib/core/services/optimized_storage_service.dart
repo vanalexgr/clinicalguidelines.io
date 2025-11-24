@@ -59,6 +59,10 @@ class OptimizedStorageService {
   static const String _localFoldersKey = HiveStoreKeys.localFolders;
   static const String _onboardingSeenKey = PreferenceKeys.onboardingSeen;
   static const String _reviewerModeKey = PreferenceKeys.reviewerMode;
+  // Longer TTLs to reduce secure storage churn for OpenWebUI sessions.
+  static const Duration _authTokenTtl = Duration(hours: 12);
+  static const Duration _serverIdTtl = Duration(days: 7);
+  static const Duration _credentialsFlagTtl = Duration(hours: 12);
 
   // ---------------------------------------------------------------------------
   // Auth token APIs (secure storage + in-memory cache)
@@ -66,7 +70,7 @@ class OptimizedStorageService {
   Future<void> saveAuthToken(String token) async {
     try {
       await _secureCredentialStorage.saveAuthToken(token);
-      _cacheManager.write(_authTokenKey, token);
+      _cacheManager.write(_authTokenKey, token, ttl: _authTokenTtl);
       DebugLogger.log(
         'Auth token saved and cached',
         scope: 'storage/optimized',
@@ -91,7 +95,7 @@ class OptimizedStorageService {
     try {
       final token = await _secureCredentialStorage.getAuthToken();
       if (token != null) {
-        _cacheManager.write(_authTokenKey, token);
+        _cacheManager.write(_authTokenKey, token, ttl: _authTokenTtl);
       }
       return token;
     } catch (error) {
@@ -136,7 +140,7 @@ class OptimizedStorageService {
         password: password,
       );
 
-      _cacheManager.write('has_credentials', true);
+      _cacheManager.write('has_credentials', true, ttl: _credentialsFlagTtl);
 
       DebugLogger.log(
         'Credentials saved via optimized storage',
@@ -154,7 +158,11 @@ class OptimizedStorageService {
   Future<Map<String, String>?> getSavedCredentials() async {
     try {
       final credentials = await _secureCredentialStorage.getSavedCredentials();
-      _cacheManager.write('has_credentials', credentials != null);
+      _cacheManager.write(
+        'has_credentials',
+        credentials != null,
+        ttl: _credentialsFlagTtl,
+      );
       return credentials;
     } catch (error) {
       DebugLogger.log(
@@ -243,7 +251,7 @@ class OptimizedStorageService {
     } else {
       await _preferencesBox.delete(_activeServerIdKey);
     }
-    _cacheManager.write(_activeServerIdKey, serverId);
+    _cacheManager.write(_activeServerIdKey, serverId, ttl: _serverIdTtl);
   }
 
   Future<String?> getActiveServerId() async {
@@ -254,7 +262,7 @@ class OptimizedStorageService {
       return cachedId;
     }
     final serverId = _preferencesBox.get(_activeServerIdKey) as String?;
-    _cacheManager.write(_activeServerIdKey, serverId);
+    _cacheManager.write(_activeServerIdKey, serverId, ttl: _serverIdTtl);
     return serverId;
   }
 

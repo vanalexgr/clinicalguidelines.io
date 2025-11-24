@@ -8,7 +8,6 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/user_display_name.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/sheet_handle.dart';
-import '../../auth/providers/unified_auth_providers.dart';
 
 class OnboardingSheet extends ConsumerStatefulWidget {
   const OnboardingSheet({super.key});
@@ -73,8 +72,7 @@ class _OnboardingSheetState extends ConsumerState<OnboardingSheet> {
       data: (user) => user,
       orElse: () => null,
     );
-    final authUser = ref.watch(currentUserProvider2);
-    final user = userFromProfile ?? authUser;
+    final user = userFromProfile;
     final greetingName = deriveUserDisplayName(user);
     final pages = _buildPages(l10n, greetingName);
     final pageCount = pages.length;
