@@ -104,22 +104,26 @@ class AuthStateManager extends _$AuthStateManager {
       // Persist user and avatar asynchronously without blocking state update
       unawaited(_persistUserWithAvatar(next, storage));
     } else if (!next.isAuthenticated) {
-      unawaited(storage.saveLocalUser(null).onError((error, stack) {
-        DebugLogger.error(
-          'Failed to clear local user on logout',
-          scope: 'auth/persistence',
-          error: error,
-          stackTrace: stack,
-        );
-      }));
-      unawaited(storage.saveLocalUserAvatar(null).onError((error, stack) {
-        DebugLogger.error(
-          'Failed to clear local user avatar on logout',
-          scope: 'auth/persistence',
-          error: error,
-          stackTrace: stack,
-        );
-      }));
+      unawaited(
+        storage.saveLocalUser(null).onError((error, stack) {
+          DebugLogger.error(
+            'Failed to clear local user on logout',
+            scope: 'auth/persistence',
+            error: error,
+            stackTrace: stack,
+          );
+        }),
+      );
+      unawaited(
+        storage.saveLocalUserAvatar(null).onError((error, stack) {
+          DebugLogger.error(
+            'Failed to clear local user avatar on logout',
+            scope: 'auth/persistence',
+            error: error,
+            stackTrace: stack,
+          );
+        }),
+      );
     }
     state = AsyncValue.data(next);
     if (cache) {
@@ -140,8 +144,8 @@ class AuthStateManager extends _$AuthStateManager {
       );
       final userWithAvatar =
           resolvedAvatar != null && resolvedAvatar != user.profileImage
-              ? user.copyWith(profileImage: resolvedAvatar)
-              : user;
+          ? user.copyWith(profileImage: resolvedAvatar)
+          : user;
       await storage.saveLocalUser(userWithAvatar);
       if (resolvedAvatar != null) {
         await storage.saveLocalUserAvatar(resolvedAvatar);

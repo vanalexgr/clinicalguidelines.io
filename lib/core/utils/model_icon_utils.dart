@@ -2,7 +2,7 @@ import '../models/model.dart';
 import '../services/api_service.dart';
 
 /// Extracts the profile image URL from a model's metadata.
-/// 
+///
 /// Note: After OpenWebUI updates, the profile_image_url field is stripped from
 /// the /api/models response. This function still checks for legacy data but
 /// clients should use [buildModelAvatarUrl] to construct the proper endpoint URL.
@@ -53,10 +53,10 @@ String? deriveModelIcon(Model? model) {
 }
 
 /// Builds the model avatar URL using the new OpenWebUI endpoint.
-/// 
+///
 /// OpenWebUI now serves model avatars through a dedicated endpoint:
 /// `/api/v1/models/model/profile/image?id={modelId}`
-/// 
+///
 /// This endpoint:
 /// - Requires authentication
 /// - Handles external URLs (returns 302 redirect)
@@ -76,12 +76,9 @@ String? buildModelAvatarUrl(ApiService? api, String? modelId) {
     final baseUri = Uri.parse(baseUrl);
     final path = '/api/v1/models/model/profile/image';
     final queryParams = {'id': modelId};
-    
-    final avatarUri = baseUri.replace(
-      path: path,
-      queryParameters: queryParams,
-    );
-    
+
+    final avatarUri = baseUri.replace(path: path, queryParameters: queryParams);
+
     return avatarUri.toString();
   } catch (_) {
     // Fallback to manual URL construction
@@ -140,11 +137,11 @@ String? resolveModelIconUrl(ApiService? api, String? rawUrl) {
 }
 
 /// Resolves the final model icon URL for a given model.
-/// 
+///
 /// This function first checks for a legacy profile_image_url in the model's
 /// metadata (for backwards compatibility with older OpenWebUI versions).
 /// If found and it's an external URL or data URI, it uses that directly.
-/// 
+///
 /// Otherwise, it constructs the URL using the new OpenWebUI endpoint:
 /// `/api/v1/models/model/profile/image?id={modelId}`
 String? resolveModelIconUrlForModel(ApiService? api, Model? model) {
@@ -152,7 +149,7 @@ String? resolveModelIconUrlForModel(ApiService? api, Model? model) {
 
   // Check for legacy profile_image_url in metadata
   final legacyUrl = deriveModelIcon(model);
-  
+
   // If we have a legacy URL that's external or a data URI, use it directly
   if (legacyUrl != null && legacyUrl.isNotEmpty) {
     final trimmed = legacyUrl.trim();
