@@ -5,13 +5,15 @@ import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:record/record.dart';
+import 'package:record/record.dart'
+    hide IosAudioCategory, IosAudioCategoryOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:stts/stts.dart';
 import 'package:vad/vad.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/background_streaming_handler.dart';
 import '../../../core/services/settings_service.dart';
 
 part 'voice_input_service.g.dart';
@@ -27,6 +29,7 @@ class VoiceInputService {
   static const int _vadSampleRate = 16000;
   static const int _vadFrameSamples = 1536;
   static const Duration _localeFetchTimeout = Duration(seconds: 2);
+  static const String _backgroundSttStreamId = 'voice-input-stt';
 
   final VadHandler _vadHandler = VadHandler.create();
   final Stt _speech = Stt();
@@ -36,11 +39,13 @@ class VoiceInputService {
   bool _isInitialized = false;
   bool _isListening = false;
   bool _localSttAvailable = false;
+  bool _localSttActive = false;
   SttPreference _preference = SttPreference.deviceOnly;
   bool _usingServerStt = false;
   String? _selectedLocaleId;
   List<LocaleName> _locales = const [];
   bool _usingFallbackLocales = false;
+  Future<void>? _startingLocalStt;
   StreamController<String>? _textStreamController;
   String _currentText = '';
   StreamController<int>? _intensityController;
@@ -49,6 +54,7 @@ class VoiceInputService {
   int _lastIntensity = 0;
   Timer? _intensityDecayTimer;
   List<double>? _vadPendingSamples;
+  bool _backgroundMicPinned = false;
 
   Stream<String> get textStream =>
       _textStreamController?.stream ?? const Stream<String>.empty();
@@ -266,22 +272,38 @@ class VoiceInputService {
   Future<void> _startLocalRecognition({
     required bool allowOnlineFallback,
   }) async {
+    if (_startingLocalStt != null) {
+      await _startingLocalStt;
+    }
+    final completer = Completer<void>();
+    _startingLocalStt = completer.future;
+    _localSttActive = false;
+
+    await _ensureLocalSttReset();
+    await _configureIosAudioSession();
+
     if (_selectedLocaleId != null) {
       await _speech.setLanguage(_selectedLocaleId!);
     }
 
-    Future<void> attempt(bool offline) => _speech.start(
-      SttRecognitionOptions(punctuation: true, offline: offline),
-    );
+    Future<void> attempt(bool offline) async {
+      await _speech.start(
+        SttRecognitionOptions(punctuation: true, offline: offline),
+      );
+      _localSttActive = true;
+    }
 
     try {
       await attempt(true);
     } catch (error) {
+      _localSttActive = false;
+      await _ensureLocalSttReset();
       if (Platform.isIOS && allowOnlineFallback) {
         try {
           await attempt(false);
           return;
         } catch (secondary) {
+          await _ensureLocalSttReset();
           throw Exception(
             'On-device speech failed ($error); '
             'online fallback failed ($secondary).',
@@ -289,16 +311,25 @@ class VoiceInputService {
         }
       }
       rethrow;
+    } finally {
+      completer.complete();
+      _startingLocalStt = null;
     }
   }
 
-  Stream<String> startListening() {
+  Future<Stream<String>> startListening() async {
     if (!_isInitialized) {
       throw Exception('Voice input not initialized');
     }
 
+    if (_startingLocalStt != null) {
+      try {
+        await _startingLocalStt;
+      } catch (_) {}
+    }
+
     if (_isListening) {
-      unawaited(stopListening());
+      await stopListening();
     }
 
     _textStreamController = StreamController<String>.broadcast();
@@ -316,62 +347,81 @@ class VoiceInputService {
         canUseLocal && _preference != SttPreference.serverOnly;
     final bool shouldUseServer =
         serverAvailable &&
-        (_preference == SttPreference.serverOnly || !shouldUseLocal);
+        (_preference == SttPreference.serverOnly ||
+            (!shouldUseLocal && _preference != SttPreference.deviceOnly));
 
     if (shouldUseLocal) {
+      await _pinBackgroundMicrophone();
       _autoStopTimer?.cancel();
       _autoStopTimer = Timer(const Duration(seconds: 60), () {
         if (_isListening) {
           unawaited(_stopListening());
         }
       });
+      try {
+        final isStillAvailable = await _speech.isSupported();
+        if (!isStillAvailable && _isListening) {
+          _localSttAvailable = false;
+          _textStreamController?.addError(
+            Exception('On-device speech recognition unavailable'),
+          );
+          await _stopListening();
+          return _textStreamController!.stream;
+        }
+      } catch (_) {
+        // ignore availability check errors
+      }
 
-      Future.microtask(() async {
-        try {
-          final isStillAvailable = await _speech.isSupported();
-          if (!isStillAvailable && _isListening) {
-            _localSttAvailable = false;
-            _textStreamController?.addError(
-              Exception('On-device speech recognition unavailable'),
-            );
+      _sttResultSub = _speech.onResultChanged.listen(
+        (SttRecognition result) {
+          if (!_isListening) return;
+          final prevLen = _currentText.length;
+          _currentText = result.text;
+          _textStreamController?.add(_currentText);
+          final delta = (_currentText.length - prevLen).clamp(0, 50);
+          final mapped = (delta / 5.0).ceil();
+          _lastIntensity = mapped.clamp(0, 10);
+          try {
+            _intensityController?.add(_lastIntensity);
+          } catch (_) {}
+          if (result.isFinal) {
             unawaited(_stopListening());
           }
-        } catch (_) {
-          // ignore availability check errors
-        }
-      });
-
-      _sttResultSub = _speech.onResultChanged.listen((SttRecognition result) {
-        if (!_isListening) return;
-        final prevLen = _currentText.length;
-        _currentText = result.text;
-        _textStreamController?.add(_currentText);
-        final delta = (_currentText.length - prevLen).clamp(0, 50);
-        final mapped = (delta / 5.0).ceil();
-        _lastIntensity = mapped.clamp(0, 10);
-        try {
-          _intensityController?.add(_lastIntensity);
-        } catch (_) {}
-        if (result.isFinal) {
-          unawaited(_stopListening());
-        }
-      }, onError: _handleLocalRecognizerError);
-
-      _sttStateSub = _speech.onStateChanged.listen(
-        (_) {},
-        onError: _handleLocalRecognizerError,
+        },
+        onError: (error) {
+          debugPrint('Local STT Error: $error');
+          _handleLocalRecognizerError(error);
+        },
       );
 
-      Future(() async {
-        try {
-          await _startLocalRecognition(allowOnlineFallback: !prefersDeviceOnly);
-        } catch (error) {
-          _localSttAvailable = false;
-          if (!_isListening) return;
-          _textStreamController?.addError(error);
-          await _stopListening();
+      _sttStateSub = _speech.onStateChanged.listen(
+        (state) {
+          debugPrint('Local STT State: $state');
+          if (state == SttState.start) {
+            _localSttActive = true;
+          } else if (state == SttState.stop) {
+            _localSttActive = false;
+          }
+        },
+        onError: (error) {
+          debugPrint('Local STT State Error: $error');
+          _handleLocalRecognizerError(error);
+        },
+      );
+
+      try {
+        debugPrint('Starting local recognition...');
+        await _startLocalRecognition(allowOnlineFallback: !prefersDeviceOnly);
+        debugPrint('Local recognition started');
+      } catch (error) {
+        debugPrint('Failed to start local recognition: $error');
+        _localSttAvailable = false;
+        if (!_isListening) {
+          return _textStreamController!.stream;
         }
-      });
+        _textStreamController?.addError(error);
+        await _stopListening();
+      }
     } else if (shouldUseServer) {
       _usingServerStt = true;
       _autoStopTimer?.cancel();
@@ -406,7 +456,7 @@ class VoiceInputService {
       });
     }
 
-    return _textStreamController!.stream;
+    return _textStreamController?.stream ?? const Stream<String>.empty();
   }
 
   /// Centralized entry point to begin voice recognition.
@@ -417,7 +467,7 @@ class VoiceInputService {
     if (!hasMic) {
       throw Exception('Microphone permission not granted');
     }
-    return startListening();
+    return await startListening();
   }
 
   Future<void> stopListening() async {
@@ -453,9 +503,16 @@ class VoiceInputService {
     await _closeControllers();
 
     _usingServerStt = false;
+    await _releaseBackgroundMicrophone();
   }
 
   Future<void> _stopLocalStt() async {
+    final pendingStart = _startingLocalStt;
+    if (pendingStart != null) {
+      try {
+        await pendingStart;
+      } catch (_) {}
+    }
     if (_sttResultSub != null) {
       try {
         await _sttResultSub?.cancel();
@@ -469,11 +526,67 @@ class VoiceInputService {
       _sttStateSub = null;
     }
 
-    if (_localSttAvailable) {
+    final shouldStopStt = _localSttActive && _localSttAvailable;
+    _localSttActive = false;
+    if (shouldStopStt) {
       try {
         await _speech.stop();
       } catch (_) {}
     }
+    if (Platform.isIOS) {
+      try {
+        await _speech.ios?.setAudioSessionActive(false);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _pinBackgroundMicrophone() async {
+    if (!Platform.isIOS || _backgroundMicPinned) return;
+    try {
+      await BackgroundStreamingHandler.instance.startBackgroundExecution(const [
+        _backgroundSttStreamId,
+      ], requiresMicrophone: true);
+      _backgroundMicPinned = true;
+    } catch (_) {}
+  }
+
+  Future<void> _releaseBackgroundMicrophone() async {
+    if (!Platform.isIOS || !_backgroundMicPinned) return;
+    _backgroundMicPinned = false;
+    try {
+      await BackgroundStreamingHandler.instance.stopBackgroundExecution(const [
+        _backgroundSttStreamId,
+      ]);
+    } catch (_) {}
+  }
+
+  Future<void> _ensureLocalSttReset() async {
+    try {
+      await _speech.stop();
+    } catch (_) {}
+    if (Platform.isIOS) {
+      try {
+        await _speech.ios?.setAudioSessionActive(false);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _configureIosAudioSession() async {
+    if (!Platform.isIOS) return;
+    final ios = _speech.ios;
+    if (ios == null) return;
+    try {
+      await ios.setAudioSessionCategory(
+        category: IosAudioCategory.playAndRecord,
+        options: [
+          IosAudioCategoryOptions.allowBluetooth,
+          IosAudioCategoryOptions.allowBluetoothA2DP,
+          IosAudioCategoryOptions.defaultToSpeaker,
+          IosAudioCategoryOptions.duckOthers,
+        ],
+      );
+      await ios.setAudioSessionActive(true);
+    } catch (_) {}
   }
 
   Future<void> _startServerRecording() async {
@@ -548,7 +661,9 @@ class VoiceInputService {
 
   Future<void> _stopVadRecording() async {
     try {
-      await _vadHandler.stopListening();
+      if (_isListening) {
+        await _vadHandler.stopListening();
+      }
     } catch (_) {}
     await _vadSpeechEndSub?.cancel();
     _vadSpeechEndSub = null;

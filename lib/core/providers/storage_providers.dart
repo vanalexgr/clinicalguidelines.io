@@ -33,3 +33,4 @@ final optimizedStorageServiceProvider = Provider<OptimizedStorageService>((
     workerManager: ref.watch(workerManagerProvider),
   );
 });
+
