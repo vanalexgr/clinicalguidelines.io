@@ -1,1 +1,1 @@
-Snellere gesprekken met gelijktijdig laden, verbeterde navigatie en betere spraakfuncties
+Native oproepen met achtergrondondersteuning en Dynamic Island-integratie voor naadloze iOS-gesprekken

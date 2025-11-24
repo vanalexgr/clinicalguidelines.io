@@ -1,1 +1,1 @@
-Conversazioni più veloci con caricamento concorrente, navigazione migliorata e migliori funzioni vocali
+Chiamate native con supporto in background e integrazione Dynamic Island per conversazioni iOS fluide

@@ -1,1 +1,1 @@
-Schnellere Konversationen mit gleichzeitigem Laden, verbesserter Navigation und besseren Sprachfunktionen
+Native Anrufe mit Hintergrundunterstützung und Dynamic Island Integration für nahtlose iOS-Gespräche

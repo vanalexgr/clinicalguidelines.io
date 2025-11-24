@@ -1,1 +1,1 @@
-Faster conversations with concurrent loading, refined navigation, and better voice features
+Native calling with background support and Dynamic Island integration for seamless iOS conversations
