@@ -339,17 +339,64 @@ class ApiService {
   Future<List<Model>> getModels() async {
     final response = await _dio.get('/api/models');
 
-    // Handle different response formats
-    List<dynamic> models;
-    if (response.data is Map && response.data['data'] != null) {
-      // Response is wrapped in a 'data' field
-      models = response.data['data'] as List;
-    } else if (response.data is List) {
-      // Response is a direct array
-      models = response.data as List;
-    } else {
-      DebugLogger.error('models-format', scope: 'api/models');
-      return [];
+    // Normalize common response formats:
+    // - {"data": [...]} (OpenAI)
+    // - {"models": [...]} (some proxies)
+    // - [...] (raw array)
+    // - String payloads that need JSON decoding
+    dynamic payload = response.data;
+    if (payload is String) {
+      try {
+        payload = json.decode(payload);
+      } catch (_) {}
+    }
+
+    List<dynamic>? rawModels;
+    if (payload is Map && payload['data'] is List) {
+      rawModels = payload['data'] as List;
+    } else if (payload is Map && payload['models'] is List) {
+      rawModels = payload['models'] as List;
+    } else if (payload is List) {
+      rawModels = payload;
+    }
+
+    if (rawModels == null) {
+      DebugLogger.error(
+        'models-format',
+        scope: 'api/models',
+        data: {'type': payload.runtimeType},
+      );
+      return const [];
+    }
+
+    final models = <Model>[];
+    for (final raw in rawModels) {
+      try {
+        if (raw is String) {
+          models.add(Model(id: raw, name: raw, supportsStreaming: true));
+          continue;
+        }
+        if (raw is Map) {
+          final normalized = raw.map(
+            (key, value) => MapEntry(key.toString(), value),
+          );
+          models.add(Model.fromJson(normalized));
+          continue;
+        }
+        DebugLogger.warning(
+          'models-entry-unknown',
+          scope: 'api/models',
+          data: {'type': raw.runtimeType},
+        );
+      } catch (error, stackTrace) {
+        DebugLogger.error(
+          'model-parse-failed',
+          scope: 'api/models',
+          error: error,
+          stackTrace: stackTrace,
+          data: {'type': raw.runtimeType},
+        );
+      }
     }
 
     DebugLogger.log(
@@ -357,7 +404,7 @@ class ApiService {
       scope: 'api/models',
       data: {'count': models.length},
     );
-    return models.map((m) => Model.fromJson(m)).toList();
+    return models;
   }
 
   // Get default model configuration from OpenWebUI user settings
