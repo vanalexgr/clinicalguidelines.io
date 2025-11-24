@@ -521,15 +521,86 @@ final apiTokenUpdaterProvider = Provider<void>((ref) {
 @Riverpod(keepAlive: true)
 Future<User?> currentUser(Ref ref) async {
   final api = ref.read(apiServiceProvider);
-  final isAuthenticated = ref.watch(isAuthenticatedProvider2);
+  final authState = ref.watch(authStateManagerProvider);
+  final isAuthenticated = authState.maybeWhen(
+    data: (state) => state.isAuthenticated,
+    orElse: () => false,
+  );
 
   if (api == null || !isAuthenticated) return null;
 
+  // Fast path: use user already in auth state.
+  final authUser = authState.maybeWhen(
+    data: (state) => state.user,
+    orElse: () => null,
+  );
+  if (authUser != null) return authUser;
+
+  // Next: try cached user from storage, then refresh in the background.
+  final storage = ref.read(optimizedStorageServiceProvider);
+  final cachedUser = await _getCachedUserWithAvatar(storage);
+  if (cachedUser != null) {
+    final lastRefresh = ref.read(_lastUserRefreshProvider);
+    final now = DateTime.now();
+    final shouldRefresh =
+        lastRefresh == null ||
+        now.difference(lastRefresh) > const Duration(minutes: 5);
+
+    if (shouldRefresh) {
+      Future.microtask(() async {
+        final fresh = await _refreshCurrentUser(ref);
+        if (fresh != null && ref.mounted) {
+          ref.read(_lastUserRefreshProvider.notifier).set(now);
+          ref.invalidate(currentUserProvider);
+        }
+      });
+    }
+    return cachedUser;
+  }
+
+  // Fallback: fetch fresh.
+  final fresh = await _refreshCurrentUser(ref);
+  if (fresh != null) {
+    ref.read(_lastUserRefreshProvider.notifier).set(DateTime.now());
+  }
+  return fresh;
+}
+
+Future<User?> _getCachedUserWithAvatar(OptimizedStorageService storage) async {
+  final cachedUser = await storage.getLocalUser();
+  if (cachedUser == null) return null;
+  final cachedAvatar = await storage.getLocalUserAvatar();
+  if (cachedAvatar == null ||
+      cachedAvatar.isEmpty ||
+      cachedUser.profileImage == cachedAvatar) {
+    return cachedUser;
+  }
+  return cachedUser.copyWith(profileImage: cachedAvatar);
+}
+
+Future<User?> _refreshCurrentUser(Ref ref) async {
+  final api = ref.read(apiServiceProvider);
+  if (api == null) return null;
+
   try {
-    return await api.getCurrentUser();
-  } catch (e) {
+    final user = await api.getCurrentUser();
+    final storage = ref.read(optimizedStorageServiceProvider);
+    await storage.saveLocalUser(user);
+    if (user.profileImage != null && user.profileImage!.isNotEmpty) {
+      await storage.saveLocalUserAvatar(user.profileImage);
+    }
+    return user;
+  } catch (_) {
     return null;
   }
+}
+
+@Riverpod(keepAlive: true)
+class _LastUserRefresh extends _$LastUserRefresh {
+  @override
+  DateTime? build() => null;
+
+  void set(DateTime? timestamp) => state = timestamp;
 }
 
 // Helper provider to force refresh auth state - now using unified system
