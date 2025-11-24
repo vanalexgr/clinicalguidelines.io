@@ -13,7 +13,6 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -27,6 +26,7 @@ import org.json.JSONObject
 class BackgroundStreamingService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private val activeStreams = mutableSetOf<String>()
+    private var activeStreamCount = 0
     private var isForeground = false
     private var currentForegroundType: Int = 0
     private var foregroundStartTime: Long = 0
@@ -37,49 +37,82 @@ class BackgroundStreamingService : Service() {
         const val ACTION_START = "START_STREAMING"
         const val ACTION_STOP = "STOP_STREAMING"
         const val EXTRA_REQUIRES_MICROPHONE = "requiresMicrophone"
+        const val EXTRA_STREAM_COUNT = "streamCount"
     }
 
     override fun onCreate() {
         super.onCreate()
         println("BackgroundStreamingService: Service created")
+
+        // Enter foreground immediately to satisfy Android's 5s requirement even
+        // if onStartCommand handling is delayed or cancelled.
+        val initialType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        } else {
+            0
+        }
+        if (!isForeground) {
+            val notification = createMinimalNotification()
+            startForegroundInternal(notification, initialType)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_STOP -> {
-                stopStreaming()
-                return START_NOT_STICKY
-            }
-        }
-        
-        // For KEEP_ALIVE, only refresh the wake lock without restarting foreground
-        if (intent?.action == "KEEP_ALIVE") {
-            keepAlive()
-            return START_STICKY
-        }
-        
-        val notification = createMinimalNotification()
+        val action = intent?.action
+        val incomingStreamCount =
+            intent?.getIntExtra(EXTRA_STREAM_COUNT, 0) ?: 0
+        activeStreamCount = incomingStreamCount
+
         val desiredType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             resolveForegroundServiceType(intent)
         } else {
             0
         }
 
-        if (!isForeground) {
-            if (!startForegroundInternal(notification, desiredType)) {
+        // Always enter foreground as early as possible to avoid the 5s timeout
+        // even when stop/keep-alive races deliver a STOP intent first.
+        val needsTypeUpdate = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            currentForegroundType != desiredType
+
+        if (!isForeground || needsTypeUpdate) {
+            val notification = createMinimalNotification()
+            val enteredForeground = if (!isForeground) {
+                startForegroundInternal(notification, desiredType)
+            } else {
+                updateForegroundType(notification, desiredType)
+                true
+            }
+
+            if (!enteredForeground) {
                 stopSelf()
                 return START_NOT_STICKY
             }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            currentForegroundType != desiredType
-        ) {
-            updateForegroundType(notification, desiredType)
+
+            // If no streams are active after entering foreground, shut down to
+            // avoid lingering foreground instances that could trigger
+            // DidNotStopInTime exceptions.
+            if (activeStreamCount <= 0) {
+                stopStreaming()
+                return START_NOT_STICKY
+            }
         }
 
-        when (intent?.action) {
+        when (action) {
+            ACTION_STOP -> {
+                stopStreaming()
+                return START_NOT_STICKY
+            }
+            "KEEP_ALIVE" -> {
+                keepAlive()
+                return START_STICKY
+            }
             ACTION_START -> {
-                acquireWakeLock()
-                println("BackgroundStreamingService: Started foreground service")
+                if (activeStreamCount > 0) {
+                    acquireWakeLock()
+                    println("BackgroundStreamingService: Started foreground service")
+                } else {
+                    println("BackgroundStreamingService: No active streams; skipping wake lock")
+                }
             }
         }
 
@@ -149,6 +182,8 @@ class BackgroundStreamingService : Service() {
     }
 
     private fun createMinimalNotification(): Notification {
+        ensureNotificationChannel()
+
         // Create a minimal, silent notification (required for foreground service)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Conduit")
@@ -161,6 +196,29 @@ class BackgroundStreamingService : Service() {
             .setShowWhen(false)
             .setSilent(true)
             .build()
+    }
+
+    private fun ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+        val manager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
+
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Background Service",
+            NotificationManager.IMPORTANCE_MIN,
+        ).apply {
+            description = "Background service for Conduit"
+            setShowBadge(false)
+            enableLights(false)
+            enableVibration(false)
+            setSound(null, null)
+            lockscreenVisibility = Notification.VISIBILITY_SECRET
+        }
+
+        manager.createNotificationChannel(channel)
     }
     
     private fun acquireWakeLock() {
@@ -189,6 +247,11 @@ class BackgroundStreamingService : Service() {
     }
     
     private fun keepAlive() {
+        if (activeStreamCount <= 0) {
+            stopStreaming()
+            return
+        }
+
         // Check if we're approaching Android 14's 6-hour dataSync limit
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && isForeground) {
             val uptime = System.currentTimeMillis() - foregroundStartTime
@@ -210,6 +273,7 @@ class BackgroundStreamingService : Service() {
     private fun stopStreaming() {
         println("BackgroundStreamingService: Stopping service...")
         activeStreams.clear()
+        activeStreamCount = 0
         releaseWakeLock()
         
         if (isForeground) {
@@ -238,8 +302,21 @@ class BackgroundStreamingService : Service() {
 
     override fun onDestroy() {
         println("BackgroundStreamingService: onDestroy called")
+        if (isForeground) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+            } catch (e: Exception) {
+                println("BackgroundStreamingService: Error stopping foreground in onDestroy: ${e.message}")
+            }
+        }
         releaseWakeLock()
         activeStreams.clear()
+        activeStreamCount = 0
         isForeground = false
         foregroundStartTime = 0
         super.onDestroy()
@@ -382,7 +459,10 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
     private fun startForegroundService() {
         try {
             val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
-            serviceIntent.putExtra("streamCount", activeStreams.size)
+            serviceIntent.putExtra(
+                BackgroundStreamingService.EXTRA_STREAM_COUNT,
+                activeStreams.size,
+            )
             serviceIntent.putExtra(
                 BackgroundStreamingService.EXTRA_REQUIRES_MICROPHONE,
                 streamsRequiringMic.isNotEmpty(),
@@ -454,7 +534,10 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         try {
             val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
             serviceIntent.action = "KEEP_ALIVE"
-            serviceIntent.putExtra("streamCount", activeStreams.size)
+            serviceIntent.putExtra(
+                BackgroundStreamingService.EXTRA_STREAM_COUNT,
+                activeStreams.size,
+            )
             serviceIntent.putExtra(
                 BackgroundStreamingService.EXTRA_REQUIRES_MICROPHONE,
                 streamsRequiringMic.isNotEmpty(),
