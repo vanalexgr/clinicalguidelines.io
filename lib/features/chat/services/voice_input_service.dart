@@ -661,9 +661,7 @@ class VoiceInputService {
 
   Future<void> _stopVadRecording() async {
     try {
-      if (_isListening) {
-        await _vadHandler.stopListening();
-      }
+      await _vadHandler.stopListening();
     } catch (_) {}
     await _vadSpeechEndSub?.cancel();
     _vadSpeechEndSub = null;
