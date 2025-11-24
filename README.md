@@ -193,6 +193,10 @@ Conduit is currently in active development. We welcome your feedback and contrib
 - Android: minSdk 23+, ensure correct Java and Gradle; if builds fail, try `flutter clean`.
 - Codegen conflicts: `flutter pub run build_runner build --delete-conflicting-outputs`.
 
+### Streaming Issues
+
+If you experience problems with real-time streaming or chat updates, ensure websocket support is enabled on your Open-WebUI server. See the [Websocket Support documentation](https://docs.openwebui.com/tutorials/integrations/redis/#websocket-configuration) for configuration details. Required environment variables include `ENABLE_WEBSOCKET_SUPPORT="true"`.
+
 ## Security & Privacy
 
 - Credentials are stored using platform secure storage (Keychain/Keystore).
