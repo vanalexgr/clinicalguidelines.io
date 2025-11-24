@@ -19,3 +19,6 @@
 # Keep WebSocket functionality
 -keep class org.java_websocket.** { *; }
 -dontwarn org.java_websocket.**
+
+# Keep Flutter CallKit Incoming classes
+-keep class com.hiennv.flutter_callkit_incoming.** { *; }

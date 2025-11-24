@@ -69,6 +69,22 @@ class TextToSpeechService {
           break;
       }
     });
+
+    if (!kIsWeb && Platform.isIOS) {
+      final context = AudioContext(
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.playAndRecord,
+          options: const {
+            AVAudioSessionOptions.defaultToSpeaker,
+            AVAudioSessionOptions.mixWithOthers,
+            AVAudioSessionOptions.allowBluetooth,
+            AVAudioSessionOptions.allowBluetoothA2DP,
+          },
+        ),
+        android: const AudioContextAndroid(),
+      );
+      _player.setAudioContext(context);
+    }
   }
 
   Future<void> _configureDeviceEngine({
@@ -87,12 +103,13 @@ class TextToSpeechService {
 
       if (!kIsWeb && Platform.isIOS) {
         await _tts.setSharedInstance(true);
-        await _tts.setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
-          IosTextToSpeechAudioCategoryOptions.mixWithOthers,
-          IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
-          IosTextToSpeechAudioCategoryOptions.allowBluetooth,
-          IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
-        ]);
+        await _tts
+            .setIosAudioCategory(IosTextToSpeechAudioCategory.playAndRecord, [
+              IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+              IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+              IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+              IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+            ]);
       }
 
       if (_engine != TtsEngine.server) {

@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:developer' as developer;
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/background_streaming_handler.dart';
+import '../../../core/services/callkit_service.dart';
 import '../../../core/services/socket_service.dart';
 import '../../../core/utils/markdown_to_text.dart';
 import '../providers/chat_providers.dart';
@@ -38,6 +41,7 @@ class VoiceCallService {
   final TextToSpeechService _tts;
   final SocketService _socketService;
   final Ref _ref;
+  final CallKitService _callKitService;
   final VoiceCallNotificationService _notificationService =
       VoiceCallNotificationService();
 
@@ -64,6 +68,9 @@ class VoiceCallService {
   bool _serverPipelineActive = false;
   int _nextServerChunkId = 0;
   int _nextServerPlaybackId = 0;
+  bool _callKitPermissionsRequested = false;
+  String? _callKitCallId;
+  bool _callKitConnectedReported = false;
 
   final StreamController<VoiceCallState> _stateController =
       StreamController<VoiceCallState>.broadcast();
@@ -73,15 +80,18 @@ class VoiceCallService {
       StreamController<String>.broadcast();
   final StreamController<int> _intensityController =
       StreamController<int>.broadcast();
+  StreamSubscription<CallEvent>? _callKitEventSubscription;
 
   VoiceCallService({
     required VoiceInputService voiceInput,
     required TextToSpeechService tts,
     required SocketService socketService,
+    required CallKitService callKitService,
     required Ref ref,
   }) : _voiceInput = voiceInput,
        _tts = tts,
        _socketService = socketService,
+       _callKitService = callKitService,
        _ref = ref {
     _tts.bindHandlers(
       onStart: _handleTtsStart,
@@ -161,10 +171,124 @@ class VoiceCallService {
     );
   }
 
+  Future<void> _ensureCallKitPermissions() async {
+    if (_callKitPermissionsRequested) return;
+    _callKitPermissionsRequested = true;
+    await _callKitService.requestPermissions();
+  }
+
+  Future<void> _startCallKitSession({required String modelName}) async {
+    try {
+      await _ensureCallKitPermissions();
+      final callId = await _callKitService.startOutgoingVoiceCall(
+        calleeName: modelName,
+        handle: 'Conduit AI',
+      );
+      _callKitCallId = callId;
+      _callKitConnectedReported = false;
+    } catch (error, stackTrace) {
+      developer.log(
+        'CallKit outgoing setup failed: $error',
+        name: 'voice_call',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _endCallKitSession() async {
+    if (_callKitCallId == null) {
+      return;
+    }
+    final callId = _callKitCallId;
+    _callKitCallId = null;
+    _callKitConnectedReported = false;
+    try {
+      await _callKitService.endCall(callId!);
+    } catch (error, stackTrace) {
+      developer.log(
+        'CallKit endCall failed: $error',
+        name: 'voice_call',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      await _callKitService.endAllCalls();
+    }
+  }
+
+  void _listenForCallKitEvents() {
+    _callKitEventSubscription?.cancel();
+    if (_callKitCallId == null) return;
+
+    _callKitEventSubscription = _callKitService.events.listen((callEvent) {
+      final eventId = _extractCallId(callEvent.body);
+      if (_callKitCallId != null &&
+          eventId != null &&
+          eventId != _callKitCallId) {
+        return;
+      }
+
+      switch (callEvent.event) {
+        case Event.actionCallEnded:
+        case Event.actionCallDecline:
+        case Event.actionCallTimeout:
+          if (_state != VoiceCallState.disconnected) {
+            unawaited(stopCall());
+          }
+          break;
+        case Event.actionCallToggleMute:
+          _handleCallKitMute(callEvent.body);
+          break;
+        case Event.actionCallToggleHold:
+          _handleCallKitHold(callEvent.body);
+          break;
+        case Event.actionCallConnected:
+          unawaited(_markCallKitConnected());
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  void _handleCallKitMute(dynamic body) {
+    final isMuted = body is Map ? body['isMuted'] == true : body == true;
+    if (_isMuted != isMuted) {
+      _toggleMute();
+    }
+  }
+
+  void _handleCallKitHold(dynamic body) {
+    final onHold = body is Map ? body['isOnHold'] == true : body == true;
+    if (onHold) {
+      unawaited(pauseListening(reason: VoiceCallPauseReason.system));
+    } else {
+      unawaited(resumeListening(reason: VoiceCallPauseReason.system));
+    }
+  }
+
+  Future<void> _markCallKitConnected() async {
+    if (_callKitCallId == null || _callKitConnectedReported) return;
+    await _callKitService.markCallConnected(_callKitCallId!);
+    _callKitConnectedReported = true;
+  }
+
+  String? _extractCallId(dynamic body) {
+    if (body is Map) {
+      final id = body['id'];
+      return id?.toString();
+    }
+    return null;
+  }
+
   Future<void> startCall(String? conversationId) async {
     if (_isDisposed) return;
 
     try {
+      final modelName = _ref.read(selectedModelProvider)?.name ?? 'Assistant';
+      await _startCallKitSession(modelName: modelName);
+      _listenForCallKitEvents();
+
       // Update state (this will trigger notification)
       _updateState(VoiceCallState.connecting);
 
@@ -200,15 +324,19 @@ class VoiceCallService {
 
       // Start listening for user voice input
       await _startListening();
+      await _markCallKitConnected();
     } catch (e) {
       _updateState(VoiceCallState.error);
       _keepAliveTimer?.cancel();
       _keepAliveTimer = null;
+      await _callKitEventSubscription?.cancel();
+      _callKitEventSubscription = null;
       await WakelockPlus.disable();
       await _notificationService.cancelNotification();
       await BackgroundStreamingHandler.instance.stopBackgroundExecution(const [
         _voiceCallStreamId,
       ]);
+      await _endCallKitSession();
       rethrow;
     }
   }
@@ -551,10 +679,12 @@ class VoiceCallService {
       return;
     }
     _isSpeaking = false;
+    _listeningSuspendedForSpeech = false;
     if (_serverAudioBuffer.containsKey(_nextServerPlaybackId)) {
       _maybeStartServerAudio();
       return;
     }
+    _responseCompleted = true;
     _maybeResumeListeningAfterSpeech();
   }
 
@@ -603,6 +733,7 @@ class VoiceCallService {
       return;
     }
 
+    _listeningSuspendedForSpeech = false;
     unawaited(_startListening());
   }
 
@@ -618,6 +749,8 @@ class VoiceCallService {
       unawaited(_startNextSpeechChunk());
       return;
     }
+    _responseCompleted = true;
+    _listeningSuspendedForSpeech = false;
     _maybeResumeListeningAfterSpeech();
   }
 
@@ -641,6 +774,8 @@ class VoiceCallService {
 
     await _transcriptSubscription?.cancel();
     await _intensitySubscription?.cancel();
+    await _callKitEventSubscription?.cancel();
+    _callKitEventSubscription = null;
     _socketSubscription?.dispose();
 
     await _voiceInput.stopListening();
@@ -653,6 +788,7 @@ class VoiceCallService {
 
     // Cancel notification
     await _notificationService.cancelNotification();
+    await _endCallKitSession();
 
     // Disable wake lock when call ends
     await WakelockPlus.disable();
@@ -734,6 +870,10 @@ class VoiceCallService {
   }
 
   Future<void> _updateNotification() async {
+    // When CallKit is active, rely on native UI instead of the ongoing
+    // notification to avoid duplicate surfaces.
+    if (_callKitCallId != null) return;
+
     // Skip notification for idle, error, and disconnected states
     if (_state == VoiceCallState.idle ||
         _state == VoiceCallState.error ||
@@ -801,6 +941,8 @@ class VoiceCallService {
 
     await _transcriptSubscription?.cancel();
     await _intensitySubscription?.cancel();
+    await _callKitEventSubscription?.cancel();
+    _callKitEventSubscription = null;
     _socketSubscription?.dispose();
 
     _voiceInput.dispose();
@@ -809,6 +951,7 @@ class VoiceCallService {
 
     // Cancel notification
     await _notificationService.cancelNotification();
+    await _endCallKitSession();
 
     // Ensure wake lock is disabled on dispose
     await WakelockPlus.disable();
@@ -830,6 +973,7 @@ VoiceCallService voiceCallService(Ref ref) {
   final api = ref.watch(apiServiceProvider);
   final tts = TextToSpeechService(api: api);
   final socketService = ref.watch(socketServiceProvider);
+  final callKit = ref.watch(callKitServiceProvider);
 
   if (socketService == null) {
     throw Exception('Socket service not available');
@@ -839,6 +983,7 @@ VoiceCallService voiceCallService(Ref ref) {
     voiceInput: voiceInput,
     tts: tts,
     socketService: socketService,
+    callKitService: callKit,
     ref: ref,
   );
 
