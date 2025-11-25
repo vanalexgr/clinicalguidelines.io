@@ -90,9 +90,7 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
-		<string>remote-notification</string>
 		<string>processing</string>
-		<string>voip</string>
 	</array>
 		<!-- Background Task Identifiers -->
 		<key>BGTaskSchedulerPermittedIdentifiers</key>

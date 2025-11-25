@@ -54,12 +54,21 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
   end
 
-  # Reduce chances of embed/cycle: don't embed Swift stdlib explicitly
+  # Add -ObjC linker flag for objective_c native assets (required for Release builds)
+  # This fixes: "dlsym(RTLD_DEFAULT, DOBJC_initializeApi): symbol not found"
   installer.aggregate_targets.each do |aggregate_target|
     aggregate_target.user_project.native_targets.each do |native_target|
       if ['Runner', 'ShareExtension'].include?(native_target.name)
         native_target.build_configurations.each do |config|
           config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'NO'
+          
+          # Add -ObjC flag for objective_c package support in Release builds
+          other_ldflags = config.build_settings['OTHER_LDFLAGS'] || ['$(inherited)']
+          other_ldflags = [other_ldflags] if other_ldflags.is_a?(String)
+          unless other_ldflags.include?('-ObjC')
+            other_ldflags << '-ObjC'
+          end
+          config.build_settings['OTHER_LDFLAGS'] = other_ldflags
         end
       end
     end
