@@ -91,6 +91,7 @@
 	<array>
 		<string>audio</string>
 		<string>processing</string>
+		<string>voip</string>
 	</array>
 		<!-- Background Task Identifiers -->
 		<key>BGTaskSchedulerPermittedIdentifiers</key>
