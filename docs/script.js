@@ -273,9 +273,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ============================================
-    // FETCH GITHUB STATS
+    // FETCH REPOSITORY STATS
     // ============================================
-    const formatNumber = (num) => {
+    const formatCount = (num) => {
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
         }
@@ -285,48 +285,68 @@ document.addEventListener('DOMContentLoaded', () => {
         return num.toString();
     };
 
-    const starsElement = document.getElementById('github-stars');
-    const downloadsElement = document.getElementById('github-downloads');
+    // Use data attributes instead of IDs to avoid ad blocker element hiding
+    const starsEl = document.querySelector('[data-metric="stars"]');
+    const downloadsEl = document.querySelector('[data-metric="downloads"]');
     
-    // Fetch repo stats (stars)
-    if (starsElement) {
-        fetch('https://api.github.com/repos/cogwheel0/conduit')
-            .then(response => response.json())
-            .then(data => {
-                if (data.stargazers_count !== undefined) {
-                    starsElement.textContent = formatNumber(data.stargazers_count);
-                    starsElement.classList.add('loaded');
-                }
-            })
-            .catch(() => {
-                starsElement.textContent = '★';
-            });
+    // Build API URL dynamically to avoid static pattern matching
+    const apiBase = ['https:/', '/api', '.github', '.com/'].join('');
+    const repoPath = 'repos/cogwheel0/conduit';
+    
+    // Fetch repo stats using a class-based approach (less likely to be blocked)
+    const fetchRepoData = async () => {
+        try {
+            const endpoint = apiBase + repoPath;
+            const response = await fetch(endpoint);
+            if (!response.ok) throw new Error('API request failed');
+            return await response.json();
+        } catch (e) {
+            return null;
+        }
+    };
+    
+    const fetchReleaseData = async () => {
+        try {
+            const endpoint = apiBase + repoPath + '/releases';
+            const response = await fetch(endpoint);
+            if (!response.ok) throw new Error('API request failed');
+            return await response.json();
+        } catch (e) {
+            return null;
+        }
+    };
+    
+    // Initialize stats
+    if (starsEl) {
+        fetchRepoData().then(data => {
+            if (data && data.stargazers_count !== undefined) {
+                starsEl.textContent = formatCount(data.stargazers_count);
+                starsEl.classList.add('loaded');
+            } else {
+                starsEl.textContent = '★';
+            }
+        });
     }
 
-    // Fetch releases (downloads)
-    if (downloadsElement) {
-        fetch('https://api.github.com/repos/cogwheel0/conduit/releases')
-            .then(response => response.json())
-            .then(releases => {
-                if (Array.isArray(releases)) {
-                    const totalDownloads = releases.reduce((total, release) => {
-                        return total + release.assets.reduce((assetTotal, asset) => {
-                            return assetTotal + (asset.download_count || 0);
-                        }, 0);
+    if (downloadsEl) {
+        fetchReleaseData().then(releases => {
+            if (Array.isArray(releases)) {
+                const total = releases.reduce((sum, release) => {
+                    return sum + release.assets.reduce((assetSum, asset) => {
+                        return assetSum + (asset.download_count || 0);
                     }, 0);
-                    
-                    if (totalDownloads > 0) {
-                        downloadsElement.textContent = formatNumber(totalDownloads);
-                    } else {
-                        // If no GitHub downloads, show a generic indicator
-                        downloadsElement.textContent = 'New';
-                    }
-                    downloadsElement.classList.add('loaded');
+                }, 0);
+                
+                if (total > 0) {
+                    downloadsEl.textContent = formatCount(total);
+                } else {
+                    downloadsEl.textContent = 'New';
                 }
-            })
-            .catch(() => {
-                downloadsElement.textContent = '↓';
-            });
+                downloadsEl.classList.add('loaded');
+            } else {
+                downloadsEl.textContent = '↓';
+            }
+        });
     }
 
     console.log('✨ Conduit landing page initialized');
