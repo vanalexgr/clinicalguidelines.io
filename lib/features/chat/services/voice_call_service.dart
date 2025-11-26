@@ -71,6 +71,7 @@ class VoiceCallService {
   bool _callKitPermissionsRequested = false;
   String? _callKitCallId;
   bool _callKitConnectedReported = false;
+  bool get _callKitEnabled => _callKitService.isAvailable;
 
   final StreamController<VoiceCallState> _stateController =
       StreamController<VoiceCallState>.broadcast();
@@ -172,12 +173,16 @@ class VoiceCallService {
   }
 
   Future<void> _ensureCallKitPermissions() async {
+    if (!_callKitEnabled) return;
+
     if (_callKitPermissionsRequested) return;
     _callKitPermissionsRequested = true;
     await _callKitService.requestPermissions();
   }
 
   Future<void> _startCallKitSession({required String modelName}) async {
+    if (!_callKitEnabled) return;
+
     try {
       await _ensureCallKitPermissions();
       final callId = await _callKitService.startOutgoingVoiceCall(
@@ -197,6 +202,8 @@ class VoiceCallService {
   }
 
   Future<void> _endCallKitSession() async {
+    if (!_callKitEnabled) return;
+
     if (_callKitCallId == null) {
       return;
     }
@@ -218,7 +225,7 @@ class VoiceCallService {
 
   void _listenForCallKitEvents() {
     _callKitEventSubscription?.cancel();
-    if (_callKitCallId == null) return;
+    if (!_callKitEnabled || _callKitCallId == null) return;
 
     _callKitEventSubscription = _callKitService.events.listen((callEvent) {
       final eventId = _extractCallId(callEvent.body);
@@ -268,6 +275,8 @@ class VoiceCallService {
   }
 
   Future<void> _markCallKitConnected() async {
+    if (!_callKitEnabled) return;
+
     if (_callKitCallId == null || _callKitConnectedReported) return;
     await _callKitService.markCallConnected(_callKitCallId!);
     _callKitConnectedReported = true;

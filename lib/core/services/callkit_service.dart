@@ -1,4 +1,6 @@
 import 'dart:developer' as developer;
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
@@ -9,13 +11,22 @@ part 'callkit_service.g.dart';
 
 /// Thin wrapper around `flutter_callkit_incoming` for voice calls.
 class CallKitService {
-  CallKitService({Uuid? uuid}) : _uuid = uuid ?? const Uuid();
+  CallKitService({Uuid? uuid})
+    : _uuid = uuid ?? const Uuid(),
+      _callKitAllowed = _computeCallKitAllowed();
 
   final Uuid _uuid;
+  final bool _callKitAllowed;
+  bool _loggedCallKitDisabled = false;
   static const int _defaultCallDurationMs = 2 * 60 * 60 * 1000; // 2 hours
+
+  /// Returns whether CallKit can be used on this device/region.
+  bool get isAvailable => _callKitAllowed;
 
   /// Requests the notification/full-screen intent permissions needed on Android.
   Future<void> requestPermissions() async {
+    if (!_shouldUseCallKit('request permissions')) return;
+
     await _safe(
       () => FlutterCallkitIncoming.requestNotificationPermission(
         <String, dynamic>{
@@ -37,6 +48,8 @@ class CallKitService {
     String? avatar,
     int? durationMs,
   }) async {
+    if (!_shouldUseCallKit('start call')) return null;
+
     final id = _uuid.v4();
     final params = _buildParams(
       id: id,
@@ -61,6 +74,8 @@ class CallKitService {
 
   /// Marks the current call as connected so iOS shows an incrementing timer.
   Future<void> markCallConnected(String id) async {
+    if (!_shouldUseCallKit('mark call connected')) return;
+
     try {
       await FlutterCallkitIncoming.setCallConnected(id);
     } catch (error, stackTrace) {
@@ -75,16 +90,22 @@ class CallKitService {
 
   /// Ends a specific call id.
   Future<void> endCall(String id) async {
+    if (!_shouldUseCallKit('end call')) return;
+
     await _safe(() => FlutterCallkitIncoming.endCall(id));
   }
 
   /// Clears all ongoing/missed calls.
   Future<void> endAllCalls() async {
+    if (!_shouldUseCallKit('end all calls')) return;
+
     await _safe(FlutterCallkitIncoming.endAllCalls);
   }
 
   /// Returns the platform VOIP token (iOS PushKit) when available.
   Future<String?> getVoipToken() async {
+    if (!_shouldUseCallKit('fetch VoIP token')) return null;
+
     final token = await _safe<dynamic>(
       () => FlutterCallkitIncoming.getDevicePushTokenVoIP(),
     );
@@ -95,6 +116,10 @@ class CallKitService {
 
   /// Returns the raw active call list from the plugin.
   Future<List<Map<String, dynamic>>> activeCalls() async {
+    if (!_shouldUseCallKit('fetch active calls')) {
+      return <Map<String, dynamic>>[];
+    }
+
     final calls = await _safe<dynamic>(FlutterCallkitIncoming.activeCalls);
     if (calls is List) {
       return calls
@@ -106,8 +131,14 @@ class CallKitService {
   }
 
   /// Stream of CallKit events from the native layer.
-  Stream<CallEvent> get events =>
-      FlutterCallkitIncoming.onEvent.where((event) => event != null).cast();
+  Stream<CallEvent> get events {
+    if (!_callKitAllowed) {
+      return const Stream<CallEvent>.empty();
+    }
+    return FlutterCallkitIncoming.onEvent
+        .where((event) => event != null)
+        .cast();
+  }
 
   CallKitParams _buildParams({
     required String id,
@@ -176,6 +207,32 @@ class CallKitService {
       );
       return null;
     }
+  }
+
+  bool _shouldUseCallKit(String reason) {
+    if (_callKitAllowed) return true;
+    if (_loggedCallKitDisabled) return false;
+    _loggedCallKitDisabled = true;
+    developer.log(
+      'CallKit disabled on iOS devices set to mainland China; '
+      'skipping $reason.',
+      name: 'callkit',
+    );
+    return false;
+  }
+
+  static bool _computeCallKitAllowed() {
+    if (!Platform.isIOS) return true;
+
+    final dispatcher = ui.PlatformDispatcher.instance;
+    final locale = dispatcher.locale;
+    return !_isMainlandChinaLocale(locale);
+  }
+
+  static bool _isMainlandChinaLocale(ui.Locale? locale) {
+    if (locale == null) return false;
+    final country = locale.countryCode?.toUpperCase();
+    return country == 'CN';
   }
 }
 
