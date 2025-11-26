@@ -30,6 +30,7 @@ class ApiAuthInterceptor extends Interceptor {
 
   // Endpoints that have optional authentication (work without but better with)
   static const Set<String> _optionalAuthEndpoints = {
+    '/api/config',
     '/api/models',
     '/api/v1/configs/models',
   };

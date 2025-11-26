@@ -81,8 +81,14 @@ class RouterNotifier extends ChangeNotifier {
     final activeServer = activeServerAsync.asData?.value;
     final hasActiveServer = activeServer != null;
     if (!hasActiveServer) {
-      // Allow auth-related routes while no server configured
-      if (_isAuthLocation(location)) return null;
+      // No server configured - redirect to server connection
+      // Exception: allow staying on server connection or authentication pages
+      // But always redirect away from connection issue page (user logged out)
+      if (location == Routes.serverConnection ||
+          location == Routes.authentication ||
+          location == Routes.login) {
+        return null;
+      }
       return Routes.serverConnection;
     }
 

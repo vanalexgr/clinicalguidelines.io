@@ -37,6 +37,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   bool _useApiKey = false;
   String? _loginError;
   bool _isSigningIn = false;
+  bool _serverConfigSaved = false;
 
   @override
   void initState() {
@@ -72,13 +73,20 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
     });
 
     try {
+      // Save server config on first sign-in attempt if it's a new config
+      // This persists the server so user can retry with different credentials
+      if (widget.serverConfig != null && !_serverConfigSaved) {
+        await _saveServerConfig(widget.serverConfig!);
+        _serverConfigSaved = true;
+      }
+
       final actions = ref.read(authActionsProvider);
       bool success;
 
       if (_useApiKey) {
         success = await actions.loginWithApiKey(
           _apiKeyController.text.trim(),
-          rememberCredentials: true, // Consistent with credentials method
+          rememberCredentials: true,
         );
       } else {
         success = await actions.login(
@@ -95,6 +103,9 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
 
       // Success - navigation will be handled by auth state change
     } catch (e) {
+      // Don't clear server config on auth failure - user should be able to retry
+      // The server config is valid (passed OpenWebUI verification), only the
+      // credentials were wrong or there was a network issue
       setState(() {
         _loginError = _formatLoginError(e.toString());
       });
@@ -105,6 +116,14 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         });
       }
     }
+  }
+
+  Future<void> _saveServerConfig(ServerConfig config) async {
+    final storage = ref.read(optimizedStorageServiceProvider);
+    await storage.saveServerConfigs([config]);
+    await storage.setActiveServerId(config.id);
+    ref.invalidate(serverConfigsProvider);
+    ref.invalidate(activeServerProvider);
   }
 
   String _formatLoginError(String error) {
@@ -164,6 +183,8 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
                 // Main content
                 Expanded(
                   child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 480),
                       child: Form(

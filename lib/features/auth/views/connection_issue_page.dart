@@ -215,19 +215,31 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
   }
 
   Future<void> _retryConnection() async {
+    final l10n = AppLocalizations.of(context)!;
+
     setState(() {
       _isRetrying = true;
       _statusMessage = null;
     });
 
     try {
-      // Clear the error state and attempt to re-establish connection
       final authManager = ref.read(authStateManagerProvider.notifier);
+      final authState = ref.read(authStateManagerProvider);
+      final hasValidToken = authState.maybeWhen(
+        data: (state) => state.hasValidToken,
+        orElse: () => false,
+      );
 
       // Reset retry counter for manual retry attempts
       authManager.resetRetryCounter();
 
-      await authManager.silentLogin();
+      if (hasValidToken) {
+        // User has a valid token - just refresh to verify connection
+        await authManager.refresh();
+      } else {
+        // No valid token - attempt silent login with saved credentials
+        await authManager.silentLogin();
+      }
 
       // If successful, router will automatically navigate to chat
       if (!mounted) return;
@@ -237,7 +249,7 @@ class _ConnectionIssuePageState extends ConsumerState<ConnectionIssuePage> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _statusMessage = 'Connection failed. Please try again.';
+        _statusMessage = l10n.couldNotConnectGeneric;
       });
     } finally {
       if (mounted) {
