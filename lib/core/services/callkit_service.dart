@@ -27,8 +27,7 @@ class CallKitService {
         },
       ),
     );
-
-    await _safe(() => FlutterCallkitIncoming.requestFullIntentPermission());
+    // Full-screen intent permission not needed for outgoing-only calls.
   }
 
   /// Starts an outgoing call with the native UI and returns the call id.
