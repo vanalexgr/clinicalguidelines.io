@@ -13,6 +13,8 @@ import '../providers/app_providers.dart';
 import '../utils/debug_logger.dart';
 import 'navigation_service.dart';
 import '../../features/chat/providers/chat_providers.dart';
+import '../../features/chat/providers/context_attachments_provider.dart';
+import '../../features/chat/providers/knowledge_cache_provider.dart';
 import '../../features/auth/providers/unified_auth_providers.dart';
 import '../../features/chat/views/voice_call_page.dart';
 import '../../features/chat/services/file_attachment_service.dart';
@@ -25,6 +27,7 @@ const _voiceCallIntentId = 'app.cogwheel.conduit.start_voice_call';
 const _sendTextIntentId = 'app.cogwheel.conduit.send_text';
 const _sendUrlIntentId = 'app.cogwheel.conduit.send_url';
 const _sendImageIntentId = 'app.cogwheel.conduit.send_image';
+const _attachKnowledgeIntentId = 'app.cogwheel.conduit.attach_knowledge';
 
 /// Registers and handles iOS App Intents for Siri/Shortcuts.
 @Riverpod(keepAlive: true)
@@ -39,6 +42,7 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
     unawaited(_registerSendTextIntent());
     unawaited(_registerSendUrlIntent());
     unawaited(_registerSendImageIntent());
+    unawaited(_registerAttachKnowledgeIntent());
   }
 
   Future<void> _registerAskIntent() async {
@@ -216,6 +220,41 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
     }
   }
 
+  Future<void> _registerAttachKnowledgeIntent() async {
+    final client = FlutterAppIntentsClient.instance;
+    final intent = AppIntentBuilder()
+        .identifier(_attachKnowledgeIntentId)
+        .title('Attach Knowledge')
+        .description('Attach a document from your knowledge base to the chat.')
+        .parameter(
+          const AppIntentParameter(
+            name: 'documentName',
+            title: 'Document Name',
+            description: 'Name of the knowledge base document to attach.',
+            type: AppIntentParameterType.string,
+            isOptional: false,
+          ),
+        )
+        .build();
+
+    try {
+      await client.registerIntent(intent, _handleAttachKnowledgeIntent);
+      await FlutterAppIntentsService.donateIntentWithMetadata(
+        _attachKnowledgeIntentId,
+        const {},
+        relevanceScore: 0.7,
+        context: {'feature': 'knowledge', 'source': 'app_intent'},
+      );
+    } catch (error, stackTrace) {
+      DebugLogger.error(
+        'app-intents-register-knowledge',
+        scope: 'siri',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   Future<AppIntentResult> _handleAskIntent(
     Map<String, dynamic> parameters,
   ) async {
@@ -301,17 +340,78 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
       return AppIntentResult.failed(error: 'No URL provided.');
     }
 
-    final prompt = 'Please summarize or analyze:\n$url';
     try {
+      // Determine if this is a YouTube URL
+      final isYoutube = url.startsWith('https://www.youtube.com') ||
+          url.startsWith('https://youtu.be') ||
+          url.startsWith('https://youtube.com') ||
+          url.startsWith('https://m.youtube.com');
+
+      // Try to fetch the URL content first
+      String? content;
+      String? name;
+      String? collectionName;
+      final api = ref.read(apiServiceProvider);
+      if (api != null) {
+        final result = isYoutube
+            ? await api.processYoutube(url: url)
+            : await api.processWebpage(url: url);
+
+        final file =
+            (result?['file'] as Map?)?.cast<String, dynamic>();
+        final fileData =
+            (file?['data'] as Map?)?.cast<String, dynamic>();
+        content = fileData?['content']?.toString() ?? '';
+        final meta = (file?['meta'] as Map?)?.cast<String, dynamic>();
+        name = meta?['name']?.toString() ?? Uri.parse(url).host;
+        collectionName = result?['collection_name']?.toString();
+      }
+
+      final prompt = isYoutube
+          ? 'Please summarize or analyze this video:'
+          : 'Please summarize or analyze this page:';
+
+      // Reset chat first, then add attachments (startNewChat clears attachments)
       await _prepareChatWithOptions(
         prompt: prompt,
         focusComposer: true,
         resetChat: true,
       );
-      return AppIntentResult.successful(
-        value: 'Opening Conduit for this link',
-        needsToContinueInApp: true,
-      );
+
+      // Add attachments after reset so they aren't cleared
+      final bool contentAttached = content != null && content.isNotEmpty;
+      if (contentAttached) {
+        final notifier = ref.read(contextAttachmentsProvider.notifier);
+        if (isYoutube) {
+          notifier.addYoutube(
+            displayName: name ?? Uri.parse(url).host,
+            content: content,
+            url: url,
+            collectionName: collectionName,
+          );
+        } else {
+          notifier.addWeb(
+            displayName: name ?? Uri.parse(url).host,
+            content: content,
+            url: url,
+            collectionName: collectionName,
+          );
+        }
+      }
+
+      if (contentAttached) {
+        return AppIntentResult.successful(
+          value: isYoutube
+              ? 'YouTube video attached in Conduit'
+              : 'Webpage attached in Conduit',
+          needsToContinueInApp: true,
+        );
+      } else {
+        return AppIntentResult.successful(
+          value: 'Opening Conduit with URL (content could not be fetched)',
+          needsToContinueInApp: true,
+        );
+      }
     } catch (error, stackTrace) {
       DebugLogger.error(
         'app-intents-url',
@@ -351,6 +451,69 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
         stackTrace: stackTrace,
       );
       return AppIntentResult.failed(error: 'Unable to send image: $error');
+    }
+  }
+
+  Future<AppIntentResult> _handleAttachKnowledgeIntent(
+    Map<String, dynamic> parameters,
+  ) async {
+    final documentName = (parameters['documentName'] as String?)?.trim();
+    if (documentName == null || documentName.isEmpty) {
+      return AppIntentResult.failed(error: 'No document name provided.');
+    }
+
+    try {
+      // Ensure knowledge bases are loaded
+      final cacheNotifier = ref.read(knowledgeCacheProvider.notifier);
+      await cacheNotifier.ensureBases();
+
+      final cacheState = ref.read(knowledgeCacheProvider);
+      final bases = cacheState.bases;
+
+      // Search through all knowledge bases for matching items
+      for (final base in bases) {
+        await cacheNotifier.fetchItemsForBase(base.id);
+        final updatedState = ref.read(knowledgeCacheProvider);
+        final items = updatedState.items[base.id] ?? const [];
+
+        for (final item in items) {
+          final itemTitle = item.title ?? item.metadata['name']?.toString() ?? '';
+          if (itemTitle.toLowerCase().contains(documentName.toLowerCase())) {
+            // Reset chat first, then add attachment (startNewChat clears attachments)
+            await _prepareChatWithOptions(
+              focusComposer: true,
+              resetChat: true,
+            );
+
+            // Add attachment after reset so it isn't cleared
+            ref.read(contextAttachmentsProvider.notifier).addKnowledge(
+                  displayName: itemTitle,
+                  fileId: item.id,
+                  collectionName: base.name,
+                  url: item.metadata['source']?.toString(),
+                );
+
+            return AppIntentResult.successful(
+              value: 'Attached "$itemTitle" from ${base.name}',
+              needsToContinueInApp: true,
+            );
+          }
+        }
+      }
+
+      return AppIntentResult.failed(
+        error: 'No document found matching "$documentName".',
+      );
+    } catch (error, stackTrace) {
+      DebugLogger.error(
+        'app-intents-knowledge',
+        scope: 'siri',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return AppIntentResult.failed(
+        error: 'Unable to attach knowledge: $error',
+      );
     }
   }
 
@@ -423,6 +586,9 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
     if (navigator == null || context == null) {
       throw StateError('Navigation is not available.');
     }
+
+    // Dismiss keyboard before navigating
+    FocusManager.instance.primaryFocus?.unfocus();
 
     await navigator.push(
       MaterialPageRoute(

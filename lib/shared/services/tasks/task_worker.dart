@@ -7,6 +7,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/services/attachment_upload_queue.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../features/chat/providers/chat_providers.dart' as chat;
+import '../../../features/chat/providers/context_attachments_provider.dart';
 import '../../../features/chat/services/file_attachment_service.dart';
 import 'outbound_task.dart';
 
@@ -55,13 +56,21 @@ class TaskWorker {
       }
     } catch (_) {}
 
-    // Delegate to existing unified send implementation
-    await chat.sendMessageFromService(
-      _ref,
-      task.text,
-      task.attachments.isEmpty ? null : task.attachments,
-      task.toolIds.isEmpty ? null : task.toolIds,
-    );
+    // Delegate to existing unified send implementation.
+    // Always clear context attachments after send, even on failure,
+    // to prevent stale attachments from leaking into subsequent messages.
+    try {
+      await chat.sendMessageFromService(
+        _ref,
+        task.text,
+        task.attachments.isEmpty ? null : task.attachments,
+        task.toolIds.isEmpty ? null : task.toolIds,
+      );
+    } finally {
+      try {
+        _ref.read(contextAttachmentsProvider.notifier).clear();
+      } catch (_) {}
+    }
   }
 
   Future<void> _performUploadMedia(UploadMediaTask task) async {

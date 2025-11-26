@@ -156,6 +156,9 @@ class AndroidAssistantHandler {
         return;
       }
 
+      // Dismiss keyboard before navigating
+      FocusScope.of(context).unfocus();
+
       // Navigate to voice call page with new conversation flag
       await Navigator.of(context).push(
         MaterialPageRoute(

@@ -23,6 +23,7 @@ import '../widgets/user_message_bubble.dart';
 import '../widgets/assistant_message_widget.dart' as assistant;
 import '../widgets/streaming_title_text.dart';
 import '../widgets/file_attachment_widget.dart';
+import '../widgets/context_attachment_widget.dart';
 import '../services/voice_input_service.dart';
 import '../services/file_attachment_service.dart';
 import 'voice_call_page.dart';
@@ -30,6 +31,7 @@ import '../../../shared/services/tasks/task_queue.dart';
 import '../../tools/providers/tools_providers.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/model.dart';
+import '../providers/context_attachments_provider.dart';
 import '../../../shared/widgets/loading_states.dart';
 import 'chat_page_helpers.dart';
 import '../../../shared/widgets/themed_dialogs.dart';
@@ -122,6 +124,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // Clear current conversation
     ref.read(chatMessagesProvider.notifier).clearMessages();
     ref.read(activeConversationProvider.notifier).clear();
+
+    // Clear context attachments (web pages, YouTube, knowledge base docs)
+    ref.read(contextAttachmentsProvider.notifier).clear();
 
     // Scroll to top
     if (_scrollController.hasClients) {
@@ -597,6 +602,163 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  /// Checks if a URL is a YouTube URL.
+  bool _isYoutubeUrl(String url) {
+    return url.startsWith('https://www.youtube.com') ||
+        url.startsWith('https://youtu.be') ||
+        url.startsWith('https://youtube.com') ||
+        url.startsWith('https://m.youtube.com');
+  }
+
+  Future<void> _promptAttachWebpage() async {
+    final api = ref.read(apiServiceProvider);
+    if (api == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    String url = '';
+    bool submitting = false;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        String? errorText;
+        return StatefulBuilder(
+          builder: (innerContext, setState) {
+            void setError(String? msg) {
+              setState(() {
+                errorText = msg;
+              });
+            }
+
+            return AlertDialog(
+              title: const Text('Attach webpage'),
+              content: SizedBox(
+                width: 400,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Paste a URL to ingest its content into the chat.',
+                      style: Theme.of(innerContext).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Webpage URL',
+                        hintText: 'https://example.com/article',
+                        border: const OutlineInputBorder(),
+                        errorText: errorText,
+                      ),
+                      onChanged: (value) {
+                        url = value;
+                        if (errorText != null) setError(null);
+                      },
+                      autofocus: true,
+                      keyboardType: TextInputType.url,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: submitting
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: Text(l10n.cancel),
+                ),
+                ElevatedButton(
+                  onPressed: submitting
+                      ? null
+                      : () async {
+                          final parsed = Uri.tryParse(url.trim());
+                          if (parsed == null ||
+                              !(parsed.isScheme('http') ||
+                                  parsed.isScheme('https'))) {
+                            setError('Enter a valid http(s) URL.');
+                            return;
+                          }
+                          setState(() {
+                            submitting = true;
+                            errorText = null;
+                          });
+                          try {
+                            final trimmedUrl = url.trim();
+                            final isYoutube = _isYoutubeUrl(trimmedUrl);
+
+                            // Use appropriate API based on URL type
+                            final result = isYoutube
+                                ? await api.processYoutube(url: trimmedUrl)
+                                : await api.processWebpage(url: trimmedUrl);
+
+                            final file = (result?['file'] as Map?)
+                                ?.cast<String, dynamic>();
+                            final fileData = (file?['data'] as Map?)
+                                ?.cast<String, dynamic>();
+                            final content =
+                                fileData?['content']?.toString() ?? '';
+                            if (content.isEmpty) {
+                              setError(
+                                isYoutube
+                                    ? 'Could not fetch YouTube transcript.'
+                                    : 'The page had no readable content.',
+                              );
+                              return;
+                            }
+                            final meta = (file?['meta'] as Map?)
+                                ?.cast<String, dynamic>();
+                            final name =
+                                meta?['name']?.toString() ?? parsed.host;
+                            final collectionName =
+                                result?['collection_name']?.toString();
+
+                            // Add as appropriate type
+                            final notifier =
+                                ref.read(contextAttachmentsProvider.notifier);
+                            if (isYoutube) {
+                              notifier.addYoutube(
+                                displayName: name,
+                                content: content,
+                                url: trimmedUrl,
+                                collectionName: collectionName,
+                              );
+                            } else {
+                              notifier.addWeb(
+                                displayName: name,
+                                content: content,
+                                url: trimmedUrl,
+                                collectionName: collectionName,
+                              );
+                            }
+
+                            if (!mounted || !dialogContext.mounted) {
+                              return;
+                            }
+                            Navigator.of(dialogContext).pop();
+                          } catch (_) {
+                            setError('Failed to attach content.');
+                          } finally {
+                            if (mounted) {
+                              setState(() => submitting = false);
+                            }
+                          }
+                        },
+                  child: submitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Attach'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _handleNewChat() {
     // Start a new chat using the existing function
     startNewChat();
@@ -610,6 +772,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _handleVoiceCall() {
+    // Dismiss keyboard before navigating
+    FocusScope.of(context).unfocus();
+
     // Navigate to voice call page
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -1842,6 +2007,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
                           // File attachments
                           const FileAttachmentWidget(),
+                          const ContextAttachmentWidget(),
 
                           // Modern Input (root matches input background including safe area)
                           RepaintBoundary(
@@ -1862,6 +2028,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                 onImageAttachment: _handleImageAttachment,
                                 onCameraCapture: () =>
                                     _handleImageAttachment(fromCamera: true),
+                                onWebAttachment: _promptAttachWebpage,
                               ),
                             ),
                           ),

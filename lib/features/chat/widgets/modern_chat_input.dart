@@ -12,6 +12,8 @@ import 'dart:async';
 import 'dart:ui';
 import 'dart:math' as math;
 import '../providers/chat_providers.dart';
+import '../providers/context_attachments_provider.dart';
+import '../providers/knowledge_cache_provider.dart';
 import '../../tools/providers/tools_providers.dart';
 import '../../prompts/providers/prompts_providers.dart';
 import '../../../core/models/tool.dart';
@@ -19,6 +21,7 @@ import '../../../core/models/prompt.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/settings_service.dart';
 import '../../chat/services/voice_input_service.dart';
+import '../../../core/models/knowledge_base.dart';
 
 import '../../../shared/utils/platform_utils.dart';
 import 'package:conduit/l10n/app_localizations.dart';
@@ -64,6 +67,7 @@ class ModernChatInput extends ConsumerStatefulWidget {
   final Function()? onFileAttachment;
   final Function()? onImageAttachment;
   final Function()? onCameraCapture;
+  final Function()? onWebAttachment;
 
   const ModernChatInput({
     super.key,
@@ -74,6 +78,7 @@ class ModernChatInput extends ConsumerStatefulWidget {
     this.onFileAttachment,
     this.onImageAttachment,
     this.onCameraCapture,
+    this.onWebAttachment,
   });
 
   @override
@@ -291,7 +296,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
 
     if (!wasShowing && shouldShow) {
       // Trigger prompt fetch lazily when overlay first appears
-      ref.read(promptsListProvider.future);
+      if (_currentPromptCommand.startsWith('/')) {
+        ref.read(promptsListProvider.future);
+      }
     }
   }
 
@@ -317,7 +324,8 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     }
 
     final String candidate = text.substring(start, cursor);
-    if (candidate.isEmpty || !candidate.startsWith('/')) {
+    if (candidate.isEmpty ||
+        !(candidate.startsWith('/') || candidate.startsWith('#'))) {
       return null;
     }
 
@@ -326,13 +334,18 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
 
   List<Prompt> _filterPrompts(List<Prompt> prompts) {
     if (prompts.isEmpty) return const <Prompt>[];
-    final String query = _currentPromptCommand.toLowerCase();
+    final String query = _currentPromptCommand.toLowerCase().trim();
+    // Strip leading '/' prefix so we can match prompt commands (e.g., "help")
+    final String searchQuery = query.startsWith('/') ? query.substring(1) : query;
+
+    // Prevent matching all prompts when user types only '/'
+    if (searchQuery.isEmpty) return const <Prompt>[];
 
     final List<Prompt> filtered =
         prompts
             .where(
               (prompt) =>
-                  prompt.command.toLowerCase().contains(query.trim()) &&
+                  prompt.command.toLowerCase().contains(searchQuery) &&
                   prompt.content.isNotEmpty,
             )
             .toList()
@@ -348,6 +361,11 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   }
 
   void _movePromptSelection(int delta) {
+    if (_currentPromptCommand.startsWith('#')) {
+      // Only a single option in knowledge overlay; nothing to move.
+      return;
+    }
+
     final AsyncValue<List<Prompt>> promptsAsync = ref.read(promptsListProvider);
     final List<Prompt>? prompts = promptsAsync.value;
     if (prompts == null || prompts.isEmpty) return;
@@ -369,6 +387,11 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   }
 
   void _confirmPromptSelection() {
+    if (_currentPromptCommand.startsWith('#')) {
+      _openKnowledgePicker();
+      return;
+    }
+
     final AsyncValue<List<Prompt>> promptsAsync = ref.read(promptsListProvider);
     final List<Prompt>? prompts = promptsAsync.value;
     if (prompts == null || prompts.isEmpty) return;
@@ -421,12 +444,157 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     });
   }
 
+  Future<void> _openKnowledgePicker() async {
+    _hidePromptOverlay();
+
+    // Ensure bases are loaded in the centralized cache
+    final cacheNotifier = ref.read(knowledgeCacheProvider.notifier);
+    await cacheNotifier.ensureBases();
+    if (!mounted) return;
+
+    // Track selected base ID outside the builder so it persists across rebuilds
+    String? selectedBaseId;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (modalContext) {
+        return ModalSheetSafeArea(
+          // Use StatefulBuilder to manage selectedBaseId locally so that
+          // selecting a knowledge base triggers a proper rebuild.
+          child: StatefulBuilder(
+            builder: (statefulContext, setModalState) {
+              return Consumer(
+                builder: (innerContext, innerRef, _) {
+                  final cacheState = innerRef.watch(knowledgeCacheProvider);
+                  final bases = cacheState.bases;
+                  final itemsMap = cacheState.items;
+                  final items = selectedBaseId != null
+                      ? itemsMap[selectedBaseId] ?? const <KnowledgeBaseItem>[]
+                      : const <KnowledgeBaseItem>[];
+                  final loading = cacheState.isLoading ||
+                      (selectedBaseId != null &&
+                          !itemsMap.containsKey(selectedBaseId));
+
+                  Future<void> loadItems(KnowledgeBase base) async {
+                    setModalState(() {
+                      selectedBaseId = base.id;
+                    });
+                    await innerRef
+                        .read(knowledgeCacheProvider.notifier)
+                        .fetchItemsForBase(base.id);
+                  }
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: innerContext.conduitTheme.surfaceBackground,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(AppBorderRadius.modal),
+                      ),
+                      boxShadow: ConduitShadows.modal(innerContext),
+                    ),
+                    child: SizedBox(
+                      height: MediaQuery.of(innerContext).size.height * 0.6,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: ListView.builder(
+                              itemCount: bases.length,
+                              itemBuilder: (context, index) {
+                                final base = bases[index];
+                                final isSelected = selectedBaseId == base.id;
+                                return ListTile(
+                                  dense: true,
+                                  selected: isSelected,
+                                  title: Text(base.name),
+                                  onTap: () => loadItems(base),
+                                );
+                              },
+                            ),
+                          ),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            flex: 2,
+                            child: loading
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : ListView.builder(
+                                    itemCount: items.length,
+                                    itemBuilder: (context, index) {
+                                      final item = items[index];
+                                      final KnowledgeBase? selectedBase =
+                                          bases.isEmpty
+                                              ? null
+                                              : bases.firstWhere(
+                                                  (b) => b.id == selectedBaseId,
+                                                  orElse: () => bases.first,
+                                                );
+                                      return ListTile(
+                                        title: Text(
+                                          item.title ??
+                                              item.metadata['name']?.toString() ??
+                                              'Document',
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        subtitle: Text(
+                                          item.metadata['source']?.toString() ??
+                                              item.content,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        onTap: () {
+                                          innerRef
+                                              .read(
+                                                contextAttachmentsProvider
+                                                    .notifier,
+                                              )
+                                              .addKnowledge(
+                                                displayName: item.title ??
+                                                    item.metadata['name']
+                                                        ?.toString() ??
+                                                    'Document',
+                                                fileId: item.id,
+                                                collectionName:
+                                                    selectedBase?.name ??
+                                                        'Unknown',
+                                                url: item.metadata['source']
+                                                    ?.toString(),
+                                              );
+                                          if (modalContext.mounted) {
+                                            Navigator.of(modalContext).pop();
+                                          }
+                                        },
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildPromptOverlay(BuildContext context) {
     final Brightness brightness = Theme.of(context).brightness;
     final overlayColor = context.conduitTheme.cardBackground;
     final borderColor = context.conduitTheme.cardBorder.withValues(
       alpha: brightness == Brightness.dark ? 0.6 : 0.4,
     );
+
+    if (_currentPromptCommand.startsWith('#')) {
+      return _buildKnowledgeOverlay(context, overlayColor, borderColor);
+    }
 
     final AsyncValue<List<Prompt>> promptsAsync = ref.watch(
       promptsListProvider,
@@ -589,6 +757,38 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildKnowledgeOverlay(
+    BuildContext context,
+    Color overlayColor,
+    Color borderColor,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: overlayColor,
+        borderRadius: BorderRadius.circular(AppBorderRadius.card),
+        border: Border.all(color: borderColor, width: BorderWidth.thin),
+        boxShadow: [
+          BoxShadow(
+            color: context.conduitTheme.cardShadow.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.28
+                  : 0.16,
+            ),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+            spreadRadius: -4,
+          ),
+        ],
+      ),
+      child: ListTile(
+        title: const Text('Browse knowledge base'),
+        subtitle: const Text('Press Enter to pick a document'),
+        leading: const Icon(Icons.folder_outlined),
+        onTap: _openKnowledgePicker,
       ),
     );
   }
@@ -1708,6 +1908,16 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                   : () {
                       HapticFeedback.lightImpact();
                       widget.onCameraCapture!.call();
+                    },
+            ),
+            _buildOverflowAction(
+              icon: Icons.public,
+              label: 'Attach webpage',
+              onTap: widget.onWebAttachment == null
+                  ? null
+                  : () {
+                      HapticFeedback.lightImpact();
+                      widget.onWebAttachment!.call();
                     },
             ),
           ];
