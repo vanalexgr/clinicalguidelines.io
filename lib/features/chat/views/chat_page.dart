@@ -12,6 +12,7 @@ import '../../../shared/widgets/responsive_drawer_layout.dart';
 import '../../navigation/widgets/chats_drawer.dart';
 import 'dart:async';
 import '../../../core/providers/app_providers.dart';
+import '../../auth/providers/unified_auth_providers.dart';
 import '../providers/chat_providers.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/utils/user_display_name.dart';
@@ -1122,12 +1123,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   Widget _buildEmptyState(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
-    final currentUserAsync = ref.watch(currentUserProvider);
-    final userFromProfile = currentUserAsync.maybeWhen(
-      data: (user) => user,
-      orElse: () => null,
+    final authUser = ref.watch(currentUserProvider2);
+    final asyncUser = ref.watch(currentUserProvider);
+    final user = asyncUser.maybeWhen(
+      data: (value) => value ?? authUser,
+      orElse: () => authUser,
     );
-    final user = userFromProfile;
     String? greetingName;
     if (user != null) {
       final derived = deriveUserDisplayName(user, fallback: '').trim();

@@ -32,10 +32,18 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
   void Function(FlutterErrorDetails details)? _previousOnError;
 
   bool _shouldIgnoreError(Object error) {
-    // Ignore RenderFlex overflow errors (layout issues)
     final errorString = error.toString();
-    return errorString.contains('RenderFlex') ||
-        errorString.contains('overflow') && errorString.contains('pixels');
+    // Ignore RenderFlex overflow errors (layout issues)
+    if (errorString.contains('RenderFlex') ||
+        errorString.contains('overflow') && errorString.contains('pixels')) {
+      return true;
+    }
+    // Ignore "Build scheduled during frame" errors - these are harmless
+    // framework warnings from animations during layout
+    if (errorString.contains('Build scheduled during frame')) {
+      return true;
+    }
+    return false;
   }
 
   void _scheduleHandleError(Object error, StackTrace? stack) {
@@ -59,6 +67,10 @@ class _ErrorBoundaryState extends ConsumerState<ErrorBoundary> {
     // Set up Flutter error handling for this widget
     _previousOnError = FlutterError.onError;
     FlutterError.onError = (FlutterErrorDetails details) {
+      // Check if this is a harmless error we should completely ignore
+      if (_shouldIgnoreError(details.exception)) {
+        return; // Don't forward or handle
+      }
       // Forward to any previously registered handler to avoid interfering
       _previousOnError?.call(details);
       // Defer handling to avoid setState during build

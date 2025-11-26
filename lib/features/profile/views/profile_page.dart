@@ -41,40 +41,23 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider);
+    final user = ref.watch(currentUserProvider2);
+    final isAuthLoading = ref.watch(isAuthLoadingProvider2);
     final api = ref.watch(apiServiceProvider);
 
-    return ErrorBoundary(
-      child: user.when(
-        data: (userData) => _buildScaffold(
-          context,
-          body: _buildProfileBody(context, ref, userData, api),
+    Widget body;
+    if (isAuthLoading && user == null) {
+      body = _buildCenteredState(
+        context,
+        ImprovedLoadingState(
+          message: AppLocalizations.of(context)!.loadingProfile,
         ),
-        loading: () => _buildScaffold(
-          context,
-          body: _buildCenteredState(
-            context,
-            ImprovedLoadingState(
-              message: AppLocalizations.of(context)!.loadingProfile,
-            ),
-          ),
-        ),
-        error: (error, stack) => _buildScaffold(
-          context,
-          body: _buildCenteredState(
-            context,
-            ImprovedEmptyState(
-              title: AppLocalizations.of(context)!.unableToLoadProfile,
-              subtitle: AppLocalizations.of(context)!.pleaseCheckConnection,
-              icon: UiUtils.platformIcon(
-                ios: CupertinoIcons.exclamationmark_triangle,
-                android: Icons.error_outline,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+      );
+    } else {
+      body = _buildProfileBody(context, ref, user, api);
+    }
+
+    return ErrorBoundary(child: _buildScaffold(context, body: body));
   }
 
   Scaffold _buildScaffold(BuildContext context, {required Widget body}) {

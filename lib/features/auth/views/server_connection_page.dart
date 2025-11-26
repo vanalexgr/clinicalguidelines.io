@@ -14,6 +14,7 @@ import '../../../core/services/api_service.dart';
 import '../../../core/services/worker_manager.dart';
 import '../../../core/services/input_validation_service.dart';
 import '../../../core/services/navigation_service.dart';
+import '../../../core/utils/debug_logger.dart';
 import '../../../core/widgets/error_boundary.dart';
 import '../../../shared/services/brand_service.dart';
 import '../../../shared/theme/theme_extensions.dart';
@@ -63,7 +64,22 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
   }
 
   Future<void> _connectToServer() async {
-    if (!_formKey.currentState!.validate()) return;
+    DebugLogger.log('Connect button pressed', scope: 'auth/connection');
+
+    final urlValue = _urlController.text.trim();
+    DebugLogger.log('URL value: "$urlValue"', scope: 'auth/connection');
+
+    // Check what validation would return
+    final validationResult = InputValidationService.validateUrl(urlValue);
+    DebugLogger.log(
+      'URL validation result: ${validationResult ?? "valid"}',
+      scope: 'auth/connection',
+    );
+
+    if (!_formKey.currentState!.validate()) {
+      DebugLogger.log('Form validation failed', scope: 'auth/connection');
+      return;
+    }
 
     setState(() {
       _isConnecting = true;
@@ -87,21 +103,56 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         serverConfig: tempConfig,
         workerManager: workerManager,
       );
-      final isHealthy = await api.checkHealth();
-      if (!isHealthy) {
+
+      // First check basic connectivity
+      DebugLogger.log('Checking server health...', scope: 'auth/connection');
+      final isReachable = await api.checkHealth();
+      DebugLogger.log(
+        'Health check result: $isReachable',
+        scope: 'auth/connection',
+      );
+      if (!isReachable) {
+        throw Exception(
+          'Could not reach the server. Please check the address.',
+        );
+      }
+
+      // Then verify it's actually an OpenWebUI server
+      DebugLogger.log(
+        'Verifying OpenWebUI server...',
+        scope: 'auth/connection',
+      );
+      final isOpenWebUI = await api.verifyIsOpenWebUIServer();
+      DebugLogger.log(
+        'OpenWebUI verification result: $isOpenWebUI',
+        scope: 'auth/connection',
+      );
+      if (!isOpenWebUI) {
         throw Exception('This does not appear to be an Open-WebUI server.');
       }
 
-      await _saveServerConfig(tempConfig);
+      DebugLogger.log(
+        'Server validation passed, navigating to auth page',
+        scope: 'auth/connection',
+      );
 
-      // Navigate to authentication page
+      // Don't save server config yet - wait until authentication succeeds
+      // The config is passed to the authentication page
       if (mounted) {
         context.pushNamed(RouteNames.authentication, extra: tempConfig);
       }
-    } catch (e) {
-      setState(() {
-        _connectionError = _formatConnectionError(e.toString());
-      });
+    } catch (e, stack) {
+      DebugLogger.error(
+        'server-connection-error',
+        scope: 'auth/connection',
+        error: e,
+        stackTrace: stack,
+      );
+      if (mounted) {
+        setState(() {
+          _connectionError = _formatConnectionError(e.toString());
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -109,14 +160,6 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         });
       }
     }
-  }
-
-  Future<void> _saveServerConfig(ServerConfig config) async {
-    final storage = ref.read(optimizedStorageServiceProvider);
-    await storage.saveServerConfigs([config]);
-    await storage.setActiveServerId(config.id);
-    ref.invalidate(serverConfigsProvider);
-    ref.invalidate(activeServerProvider);
   }
 
   String _validateAndFormatUrl(String input) {
@@ -244,6 +287,8 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
                 // Main content
                 Expanded(
                   child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 480),
                       child: Form(
@@ -528,12 +573,16 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
             ),
           ),
         ),
-        AnimatedSize(
+        // Use AnimatedCrossFade instead of AnimatedSize to avoid
+        // "Build scheduled during frame" errors
+        AnimatedCrossFade(
           duration: AnimationDuration.microInteraction,
-          curve: Curves.easeInOutCubic,
-          child: _showAdvancedSettings
-              ? _buildAdvancedSettingsContent()
-              : const SizedBox.shrink(),
+          sizeCurve: Curves.easeInOutCubic,
+          crossFadeState: _showAdvancedSettings
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          firstChild: const SizedBox.shrink(),
+          secondChild: _buildAdvancedSettingsContent(),
         ),
       ],
     );
@@ -845,8 +894,8 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
   }
 
   String? _validateHeaderKey(String key) {
-    // RFC 7230 compliant header name validation
-    if (key.isEmpty) return AppLocalizations.of(context)!.headerNameEmpty;
+    // Allow empty - header fields are optional
+    if (key.isEmpty) return null;
     if (key.length > 64) return AppLocalizations.of(context)!.headerNameTooLong;
 
     // Check for valid characters (RFC 7230: token characters)
@@ -879,7 +928,8 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
   }
 
   String? _validateHeaderValue(String value) {
-    if (value.isEmpty) return AppLocalizations.of(context)!.headerValueEmpty;
+    // Allow empty - header fields are optional
+    if (value.isEmpty) return null;
     if (value.length > 1024) {
       return AppLocalizations.of(context)!.headerValueTooLong;
     }

@@ -219,11 +219,40 @@ class ApiService {
     return parsed;
   }
 
-  // Health check
+  /// Basic health check - just verifies the server is reachable.
   Future<bool> checkHealth() async {
     try {
       final response = await _dio.get('/health');
       return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Verifies this is actually an OpenWebUI server by checking the /api/config
+  /// endpoint for OpenWebUI-specific fields (version, status, features).
+  ///
+  /// Returns `true` if the server appears to be a valid OpenWebUI instance.
+  Future<bool> verifyIsOpenWebUIServer() async {
+    try {
+      final response = await _dio.get('/api/config');
+      if (response.statusCode != 200) {
+        return false;
+      }
+
+      final data = response.data;
+      if (data is! Map<String, dynamic>) {
+        return false;
+      }
+
+      // Check for OpenWebUI-specific fields
+      // The /api/config endpoint always returns these fields on OpenWebUI
+      final hasStatus = data['status'] == true;
+      final hasVersion =
+          data['version'] is String && (data['version'] as String).isNotEmpty;
+      final hasFeatures = data['features'] is Map;
+
+      return hasStatus && hasVersion && hasFeatures;
     } catch (e) {
       return false;
     }
