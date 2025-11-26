@@ -18,6 +18,8 @@ import '../../../core/services/worker_manager.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/utils/markdown_stream_formatter.dart';
 import '../../../core/utils/tool_calls_parser.dart';
+import '../models/chat_context_attachment.dart';
+import '../providers/context_attachments_provider.dart';
 import '../../../shared/services/tasks/task_queue.dart';
 import '../../tools/providers/tools_providers.dart';
 import '../services/reviewer_mode_service.dart';
@@ -848,6 +850,9 @@ void startNewChat(dynamic ref) {
 
   // Clear messages
   ref.read(chatMessagesProvider.notifier).clearMessages();
+
+  // Clear context attachments (web pages, YouTube, knowledge base docs)
+  ref.read(contextAttachmentsProvider.notifier).clear();
 }
 
 // Available tools provider
@@ -942,47 +947,6 @@ bool validateFileSize(int fileSize, int? maxSizeMB) {
 bool validateFileCount(int currentCount, int newFilesCount, int? maxCount) {
   if (maxCount == null) return true;
   return (currentCount + newFilesCount) <= maxCount;
-}
-
-// Helper function to build files array from attachment IDs
-Future<List<Map<String, dynamic>>?> _buildFilesArrayFromAttachments(
-  dynamic api,
-  List<String> attachmentIds,
-) async {
-  final filesArray = <Map<String, dynamic>>[];
-
-  for (final attachmentId in attachmentIds) {
-    try {
-      final fileInfo = await api.getFileInfo(attachmentId);
-      final fileName = fileInfo['filename'] ?? fileInfo['name'] ?? 'Unknown';
-      final fileSize = fileInfo['size'];
-
-      // Check if it's an image
-      final ext = fileName.toLowerCase().split('.').last;
-      final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext);
-
-      // Add all files to the files array for WebUI display
-      // Note: This is for storage/display, not for API message sending
-      filesArray.add({
-        'type': isImage ? 'image' : 'file',
-        'id': attachmentId, // Required for RAG system to lookup file content
-        'url': '/api/v1/files/$attachmentId/content',
-        'name': fileName,
-        if (fileSize != null) 'size': fileSize,
-      });
-    } catch (_) {
-      // If we can't get file info, assume it's a non-image file
-      // Images should be handled in the content array anyway
-      filesArray.add({
-        'type': 'file',
-        'id': attachmentId, // Required for RAG system to lookup file content
-        'url': '/api/v1/files/$attachmentId/content',
-        'name': 'Unknown',
-      });
-    }
-  }
-
-  return filesArray.isNotEmpty ? filesArray : null;
 }
 
 // Helper function to get file content as base64
@@ -1100,6 +1064,60 @@ Future<Map<String, dynamic>> _buildMessagePayloadWithAttachments({
     messageMap['files'] = allFiles;
   }
   return messageMap;
+}
+
+List<Map<String, dynamic>> _contextAttachmentsToFiles(
+  List<ChatContextAttachment> attachments,
+) {
+  return attachments.map((attachment) {
+    switch (attachment.type) {
+      case ChatContextAttachmentType.web:
+        // Web pages use type 'text' with file data nested under 'file' key
+        return {
+          'type': 'text',
+          'name': attachment.url ?? attachment.displayName,
+          if (attachment.url != null) 'url': attachment.url,
+          if (attachment.collectionName != null)
+            'collection_name': attachment.collectionName,
+          'file': {
+            'data': {'content': attachment.content ?? ''},
+            'meta': {
+              'name': attachment.displayName,
+              if (attachment.url != null) 'source': attachment.url,
+            },
+          },
+        };
+      case ChatContextAttachmentType.youtube:
+        // YouTube uses type 'text' with context 'full' for full transcript
+        return {
+          'type': 'text',
+          'name': attachment.url ?? attachment.displayName,
+          if (attachment.url != null) 'url': attachment.url,
+          'context': 'full',
+          if (attachment.collectionName != null)
+            'collection_name': attachment.collectionName,
+          'file': {
+            'data': {'content': attachment.content ?? ''},
+            'meta': {
+              'name': attachment.displayName,
+              if (attachment.url != null) 'source': attachment.url,
+            },
+          },
+        };
+      case ChatContextAttachmentType.knowledge:
+        // Knowledge base files use type 'file' with id for lookup
+        final map = <String, dynamic>{
+          'type': 'file',
+          'id': attachment.fileId ?? attachment.id,
+          'name': attachment.displayName,
+          'knowledge': true,
+          if (attachment.collectionName != null)
+            'collection_name': attachment.collectionName,
+          if (attachment.url != null) 'source': attachment.url,
+        };
+        return map;
+    }
+  }).toList();
 }
 
 // Regenerate message function that doesn't duplicate user message
@@ -1605,13 +1623,15 @@ Future<void> _sendMessageInternal(
   var activeConversation = ref.read(activeConversationProvider);
 
   // Create user message first
-  List<Map<String, dynamic>>? userFiles;
-  if (attachments != null &&
-      attachments.isNotEmpty &&
-      !reviewerMode &&
-      api != null) {
-    userFiles = await _buildFilesArrayFromAttachments(api, attachments);
-  }
+  // Note: We only store context attachments (web/youtube/knowledge) in msg.files.
+  // Uploaded files are tracked via attachmentIds and will be rebuilt by
+  // _buildMessagePayloadWithAttachments when constructing the API payload.
+  // This prevents uploaded files from being duplicated in the final message.
+  final contextAttachments = ref.read(contextAttachmentsProvider);
+  final contextFiles = _contextAttachmentsToFiles(contextAttachments);
+  final List<Map<String, dynamic>>? userFiles = contextFiles.isNotEmpty
+      ? contextFiles
+      : null;
 
   final userMessage = ChatMessage(
     id: const Uuid().v4(),
@@ -1768,10 +1788,23 @@ Future<void> _sendMessageInternal(
           cleanedText: cleaned,
           attachmentIds: ids,
         );
+        if (msg.files != null && msg.files!.isNotEmpty) {
+          messageMap['files'] = [
+            ...?messageMap['files'] as List<dynamic>?,
+            ...msg.files!,
+          ];
+        }
         conversationMessages.add(messageMap);
       } else {
         // Regular text-only message
-        conversationMessages.add({'role': msg.role, 'content': cleaned});
+        final Map<String, dynamic> messageMap = {
+          'role': msg.role,
+          'content': cleaned,
+        };
+        if (msg.files != null && msg.files!.isNotEmpty) {
+          messageMap['files'] = msg.files;
+        }
+        conversationMessages.add(messageMap);
       }
     }
   }
@@ -2110,6 +2143,13 @@ Future<void> _sendMessageInternal(
         activeStream.socketSubscriptions,
         onDispose: activeStream.disposeWatchdog,
       );
+
+    // Clear context attachments after successfully initiating the message send.
+    // This prevents stale attachments from being included in subsequent messages.
+    try {
+      ref.read(contextAttachmentsProvider.notifier).clear();
+    } catch (_) {}
+
     return;
   } catch (e) {
     // Handle error - remove the assistant message placeholder

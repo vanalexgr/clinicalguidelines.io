@@ -1483,6 +1483,52 @@ class ApiService {
     return [];
   }
 
+  Future<Map<String, dynamic>?> processWebpage({
+    required String url,
+    String? collectionName,
+  }) async {
+    _traceApi('Processing webpage: $url');
+    try {
+      final response = await _dio.post(
+        '/api/v1/retrieval/process/web',
+        data: {
+          'url': url,
+          if (collectionName != null) 'collection_name': collectionName,
+        },
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      _traceApi('Process webpage failed: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> processYoutube({
+    required String url,
+    String? collectionName,
+  }) async {
+    _traceApi('Processing YouTube URL: $url');
+    try {
+      final response = await _dio.post(
+        '/api/v1/retrieval/process/youtube',
+        data: {
+          'url': url,
+          if (collectionName != null) 'collection_name': collectionName,
+        },
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      _traceApi('Process YouTube failed: $e');
+      return null;
+    }
+  }
+
   // Web Search
   Future<Map<String, dynamic>> performWebSearch(List<String> queries) async {
     _traceApi('Performing web search for queries: $queries');
