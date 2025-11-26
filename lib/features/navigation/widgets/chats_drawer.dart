@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/app_providers.dart';
+import '../../auth/providers/unified_auth_providers.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../chat/providers/chat_providers.dart' as chat;
 // import '../../files/views/files_page.dart';
@@ -1477,12 +1478,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   Widget _buildBottomSection(BuildContext context) {
     final theme = context.conduitTheme;
     final sidebarTheme = context.sidebarTheme;
-    final currentUserAsync = ref.watch(currentUserProvider);
-    final userFromProfile = currentUserAsync.maybeWhen(
-      data: (u) => u,
-      orElse: () => null,
-    );
-    final user = userFromProfile;
+    final user = ref.watch(currentUserProvider2);
     final api = ref.watch(apiServiceProvider);
 
     String initialFor(String name) {

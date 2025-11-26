@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 
-import '../../../core/providers/app_providers.dart';
+import '../../auth/providers/unified_auth_providers.dart';
 import '../../../core/utils/user_display_name.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/sheet_handle.dart';
@@ -67,12 +67,7 @@ class _OnboardingSheetState extends ConsumerState<OnboardingSheet> {
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
     final l10n = AppLocalizations.of(context)!;
-    final currentUserAsync = ref.watch(currentUserProvider);
-    final userFromProfile = currentUserAsync.maybeWhen(
-      data: (user) => user,
-      orElse: () => null,
-    );
-    final user = userFromProfile;
+    final user = ref.watch(currentUserProvider2);
     final greetingName = deriveUserDisplayName(user);
     final pages = _buildPages(l10n, greetingName);
     final pageCount = pages.length;
