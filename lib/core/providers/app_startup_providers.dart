@@ -13,7 +13,6 @@ import '../services/app_intents_service.dart';
 import '../services/quick_actions_service.dart';
 import '../models/conversation.dart';
 import '../services/background_streaming_handler.dart';
-import '../services/persistent_streaming_service.dart';
 import '../services/socket_service.dart';
 import '../../features/onboarding/views/onboarding_sheet.dart';
 import '../../features/chat/providers/chat_providers.dart';
@@ -196,15 +195,6 @@ class AppStartupFlow extends _$AppStartupFlow {
     Future<void>.delayed(const Duration(milliseconds: 96), () {
       if (!ref.mounted) return;
       keepAlive(socketPersistenceProvider);
-    });
-
-    // Ensure persistent streaming uses the shared connectivity service
-    final connectivityService = ref.read(connectivityServiceProvider);
-    Future<void>.delayed(const Duration(milliseconds: 160), () {
-      if (!ref.mounted) return;
-      PersistentStreamingService().attachConnectivityService(
-        connectivityService,
-      );
     });
 
     // Warm the conversations list in the background as soon as possible,
@@ -432,7 +422,7 @@ class _ForegroundRefreshObserver extends WidgetsBindingObserver {
 }
 
 /// Attempts to keep the realtime socket connection alive while the app is
-/// backgrounded, similar to how PersistentStreamingService works for streams.
+/// backgrounded using BackgroundStreamingHandler for platform-specific handling.
 ///
 /// Notes:
 /// - iOS: limited to short background task windows; we send periodic keepAlive.

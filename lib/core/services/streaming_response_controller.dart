@@ -17,7 +17,7 @@ typedef StreamingErrorCallback =
 ///
 /// This wraps a [StreamSubscription], normalises error handling, and exposes
 /// a unified cancel method so UI layers can stop streaming without having to
-/// know the underlying transport (SSE, polling, etc.).
+/// know the underlying transport (WebSocket, polling, etc.).
 class StreamingResponseController {
   StreamingResponseController({
     required Stream<String> stream,

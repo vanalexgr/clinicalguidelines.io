@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
