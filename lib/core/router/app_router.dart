@@ -7,9 +7,9 @@ import '../auth/auth_state_manager.dart';
 import '../providers/app_providers.dart';
 import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
-import '../services/persistent_streaming_service.dart';
 import '../utils/debug_logger.dart';
 import '../../features/auth/providers/unified_auth_providers.dart';
+import '../../features/chat/providers/chat_providers.dart';
 import '../../features/auth/views/authentication_page.dart';
 import '../../features/auth/views/connect_signin_page.dart';
 import '../../features/auth/views/connection_issue_page.dart';
@@ -37,6 +37,7 @@ class RouterNotifier extends ChangeNotifier {
         connectivityStatusProvider,
         _onStateChanged,
       ),
+      ref.listen<bool>(isChatStreamingProvider, _onStateChanged),
     ];
   }
 
@@ -112,8 +113,8 @@ class RouterNotifier extends ChangeNotifier {
     // 2. Connectivity is explicitly offline
     // 3. Auth is authenticated (don't interrupt auth flow)
     // 4. App is in foreground and offline warning isn't suppressed
-    // 5. No active streaming is in progress (avoid interrupting token streams)
-    final hasActiveStreams = PersistentStreamingService().activeStreamCount > 0;
+    // 5. No active streaming is in progress (avoid interrupting chat streams)
+    final hasActiveStreams = ref.read(isChatStreamingProvider);
     final shouldShowConnectionIssue =
         !reviewerMode &&
         connectivity == ConnectivityStatus.offline &&

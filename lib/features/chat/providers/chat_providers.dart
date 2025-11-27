@@ -34,6 +34,15 @@ final chatMessagesProvider =
       ChatMessagesNotifier.new,
     );
 
+/// Whether chat is currently streaming a response.
+/// Used by router to avoid showing connection issues during active streaming.
+final isChatStreamingProvider = Provider<bool>((ref) {
+  final messages = ref.watch(chatMessagesProvider);
+  if (messages.isEmpty) return false;
+  final last = messages.last;
+  return last.role == 'assistant' && last.isStreaming;
+});
+
 // Loading state for conversation (used to show chat skeletons during fetch)
 @Riverpod(keepAlive: true)
 class IsLoadingConversation extends _$IsLoadingConversation {
@@ -1381,23 +1390,44 @@ Future<void> regenerateMessage(
       'tags': <dynamic>[],
     };
 
-    // Socket binding for background flows
+    // WebSocket-only streaming requires socket connection
     final socketService = ref.read(socketServiceProvider);
-    String? socketSessionId = socketService?.sessionId;
-    bool wantSessionBinding =
-        (socketService?.isConnected == true) &&
-        (socketSessionId != null && socketSessionId.isNotEmpty);
-    // When regenerating with tools, make a best-effort to ensure a live socket.
-    if (!wantSessionBinding && socketService != null) {
-      try {
-        final ok = await socketService.ensureConnected();
-        if (ok) {
-          socketSessionId = socketService.sessionId;
-          wantSessionBinding =
-              socketSessionId != null && socketSessionId.isNotEmpty;
-        }
-      } catch (_) {}
+    if (socketService == null) {
+      // No socket service available
+      ref.read(chatMessagesProvider.notifier).updateLastMessageWithFunction((
+        m,
+      ) {
+        return m.copyWith(
+          content: 'Connection not available. Please try again later.',
+          isStreaming: false,
+        );
+      });
+      return;
     }
+
+    // Ensure socket is connected (with 10s timeout)
+    if (!socketService.isConnected) {
+      final connected = await socketService.ensureConnected(
+        timeout: const Duration(seconds: 10),
+      );
+      if (!connected) {
+        ref.read(chatMessagesProvider.notifier).updateLastMessageWithFunction((
+          m,
+        ) {
+          return m.copyWith(
+            content:
+                'Unable to connect to server. Please check your connection and try again.',
+            isStreaming: false,
+          );
+        });
+        return;
+      }
+    }
+
+    final socketSessionId = socketService.sessionId;
+    final bool wantSessionBinding =
+        socketService.isConnected &&
+        (socketSessionId != null && socketSessionId.isNotEmpty);
 
     // Resolve tool servers from user settings (if any)
     List<Map<String, dynamic>>? toolServers;
@@ -1963,12 +1993,46 @@ Future<void> _sendMessageInternal(
       'tags': <dynamic>[],
     };
 
-    // Stream response using server-push via Socket when available, otherwise fallback
-    // Resolve Socket session for background tasks parity
+    // WebSocket-only streaming requires socket connection.
+    // Wait for connection with timeout before proceeding.
     final socketService = ref.read(socketServiceProvider);
-    final socketSessionId = socketService?.sessionId;
+    if (socketService == null) {
+      // No socket service available at all
+      ref.read(chatMessagesProvider.notifier).updateLastMessageWithFunction((
+        m,
+      ) {
+        return m.copyWith(
+          content: 'Connection not available. Please try again later.',
+          isStreaming: false,
+        );
+      });
+      return;
+    }
+
+    // Ensure socket is connected (with 10s timeout for initial connection)
+    if (!socketService.isConnected) {
+      final connected = await socketService.ensureConnected(
+        timeout: const Duration(seconds: 10),
+      );
+      if (!connected) {
+        // Socket connection failed - cannot stream without it
+        ref.read(chatMessagesProvider.notifier).updateLastMessageWithFunction((
+          m,
+        ) {
+          return m.copyWith(
+            content:
+                'Unable to connect to server. Please check your connection and try again.',
+            isStreaming: false,
+          );
+        });
+        return;
+      }
+    }
+
+    // Socket is now connected - resolve session for background tasks parity
+    final socketSessionId = socketService.sessionId;
     final bool wantSessionBinding =
-        (socketService?.isConnected == true) &&
+        socketService.isConnected &&
         (socketSessionId != null && socketSessionId.isNotEmpty);
 
     // Resolve tool servers from user settings (if any)
@@ -2045,7 +2109,7 @@ Future<void> _sendMessageInternal(
     final effectiveSessionId =
         response.socketSessionId ?? socketSessionId ?? sessionId;
 
-    // Use unified streaming helper for SSE/WebSocket handling
+    // Use unified streaming helper for WebSocket handling
     final bool isBackgroundFlow = response.isBackgroundFlow;
 
     try {
@@ -2500,7 +2564,7 @@ final stopGenerationProvider = Provider<void Function()>((ref) {
           messages.last.isStreaming) {
         final lastId = messages.last.id;
 
-        // Cancel the network stream (SSE) if active
+        // Cancel the network stream if active
         final api = ref.read(apiServiceProvider);
         api?.cancelStreamingMessage(lastId);
 

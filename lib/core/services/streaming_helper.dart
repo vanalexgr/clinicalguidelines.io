@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/chat_message.dart';
 import '../../core/models/socket_event.dart';
-import '../../core/services/persistent_streaming_service.dart';
 import '../../core/services/socket_service.dart';
 import '../../core/utils/inactivity_watchdog.dart';
 import '../../core/utils/tool_calls_parser.dart';
@@ -163,86 +162,44 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   required void Function() finishStreaming,
   required List<ChatMessage> Function() getMessages,
 }) {
-  // Persistable controller to survive brief app suspensions
+  // Track if streaming has been finished to avoid duplicate cleanup
+  bool hasFinished = false;
+
+  // Wrap finishStreaming to always clear the cancel token
+  void wrappedFinishStreaming() {
+    if (hasFinished) return;
+    hasFinished = true;
+    api.clearStreamCancelToken(assistantMessageId);
+    finishStreaming();
+  }
+
+  // Controller for forwarding data to StreamingResponseController
+  // With WebSocket-only streaming, the HTTP stream closes immediately after returning task_id.
+  // All actual content comes via WebSocket events, so we don't need persistent stream tracking.
   final persistentController = StreamController<String>.broadcast();
-  final persistentService = PersistentStreamingService();
 
-  // Track if stream has received any data
-  bool hasReceivedData = false;
-
-  // Create subscription first so we can reference it in onDone
-  late final String streamId;
-  final subscription = stream.listen(
+  // Subscribe to HTTP stream (mainly for error handling - content comes via WebSocket)
+  final httpSubscription = stream.listen(
     (data) {
-      hasReceivedData = true;
+      // Forward any HTTP stream data (rare with WebSocket-only)
       persistentController.add(data);
     },
-    onDone: () async {
+    onDone: () {
       DebugLogger.stream(
-        'Source stream onDone fired, hasReceivedData=$hasReceivedData',
+        'HTTP stream completed - WebSocket handles content delivery',
       );
-
-      // If stream closes immediately without data, it's likely due to backgrounding/network drop
-      // Not a natural completion
-      if (!hasReceivedData) {
-        DebugLogger.stream(
-          'Stream closed without data - likely interrupted, not completing',
-        );
-        // Check if app is backgrounding - if so, finish streaming with whatever we have
-        await Future.delayed(const Duration(milliseconds: 300));
-        if (persistentService.isInBackground) {
-          DebugLogger.stream(
-            'App backgrounding during stream - finishing with current content',
-          );
-          finishStreaming();
-        }
-        // Don't close the controller to prevent cascading completion handlers
-        return;
-      }
-
-      // For streams with data, delay to allow background detection
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      final isInBg = persistentService.isInBackground;
-      DebugLogger.stream(
-        'Stream onDone check: streamId=$streamId, isInBackground=$isInBg',
-      );
-
-      // Check if we're in background before closing
-      if (!isInBg) {
-        DebugLogger.stream(
-          'Closing stream controller for $streamId (foreground completion)',
-        );
+      // Close the controller to trigger StreamingResponseController.onComplete
+      // WebSocket events continue independently via socket subscriptions
+      if (!persistentController.isClosed) {
         persistentController.close();
-      } else {
-        DebugLogger.stream(
-          'Source stream completed in background for $streamId - keeping open for recovery',
-        );
-        // Finish streaming to save the content we have
-        finishStreaming();
       }
     },
     onError: persistentController.addError,
   );
 
-  streamId = persistentService.registerStream(
-    subscription: subscription,
-    controller: persistentController,
-    recoveryCallback: () async {
-      DebugLogger.log(
-        'Attempting to recover interrupted stream',
-        scope: 'streaming/helper',
-      );
-    },
-    metadata: {
-      'conversationId': activeConversationId,
-      'messageId': assistantMessageId,
-      'modelId': modelId,
-    },
-  );
-  api.registerPersistentStreamForMessage(assistantMessageId, streamId);
-
   InactivityWatchdog? socketWatchdog;
+  // Socket subscriptions list - starts empty so non-socket flows can finish via onComplete.
+  // HTTP subscription is tracked separately and cleaned up in disposeSocketSubscriptions.
   final socketSubscriptions = <VoidCallback>[];
   final hasSocketSignals =
       socketService != null || registerDeltaListener != null;
@@ -268,7 +225,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
           if (msgs.isNotEmpty &&
               msgs.last.role == 'assistant' &&
               msgs.last.isStreaming) {
-            finishStreaming();
+            wrappedFinishStreaming();
           }
         } catch (_) {}
         socketWatchdog?.stop();
@@ -284,15 +241,19 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   int imageCollectionRequestId = 0;
 
   void disposeSocketSubscriptions() {
-    if (socketSubscriptions.isEmpty) {
-      return;
-    }
+    // Cancel HTTP subscription
+    try {
+      httpSubscription.cancel();
+    } catch (_) {}
+
+    // Cancel socket subscriptions
     for (final dispose in socketSubscriptions) {
       try {
         dispose();
       } catch (_) {}
     }
     socketSubscriptions.clear();
+
     imageCollectionDebounce?.cancel();
     imageCollectionDebounce = null;
     pendingImageContent = null;
@@ -481,7 +442,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                 sessionId: sessionId,
               );
             } catch (_) {}
-            finishStreaming();
+            wrappedFinishStreaming();
             socketWatchdog?.stop();
             return;
           }
@@ -502,7 +463,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                   sessionId: sessionId,
                 );
               } catch (_) {}
-              finishStreaming();
+              wrappedFinishStreaming();
               socketWatchdog?.stop();
               return;
             }
@@ -563,7 +524,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
             try {
               socketService?.offEvent(channel);
             } catch (_) {}
-            finishStreaming();
+            wrappedFinishStreaming();
             socketWatchdog?.stop();
             return;
           }
@@ -781,13 +742,13 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                     }
                   } catch (_) {
                   } finally {
-                    finishStreaming();
+                    wrappedFinishStreaming();
                   }
                 });
                 return;
               }
             }
-            finishStreaming();
+            wrappedFinishStreaming();
             socketWatchdog?.stop();
           }
         }
@@ -816,7 +777,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
           });
         }
         disposeSocketSubscriptions();
-        finishStreaming();
+        wrappedFinishStreaming();
       } else if (type == 'chat:message:follow_ups' && payload != null) {
         DebugLogger.log('Received follow-ups event', scope: 'streaming/helper');
         final followMap = _asStringMap(payload);
@@ -966,7 +927,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
           return message.copyWith(statusHistory: filtered);
         });
         // Ensure UI exits streaming state
-        finishStreaming();
+        wrappedFinishStreaming();
         socketWatchdog?.stop();
       } else if ((type == 'chat:message:delta' || type == 'message') &&
           payload != null) {
@@ -1246,17 +1207,11 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       }
     },
     onComplete: () {
-      api.clearPersistentStreamForMessage(
-        assistantMessageId,
-        expectedStreamId: streamId,
-      );
-      // Unregister from persistent service
-      persistentService.unregisterStream(streamId);
-
-      // Stream completion without socket subscriptions indicates a simple flow
-      // For WebSocket flows, completion should be handled by socket events (done: true)
+      // HTTP stream completed - cleanup already done in onDone handler.
+      // For WebSocket flows, actual completion is handled by socket events (done: true).
+      // Only finish streaming here if there are no socket subscriptions (simple/legacy flow).
       if (socketSubscriptions.isEmpty) {
-        finishStreaming();
+        wrappedFinishStreaming();
         Future.microtask(refreshConversationSnapshot);
       }
     },
@@ -1271,14 +1226,6 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
           'modelId': modelId,
         },
       );
-
-      api.clearPersistentStreamForMessage(
-        assistantMessageId,
-        expectedStreamId: streamId,
-      );
-      try {
-        persistentService.unregisterStream(streamId);
-      } catch (_) {}
 
       // Check if this is a recoverable error (network issues, etc.)
       final errorText = error.toString();
@@ -1303,7 +1250,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       }
 
       disposeSocketSubscriptions();
-      finishStreaming();
+      wrappedFinishStreaming();
       Future.microtask(refreshConversationSnapshot);
       socketWatchdog?.stop();
     },

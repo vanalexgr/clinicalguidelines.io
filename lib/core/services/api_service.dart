@@ -19,9 +19,7 @@ import '../models/prompt.dart';
 import '../auth/api_auth_interceptor.dart';
 import '../error/api_error_interceptor.dart';
 // Tool-call details are parsed in the UI layer to render collapsible blocks
-import 'persistent_streaming_service.dart';
 import 'connectivity_service.dart';
-import 'sse_stream_parser.dart';
 import '../utils/debug_logger.dart';
 import 'conversation_parsing.dart';
 import 'worker_manager.dart';
@@ -2596,36 +2594,12 @@ class ApiService {
   // Chat streaming with conversation context
   // Track cancellable streaming requests by messageId for stop parity
   final Map<String, CancelToken> _streamCancelTokens = {};
-  final Map<String, String> _messagePersistentStreamIds = {};
 
-  /// Associates a streaming message with its persistent stream identifier.
-  void registerPersistentStreamForMessage(String messageId, String streamId) {
-    _messagePersistentStreamIds[messageId] = streamId;
-  }
-
-  /// Removes the persistent stream mapping for a message if it matches.
-  ///
-  /// Returns the removed persistent stream identifier when one existed and
-  /// matched the optional [expectedStreamId].
-  String? clearPersistentStreamForMessage(
-    String messageId, {
-    String? expectedStreamId,
-  }) {
-    final current = _messagePersistentStreamIds[messageId];
-    if (current == null) {
-      return null;
-    }
-    if (expectedStreamId != null && current != expectedStreamId) {
-      return null;
-    }
-    return _messagePersistentStreamIds.remove(messageId);
-  }
-
-  // Send message using dual-stream approach (HTTP SSE + WebSocket events).
-  // Matches OpenWebUI web client behavior:
-  // - HTTP SSE stream provides immediate content chunks
-  // - WebSocket events deliver metadata, tool status, sources, follow-ups
-  // - Both streams run in parallel for reliability
+  // Send message using WebSocket-only streaming.
+  // Matches OpenWebUI web client behavior when session_id + chat_id + message_id are provided:
+  // - HTTP POST returns JSON with task_id (no SSE streaming)
+  // - All content and metadata delivered via WebSocket events
+  // - Events: chat:completion, chat:message:delta, status, source, follow_ups, etc.
   // Returns a record with (stream, messageId, sessionId, socketSessionId, isBackgroundFlow)
   ({
     Stream<String> stream,
@@ -2790,7 +2764,7 @@ class ApiService {
       _traceApi('Including non-image files in request: ${allFiles.length}');
     }
 
-    _traceApi('Preparing dual-stream chat request (HTTP SSE + WebSocket)');
+    _traceApi('Preparing WebSocket-only chat request');
     _traceApi('Model: $model');
     _traceApi('Message count: ${processedMessages.length}');
 
@@ -2830,118 +2804,85 @@ class ApiService {
     );
     _traceApi('Has background_tasks: ${data.containsKey('background_tasks')}');
 
-    _traceApi('Initiating dual-stream request (HTTP SSE + WebSocket)');
+    _traceApi('Initiating WebSocket-only chat request');
     _traceApi('Posting to /api/chat/completions');
 
     // Create a cancel token for this request
     final cancelToken = CancelToken();
     _streamCancelTokens[messageId] = cancelToken;
 
-    // Start HTTP SSE stream (matches web client behavior)
-    // The WebSocket events will run in parallel via streaming_helper.dart
+    // Send HTTP request to initiate chat task
+    // With session_id + chat_id + message_id, the server returns a task_id
+    // and all streaming happens via WebSocket events (not SSE)
     () async {
       try {
         final resp = await _dio.post(
           '/api/chat/completions',
           data: data,
           options: Options(
-            responseType: ResponseType.stream,
-            // Extended timeout for streaming responses - allow up to 10 minutes
-            // for long-running tool calls and reasoning
-            receiveTimeout: const Duration(minutes: 10),
-            // Shorter send timeout for the initial request
+            responseType: ResponseType.json,
+            receiveTimeout: const Duration(seconds: 30),
             sendTimeout: const Duration(seconds: 30),
-            headers: {
-              'Accept': 'text/event-stream',
-              // Enable HTTP keep-alive to maintain connection in background
-              'Connection': 'keep-alive',
-              // Request server to send keep-alive messages
-              'Cache-Control': 'no-cache',
-            },
           ),
           cancelToken: cancelToken,
         );
 
         final respData = resp.data;
 
-        // Check if we got a task_id response (non-streaming)
-        if (respData is Map && respData['task_id'] != null) {
-          final taskId = respData['task_id'].toString();
-          _traceApi('Background task created: $taskId');
-
-          // In this case, all streaming will happen via WebSocket
-          // Close HTTP stream but keep WebSocket active
-          if (!streamController.isClosed) {
-            streamController.close();
-          }
-          return;
-        }
-
-        // We have a streaming response body
-        if (respData is ResponseBody) {
-          _traceApi('HTTP SSE stream started for message: $messageId');
-
-          // Parse SSE stream and forward chunks to controller
-          await for (final chunk in SSEStreamParser.parseResponseStream(
-            respData,
-            splitLargeDeltas: false,
-            heartbeatTimeout: const Duration(minutes: 2),
-            onHeartbeat: () {
-              // Notify persistent streaming service that connection is alive
-              final persistentStreamId = _messagePersistentStreamIds[messageId];
-              if (persistentStreamId != null) {
-                PersistentStreamingService().updateStreamProgress(
-                  persistentStreamId,
-                  chunkSequence: DateTime.now().millisecondsSinceEpoch,
-                );
-              }
-            },
-          )) {
+        if (respData is Map) {
+          if (respData['task_id'] != null) {
+            final taskId = respData['task_id'].toString();
+            _traceApi('Background task created: $taskId');
+          } else if (respData['status'] == true) {
+            _traceApi('Chat task initiated successfully');
+          } else if (respData['error'] != null) {
+            _traceApi('Server error: ${respData['error']}');
             if (!streamController.isClosed) {
-              streamController.add(chunk);
-            } else {
-              _traceApi('Stream controller closed, stopping SSE parsing');
-              break;
+              streamController.addError(Exception(respData['error'].toString()));
             }
           }
-
-          _traceApi('HTTP SSE stream completed for message: $messageId');
-        } else {
-          _traceApi('Unexpected response type: ${respData.runtimeType}');
         }
 
-        // Close the HTTP stream controller
-        // WebSocket events will continue independently via streaming_helper
+        // Close HTTP stream controller - WebSocket handles all content delivery
         if (!streamController.isClosed) {
           streamController.close();
         }
       } on DioException catch (e) {
         if (CancelToken.isCancel(e)) {
-          _traceApi('HTTP stream cancelled for message: $messageId');
+          _traceApi('Request cancelled for message: $messageId');
         } else {
-          _traceApi('HTTP stream error: $e');
+          _traceApi('Request error: $e');
           if (!streamController.isClosed) {
             streamController.addError(e);
             streamController.close();
           }
         }
       } catch (e) {
-        _traceApi('Unexpected error in HTTP stream: $e');
+        _traceApi('Unexpected error: $e');
         if (!streamController.isClosed) {
           streamController.addError(e);
           streamController.close();
         }
-      } finally {
-        _streamCancelTokens.remove(messageId);
       }
+      // Note: Don't remove cancel token here - it should remain until WebSocket
+      // streaming finishes so Stop button can cancel the active generation.
+      // Token is removed by clearStreamCancelToken() when streaming completes.
     }();
+
+    // Determine if this is actually a background flow based on the request payload
+    final bool isBackgroundFlow =
+        hasBackgroundTasksPayload ||
+        (toolIds != null && toolIds.isNotEmpty) ||
+        (toolServers != null && toolServers.isNotEmpty) ||
+        enableWebSearch ||
+        enableImageGeneration;
 
     return (
       stream: streamController.stream,
       messageId: messageId,
       sessionId: sessionId,
       socketSessionId: socketSessionId,
-      isBackgroundFlow: true,
+      isBackgroundFlow: isBackgroundFlow,
     );
   }
 
@@ -2975,13 +2916,12 @@ class ApiService {
         token.cancel('User cancelled');
       }
     } catch (_) {}
+  }
 
-    try {
-      final pid = clearPersistentStreamForMessage(messageId);
-      if (pid != null) {
-        PersistentStreamingService().unregisterStream(pid);
-      }
-    } catch (_) {}
+  /// Clears the cancel token for a message when streaming completes normally.
+  /// Called by streaming_helper when finishStreaming is invoked.
+  void clearStreamCancelToken(String messageId) {
+    _streamCancelTokens.remove(messageId);
   }
 
   // File upload for RAG

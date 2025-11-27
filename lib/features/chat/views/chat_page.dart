@@ -1254,7 +1254,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     try {
       // If assistant message has generated images and it's the last message,
-      // use image-only regenerate flow instead of text SSE regeneration
+      // use image-only regenerate flow instead of text streaming regeneration
       if (message.role == 'assistant' &&
           (message.files?.any((f) => f['type'] == 'image') == true) &&
           messageIndex == messages.length - 1) {
