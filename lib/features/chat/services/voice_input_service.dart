@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io' show Platform;
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:record/record.dart';
@@ -36,7 +37,7 @@ class VoiceInputService {
   static const Duration _localeFetchTimeout = Duration(seconds: 2);
   static const String _backgroundSttStreamId = 'voice-input-stt';
 
-  final VadHandler _vadHandler = VadHandler.create();
+  VadHandler? _vadHandler;
   final SpeechToText _speech = SpeechToText();
   final AudioRecorder _microphonePermissionProbe = AudioRecorder();
   final ApiService? _api;
@@ -53,6 +54,7 @@ class VoiceInputService {
   Future<void>? _startingLocalStt;
   StreamController<String>? _textStreamController;
   String _currentText = '';
+  bool _receivedFinalResult = false;
   StreamController<int>? _intensityController;
   Stream<int> get intensityStream =>
       _intensityController?.stream ?? const Stream<int>.empty();
@@ -124,9 +126,30 @@ class VoiceInputService {
       // properly close the stream so voice call service can restart
       if (wasActive && _isListening && !_usingServerStt) {
         debugPrint('Platform stopped listening, closing stream');
-        unawaited(_stopListening());
+        // On Android, the 'done' status often fires BEFORE the final result
+        // callback arrives. Wait for the final result to avoid cutting off
+        // the last word.
+        if (Platform.isAndroid && !_receivedFinalResult) {
+          _waitForFinalResultThenStop();
+        } else {
+          unawaited(_stopListening());
+        }
       }
     }
+  }
+
+  /// Waits briefly for Android to deliver the final STT result before stopping.
+  void _waitForFinalResultThenStop() {
+    Future(() async {
+      // Wait up to 300ms for the final result to arrive
+      for (var i = 0; i < 6; i++) {
+        await Future.delayed(const Duration(milliseconds: 50));
+        if (_receivedFinalResult || !_isListening) break;
+      }
+      if (_isListening) {
+        await _stopListening();
+      }
+    });
   }
 
   void _handleSttError(dynamic error) {
@@ -234,13 +257,29 @@ class VoiceInputService {
       if (sttLocales.isEmpty) {
         return;
       }
+
       // Map speech_to_text LocaleName to our own LocaleName class
       _locales = sttLocales
           .map((loc) => LocaleName(loc.localeId, loc.name))
           .toList();
       _usingFallbackLocales = false;
-      final match = _matchLocale(deviceTag);
+
+      // Prefer the STT engine's own system locale when available, since
+      // it may differ from Flutter's UI locale on some Android devices.
+      final systemLocale = await _speech.systemLocale();
+      final systemTag = systemLocale?.localeId;
+      final tagForMatch = (systemTag != null && systemTag.isNotEmpty)
+          ? systemTag
+          : deviceTag;
+
+      final match = _matchLocale(tagForMatch);
       _selectedLocaleId = match.localeId;
+
+      debugPrint(
+        'VoiceInputService: deviceTag=$deviceTag, '
+        'systemLocale=$systemTag, '
+        'selectedLocaleId=$_selectedLocaleId',
+      );
     } catch (_) {
       // Some engines may not support locale listing
     }
@@ -359,15 +398,15 @@ class VoiceInputService {
     final prevLen = _currentText.length;
     _currentText = result.recognizedWords;
     _textStreamController?.add(_currentText);
+    if (result.finalResult) {
+      _receivedFinalResult = true;
+    }
     final delta = (_currentText.length - prevLen).clamp(0, 50);
     final mapped = (delta / 5.0).ceil();
     _lastIntensity = mapped.clamp(0, 10);
     try {
       _intensityController?.add(_lastIntensity);
     } catch (_) {}
-    if (result.finalResult) {
-      unawaited(_stopListening());
-    }
   }
 
   Future<Stream<String>> startListening() async {
@@ -388,9 +427,18 @@ class VoiceInputService {
     _textStreamController = StreamController<String>.broadcast();
     _currentText = '';
     _isListening = true;
+    _receivedFinalResult = false;
     _intensityController = StreamController<int>.broadcast();
     _lastIntensity = 0;
     _usingServerStt = false;
+
+    // Optional haptic feedback when listening starts
+    final hapticsEnabled = _ref?.read(hapticEnabledProvider) ?? false;
+    if (hapticsEnabled) {
+      try {
+        HapticFeedback.heavyImpact();
+      } catch (_) {}
+    }
 
     _startIntensityDecayTimer();
 
@@ -489,12 +537,11 @@ class VoiceInputService {
   Future<void> _stopListening() async {
     if (!_isListening) return;
 
-    _isListening = false;
-
     _autoStopTimer?.cancel();
     _autoStopTimer = null;
 
     if (_usingServerStt) {
+      _isListening = false;
       await _stopVadRecording();
       final samples = _vadPendingSamples;
       _vadPendingSamples = null;
@@ -502,7 +549,17 @@ class VoiceInputService {
         await _processVadSamples(samples);
       }
     } else {
+      // On Android, stop() triggers a final result with any buffered words.
+      // Keep _isListening true until after stop() so _handleSttResult accepts it.
       await _stopLocalStt();
+      // Wait for Android's STT engine to deliver the final result callback
+      if (Platform.isAndroid && !_receivedFinalResult) {
+        for (var i = 0; i < 6; i++) {
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (_receivedFinalResult) break;
+        }
+      }
+      _isListening = false;
       if (_currentText.isNotEmpty) {
         _textStreamController?.add(_currentText);
       }
@@ -552,7 +609,11 @@ class VoiceInputService {
   }
 
   Future<void> _startServerRecording() async {
-    await _setupVadStreams();
+    // Create a fresh VadHandler for this session to avoid reusing any
+    // internal AudioRecorder that may be in a bad state after errors.
+    final vad = VadHandler.create();
+    _vadHandler = vad;
+    await _setupVadStreams(vad);
     final settings = _ref?.read(appSettingsProvider);
     final silenceMs = settings?.voiceSilenceDuration ?? 2000;
     final redemptionFrames = _silenceDurationToFrames(
@@ -561,7 +622,7 @@ class VoiceInputService {
     );
 
     try {
-      await _vadHandler.startListening(
+      await vad.startListening(
         frameSamples: _vadFrameSamples,
         model: 'v5',
         minSpeechFrames: _vadMinSpeechFrames,
@@ -581,22 +642,59 @@ class VoiceInputService {
           noiseSuppress: true,
           androidConfig: AndroidRecordConfig(
             audioSource: AndroidAudioSource.voiceRecognition,
-            audioManagerMode: AudioManagerMode.modeInCommunication,
-            speakerphone: true,
+            // Use normal mode instead of modeInCommunication to avoid
+            // audio routing conflicts with TTS playback after recording stops.
+            audioManagerMode: AudioManagerMode.modeNormal,
+            speakerphone: false,
             manageBluetooth: true,
             useLegacy: false,
           ),
         ),
       );
     } catch (error) {
+      // If starting the audio stream fails (e.g. recorder disposed),
+      // drop this handler so the next session gets a clean instance.
+      if (identical(_vadHandler, vad)) {
+        _vadHandler = null;
+      }
+
+      // Known Android issue: the underlying AudioRecorder can be in a bad
+      // state after audio focus changes triggered by TTS playback. When
+      // this happens and local STT is available, transparently fall back
+      // to on-device STT instead of failing the entire voice turn.
+      final canFallbackToLocal = _localSttAvailable && !prefersServerOnly;
+      if (error is PlatformException &&
+          error.code == 'record' &&
+          (error.message ?? '').contains(
+            'Recorder has not yet been created or has already been disposed.',
+          ) &&
+          canFallbackToLocal &&
+          _isListening) {
+        debugPrint(
+          'VadHandler.startListening failed due to recorder error – '
+          'falling back to local STT.',
+        );
+        _usingServerStt = false;
+        try {
+          await _stopVadRecording();
+        } catch (_) {}
+        try {
+          await _startLocalRecognition(allowOnlineFallback: !prefersDeviceOnly);
+          return;
+        } catch (fallbackError) {
+          _textStreamController?.addError(fallbackError);
+          rethrow;
+        }
+      }
+
       _textStreamController?.addError(error);
       rethrow;
     }
   }
 
-  Future<void> _setupVadStreams() async {
+  Future<void> _setupVadStreams(VadHandler vad) async {
     await _vadSpeechEndSub?.cancel();
-    _vadSpeechEndSub = _vadHandler.onSpeechEnd.listen((samples) {
+    _vadSpeechEndSub = vad.onSpeechEnd.listen((samples) {
       if (!_isListening || !_usingServerStt) return;
       if (samples.isEmpty) return;
       _vadPendingSamples = samples;
@@ -606,7 +704,7 @@ class VoiceInputService {
     });
 
     await _vadFrameSub?.cancel();
-    _vadFrameSub = _vadHandler.onFrameProcessed.listen((frameData) {
+    _vadFrameSub = vad.onFrameProcessed.listen((frameData) {
       if (!_isListening) return;
       final intensity = _intensityFromVadFrame(frameData.frame);
       _lastIntensity = intensity;
@@ -616,7 +714,7 @@ class VoiceInputService {
     });
 
     await _vadErrorSub?.cancel();
-    _vadErrorSub = _vadHandler.onError.listen((message) {
+    _vadErrorSub = vad.onError.listen((message) {
       _textStreamController?.addError(Exception(message));
       if (_isListening) {
         unawaited(_stopListening());
@@ -625,15 +723,28 @@ class VoiceInputService {
   }
 
   Future<void> _stopVadRecording() async {
-    try {
-      await _vadHandler.stopListening();
-    } catch (_) {}
+    final vad = _vadHandler;
+    if (vad != null) {
+      try {
+        await vad.stopListening();
+      } catch (_) {}
+    }
     await _vadSpeechEndSub?.cancel();
     _vadSpeechEndSub = null;
     await _vadFrameSub?.cancel();
     _vadFrameSub = null;
     await _vadErrorSub?.cancel();
     _vadErrorSub = null;
+  }
+
+  Future<void> _disposeVadHandler() async {
+    final vad = _vadHandler;
+    _vadHandler = null;
+    if (vad != null) {
+      try {
+        await vad.dispose();
+      } catch (_) {}
+    }
   }
 
   Future<void> _processVadSamples(List<double> samples) async {
@@ -861,7 +972,7 @@ class VoiceInputService {
 
   void dispose() {
     stopListening();
-    unawaited(_vadHandler.dispose());
+    unawaited(_disposeVadHandler());
     unawaited(_microphonePermissionProbe.dispose());
     try {
       _speech.stop();
