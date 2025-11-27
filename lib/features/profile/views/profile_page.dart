@@ -41,7 +41,12 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider2);
+    final authUser = ref.watch(currentUserProvider2);
+    final asyncUser = ref.watch(currentUserProvider);
+    final user = asyncUser.maybeWhen(
+      data: (value) => value ?? authUser,
+      orElse: () => authUser,
+    );
     final isAuthLoading = ref.watch(isAuthLoadingProvider2);
     final api = ref.watch(apiServiceProvider);
 

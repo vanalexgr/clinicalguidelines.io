@@ -338,9 +338,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     // Strip leading '/' prefix so we can match prompt commands (e.g., "help")
     final String searchQuery = query.startsWith('/') ? query.substring(1) : query;
 
-    // Prevent matching all prompts when user types only '/'
-    if (searchQuery.isEmpty) return const <Prompt>[];
-
     final List<Prompt> filtered =
         prompts
             .where(
@@ -976,6 +973,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final List<Widget> composerChildren = <Widget>[
       if (_showPromptOverlay)
         Padding(
+          key: const ValueKey('prompt-overlay'),
           padding: const EdgeInsets.fromLTRB(
             Spacing.sm,
             0,
@@ -986,6 +984,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         ),
       if (showCompactComposer)
         Padding(
+          key: const ValueKey('composer-compact'),
           padding: const EdgeInsets.fromLTRB(
             Spacing.screenPadding,
             Spacing.xs,
@@ -1059,6 +1058,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         )
       else ...[
         Padding(
+          key: const ValueKey('composer-expanded-input'),
           padding: const EdgeInsets.fromLTRB(
             Spacing.sm,
             Spacing.xs,
@@ -1097,6 +1097,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
           ),
         ),
         Padding(
+          key: const ValueKey('composer-expanded-buttons'),
           padding: const EdgeInsets.fromLTRB(
             Spacing.inputPadding,
             0,
