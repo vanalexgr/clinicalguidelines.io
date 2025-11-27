@@ -88,7 +88,11 @@ class TextToSpeechService {
     _deviceEngineAvailable = false;
     try {
       await _ensureAndroidDefaultEngine();
-      await _tts.awaitSpeakCompletion(false);
+      // Ensure speak() futures complete only after playback finishes.
+      // This avoids race conditions where completion callbacks fire
+      // early in release builds (especially on iOS), which can cause
+      // our voice-call pipeline to resume listening and cut off speech.
+      await _tts.awaitSpeakCompletion(true);
       await _tts.setVolume(volume);
       await _tts.setSpeechRate(speechRate);
       await _tts.setPitch(pitch);

@@ -523,9 +523,18 @@ class VoiceInputService {
   /// Ensures initialization and microphone permission before starting.
   Future<Stream<String>> beginListening() async {
     await initialize();
-    final hasMic = await checkPermissions();
-    if (!hasMic) {
-      throw Exception('Microphone permission not granted');
+    // For on-device STT we preflight the microphone permission so we can
+    // fail fast with a clear error before starting any recognition.
+    //
+    // For server-only STT we skip the preflight check and let the VAD /
+    // recording pipeline request or validate permissions as needed. This
+    // avoids false negatives from the lightweight probe and prevents
+    // blocking server STT when the platform would otherwise allow it.
+    if (!prefersServerOnly) {
+      final hasMic = await checkPermissions();
+      if (!hasMic) {
+        throw Exception('Microphone permission not granted');
+      }
     }
     return await startListening();
   }
