@@ -998,19 +998,28 @@ final voiceInputServiceProvider = Provider<VoiceInputService>((ref) {
 Future<bool> voiceInputAvailable(Ref ref) async {
   final service = ref.watch(voiceInputServiceProvider);
   if (!service.isSupportedPlatform) return false;
-  final initialized = await service.initialize();
-  if (!initialized) return false;
-  switch (service.preference) {
-    case SttPreference.deviceOnly:
-      if (service.hasLocalStt) return true;
-      if (!service.hasServerStt) return false;
-      break;
-    case SttPreference.serverOnly:
-      return service.hasServerStt;
+
+  // IMPORTANT:
+  // Do NOT initialize STT or request microphone/speech permissions here.
+  // This provider is watched by the chat UI during app startup; calling
+  // initialize() or checkPermissions() would trigger permission dialogs
+  // before the user explicitly opts into voice features.
+  //
+  // Instead, treat voice input as "available" based on platform support
+  // and configuration only. The actual initialization + permission flow
+  // happens on-demand via VoiceInputService.beginListening().
+
+  // If the user prefers server-only STT, only expose voice input when a
+  // server STT backend is configured.
+  if (service.preference == SttPreference.serverOnly) {
+    return service.hasServerStt;
   }
-  final hasPermission = await service.checkPermissions();
-  if (!hasPermission) return false;
-  return service.isAvailable;
+
+  // For device-only (or mixed) preferences, assume voice input is
+  // potentially available on supported platforms. Any missing
+  // permissions or lack of local STT support will be handled when
+  // beginListening() is called.
+  return true;
 }
 
 final voiceInputStreamProvider = StreamProvider<String>((ref) {
