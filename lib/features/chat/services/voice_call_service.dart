@@ -123,6 +123,11 @@ class VoiceCallService {
     _pauseReasons.clear();
     _listeningPaused = false;
 
+    // Clean up any zombie calls from previous sessions
+    if (_callKitEnabled) {
+      unawaited(_callKitService.checkAndCleanActiveCalls());
+    }
+
     // Initialize notification service
     await _notificationService.initialize();
 
@@ -312,9 +317,17 @@ class VoiceCallService {
         throw Exception('Failed to establish socket connection');
       }
 
+      // Initialize voice input first so we know which STT mode will be used
+      await _voiceInput.initialize();
+
+      // Only activate VoiceBackgroundAudioManager for server STT
+      // For local STT, speech_to_text handles its own iOS audio session
+      final useServerMic =
+          (_voiceInput.prefersServerOnly && _voiceInput.hasServerStt) ||
+          (!_voiceInput.hasLocalStt && _voiceInput.hasServerStt);
       await BackgroundStreamingHandler.instance.startBackgroundExecution(const [
         _voiceCallStreamId,
-      ], requiresMicrophone: true);
+      ], requiresMicrophone: useServerMic);
 
       // Set up periodic keep-alive to refresh wake lock (every 5 minutes)
       _keepAliveTimer?.cancel();
@@ -385,9 +398,10 @@ class VoiceCallService {
         throw Exception('Preferred speech recognition engine is unavailable');
       }
 
-      _updateState(VoiceCallState.listening);
-
       final stream = await _voiceInput.beginListening();
+
+      // Only mark as listening after STT has successfully started.
+      _updateState(VoiceCallState.listening);
 
       _transcriptSubscription = stream.listen(
         (text) {
@@ -401,13 +415,27 @@ class VoiceCallService {
         },
         onDone: () async {
           if (_isDisposed) return;
+
+          final trimmed = _accumulatedTranscript.trim();
           // User stopped speaking, send message to assistant
-          if (_accumulatedTranscript.trim().isNotEmpty) {
-            await _sendMessageToAssistant(_accumulatedTranscript);
-          } else {
-            // No input, restart listening
-            await _startListening();
+          if (trimmed.isNotEmpty) {
+            await _sendMessageToAssistant(trimmed);
+            return;
           }
+
+          // No input – avoid a tight restart loop and only restart
+          // while the call is still active and not paused.
+          await Future.delayed(const Duration(milliseconds: 250));
+          if (_isDisposed) return;
+          if (_state == VoiceCallState.disconnected ||
+              _state == VoiceCallState.error) {
+            return;
+          }
+          if (_pauseReasons.isNotEmpty) {
+            // Respect paused state; resumeListening() will restart if needed.
+            return;
+          }
+          await _startListening();
         },
       );
 
