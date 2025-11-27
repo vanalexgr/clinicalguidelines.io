@@ -1478,7 +1478,12 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   Widget _buildBottomSection(BuildContext context) {
     final theme = context.conduitTheme;
     final sidebarTheme = context.sidebarTheme;
-    final user = ref.watch(currentUserProvider2);
+    final authUser = ref.watch(currentUserProvider2);
+    final asyncUser = ref.watch(currentUserProvider);
+    final user = asyncUser.maybeWhen(
+      data: (value) => value ?? authUser,
+      orElse: () => authUser,
+    );
     final api = ref.watch(apiServiceProvider);
 
     String initialFor(String name) {

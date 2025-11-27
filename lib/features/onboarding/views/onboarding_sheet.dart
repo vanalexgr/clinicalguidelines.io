@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 
 import '../../auth/providers/unified_auth_providers.dart';
+import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/user_display_name.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/sheet_handle.dart';
@@ -67,7 +68,12 @@ class _OnboardingSheetState extends ConsumerState<OnboardingSheet> {
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
     final l10n = AppLocalizations.of(context)!;
-    final user = ref.watch(currentUserProvider2);
+    final authUser = ref.watch(currentUserProvider2);
+    final asyncUser = ref.watch(currentUserProvider);
+    final user = asyncUser.maybeWhen(
+      data: (value) => value ?? authUser,
+      orElse: () => authUser,
+    );
     final greetingName = deriveUserDisplayName(user);
     final pages = _buildPages(l10n, greetingName);
     final pageCount = pages.length;
