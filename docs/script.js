@@ -273,9 +273,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ============================================
-    // FETCH REPOSITORY STATS
+    // FETCH GITHUB STATS (via Shields.io proxy)
     // ============================================
-    const formatCount = (num) => {
+    const formatNumber = (num) => {
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
         }
@@ -285,68 +285,57 @@ document.addEventListener('DOMContentLoaded', () => {
         return num.toString();
     };
 
-    // Use data attributes instead of IDs to avoid ad blocker element hiding
-    const starsEl = document.querySelector('[data-metric="stars"]');
-    const downloadsEl = document.querySelector('[data-metric="downloads"]');
-    
-    // Build API URL dynamically to avoid static pattern matching
-    const apiBase = ['https:/', '/api', '.github', '.com/'].join('');
-    const repoPath = 'repos/cogwheel0/conduit';
-    
-    // Fetch repo stats using a class-based approach (less likely to be blocked)
-    const fetchRepoData = async () => {
-        try {
-            const endpoint = apiBase + repoPath;
-            const response = await fetch(endpoint);
-            if (!response.ok) throw new Error('API request failed');
-            return await response.json();
-        } catch (e) {
-            return null;
-        }
+    const parseShieldsValue = (value) => {
+        // Shields.io returns values like "1.2k", "5.3M", etc.
+        // Extract numeric value and convert to number
+        const match = value.match(/([\d.]+)([kKmM]?)/);
+        if (!match) return 0;
+        
+        const num = parseFloat(match[1]);
+        const suffix = match[2].toLowerCase();
+        
+        if (suffix === 'k') return num * 1000;
+        if (suffix === 'm') return num * 1000000;
+        return num;
     };
+
+    const starsElement = document.getElementById('github-stars');
+    const downloadsElement = document.getElementById('github-downloads');
     
-    const fetchReleaseData = async () => {
-        try {
-            const endpoint = apiBase + repoPath + '/releases';
-            const response = await fetch(endpoint);
-            if (!response.ok) throw new Error('API request failed');
-            return await response.json();
-        } catch (e) {
-            return null;
-        }
-    };
-    
-    // Initialize stats
-    if (starsEl) {
-        fetchRepoData().then(data => {
-            if (data && data.stargazers_count !== undefined) {
-                starsEl.textContent = formatCount(data.stargazers_count);
-                starsEl.classList.add('loaded');
-            } else {
-                starsEl.textContent = '★';
-            }
-        });
+    // Fetch repo stats (stars) via Shields.io
+    if (starsElement) {
+        fetch('https://img.shields.io/github/stars/cogwheel0/conduit.json')
+            .then(response => response.json())
+            .then(data => {
+                if (data.value) {
+                    const numValue = parseShieldsValue(data.value);
+                    starsElement.textContent = formatNumber(numValue);
+                    starsElement.classList.add('loaded');
+                }
+            })
+            .catch(() => {
+                starsElement.textContent = '★';
+            });
     }
 
-    if (downloadsEl) {
-        fetchReleaseData().then(releases => {
-            if (Array.isArray(releases)) {
-                const total = releases.reduce((sum, release) => {
-                    return sum + release.assets.reduce((assetSum, asset) => {
-                        return assetSum + (asset.download_count || 0);
-                    }, 0);
-                }, 0);
-                
-                if (total > 0) {
-                    downloadsEl.textContent = formatCount(total);
-                } else {
-                    downloadsEl.textContent = 'New';
+    // Fetch downloads via Shields.io
+    if (downloadsElement) {
+        fetch('https://img.shields.io/github/downloads/cogwheel0/conduit/total.json')
+            .then(response => response.json())
+            .then(data => {
+                if (data.value) {
+                    const numValue = parseShieldsValue(data.value);
+                    if (numValue > 0) {
+                        downloadsElement.textContent = formatNumber(numValue);
+                    } else {
+                        downloadsElement.textContent = 'New';
+                    }
+                    downloadsElement.classList.add('loaded');
                 }
-                downloadsEl.classList.add('loaded');
-            } else {
-                downloadsEl.textContent = '↓';
-            }
-        });
+            })
+            .catch(() => {
+                downloadsElement.textContent = '↓';
+            });
     }
 
     console.log('✨ Conduit landing page initialized');
