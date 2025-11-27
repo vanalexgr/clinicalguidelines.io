@@ -130,6 +130,29 @@ class CallKitService {
     return <Map<String, dynamic>>[];
   }
 
+  /// Checks for active calls and clears them if they are not tracked by the app.
+  Future<void> checkAndCleanActiveCalls() async {
+    if (!_shouldUseCallKit('check active calls')) return;
+
+    try {
+      final calls = await activeCalls();
+      if (calls.isNotEmpty) {
+        developer.log(
+          'Found ${calls.length} active CallKit calls on startup. Cleaning up.',
+          name: 'callkit',
+        );
+        await endAllCalls();
+      }
+    } catch (error, stackTrace) {
+      developer.log(
+        'Failed to clean up active calls: $error',
+        name: 'callkit',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   /// Stream of CallKit events from the native layer.
   Stream<CallEvent> get events {
     if (!_callKitAllowed) {
@@ -182,7 +205,7 @@ class CallKitService {
       ios: const IOSParams(
         handleType: 'generic',
         supportsVideo: false,
-        audioSessionMode: 'default',
+        audioSessionMode: 'voiceChat',
         audioSessionActive: true,
         audioSessionPreferredSampleRate: 44100.0,
         audioSessionPreferredIOBufferDuration: 0.005,

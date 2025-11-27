@@ -70,20 +70,12 @@ class TextToSpeechService {
       }
     });
 
-    if (!kIsWeb && Platform.isIOS) {
-      final context = AudioContext(
-        iOS: AudioContextIOS(
-          category: AVAudioSessionCategory.playAndRecord,
-          options: const {
-            AVAudioSessionOptions.defaultToSpeaker,
-            AVAudioSessionOptions.mixWithOthers,
-            AVAudioSessionOptions.allowBluetooth,
-            AVAudioSessionOptions.allowBluetoothA2DP,
-          },
+    if (!kIsWeb && Platform.isAndroid) {
+      _player.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(),
         ),
-        android: const AudioContextAndroid(),
       );
-      _player.setAudioContext(context);
     }
   }
 
@@ -103,13 +95,8 @@ class TextToSpeechService {
 
       if (!kIsWeb && Platform.isIOS) {
         await _tts.setSharedInstance(true);
-        await _tts
-            .setIosAudioCategory(IosTextToSpeechAudioCategory.playAndRecord, [
-              IosTextToSpeechAudioCategoryOptions.mixWithOthers,
-              IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
-              IosTextToSpeechAudioCategoryOptions.allowBluetooth,
-              IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
-            ]);
+        // Rely on the native VoiceBackgroundAudioManager for iOS
+        // audio session configuration to avoid routing conflicts.
       }
 
       if (_engine != TtsEngine.server) {

@@ -122,6 +122,4 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-    
-    <!-- Queries for speech recognition removed; using server transcription -->
 </manifest>

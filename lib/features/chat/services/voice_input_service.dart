@@ -3,12 +3,13 @@ import 'dart:convert';
 import 'dart:io' show Platform;
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:record/record.dart'
-    hide IosAudioCategory, IosAudioCategoryOptions;
+import 'package:record/record.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:stts/stts.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import 'package:vad/vad.dart';
 
 import '../../../core/providers/app_providers.dart';
@@ -18,7 +19,7 @@ import '../../../core/services/settings_service.dart';
 
 part 'voice_input_service.g.dart';
 
-// Lightweight replacement for previous stt.LocaleName used across the UI
+/// Lightweight locale representation used across the UI.
 class LocaleName {
   final String localeId;
   final String name;
@@ -36,8 +37,8 @@ class VoiceInputService {
   static const Duration _localeFetchTimeout = Duration(seconds: 2);
   static const String _backgroundSttStreamId = 'voice-input-stt';
 
-  final VadHandler _vadHandler = VadHandler.create();
-  final Stt _speech = Stt();
+  VadHandler? _vadHandler;
+  final SpeechToText _speech = SpeechToText();
   final AudioRecorder _microphonePermissionProbe = AudioRecorder();
   final ApiService? _api;
   final Ref? _ref;
@@ -53,6 +54,7 @@ class VoiceInputService {
   Future<void>? _startingLocalStt;
   StreamController<String>? _textStreamController;
   String _currentText = '';
+  bool _receivedFinalResult = false;
   StreamController<int>? _intensityController;
   Stream<int> get intensityStream =>
       _intensityController?.stream ?? const Stream<int>.empty();
@@ -64,8 +66,6 @@ class VoiceInputService {
   Stream<String> get textStream =>
       _textStreamController?.stream ?? const Stream<String>.empty();
   Timer? _autoStopTimer;
-  StreamSubscription<SttRecognition>? _sttResultSub;
-  StreamSubscription<SttState>? _sttStateSub;
   StreamSubscription<List<double>>? _vadSpeechEndSub;
   StreamSubscription<({double isSpeech, double notSpeech, List<double> frame})>?
   _vadFrameSub;
@@ -100,8 +100,11 @@ class VoiceInputService {
     }
     // Prepare local speech recognizer
     try {
-      // Check permission and supported status
-      _localSttAvailable = await _speech.isSupported();
+      // Initialize speech_to_text and check availability
+      _localSttAvailable = await _speech.initialize(
+        onStatus: _handleSttStatus,
+        onError: _handleSttError,
+      );
       if (_localSttAvailable) {
         await _loadLocales(deviceTag);
       }
@@ -112,21 +115,77 @@ class VoiceInputService {
     return true;
   }
 
+  void _handleSttStatus(String status) {
+    debugPrint('Local STT Status: $status');
+    if (status == 'listening') {
+      _localSttActive = true;
+    } else if (status == 'notListening' || status == 'done') {
+      final wasActive = _localSttActive;
+      _localSttActive = false;
+      // If we were actively listening and the platform stopped us,
+      // properly close the stream so voice call service can restart
+      if (wasActive && _isListening && !_usingServerStt) {
+        debugPrint('Platform stopped listening, closing stream');
+        // On Android, the 'done' status often fires BEFORE the final result
+        // callback arrives. Wait for the final result to avoid cutting off
+        // the last word.
+        if (Platform.isAndroid && !_receivedFinalResult) {
+          _waitForFinalResultThenStop();
+        } else {
+          unawaited(_stopListening());
+        }
+      }
+    }
+  }
+
+  /// Waits briefly for Android to deliver the final STT result before stopping.
+  void _waitForFinalResultThenStop() {
+    Future(() async {
+      // Wait up to 300ms for the final result to arrive
+      for (var i = 0; i < 6; i++) {
+        await Future.delayed(const Duration(milliseconds: 50));
+        if (_receivedFinalResult || !_isListening) break;
+      }
+      if (_isListening) {
+        await _stopListening();
+      }
+    });
+  }
+
+  void _handleSttError(dynamic error) {
+    debugPrint('Local STT Error: $error');
+    final errorStr = error.toString().toLowerCase();
+
+    // These errors are non-fatal - they just mean no speech was detected
+    // or the session timed out. The status handler will close the stream
+    // and voice call service will restart listening.
+    final nonFatalErrors = [
+      'error_no_match',
+      'error_speech_timeout',
+      'error_busy', // Temporary, can retry
+    ];
+
+    final isNonFatal = nonFatalErrors.any((e) => errorStr.contains(e));
+    if (isNonFatal) {
+      debugPrint('Non-fatal STT error, allowing normal stream close');
+      // Let the status handler / auto-stop timer close the stream.
+      // We do not treat this as a fatal failure for the current session.
+      return;
+    }
+
+    // Fatal errors - mark STT as unavailable
+    _handleLocalRecognizerError(error);
+  }
+
   Future<bool> checkPermissions() async {
     final micGranted = await _ensureMicrophonePermission();
     if (!micGranted) {
       return false;
     }
-    if (_localSttAvailable && _preference != SttPreference.serverOnly) {
-      try {
-        final sttGranted = await _speech.hasPermission();
-        if (!sttGranted) {
-          _localSttAvailable = false;
-        }
-      } catch (_) {
-        _localSttAvailable = false;
-      }
-    }
+    // Note: Don't disable _localSttAvailable based on hasPermission check
+    // The permission might be granted lazily when listen() is called on iOS,
+    // and the check can be unreliable. Let speech_to_text handle permissions
+    // during the actual listen() call.
     return true;
   }
 
@@ -136,23 +195,21 @@ class VoiceInputService {
   bool get hasLocalStt => _localSttAvailable;
   bool get localeMetadataIncomplete => _usingFallbackLocales;
 
-  // Add a method to check if on-device STT is properly supported
+  /// Checks if on-device STT is properly supported.
   Future<bool> checkOnDeviceSupport() async {
     if (!isSupportedPlatform || !_isInitialized) return false;
     try {
-      final supported = await _speech.isSupported();
-      return supported;
+      // speech_to_text isAvailable is set after initialize()
+      return _speech.isAvailable;
     } catch (e) {
       // ignore errors checking on-device support
       return false;
     }
   }
 
-  // Test method to verify on-device STT functionality
+  /// Test method to verify on-device STT functionality.
   Future<String> testOnDeviceStt() async {
     try {
-      // starting on-device STT test
-
       // First ensure we're initialized
       await initialize();
 
@@ -167,24 +224,19 @@ class VoiceInputService {
       }
 
       // Test if speech recognition is available
-      final supported = await _speech.isSupported();
-      if (!supported) {
+      if (!_speech.isAvailable) {
         return 'Speech recognition service is not available on this device';
       }
 
-      // Set language if available, then start and stop quickly
-      if (_selectedLocaleId != null) {
-        try {
-          await _speech.setLanguage(_selectedLocaleId!);
-        } catch (_) {}
-      }
-      await _speech.start(SttRecognitionOptions(punctuation: true));
+      // Start and stop quickly to test
+      await _speech.listen(onResult: (_) {}, localeId: _selectedLocaleId);
       await Future.delayed(const Duration(milliseconds: 100));
       await _speech.stop();
 
-      return 'On-device STT test completed successfully. Local STT available: $_localSttAvailable, Selected locale: $_selectedLocaleId';
+      return 'On-device STT test completed successfully. '
+          'Local STT available: $_localSttAvailable, '
+          'Selected locale: $_selectedLocaleId';
     } catch (e) {
-      // on-device STT test failed
       return 'On-device STT test failed: $e';
     }
   }
@@ -198,23 +250,39 @@ class VoiceInputService {
 
   Future<void> _loadLocales(String deviceTag) async {
     _ensureFallbackLocale(deviceTag);
-    List<String> langs = const [];
     try {
-      langs = await _speech.getLanguages().timeout(
-        _localeFetchTimeout,
-        onTimeout: () => const [],
+      final sttLocales = await Future.value(
+        _speech.locales(),
+      ).timeout(_localeFetchTimeout, onTimeout: () => const []);
+      if (sttLocales.isEmpty) {
+        return;
+      }
+
+      // Map speech_to_text LocaleName to our own LocaleName class
+      _locales = sttLocales
+          .map((loc) => LocaleName(loc.localeId, loc.name))
+          .toList();
+      _usingFallbackLocales = false;
+
+      // Prefer the STT engine's own system locale when available, since
+      // it may differ from Flutter's UI locale on some Android devices.
+      final systemLocale = await _speech.systemLocale();
+      final systemTag = systemLocale?.localeId;
+      final tagForMatch = (systemTag != null && systemTag.isNotEmpty)
+          ? systemTag
+          : deviceTag;
+
+      final match = _matchLocale(tagForMatch);
+      _selectedLocaleId = match.localeId;
+
+      debugPrint(
+        'VoiceInputService: deviceTag=$deviceTag, '
+        'systemLocale=$systemTag, '
+        'selectedLocaleId=$_selectedLocaleId',
       );
     } catch (_) {
-      // Engines such as Whisper Voice may not support this call.
-      langs = const [];
+      // Some engines may not support locale listing
     }
-    if (langs.isEmpty) {
-      return;
-    }
-    _locales = langs.map((locale) => LocaleName(locale, locale)).toList();
-    _usingFallbackLocales = false;
-    final match = _matchLocale(deviceTag);
-    _selectedLocaleId = match.localeId;
   }
 
   void _ensureFallbackLocale(String deviceTag) {
@@ -255,7 +323,8 @@ class VoiceInputService {
     if (!_isListening) {
       return;
     }
-    _localSttAvailable = false;
+    // Don't permanently disable _localSttAvailable on transient errors
+    // The next session should still try local STT
     final message = error?.toString().trim();
     final exception = Exception(
       (message == null || message.isEmpty)
@@ -284,42 +353,60 @@ class VoiceInputService {
     _startingLocalStt = completer.future;
     _localSttActive = false;
 
-    await _ensureLocalSttReset();
-    await _configureIosAudioSession();
-
-    if (_selectedLocaleId != null) {
-      await _speech.setLanguage(_selectedLocaleId!);
+    // Only reset if there's an active session to avoid startup delay
+    if (_speech.isListening) {
+      await _ensureLocalSttReset();
+      // Give the platform a moment to fully release the audio session
+      await Future.delayed(const Duration(milliseconds: 100));
     }
 
-    Future<void> attempt(bool offline) async {
-      await _speech.start(
-        SttRecognitionOptions(punctuation: true, offline: offline),
-      );
-      _localSttActive = true;
-    }
+    // Use user's configured silence duration for pause detection
+    final settings = _ref?.read(appSettingsProvider);
+    final pauseDuration = Duration(
+      milliseconds: settings?.voiceSilenceDuration ?? 2000,
+    );
 
     try {
-      await attempt(true);
+      await _speech.listen(
+        onResult: _handleSttResult,
+        localeId: _selectedLocaleId,
+        // Extended duration for voice calls - listen up to 60 seconds
+        listenFor: const Duration(seconds: 60),
+        // Use user's silence duration setting for pause detection
+        pauseFor: pauseDuration,
+        listenOptions: SpeechListenOptions(
+          listenMode: ListenMode.dictation,
+          cancelOnError: false,
+          partialResults: true,
+          autoPunctuation: true,
+          enableHapticFeedback: false,
+        ),
+      );
+      _localSttActive = true;
     } catch (error) {
       _localSttActive = false;
       await _ensureLocalSttReset();
-      if (Platform.isIOS && allowOnlineFallback) {
-        try {
-          await attempt(false);
-          return;
-        } catch (secondary) {
-          await _ensureLocalSttReset();
-          throw Exception(
-            'On-device speech failed ($error); '
-            'online fallback failed ($secondary).',
-          );
-        }
-      }
       rethrow;
     } finally {
       completer.complete();
       _startingLocalStt = null;
     }
+  }
+
+  void _handleSttResult(SpeechRecognitionResult result) {
+    if (!_isListening) return;
+    final prevLen = _currentText.length;
+    _currentText = result.recognizedWords;
+    _textStreamController?.add(_currentText);
+    if (result.finalResult) {
+      _receivedFinalResult = true;
+    }
+    final delta = (_currentText.length - prevLen).clamp(0, 50);
+    final mapped = (delta / 5.0).ceil();
+    _lastIntensity = mapped.clamp(0, 10);
+    try {
+      _intensityController?.add(_lastIntensity);
+    } catch (_) {}
   }
 
   Future<Stream<String>> startListening() async {
@@ -340,9 +427,18 @@ class VoiceInputService {
     _textStreamController = StreamController<String>.broadcast();
     _currentText = '';
     _isListening = true;
+    _receivedFinalResult = false;
     _intensityController = StreamController<int>.broadcast();
     _lastIntensity = 0;
     _usingServerStt = false;
+
+    // Optional haptic feedback when listening starts
+    final hapticsEnabled = _ref?.read(hapticEnabledProvider) ?? false;
+    if (hapticsEnabled) {
+      try {
+        HapticFeedback.heavyImpact();
+      } catch (_) {}
+    }
 
     _startIntensityDecayTimer();
 
@@ -356,7 +452,6 @@ class VoiceInputService {
             (!shouldUseLocal && _preference != SttPreference.deviceOnly));
 
     if (shouldUseLocal) {
-      await _pinBackgroundMicrophone();
       _autoStopTimer?.cancel();
       _autoStopTimer = Timer(const Duration(seconds: 60), () {
         if (_isListening) {
@@ -364,9 +459,7 @@ class VoiceInputService {
         }
       });
       try {
-        final isStillAvailable = await _speech.isSupported();
-        if (!isStillAvailable && _isListening) {
-          _localSttAvailable = false;
+        if (!_speech.isAvailable && _isListening) {
           _textStreamController?.addError(
             Exception('On-device speech recognition unavailable'),
           );
@@ -377,50 +470,12 @@ class VoiceInputService {
         // ignore availability check errors
       }
 
-      _sttResultSub = _speech.onResultChanged.listen(
-        (SttRecognition result) {
-          if (!_isListening) return;
-          final prevLen = _currentText.length;
-          _currentText = result.text;
-          _textStreamController?.add(_currentText);
-          final delta = (_currentText.length - prevLen).clamp(0, 50);
-          final mapped = (delta / 5.0).ceil();
-          _lastIntensity = mapped.clamp(0, 10);
-          try {
-            _intensityController?.add(_lastIntensity);
-          } catch (_) {}
-          if (result.isFinal) {
-            unawaited(_stopListening());
-          }
-        },
-        onError: (error) {
-          debugPrint('Local STT Error: $error');
-          _handleLocalRecognizerError(error);
-        },
-      );
-
-      _sttStateSub = _speech.onStateChanged.listen(
-        (state) {
-          debugPrint('Local STT State: $state');
-          if (state == SttState.start) {
-            _localSttActive = true;
-          } else if (state == SttState.stop) {
-            _localSttActive = false;
-          }
-        },
-        onError: (error) {
-          debugPrint('Local STT State Error: $error');
-          _handleLocalRecognizerError(error);
-        },
-      );
-
       try {
         debugPrint('Starting local recognition...');
         await _startLocalRecognition(allowOnlineFallback: !prefersDeviceOnly);
         debugPrint('Local recognition started');
       } catch (error) {
         debugPrint('Failed to start local recognition: $error');
-        _localSttAvailable = false;
         if (!_isListening) {
           return _textStreamController!.stream;
         }
@@ -482,12 +537,11 @@ class VoiceInputService {
   Future<void> _stopListening() async {
     if (!_isListening) return;
 
-    _isListening = false;
-
     _autoStopTimer?.cancel();
     _autoStopTimer = null;
 
     if (_usingServerStt) {
+      _isListening = false;
       await _stopVadRecording();
       final samples = _vadPendingSamples;
       _vadPendingSamples = null;
@@ -495,7 +549,17 @@ class VoiceInputService {
         await _processVadSamples(samples);
       }
     } else {
+      // On Android, stop() triggers a final result with any buffered words.
+      // Keep _isListening true until after stop() so _handleSttResult accepts it.
       await _stopLocalStt();
+      // Wait for Android's STT engine to deliver the final result callback
+      if (Platform.isAndroid && !_receivedFinalResult) {
+        for (var i = 0; i < 6; i++) {
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (_receivedFinalResult) break;
+        }
+      }
+      _isListening = false;
       if (_currentText.isNotEmpty) {
         _textStreamController?.add(_currentText);
       }
@@ -518,18 +582,6 @@ class VoiceInputService {
         await pendingStart;
       } catch (_) {}
     }
-    if (_sttResultSub != null) {
-      try {
-        await _sttResultSub?.cancel();
-      } catch (_) {}
-      _sttResultSub = null;
-    }
-    if (_sttStateSub != null) {
-      try {
-        await _sttStateSub?.cancel();
-      } catch (_) {}
-      _sttStateSub = null;
-    }
 
     final shouldStopStt = _localSttActive && _localSttAvailable;
     _localSttActive = false;
@@ -538,21 +590,6 @@ class VoiceInputService {
         await _speech.stop();
       } catch (_) {}
     }
-    if (Platform.isIOS) {
-      try {
-        await _speech.ios?.setAudioSessionActive(false);
-      } catch (_) {}
-    }
-  }
-
-  Future<void> _pinBackgroundMicrophone() async {
-    if (!Platform.isIOS || _backgroundMicPinned) return;
-    try {
-      await BackgroundStreamingHandler.instance.startBackgroundExecution(const [
-        _backgroundSttStreamId,
-      ], requiresMicrophone: true);
-      _backgroundMicPinned = true;
-    } catch (_) {}
   }
 
   Future<void> _releaseBackgroundMicrophone() async {
@@ -567,34 +604,16 @@ class VoiceInputService {
 
   Future<void> _ensureLocalSttReset() async {
     try {
-      await _speech.stop();
-    } catch (_) {}
-    if (Platform.isIOS) {
-      try {
-        await _speech.ios?.setAudioSessionActive(false);
-      } catch (_) {}
-    }
-  }
-
-  Future<void> _configureIosAudioSession() async {
-    if (!Platform.isIOS) return;
-    final ios = _speech.ios;
-    if (ios == null) return;
-    try {
-      await ios.setAudioSessionCategory(
-        category: IosAudioCategory.playAndRecord,
-        options: [
-          IosAudioCategoryOptions.allowBluetooth,
-          IosAudioCategoryOptions.defaultToSpeaker,
-          IosAudioCategoryOptions.duckOthers,
-        ],
-      );
-      await ios.setAudioSessionActive(true);
+      await _speech.cancel();
     } catch (_) {}
   }
 
   Future<void> _startServerRecording() async {
-    await _setupVadStreams();
+    // Create a fresh VadHandler for this session to avoid reusing any
+    // internal AudioRecorder that may be in a bad state after errors.
+    final vad = VadHandler.create();
+    _vadHandler = vad;
+    await _setupVadStreams(vad);
     final settings = _ref?.read(appSettingsProvider);
     final silenceMs = settings?.voiceSilenceDuration ?? 2000;
     final redemptionFrames = _silenceDurationToFrames(
@@ -603,7 +622,7 @@ class VoiceInputService {
     );
 
     try {
-      await _vadHandler.startListening(
+      await vad.startListening(
         frameSamples: _vadFrameSamples,
         model: 'v5',
         minSpeechFrames: _vadMinSpeechFrames,
@@ -623,29 +642,59 @@ class VoiceInputService {
           noiseSuppress: true,
           androidConfig: AndroidRecordConfig(
             audioSource: AndroidAudioSource.voiceRecognition,
-            audioManagerMode: AudioManagerMode.modeInCommunication,
-            speakerphone: true,
+            // Use normal mode instead of modeInCommunication to avoid
+            // audio routing conflicts with TTS playback after recording stops.
+            audioManagerMode: AudioManagerMode.modeNormal,
+            speakerphone: false,
             manageBluetooth: true,
             useLegacy: false,
-          ),
-          iosConfig: IosRecordConfig(
-            categoryOptions: [
-              IosAudioCategoryOption.allowBluetooth,
-              IosAudioCategoryOption.defaultToSpeaker,
-              IosAudioCategoryOption.duckOthers,
-            ],
           ),
         ),
       );
     } catch (error) {
+      // If starting the audio stream fails (e.g. recorder disposed),
+      // drop this handler so the next session gets a clean instance.
+      if (identical(_vadHandler, vad)) {
+        _vadHandler = null;
+      }
+
+      // Known Android issue: the underlying AudioRecorder can be in a bad
+      // state after audio focus changes triggered by TTS playback. When
+      // this happens and local STT is available, transparently fall back
+      // to on-device STT instead of failing the entire voice turn.
+      final canFallbackToLocal = _localSttAvailable && !prefersServerOnly;
+      if (error is PlatformException &&
+          error.code == 'record' &&
+          (error.message ?? '').contains(
+            'Recorder has not yet been created or has already been disposed.',
+          ) &&
+          canFallbackToLocal &&
+          _isListening) {
+        debugPrint(
+          'VadHandler.startListening failed due to recorder error – '
+          'falling back to local STT.',
+        );
+        _usingServerStt = false;
+        try {
+          await _stopVadRecording();
+        } catch (_) {}
+        try {
+          await _startLocalRecognition(allowOnlineFallback: !prefersDeviceOnly);
+          return;
+        } catch (fallbackError) {
+          _textStreamController?.addError(fallbackError);
+          rethrow;
+        }
+      }
+
       _textStreamController?.addError(error);
       rethrow;
     }
   }
 
-  Future<void> _setupVadStreams() async {
+  Future<void> _setupVadStreams(VadHandler vad) async {
     await _vadSpeechEndSub?.cancel();
-    _vadSpeechEndSub = _vadHandler.onSpeechEnd.listen((samples) {
+    _vadSpeechEndSub = vad.onSpeechEnd.listen((samples) {
       if (!_isListening || !_usingServerStt) return;
       if (samples.isEmpty) return;
       _vadPendingSamples = samples;
@@ -655,7 +704,7 @@ class VoiceInputService {
     });
 
     await _vadFrameSub?.cancel();
-    _vadFrameSub = _vadHandler.onFrameProcessed.listen((frameData) {
+    _vadFrameSub = vad.onFrameProcessed.listen((frameData) {
       if (!_isListening) return;
       final intensity = _intensityFromVadFrame(frameData.frame);
       _lastIntensity = intensity;
@@ -665,7 +714,7 @@ class VoiceInputService {
     });
 
     await _vadErrorSub?.cancel();
-    _vadErrorSub = _vadHandler.onError.listen((message) {
+    _vadErrorSub = vad.onError.listen((message) {
       _textStreamController?.addError(Exception(message));
       if (_isListening) {
         unawaited(_stopListening());
@@ -674,15 +723,28 @@ class VoiceInputService {
   }
 
   Future<void> _stopVadRecording() async {
-    try {
-      await _vadHandler.stopListening();
-    } catch (_) {}
+    final vad = _vadHandler;
+    if (vad != null) {
+      try {
+        await vad.stopListening();
+      } catch (_) {}
+    }
     await _vadSpeechEndSub?.cancel();
     _vadSpeechEndSub = null;
     await _vadFrameSub?.cancel();
     _vadFrameSub = null;
     await _vadErrorSub?.cancel();
     _vadErrorSub = null;
+  }
+
+  Future<void> _disposeVadHandler() async {
+    final vad = _vadHandler;
+    _vadHandler = null;
+    if (vad != null) {
+      try {
+        await vad.dispose();
+      } catch (_) {}
+    }
   }
 
   Future<void> _processVadSamples(List<double> samples) async {
@@ -737,45 +799,48 @@ class VoiceInputService {
     if (samples.isEmpty) {
       return Uint8List(0);
     }
-    final Int16List pcm = Int16List(samples.length);
-    for (var i = 0; i < samples.length; i++) {
-      final clamped = samples[i].clamp(-1.0, 1.0);
-      final scaled = (clamped * 32767).round().clamp(-32768, 32767);
-      pcm[i] = scaled;
-    }
-
-    final dataLength = pcm.lengthInBytes;
+    final dataLength = samples.length * 2; // 2 bytes per sample (16-bit)
     final bytesPerSample = 2;
     final numChannels = 1;
     final byteRate = _vadSampleRate * numChannels * bytesPerSample;
     final blockAlign = numChannels * bytesPerSample;
+    const headerSize = 44;
 
-    final builder = BytesBuilder();
-    builder.add(ascii.encode('RIFF'));
-    builder.add(_int32Le(36 + dataLength));
-    builder.add(ascii.encode('WAVE'));
-    builder.add(ascii.encode('fmt '));
-    builder.add(_int32Le(16));
-    builder.add(_int16Le(1));
-    builder.add(_int16Le(numChannels));
-    builder.add(_int32Le(_vadSampleRate));
-    builder.add(_int32Le(byteRate));
-    builder.add(_int16Le(blockAlign));
-    builder.add(_int16Le(16));
-    builder.add(ascii.encode('data'));
-    builder.add(_int32Le(dataLength));
-    builder.add(Uint8List.view(pcm.buffer));
-    return builder.toBytes();
+    final totalSize = headerSize + dataLength;
+    final buffer = Uint8List(totalSize);
+    final view = ByteData.view(buffer.buffer);
+
+    // RIFF chunk
+    buffer.setRange(0, 4, ascii.encode('RIFF'));
+    view.setUint32(4, 36 + dataLength, Endian.little);
+    buffer.setRange(8, 12, ascii.encode('WAVE'));
+
+    // fmt chunk
+    buffer.setRange(12, 16, ascii.encode('fmt '));
+    view.setUint32(16, 16, Endian.little); // PCM chunk size
+    view.setUint16(20, 1, Endian.little); // AudioFormat (1 = PCM)
+    view.setUint16(22, numChannels, Endian.little);
+    view.setUint32(24, _vadSampleRate, Endian.little);
+    view.setUint32(28, byteRate, Endian.little);
+    view.setUint16(32, blockAlign, Endian.little);
+    view.setUint16(34, 16, Endian.little); // BitsPerSample
+
+    // data chunk
+    buffer.setRange(36, 40, ascii.encode('data'));
+    view.setUint32(40, dataLength, Endian.little);
+
+    // Write samples
+    var offset = 44;
+    for (var i = 0; i < samples.length; i++) {
+      final clamped = samples[i].clamp(-1.0, 1.0);
+      // Convert float to 16-bit PCM
+      final pcm = (clamped * 32767).round().clamp(-32768, 32767);
+      view.setInt16(offset, pcm, Endian.little);
+      offset += 2;
+    }
+
+    return buffer;
   }
-
-  List<int> _int16Le(int value) => [value & 0xff, (value >> 8) & 0xff];
-
-  List<int> _int32Le(int value) => [
-    value & 0xff,
-    (value >> 8) & 0xff,
-    (value >> 16) & 0xff,
-    (value >> 24) & 0xff,
-  ];
 
   String? _languageForServer() {
     final locale = _selectedLocaleId;
@@ -907,10 +972,10 @@ class VoiceInputService {
 
   void dispose() {
     stopListening();
-    unawaited(_vadHandler.dispose());
+    unawaited(_disposeVadHandler());
     unawaited(_microphonePermissionProbe.dispose());
     try {
-      _speech.dispose().catchError((_) {});
+      _speech.stop();
     } catch (_) {}
   }
 }
