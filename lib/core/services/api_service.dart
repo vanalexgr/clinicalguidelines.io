@@ -495,49 +495,13 @@ class ApiService {
     List<dynamic> allRegularChats = [];
 
     if (limit == null) {
-      // Fetch all conversations using pagination
-
-      // OpenWebUI expects 1-based pagination for the `page` query param.
-      // Using 0 triggers server-side offset calculation like `offset = page*limit - limit`,
-      // which becomes negative for page=0 and causes a DB error.
-      int currentPage = 1;
-
-      while (true) {
-        final response = await _dio.get(
-          '/api/v1/chats/',
-          queryParameters: {
-            'page': currentPage,
-            'include_folders': true,
-            'include_pinned': true,
-          },
-        );
-
-        if (response.data is! List) {
-          throw Exception(
-            'Expected array of chats, got ${response.data.runtimeType}',
-          );
-        }
-
-        final pageChats = response.data as List;
-
-        if (pageChats.isEmpty) {
-          break;
-        }
-
-        allRegularChats.addAll(pageChats);
-        currentPage++;
-
-        // Safety break to avoid infinite loops (adjust as needed)
-        if (currentPage > 100) {
-          _traceApi(
-            'WARNING: Reached maximum page limit (100), stopping pagination',
-          );
-          break;
-        }
-      }
-
-      _traceApi(
-        'Fetched total of ${allRegularChats.length} conversations across $currentPage pages',
+      // Fetch all conversations using parallel pagination for better performance
+      // Main chats endpoint uses 50 items per page
+      allRegularChats = await _fetchAllPagedResults(
+        endpoint: '/api/v1/chats/',
+        baseParams: {'include_folders': true, 'include_pinned': true},
+        expectedPageSize: 50,
+        debugLabel: 'conversations',
       );
     } else {
       // Original single page fetch
@@ -642,6 +606,111 @@ class ApiService {
       DebugLogger.warning('error-skip', scope: scope, data: {'error': e});
     }
     return <dynamic>[];
+  }
+
+  /// Fetches all pages from a paginated endpoint using parallel batch requests.
+  ///
+  /// This method fetches pages in parallel batches for better performance,
+  /// rather than fetching sequentially one page at a time.
+  ///
+  /// [endpoint] - The API endpoint to fetch from
+  /// [baseParams] - Base query parameters to include with each request
+  /// [expectedPageSize] - Expected items per page from the API (for early exit
+  ///   optimization). If the first page has fewer items, no more requests are
+  ///   made. Use 50 for main chats, 10 for folder chats.
+  /// [batchSize] - Number of pages to fetch in parallel (default: 5)
+  /// [maxPages] - Maximum number of pages to fetch (default: 100)
+  /// [debugLabel] - Label for debug logging
+  Future<List<Map<String, dynamic>>> _fetchAllPagedResults({
+    required String endpoint,
+    Map<String, dynamic>? baseParams,
+    required int expectedPageSize,
+    int batchSize = 5,
+    int maxPages = 100,
+    String? debugLabel,
+  }) async {
+    final results = <Map<String, dynamic>>[];
+    final label = debugLabel ?? endpoint;
+
+    // Fetch first page to check if there's data
+    final firstResponse = await _dio.get(
+      endpoint,
+      queryParameters: {...?baseParams, 'page': 1},
+    );
+
+    final firstData = firstResponse.data;
+    if (firstData is! List) {
+      throw Exception('Expected array of $label, got ${firstData.runtimeType}');
+    }
+    if (firstData.isEmpty) {
+      _traceApi('$label: no results on first page');
+      return results;
+    }
+
+    results.addAll(firstData.whereType<Map<String, dynamic>>());
+
+    // Use unfiltered length for pagination detection since the API returns
+    // the same count regardless of filtering. If the first page has fewer
+    // items than expected, we know there are no more pages.
+    final firstPageCount = firstData.length;
+    if (firstPageCount < expectedPageSize) {
+      _traceApi('$label: fetched ${results.length} items (single page)');
+      return results;
+    }
+
+    // Fetch remaining pages in parallel batches
+    int currentPage = 2;
+    int totalPages = 1;
+
+    while (currentPage <= maxPages) {
+      final futures = <Future<Response<dynamic>>>[];
+
+      // Queue up a batch of parallel requests
+      for (int i = 0; i < batchSize && currentPage <= maxPages; i++) {
+        futures.add(
+          _dio.get(
+            endpoint,
+            queryParameters: {...?baseParams, 'page': currentPage++},
+          ),
+        );
+      }
+
+      // Execute batch in parallel
+      final responses = await Future.wait(futures);
+      bool hasMore = false;
+
+      for (final response in responses) {
+        final data = response.data;
+
+        // Validate response type - throw on non-list (e.g., error objects)
+        // to preserve original error-surfacing behavior
+        if (data is! List) {
+          throw Exception('Expected array of $label, got ${data.runtimeType}');
+        }
+
+        if (data.isNotEmpty) {
+          results.addAll(data.whereType<Map<String, dynamic>>());
+          totalPages++;
+          // If this page is full (has expected number of items), there might
+          // be more pages. Use unfiltered length for consistent detection.
+          if (data.length >= expectedPageSize) {
+            hasMore = true;
+          }
+        }
+      }
+
+      // Stop if no page in this batch was full
+      if (!hasMore) break;
+    }
+
+    if (currentPage > maxPages) {
+      _traceApi('WARNING: $label reached max page limit ($maxPages)');
+    }
+
+    _traceApi(
+      '$label: fetched ${results.length} items across $totalPages pages',
+    );
+    return results;
   }
 
   // Parse OpenWebUI chat format to our Conversation format
@@ -1130,18 +1199,23 @@ class ApiService {
   Future<List<Conversation>> getFolderConversationSummaries(
     String folderId,
   ) async {
-    _traceApi('Fetching conversation summaries in folder: $folderId');
-    final response = await _dio.get('/api/v1/chats/folder/$folderId/list');
-    final data = response.data;
-    if (data is! List) {
-      return const [];
-    }
-    final normalized = data
-        .whereType<Map<String, dynamic>>()
-        .map(parseConversationSummary)
-        .map(Conversation.fromJson)
-        .toList(growable: false);
-    return normalized;
+    // The backend endpoint has a hardcoded limit of 10 items per page,
+    // so we use parallel pagination to fetch all conversations efficiently.
+    final allChats = await _fetchAllPagedResults(
+      endpoint: '/api/v1/chats/folder/$folderId/list',
+      expectedPageSize: 10,
+      debugLabel: 'folder-$folderId',
+    );
+
+    // Parse in background isolate for better UI responsiveness
+    final parsedJson = await _workerManager
+        .schedule<Map<String, dynamic>, List<Map<String, dynamic>>>(
+          parseFolderSummariesWorker,
+          {'chats': allChats},
+          debugLabel: 'parse_folder_$folderId',
+        );
+
+    return parsedJson.map(Conversation.fromJson).toList(growable: false);
   }
 
   // Tags
@@ -2838,7 +2912,9 @@ class ApiService {
           } else if (respData['error'] != null) {
             _traceApi('Server error: ${respData['error']}');
             if (!streamController.isClosed) {
-              streamController.addError(Exception(respData['error'].toString()));
+              streamController.addError(
+                Exception(respData['error'].toString()),
+              );
             }
           }
         }
