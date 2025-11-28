@@ -709,12 +709,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                 ?.cast<String, dynamic>();
                             final name =
                                 meta?['name']?.toString() ?? parsed.host;
-                            final collectionName =
-                                result?['collection_name']?.toString();
+                            final collectionName = result?['collection_name']
+                                ?.toString();
 
                             // Add as appropriate type
-                            final notifier =
-                                ref.read(contextAttachmentsProvider.notifier);
+                            final notifier = ref.read(
+                              contextAttachmentsProvider.notifier,
+                            );
                             if (isYoutube) {
                               notifier.addYoutube(
                                 displayName: name,
@@ -1680,28 +1681,29 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                 constraints: BoxConstraints(
                                   maxWidth: constraints.maxWidth,
                                 ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.center,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      AnimatedSwitcher(
-                                        duration: const Duration(
-                                          milliseconds: 250,
-                                        ),
-                                        switchInCurve: Curves.easeOutCubic,
-                                        switchOutCurve: Curves.easeInCubic,
-                                        child: displayConversationTitle != null
-                                            ? Column(
-                                                key: ValueKey<String>(
-                                                  displayConversationTitle,
-                                                ),
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  StreamingTitleText(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    AnimatedSwitcher(
+                                      duration: const Duration(
+                                        milliseconds: 250,
+                                      ),
+                                      switchInCurve: Curves.easeOutCubic,
+                                      switchOutCurve: Curves.easeInCubic,
+                                      child: displayConversationTitle != null
+                                          ? Column(
+                                              key: ValueKey<String>(
+                                                displayConversationTitle,
+                                              ),
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                ConstrainedBox(
+                                                  constraints: BoxConstraints(
+                                                    maxWidth:
+                                                        constraints.maxWidth,
+                                                  ),
+                                                  child: StreamingTitleText(
                                                     title:
                                                         displayConversationTitle,
                                                     style: AppTypography
@@ -1720,96 +1722,45 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                                         .textPrimary
                                                         .withValues(alpha: 0.8),
                                                   ),
-                                                  const SizedBox(
-                                                    height: Spacing.xs,
-                                                  ),
-                                                ],
-                                              )
-                                            : const SizedBox.shrink(
-                                                key: ValueKey<String>(
-                                                  'empty-title',
                                                 ),
+                                                const SizedBox(
+                                                  height: Spacing.xs,
+                                                ),
+                                              ],
+                                            )
+                                          : const SizedBox.shrink(
+                                              key: ValueKey<String>(
+                                                'empty-title',
                                               ),
-                                      ),
-                                      Transform.translate(
-                                        offset: const Offset(0, 0),
-                                        child: () {
-                                          const double iconPaddingX =
-                                              Spacing.xs;
-                                          const double iconPaddingY =
-                                              Spacing.xxs;
-                                          const double iconWidth =
-                                              IconSize.small;
-                                          const double iconBoxWidth =
-                                              (iconPaddingX * 2) +
-                                              (BorderWidth.thin * 2) +
-                                              iconWidth;
-                                          final double maxLabelWidth =
-                                              (constraints.maxWidth -
-                                                      (iconBoxWidth * 2) -
-                                                      (Spacing.xs * 2))
-                                                  .clamp(
-                                                    48.0,
-                                                    constraints.maxWidth,
-                                                  );
+                                            ),
+                                    ),
+                                    Transform.translate(
+                                      offset: const Offset(0, 0),
+                                      child: () {
+                                        const double iconPaddingX = Spacing.xs;
+                                        const double iconPaddingY = Spacing.xxs;
+                                        const double iconWidth = IconSize.small;
+                                        const double iconBoxWidth =
+                                            (iconPaddingX * 2) +
+                                            (BorderWidth.thin * 2) +
+                                            iconWidth;
+                                        final double maxLabelWidth =
+                                            (constraints.maxWidth -
+                                                    (iconBoxWidth * 2) -
+                                                    (Spacing.xs * 2))
+                                                .clamp(
+                                                  48.0,
+                                                  constraints.maxWidth,
+                                                );
 
-                                          final row = Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Opacity(
-                                                opacity: 0.0,
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal:
-                                                            iconPaddingX,
-                                                        vertical: iconPaddingY,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: context
-                                                        .conduitTheme
-                                                        .surfaceBackground
-                                                        .withValues(alpha: 0.3),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          AppBorderRadius.badge,
-                                                        ),
-                                                    border: Border.all(
-                                                      color: context
-                                                          .conduitTheme
-                                                          .dividerColor,
-                                                      width: BorderWidth.thin,
-                                                    ),
-                                                  ),
-                                                  child: Icon(
-                                                    Platform.isIOS
-                                                        ? CupertinoIcons
-                                                              .chevron_down
-                                                        : Icons
-                                                              .keyboard_arrow_down,
-                                                    color: context
-                                                        .conduitTheme
-                                                        .iconSecondary,
-                                                    size: iconWidth,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: Spacing.xs),
-                                              ConstrainedBox(
-                                                constraints: BoxConstraints(
-                                                  maxWidth: maxLabelWidth,
-                                                ),
-                                                child: MiddleEllipsisText(
-                                                  modelLabel,
-                                                  style: modelTextStyle,
-                                                  textAlign: TextAlign.center,
-                                                  semanticsLabel: modelLabel,
-                                                ),
-                                              ),
-                                              const SizedBox(width: Spacing.xs),
-                                              Container(
+                                        final row = Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Opacity(
+                                              opacity: 0.0,
+                                              child: Container(
                                                 padding:
                                                     const EdgeInsets.symmetric(
                                                       horizontal: iconPaddingX,
@@ -1843,64 +1794,107 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                                   size: iconWidth,
                                                 ),
                                               ),
-                                            ],
-                                          );
-                                          final constrainedRow = ConstrainedBox(
-                                            constraints: BoxConstraints(
-                                              maxWidth: constraints.maxWidth,
                                             ),
-                                            child: row,
-                                          );
-                                          return hasConversationTitle
-                                              ? SizedBox(
-                                                  height: 24,
-                                                  child: constrainedRow,
-                                                )
-                                              : constrainedRow;
-                                        }(),
-                                      ),
-                                      if (isReviewerMode)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 2.0,
+                                            const SizedBox(width: Spacing.xs),
+                                            ConstrainedBox(
+                                              constraints: BoxConstraints(
+                                                maxWidth: maxLabelWidth,
+                                              ),
+                                              child: MiddleEllipsisText(
+                                                modelLabel,
+                                                style: modelTextStyle,
+                                                textAlign: TextAlign.center,
+                                                semanticsLabel: modelLabel,
+                                              ),
+                                            ),
+                                            const SizedBox(width: Spacing.xs),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: iconPaddingX,
+                                                    vertical: iconPaddingY,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: context
+                                                    .conduitTheme
+                                                    .surfaceBackground
+                                                    .withValues(alpha: 0.3),
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                      AppBorderRadius.badge,
+                                                    ),
+                                                border: Border.all(
+                                                  color: context
+                                                      .conduitTheme
+                                                      .dividerColor,
+                                                  width: BorderWidth.thin,
+                                                ),
+                                              ),
+                                              child: Icon(
+                                                Platform.isIOS
+                                                    ? CupertinoIcons
+                                                          .chevron_down
+                                                    : Icons.keyboard_arrow_down,
+                                                color: context
+                                                    .conduitTheme
+                                                    .iconSecondary,
+                                                size: iconWidth,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                        final constrainedRow = ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxWidth: constraints.maxWidth,
                                           ),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: Spacing.sm,
-                                              vertical: 1.0,
+                                          child: row,
+                                        );
+                                        return hasConversationTitle
+                                            ? SizedBox(
+                                                height: 24,
+                                                child: constrainedRow,
+                                              )
+                                            : constrainedRow;
+                                      }(),
+                                    ),
+                                    if (isReviewerMode)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 2.0,
+                                        ),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: Spacing.sm,
+                                            vertical: 1.0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: context.conduitTheme.success
+                                                .withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              AppBorderRadius.badge,
                                             ),
-                                            decoration: BoxDecoration(
+                                            border: Border.all(
                                               color: context
                                                   .conduitTheme
                                                   .success
-                                                  .withValues(alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    AppBorderRadius.badge,
-                                                  ),
-                                              border: Border.all(
-                                                color: context
-                                                    .conduitTheme
-                                                    .success
-                                                    .withValues(alpha: 0.3),
-                                                width: BorderWidth.thin,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              'REVIEWER MODE',
-                                              style: AppTypography.captionStyle
-                                                  .copyWith(
-                                                    color: context
-                                                        .conduitTheme
-                                                        .success,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 9,
-                                                  ),
+                                                  .withValues(alpha: 0.3),
+                                              width: BorderWidth.thin,
                                             ),
                                           ),
+                                          child: Text(
+                                            'REVIEWER MODE',
+                                            style: AppTypography.captionStyle
+                                                .copyWith(
+                                                  color: context
+                                                      .conduitTheme
+                                                      .success,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 9,
+                                                ),
+                                          ),
                                         ),
-                                    ],
-                                  ),
+                                      ),
+                                  ],
                                 ),
                               ),
                             );

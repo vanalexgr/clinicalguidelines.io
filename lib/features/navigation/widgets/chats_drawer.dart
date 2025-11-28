@@ -29,6 +29,7 @@ import '../../../core/models/folder.dart';
 import '../../../core/persistence/persistence_keys.dart';
 import '../../../core/persistence/hive_boxes.dart';
 import 'package:hive_ce/hive.dart';
+import '../../../shared/widgets/middle_ellipsis_text.dart';
 
 /// Defines the section types that can be collapsed in the chats drawer
 enum _SectionType { pinned, recent }
@@ -420,15 +421,17 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                           );
                           out.add(
                             const SliverToBoxAdapter(
+                              child: SizedBox(height: Spacing.sm),
+                            ),
+                          );
+                        } else {
+                          // Only add spacing after collapsed folders
+                          out.add(
+                            const SliverToBoxAdapter(
                               child: SizedBox(height: Spacing.xs),
                             ),
                           );
                         }
-                        out.add(
-                          const SliverToBoxAdapter(
-                            child: SizedBox(height: Spacing.xs),
-                          ),
-                        );
                       }
                       return out.isEmpty
                           ? <Widget>[
@@ -663,6 +666,13 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                       out.add(
                         const SliverToBoxAdapter(
                           child: SizedBox(height: Spacing.sm),
+                        ),
+                      );
+                    } else {
+                      // Only add spacing after collapsed folders
+                      out.add(
+                        const SliverToBoxAdapter(
+                          child: SizedBox(height: Spacing.xs),
                         ),
                       );
                     }
@@ -1903,11 +1913,10 @@ class _ConversationTileContent extends StatelessWidget {
             ],
             Flexible(
               fit: textFit,
-              child: Text(
+              child: MiddleEllipsisText(
                 title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: textStyle,
+                semanticsLabel: title,
               ),
             ),
             ...trailing,

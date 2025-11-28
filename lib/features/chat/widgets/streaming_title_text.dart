@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/middle_ellipsis_text.dart';
+
 /// Displays a chat title that reveals characters with a streaming animation
 /// whenever the title changes.
 class StreamingTitleText extends StatefulWidget {
@@ -141,36 +143,53 @@ class _StreamingTitleTextState extends State<StreamingTitleText>
             ? widget.style.fontSize! * (widget.style.height ?? 1.1)
             : 18.0);
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Flexible(
-          child: Text(
-            // When the animation completes we fall back to the full string.
-            revealedGlyphs >= totalGlyphs ? _activeTitle : visibleText,
-            maxLines: 1,
-            overflow: TextOverflow.fade,
-            softWrap: false,
-            textAlign: TextAlign.center,
-            style: widget.style,
-          ),
-        ),
-        if (isAnimating)
-          FadeTransition(
-            opacity: _cursorOpacity,
-            child: Container(
-              width: widget.cursorWidth,
-              height: cursorHeight,
-              margin: const EdgeInsets.only(left: 2),
-              decoration: BoxDecoration(
-                color: cursorColor,
-                borderRadius: BorderRadius.circular(widget.cursorWidth),
-              ),
+    // When animation is complete, use middle ellipsis for overflow.
+    // During animation, show partial text with standard Text widget.
+    final bool animationComplete = revealedGlyphs >= totalGlyphs;
+
+    // Use middle ellipsis when animation is complete
+    if (animationComplete) {
+      return MiddleEllipsisText(
+        _activeTitle,
+        style: widget.style,
+        textAlign: TextAlign.center,
+        semanticsLabel: _activeTitle,
+      );
+    }
+
+    // During animation, use IntrinsicWidth to size the row to the text,
+    // then clip any overflow from the cursor
+    return ClipRect(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Flexible(
+            child: Text(
+              visibleText,
+              maxLines: 1,
+              overflow: TextOverflow.clip,
+              softWrap: false,
+              textAlign: TextAlign.center,
+              style: widget.style,
             ),
           ),
-      ],
+          if (isAnimating)
+            FadeTransition(
+              opacity: _cursorOpacity,
+              child: Container(
+                width: widget.cursorWidth,
+                height: cursorHeight,
+                margin: const EdgeInsets.only(left: 2),
+                decoration: BoxDecoration(
+                  color: cursorColor,
+                  borderRadius: BorderRadius.circular(widget.cursorWidth),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
