@@ -30,6 +30,11 @@ final class PreferenceKeys {
   static const String ttsServerVoiceName = 'tts_server_voice_name';
   static const String voiceSilenceDuration = 'voice_silence_duration';
   static const String androidAssistantTrigger = 'android_assistant_trigger';
+
+  // Drawer section collapsed states
+  static const String drawerShowPinned = 'drawer_show_pinned';
+  static const String drawerShowFolders = 'drawer_show_folders';
+  static const String drawerShowRecent = 'drawer_show_recent';
 }
 
 final class LegacyPreferenceKeys {

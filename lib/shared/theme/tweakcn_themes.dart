@@ -210,7 +210,7 @@ class TweakcnThemes {
     border: const Color(0xFF282828),
     input: const Color(0xFF343434),
     ring: const Color(0xFF737373),
-    sidebarBackground: const Color(0xFF171717),
+    sidebarBackground: const Color(0xFF0A0A0A),
     sidebarForeground: const Color(0xFFFAFAFA),
     sidebarPrimary: const Color(0xFF1447E6),
     sidebarPrimaryForeground: const Color(0xFFFAFAFA),
