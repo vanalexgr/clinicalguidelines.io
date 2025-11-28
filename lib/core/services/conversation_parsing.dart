@@ -723,3 +723,25 @@ Map<String, dynamic> parseFullConversationWorker(Map<String, dynamic> payload) {
   }
   return parseFullConversation(<String, dynamic>{});
 }
+
+/// Worker function for parsing folder conversation summaries in a background
+/// isolate. Takes a list of raw chat data and returns parsed summaries.
+List<Map<String, dynamic>> parseFolderSummariesWorker(
+  Map<String, dynamic> payload,
+) {
+  final chatsRaw = payload['chats'];
+  if (chatsRaw is! List) {
+    return const [];
+  }
+
+  final summaries = <Map<String, dynamic>>[];
+  for (final entry in chatsRaw) {
+    if (entry is Map) {
+      final map = entry is Map<String, dynamic>
+          ? entry
+          : Map<String, dynamic>.from(entry);
+      summaries.add(parseConversationSummary(map));
+    }
+  }
+  return summaries;
+}
