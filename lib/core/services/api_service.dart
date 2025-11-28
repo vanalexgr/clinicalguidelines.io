@@ -1131,17 +1131,44 @@ class ApiService {
     String folderId,
   ) async {
     _traceApi('Fetching conversation summaries in folder: $folderId');
-    final response = await _dio.get('/api/v1/chats/folder/$folderId/list');
-    final data = response.data;
-    if (data is! List) {
-      return const [];
+
+    // The backend endpoint has a hardcoded limit of 10 items per page,
+    // so we need to paginate through all pages to get all conversations.
+    final List<Map<String, dynamic>> allChats = [];
+    int currentPage = 1;
+
+    while (true) {
+      final response = await _dio.get(
+        '/api/v1/chats/folder/$folderId/list',
+        queryParameters: {'page': currentPage},
+      );
+
+      final data = response.data;
+      if (data is! List || data.isEmpty) {
+        break;
+      }
+
+      allChats.addAll(data.whereType<Map<String, dynamic>>());
+      currentPage++;
+
+      // Safety limit to prevent infinite loops (matches getConversations)
+      if (currentPage > 100) {
+        _traceApi(
+          'WARNING: Reached maximum page limit (100) for folder $folderId',
+        );
+        break;
+      }
     }
-    final normalized = data
-        .whereType<Map<String, dynamic>>()
+
+    _traceApi(
+      'Fetched ${allChats.length} conversations in folder $folderId '
+      'across ${currentPage - 1} pages',
+    );
+
+    return allChats
         .map(parseConversationSummary)
         .map(Conversation.fromJson)
         .toList(growable: false);
-    return normalized;
   }
 
   // Tags
@@ -2838,7 +2865,9 @@ class ApiService {
           } else if (respData['error'] != null) {
             _traceApi('Server error: ${respData['error']}');
             if (!streamController.isClosed) {
-              streamController.addError(Exception(respData['error'].toString()));
+              streamController.addError(
+                Exception(respData['error'].toString()),
+              );
             }
           }
         }
