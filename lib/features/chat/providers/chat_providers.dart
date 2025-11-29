@@ -135,7 +135,12 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
             final serverMessages = next?.messages ?? const [];
             // Primary rule: adopt server messages when there are strictly more of them.
             if (serverMessages.length > state.length) {
+              // Check streaming state BEFORE updating state
+              final needsCleanup = _shouldCleanupStreamingFromServer(
+                serverMessages,
+              );
               state = serverMessages;
+              if (needsCleanup) _cancelMessageStream();
               return;
             }
 
@@ -152,10 +157,20 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
                   serverText.isNotEmpty && serverText.length > localText.length;
               final localEmptyButServerHas =
                   localText.isEmpty && serverText.isNotEmpty;
+              // Also recover if server says streaming is done but local still streaming
+              final serverDoneButLocalStreaming =
+                  !serverLast.isStreaming && localLast.isStreaming;
               if (sameLastId &&
                   isAssistant &&
-                  (serverHasMore || localEmptyButServerHas)) {
+                  (serverHasMore ||
+                      localEmptyButServerHas ||
+                      serverDoneButLocalStreaming)) {
+                // Check streaming state BEFORE updating state
+                final needsCleanup = _shouldCleanupStreamingFromServer(
+                  serverMessages,
+                );
                 state = serverMessages;
+                if (needsCleanup) _cancelMessageStream();
                 return;
               }
             }
@@ -217,6 +232,44 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
     _activeStreamingMessageId = null;
   }
 
+  /// Checks if streaming cleanup is needed when adopting server messages.
+  /// Must be called BEFORE updating state, as it compares current local state
+  /// with incoming server state.
+  bool _shouldCleanupStreamingFromServer(List<ChatMessage> serverMessages) {
+    if (serverMessages.isEmpty) return false;
+    if (!_hasStreamingAssistant) return false;
+
+    // Find the local streaming assistant message
+    final localStreamingMsg = state.lastWhere(
+      (m) => m.role == 'assistant' && m.isStreaming,
+      orElse: () => state.last,
+    );
+
+    // Find the same message in server messages by ID
+    final serverMsg = serverMessages.where((m) => m.id == localStreamingMsg.id);
+    if (serverMsg.isNotEmpty && !serverMsg.first.isStreaming) {
+      DebugLogger.log(
+        'Server indicates streaming complete for message ${localStreamingMsg.id}',
+        scope: 'chat/providers',
+      );
+      return true;
+    }
+
+    // Also check if server has MORE messages than local - if so, streaming must be done
+    // (e.g., server has [assistant(done), user] but local only has [assistant(streaming)])
+    if (serverMessages.length > state.length) {
+      // Server has additional messages, so any local streaming must have completed
+      DebugLogger.log(
+        'Server has more messages (${serverMessages.length} vs ${state.length}) - '
+        'streaming must be complete',
+        scope: 'chat/providers',
+      );
+      return true;
+    }
+
+    return false;
+  }
+
   bool get _hasStreamingAssistant {
     if (state.isEmpty) return false;
     final last = state.last;
@@ -262,15 +315,62 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
 
     _taskStatusCheckInFlight = true;
     try {
+      // Check both task status and server message state
       final taskIds = await api.getTaskIdsByChat(activeConversation.id);
-      if (taskIds.isEmpty) {
-        if (_observedRemoteTask && _hasStreamingAssistant) {
-          finishStreaming();
-        } else if (!_observedRemoteTask) {
-          // No tasks reported yet; keep monitoring to allow registration.
-        }
-      } else {
+      final hasActiveTasks = taskIds.isNotEmpty;
+
+      if (hasActiveTasks) {
         _observedRemoteTask = true;
+      }
+
+      // When no active tasks and we previously observed tasks, streaming should be done.
+      // Run secondary check to sync any missed content from server.
+      final tasksDone = _observedRemoteTask && !hasActiveTasks;
+
+      // Secondary check: fetch conversation from server and compare message state
+      // This catches cases where the done signal was missed AND syncs any missed content.
+      // Only run when tasks have actually completed (were observed and are now gone),
+      // not on every poll before tasks are registered.
+      if (_hasStreamingAssistant && tasksDone) {
+        try {
+          final serverConversation = await api.getConversation(
+            activeConversation.id,
+          );
+          final serverMessages = serverConversation.messages;
+
+          if (serverMessages.isNotEmpty && state.isNotEmpty) {
+            final serverLast = serverMessages.last;
+            final localLast = state.last;
+
+            // If server has the same message but says it's not streaming,
+            // or server has more content, sync from server
+            if (serverLast.id == localLast.id &&
+                serverLast.role == 'assistant') {
+              final serverDone = !serverLast.isStreaming;
+              final serverHasMoreContent =
+                  serverLast.content.length > localLast.content.length;
+
+              if (serverDone || serverHasMoreContent) {
+                DebugLogger.log(
+                  'Server sync: adopting server state '
+                  '(serverDone=$serverDone, serverHasMore=$serverHasMoreContent)',
+                  scope: 'chat/providers',
+                );
+                state = serverMessages;
+                // Always cancel local streaming when adopting server state.
+                // If serverDone, streaming is complete. If serverHasMoreContent,
+                // we've adopted server content and continuing local streaming
+                // could cause conflicts or duplicate content.
+                _cancelMessageStream();
+              }
+            }
+          }
+        } catch (e) {
+          DebugLogger.log(
+            'Server conversation fetch failed: $e',
+            scope: 'chat/providers',
+          );
+        }
       }
     } catch (err, stack) {
       DebugLogger.log('Task status poll failed: $err', scope: 'chat/provider');
