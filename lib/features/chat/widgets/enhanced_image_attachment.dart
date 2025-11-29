@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dio/dio.dart' as dio;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -22,6 +23,7 @@ final _globalImageCache = <String, String>{};
 final _globalLoadingStates = <String, bool>{};
 final _globalErrorStates = <String, String>{};
 final _globalImageBytesCache = <String, Uint8List>{};
+final _globalSvgStates = <String, bool>{};
 final _base64WhitespacePattern = RegExp(r'\s');
 
 Uint8List _decodeImageData(String data) {
@@ -35,6 +37,42 @@ Uint8List _decodeImageData(String data) {
   }
   payload = payload.replaceAll(_base64WhitespacePattern, '');
   return base64.decode(payload);
+}
+
+/// Checks if data URL or content indicates SVG format.
+bool _isSvgDataUrl(String data) {
+  final lower = data.toLowerCase();
+  return lower.startsWith('data:image/svg+xml');
+}
+
+/// Checks if a URL points to an SVG file.
+bool _isSvgUrl(String url) {
+  final lowerUrl = url.toLowerCase();
+
+  // Check for .svg file extension (with or without query string)
+  final queryIndex = lowerUrl.indexOf('?');
+  final pathPart = queryIndex >= 0 ? lowerUrl.substring(0, queryIndex) : lowerUrl;
+  if (pathPart.endsWith('.svg')) return true;
+
+  // Check for SVG MIME type in query parameters only (not in path)
+  // This handles cases like ?format=image/svg+xml or &type=image/svg+xml
+  if (queryIndex >= 0) {
+    final queryPart = lowerUrl.substring(queryIndex);
+    if (queryPart.contains('image/svg+xml')) return true;
+  }
+
+  return false;
+}
+
+/// Checks if decoded bytes represent SVG content by looking for the SVG tag.
+bool _isSvgBytes(Uint8List bytes) {
+  // Check first 1KB for SVG tag (not just XML declaration, which is too broad)
+  final checkLength = bytes.length < 1024 ? bytes.length : 1024;
+  final header = utf8.decode(
+    bytes.sublist(0, checkLength),
+    allowMalformed: true,
+  );
+  return header.toLowerCase().contains('<svg');
 }
 
 class EnhancedImageAttachment extends ConsumerStatefulWidget {
@@ -68,6 +106,7 @@ class _EnhancedImageAttachmentState
   bool _isLoading = true;
   String? _errorMessage;
   bool _isDecoding = false;
+  bool _isSvg = false;
   late final String _heroTag;
   // Removed unused animation and state flags
 
@@ -107,10 +146,12 @@ class _EnhancedImageAttachmentState
     if (_globalImageCache.containsKey(widget.attachmentId)) {
       final cachedData = _globalImageCache[widget.attachmentId]!;
       final cachedBytes = _globalImageBytesCache[widget.attachmentId];
+      final cachedIsSvg = _globalSvgStates[widget.attachmentId] ?? false;
       if (mounted) {
         setState(() {
           _cachedImageData = cachedData;
           _cachedBytes = cachedBytes;
+          _isSvg = cachedIsSvg;
           _isLoading = cachedBytes == null && !_isRemoteContent(cachedData);
         });
       }
@@ -129,13 +170,18 @@ class _EnhancedImageAttachmentState
     final attachmentId = widget.attachmentId;
 
     if (attachmentId.startsWith('data:') || attachmentId.startsWith('http')) {
+      // Detect SVG from data URL or HTTP URL
+      final isSvgContent =
+          _isSvgDataUrl(attachmentId) || _isSvgUrl(attachmentId);
       _globalImageCache[attachmentId] = attachmentId;
       _globalLoadingStates[attachmentId] = false;
+      _globalSvgStates[attachmentId] = isSvgContent;
       final cachedBytes = _globalImageBytesCache[attachmentId];
       if (mounted) {
         setState(() {
           _cachedImageData = attachmentId;
           _cachedBytes = cachedBytes;
+          _isSvg = isSvgContent;
           _isLoading = cachedBytes == null && !_isRemoteContent(attachmentId);
         });
       }
@@ -149,12 +195,15 @@ class _EnhancedImageAttachmentState
       final api = ref.read(apiServiceProvider);
       if (api != null) {
         final fullUrl = api.baseUrl + attachmentId;
+        final isSvgContent = _isSvgUrl(fullUrl);
         _globalImageCache[attachmentId] = fullUrl;
         _globalLoadingStates[attachmentId] = false;
+        _globalSvgStates[attachmentId] = isSvgContent;
         if (mounted) {
           setState(() {
             _cachedImageData = fullUrl;
             _cachedBytes = null;
+            _isSvg = isSvgContent;
             _isLoading = false;
           });
         }
@@ -184,10 +233,14 @@ class _EnhancedImageAttachmentState
         return;
       }
 
+      // Track if this is an SVG file based on extension
+      final isSvgFile = ext == 'svg';
+
       final fileContent = await api.getFileContent(attachmentId);
 
       _globalImageCache[attachmentId] = fileContent;
       _globalLoadingStates[attachmentId] = false;
+      _globalSvgStates[attachmentId] = isSvgFile;
 
       if (_globalImageCache.length > 50) {
         final firstKey = _globalImageCache.keys.first;
@@ -195,12 +248,14 @@ class _EnhancedImageAttachmentState
         _globalLoadingStates.remove(firstKey);
         _globalErrorStates.remove(firstKey);
         _globalImageBytesCache.remove(firstKey);
+        _globalSvgStates.remove(firstKey);
       }
 
       if (mounted) {
         setState(() {
           _cachedImageData = fileContent;
           _cachedBytes = null;
+          _isSvg = isSvgFile;
           _isLoading = !_isRemoteContent(fileContent);
         });
       }
@@ -234,9 +289,18 @@ class _EnhancedImageAttachmentState
         debugLabel: 'decode_image',
       );
       _globalImageBytesCache[widget.attachmentId] = bytes;
+
+      // Use byte content as authoritative SVG detection when positive, but
+      // preserve prior true-hints (e.g., from file extension) if detection fails.
+      final previousHint = _globalSvgStates[widget.attachmentId] ?? _isSvg;
+      final detectedSvg = _isSvgBytes(bytes) || _isSvgDataUrl(data);
+      final isSvgContent = detectedSvg ? true : previousHint;
+      _globalSvgStates[widget.attachmentId] = isSvgContent;
+
       if (!mounted) return;
       setState(() {
         _cachedBytes = bytes;
+        _isSvg = isSvgContent;
         _isLoading = false;
       });
     } on FormatException {
@@ -255,6 +319,7 @@ class _EnhancedImageAttachmentState
     _globalLoadingStates[widget.attachmentId] = false;
     _globalImageCache.remove(widget.attachmentId);
     _globalImageBytesCache.remove(widget.attachmentId);
+    _globalSvgStates.remove(widget.attachmentId);
     if (!mounted) {
       return;
     }
@@ -297,11 +362,14 @@ class _EnhancedImageAttachmentState
     }
 
     // Handle different image data formats
+    // Include fallback URL/data detection to match FullScreenImageViewer behavior
     Widget imageWidget;
     if (_cachedImageData!.startsWith('http')) {
-      imageWidget = _buildNetworkImage();
+      final isSvgContent = _isSvg || _isSvgUrl(_cachedImageData!);
+      imageWidget = isSvgContent ? _buildNetworkSvg() : _buildNetworkImage();
     } else {
-      imageWidget = _buildBase64Image();
+      final isSvgContent = _isSvg || _isSvgDataUrl(_cachedImageData!);
+      imageWidget = isSvgContent ? _buildBase64Svg() : _buildBase64Image();
     }
 
     // Always show the image without fade transitions during streaming to prevent black display
@@ -446,6 +514,39 @@ class _EnhancedImageAttachmentState
     return _wrapImage(imageWidget);
   }
 
+  Widget _buildNetworkSvg() {
+    // Get authentication headers if available
+    final headers = buildImageHeadersFromWidgetRef(ref);
+
+    final svgWidget = SvgPicture.network(
+      _cachedImageData!,
+      key: ValueKey('svg_${widget.attachmentId}'),
+      fit: BoxFit.contain,
+      headers: headers,
+      placeholderBuilder: (context) => Container(
+        constraints: widget.constraints,
+        decoration: BoxDecoration(
+          color: context.conduitTheme.shimmerBase,
+          borderRadius: BorderRadius.circular(AppBorderRadius.md),
+        ),
+        child: Center(
+          child: CircularProgressIndicator(
+            color: context.conduitTheme.buttonPrimary,
+            strokeWidth: 2,
+          ),
+        ),
+      ),
+      errorBuilder: (context, error, stackTrace) {
+        _errorMessage = AppLocalizations.of(
+          context,
+        )!.failedToLoadImage(error.toString());
+        return _buildErrorState();
+      },
+    );
+
+    return _wrapImage(svgWidget);
+  }
+
   Widget _buildBase64Image() {
     final bytes = _cachedBytes;
     if (bytes == null) {
@@ -464,6 +565,25 @@ class _EnhancedImageAttachmentState
     );
 
     return _wrapImage(imageWidget);
+  }
+
+  Widget _buildBase64Svg() {
+    final bytes = _cachedBytes;
+    if (bytes == null) {
+      return _buildLoadingState();
+    }
+
+    final svgWidget = SvgPicture.memory(
+      bytes,
+      key: ValueKey('svg_${widget.attachmentId}'),
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        _errorMessage = AppLocalizations.of(context)!.failedToDecodeImage;
+        return _buildErrorState();
+      },
+    );
+
+    return _wrapImage(svgWidget);
   }
 
   Widget _wrapImage(Widget imageWidget) {
@@ -523,8 +643,11 @@ class _EnhancedImageAttachmentState
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (context) =>
-            FullScreenImageViewer(imageData: _cachedImageData!, tag: _heroTag),
+        builder: (context) => FullScreenImageViewer(
+          imageData: _cachedImageData!,
+          tag: _heroTag,
+          isSvg: _isSvg,
+        ),
       ),
     );
   }
@@ -533,11 +656,13 @@ class _EnhancedImageAttachmentState
 class FullScreenImageViewer extends ConsumerWidget {
   final String imageData;
   final String tag;
+  final bool isSvg;
 
   const FullScreenImageViewer({
     super.key,
     required this.imageData,
     required this.tag,
+    this.isSvg = false,
   });
 
   @override
@@ -548,36 +673,75 @@ class FullScreenImageViewer extends ConsumerWidget {
       // Get authentication headers if available
       final headers = buildImageHeadersFromWidgetRef(ref);
 
-      final cacheManager = ref.watch(selfSignedImageCacheManagerProvider);
-      imageWidget = CachedNetworkImage(
-        imageUrl: imageData,
-        fit: BoxFit.contain,
-        cacheManager: cacheManager,
-        httpHeaders: headers,
-        placeholder: (context, url) => Center(
-          child: CircularProgressIndicator(
-            color: context.conduitTheme.buttonPrimary,
+      if (isSvg || _isSvgUrl(imageData)) {
+        imageWidget = SvgPicture.network(
+          imageData,
+          fit: BoxFit.contain,
+          headers: headers,
+          placeholderBuilder: (context) => Center(
+            child: CircularProgressIndicator(
+              color: context.conduitTheme.buttonPrimary,
+            ),
           ),
-        ),
-        errorWidget: (context, url, error) => Center(
-          child: Icon(
-            Icons.error_outline,
-            color: context.conduitTheme.error,
-            size: 48,
+          errorBuilder: (context, error, stackTrace) => Center(
+            child: Icon(
+              Icons.error_outline,
+              color: context.conduitTheme.error,
+              size: 48,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        final cacheManager = ref.watch(selfSignedImageCacheManagerProvider);
+        imageWidget = CachedNetworkImage(
+          imageUrl: imageData,
+          fit: BoxFit.contain,
+          cacheManager: cacheManager,
+          httpHeaders: headers,
+          placeholder: (context, url) => Center(
+            child: CircularProgressIndicator(
+              color: context.conduitTheme.buttonPrimary,
+            ),
+          ),
+          errorWidget: (context, url, error) => Center(
+            child: Icon(
+              Icons.error_outline,
+              color: context.conduitTheme.error,
+              size: 48,
+            ),
+          ),
+        );
+      }
     } else {
       try {
         String actualBase64;
         if (imageData.startsWith('data:')) {
           final commaIndex = imageData.indexOf(',');
+          if (commaIndex == -1) {
+            throw const FormatException('Invalid data URI');
+          }
           actualBase64 = imageData.substring(commaIndex + 1);
         } else {
           actualBase64 = imageData;
         }
         final imageBytes = base64.decode(actualBase64);
-        imageWidget = Image.memory(imageBytes, fit: BoxFit.contain);
+
+        // Check if SVG content
+        if (isSvg || _isSvgDataUrl(imageData) || _isSvgBytes(imageBytes)) {
+          imageWidget = SvgPicture.memory(
+            imageBytes,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => Center(
+              child: Icon(
+                Icons.error_outline,
+                color: context.conduitTheme.error,
+                size: 48,
+              ),
+            ),
+          );
+        } else {
+          imageWidget = Image.memory(imageBytes, fit: BoxFit.contain);
+        }
       } catch (e) {
         imageWidget = Center(
           child: Icon(
