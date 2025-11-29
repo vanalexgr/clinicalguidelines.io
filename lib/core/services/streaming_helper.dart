@@ -204,9 +204,12 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   final hasSocketSignals =
       socketService != null || registerDeltaListener != null;
   if (hasSocketSignals) {
-    // Increase timeout to match OpenWebUI's more generous timeouts for long responses
+    // Use a reasonable inactivity timeout - if no data arrives for 45 seconds,
+    // something is likely wrong with the connection
     socketWatchdog = InactivityWatchdog(
-      window: const Duration(minutes: 15), // Increased from 5 to 15 minutes
+      window: const Duration(seconds: 45),
+      // Absolute cap ensures streaming never gets stuck indefinitely
+      absoluteCap: const Duration(minutes: 10),
       onTimeout: () {
         DebugLogger.log(
           'Socket watchdog timeout - finishing streaming gracefully',
@@ -231,6 +234,106 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
         socketWatchdog?.stop();
       },
     )..start();
+
+    // Subscribe to socket reconnection events to sync state after reconnect.
+    // This catches cases where the done signal was missed due to disconnection.
+    if (socketService != null) {
+      StreamSubscription<void>? reconnectSub;
+      Timer? reconnectDelayTimer;
+      var reconnectSubDisposed = false;
+
+      reconnectSub = socketService.onReconnect.listen((_) {
+        DebugLogger.log(
+          'Socket reconnected - checking server state for missed signals',
+          scope: 'streaming/helper',
+        );
+
+        // Cancel any pending timer from a previous reconnect
+        reconnectDelayTimer?.cancel();
+
+        // After reconnection, give a brief moment for any queued events
+        // then check server state to catch any missed completion signals.
+        // Use Timer instead of Future.delayed so it can be cancelled on dispose.
+        reconnectDelayTimer = Timer(const Duration(milliseconds: 500), () async {
+          // Check if disposed before executing
+          if (reconnectSubDisposed || hasFinished) return;
+
+          // Check current state before making the async call
+          var msgs = getMessages();
+          if (msgs.isEmpty || msgs.last.role != 'assistant') return;
+          if (!msgs.last.isStreaming) return;
+
+          // Fetch conversation from server to check if streaming actually completed
+          try {
+            final chatId = activeConversationId;
+            if (chatId != null && chatId.isNotEmpty) {
+              final resp = await api.dio.get('/api/v1/chats/$chatId');
+
+              // Re-check state after async call - it may have changed or been disposed
+              if (reconnectSubDisposed || hasFinished) return;
+              msgs = getMessages();
+              if (msgs.isEmpty || msgs.last.role != 'assistant') return;
+              if (!msgs.last.isStreaming) return;
+
+              final data = resp.data as Map<String, dynamic>?;
+              final chatObj = data?['chat'] as Map<String, dynamic>?;
+
+              if (chatObj != null) {
+                // Check if server has the completed message
+                final list = chatObj['messages'];
+                if (list is List) {
+                  final serverMsg = list.firstWhere(
+                    (m) =>
+                        m is Map && m['id']?.toString() == assistantMessageId,
+                    orElse: () => null,
+                  );
+                  if (serverMsg != null && serverMsg is Map) {
+                    final serverContent = serverMsg['content'];
+                    String content = '';
+                    if (serverContent is String) {
+                      content = serverContent;
+                    } else if (serverContent is List) {
+                      final textItem = serverContent.firstWhere(
+                        (i) => i is Map && i['type'] == 'text',
+                        orElse: () => null,
+                      );
+                      if (textItem != null) {
+                        content = textItem['text']?.toString() ?? '';
+                      }
+                    }
+
+                    // If server has content, adopt it and finish streaming
+                    // Use current msgs (re-fetched after await) for comparison
+                    if (content.isNotEmpty &&
+                        content.length >= msgs.last.content.length) {
+                      DebugLogger.log(
+                        'Reconnect recovery: adopting server content (${content.length} chars)',
+                        scope: 'streaming/helper',
+                      );
+                      replaceLastMessageContent(content);
+                      wrappedFinishStreaming();
+                    }
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            DebugLogger.log(
+              'Reconnect recovery fetch failed: $e',
+              scope: 'streaming/helper',
+            );
+          }
+        });
+      });
+
+      socketSubscriptions.add(() {
+        reconnectSubDisposed = true;
+        reconnectDelayTimer?.cancel();
+        reconnectDelayTimer = null;
+        reconnectSub?.cancel();
+        reconnectSub = null;
+      });
+    }
   }
 
   Timer? imageCollectionDebounce;

@@ -30,6 +30,13 @@ class SocketService with WidgetsBindingObserver {
   final Map<String, _ChannelEventRegistration> _channelEventHandlers = {};
   int _handlerSeed = 0;
 
+  /// Stream controller that emits when a socket reconnection occurs.
+  /// Listeners can use this to sync state after a reconnect.
+  final _reconnectController = StreamController<void>.broadcast();
+
+  /// Stream that emits when a socket reconnection occurs.
+  Stream<void> get onReconnect => _reconnectController.stream;
+
   SocketService({
     required this.serverConfig,
     String? authToken,
@@ -214,6 +221,7 @@ class SocketService with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _chatEventHandlers.clear();
     _channelEventHandlers.clear();
+    _reconnectController.close();
   }
 
   // Best-effort: ensure there is an active connection and wait briefly.
@@ -278,6 +286,10 @@ class SocketService with WidgetsBindingObserver {
       _socket?.emit('user-join', {
         'auth': {'token': _authToken},
       });
+    }
+    // Notify listeners that a reconnection occurred so they can refresh state
+    if (!_reconnectController.isClosed) {
+      _reconnectController.add(null);
     }
   }
 
