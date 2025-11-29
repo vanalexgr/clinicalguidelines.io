@@ -30,6 +30,103 @@ import '../../../core/services/worker_manager.dart';
 final _base64ImagePattern = RegExp(r'data:image/[^;]+;base64,[A-Za-z0-9+/]+=*');
 final _fileIdPattern = RegExp(r'/api/v1/files/([^/]+)/content');
 
+// Pre-compiled regex patterns for content sanitization (performance optimization)
+final _detailsOpenPattern = RegExp(r'<details[^>]*>');
+final _detailsClosePattern = RegExp(r'</details>');
+final _inlineDetailsPattern = RegExp(
+  r'<details([^>]*)>((?:(?!</details>).)*)</details>',
+  dotAll: true,
+);
+
+/// Sanitizes content to handle malformed HTML-like tags that might cause
+/// parsing issues, particularly with Pipe Functions (e.g., Gemini).
+///
+/// This function:
+/// - Ensures all `<details>` tags are properly closed
+/// - Converts inline `<details>...</details>` to multi-line format for proper
+///   block-level parsing
+/// - Removes orphan closing tags (those without matching opening tags)
+/// - Adds missing closing tags for unclosed opening tags
+/// - Prevents infinite loops in parsers caused by malformed content
+String sanitizeContentForParsing(String content) {
+  if (content.isEmpty) return content;
+
+  // Quick check: skip if no details tags present (check for both opening and closing)
+  if (!content.contains('<details') && !content.contains('</details>')) {
+    return content;
+  }
+
+  String result = content;
+
+  // Step 1: Convert inline <details>...</details> to multi-line format
+  // This ensures the markdown block parser can properly detect them
+  result = result.replaceAllMapped(_inlineDetailsPattern, (match) {
+    final attrs = match.group(1) ?? '';
+    final inner = match.group(2) ?? '';
+    // Only convert if the inner content doesn't already span multiple lines
+    if (!inner.contains('\n')) {
+      return '<details$attrs>\n$inner\n</details>';
+    }
+    return match.group(0)!;
+  });
+
+  // Step 2: Balance tags by removing orphan closing tags and adding
+  // missing closing tags using depth tracking
+  result = _balanceDetailsTags(result);
+
+  return result;
+}
+
+/// Balances `<details>` tags by removing orphan closing tags and adding
+/// missing closing tags. Uses depth tracking to properly handle nested tags
+/// and identify orphans anywhere in the content.
+String _balanceDetailsTags(String content) {
+  final openMatches = _detailsOpenPattern.allMatches(content).toList();
+  final closeMatches = _detailsClosePattern.allMatches(content).toList();
+
+  if (openMatches.isEmpty && closeMatches.isEmpty) return content;
+
+  // Build sorted list of all tags: (start, end, isOpen)
+  final tags = <({int start, int end, bool isOpen})>[];
+  for (final m in openMatches) {
+    tags.add((start: m.start, end: m.end, isOpen: true));
+  }
+  for (final m in closeMatches) {
+    tags.add((start: m.start, end: m.end, isOpen: false));
+  }
+  tags.sort((a, b) => a.start.compareTo(b.start));
+
+  // Find orphan closing tags using depth tracking
+  // An orphan is a closing tag encountered when depth is already 0
+  final orphanRanges = <(int, int)>[];
+  int depth = 0;
+  for (final tag in tags) {
+    if (tag.isOpen) {
+      depth++;
+    } else {
+      if (depth > 0) {
+        depth--;
+      } else {
+        // Orphan closing tag - no matching opening tag
+        orphanRanges.add((tag.start, tag.end));
+      }
+    }
+  }
+
+  // Remove orphan closing tags from end to start to preserve indices
+  var result = content;
+  for (final range in orphanRanges.reversed) {
+    result = result.substring(0, range.$1) + result.substring(range.$2);
+  }
+
+  // Add missing closing tags for unclosed opening tags
+  if (depth > 0) {
+    result += '\n</details>' * depth;
+  }
+
+  return result;
+}
+
 class AssistantMessageWidget extends ConsumerStatefulWidget {
   final dynamic message;
   final bool isStreaming;
@@ -162,6 +259,14 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     if (raw.startsWith(searchBanner)) {
       raw = raw.substring(searchBanner.length);
     }
+
+    // Sanitize content to handle malformed HTML-like tags from Pipe Functions
+    // (e.g., Gemini) that might cause parsing issues or infinite loops.
+    // Only sanitize when NOT streaming to avoid interfering with partial content.
+    if (!widget.isStreaming) {
+      raw = sanitizeContentForParsing(raw);
+    }
+
     // Do not truncate content during streaming; segmented parser skips
     // incomplete details blocks and tiles will render once complete.
     final rSegs = ReasoningParser.segments(raw);
@@ -885,6 +990,13 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             ),
             '',
           );
+    }
+
+    // Sanitize content for markdown rendering to prevent parser issues with
+    // malformed <details> blocks from Pipe Functions (e.g., Gemini).
+    // Only sanitize when NOT streaming to avoid interfering with partial content.
+    if (!widget.isStreaming) {
+      cleaned = sanitizeContentForParsing(cleaned);
     }
 
     // Process images in the remaining text
