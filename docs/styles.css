@@ -3,16 +3,16 @@
    ============================================ */
 
 :root {
-    /* Color Palette - Warm Dark Theme with Coral Accent */
-    --bg-deep: #0a0a0c;
-    --bg-surface: #111114;
-    --bg-elevated: #18181c;
-    --bg-card: #1e1e24;
+    /* Color Palette - Dark Theme with Conduit Blue */
+    --bg-deep: #050810;
+    --bg-surface: #0a0f18;
+    --bg-elevated: #111827;
+    --bg-card: #1a2235;
     
-    --accent: #ff6b4a;
-    --accent-light: #ff8a70;
-    --accent-glow: rgba(255, 107, 74, 0.4);
-    --accent-subtle: rgba(255, 107, 74, 0.1);
+    --accent: #2563eb;
+    --accent-light: #3b82f6;
+    --accent-glow: rgba(37, 99, 235, 0.4);
+    --accent-subtle: rgba(37, 99, 235, 0.1);
     
     --text-primary: #fafafa;
     --text-secondary: #a8a8b8;
@@ -127,30 +127,30 @@ img {
 .orb-1 {
     width: 600px;
     height: 600px;
-    background: linear-gradient(135deg, var(--accent) 0%, #ff3d00 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
     top: -200px;
     right: -200px;
-    opacity: 0.15;
+    opacity: 0.2;
     animation: float 20s ease-in-out infinite;
 }
 
 .orb-2 {
     width: 400px;
     height: 400px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
     bottom: 20%;
     left: -150px;
-    opacity: 0.1;
+    opacity: 0.12;
     animation: float 25s ease-in-out infinite reverse;
 }
 
 .orb-3 {
     width: 300px;
     height: 300px;
-    background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+    background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
     bottom: -100px;
     right: 20%;
-    opacity: 0.08;
+    opacity: 0.1;
     animation: float 18s ease-in-out infinite;
 }
 
@@ -199,9 +199,10 @@ img {
     opacity: 0.8;
 }
 
-.logo-mark {
-    color: var(--accent);
-    font-size: 1.375rem;
+.logo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
 }
 
 .nav-links {
@@ -341,7 +342,7 @@ img {
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     background: var(--accent-subtle);
-    border: 1px solid rgba(255, 107, 74, 0.2);
+    border: 1px solid rgba(37, 99, 235, 0.3);
     border-radius: 100px;
     font-family: var(--font-body);
     font-size: var(--text-xs);
@@ -438,7 +439,7 @@ img {
 }
 
 .title-accent {
-    background: linear-gradient(135deg, var(--accent) 0%, #ff9a7a 40%, var(--accent-light) 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 40%, var(--accent-light) 100%);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -577,7 +578,7 @@ img {
 .device-frame:hover {
     transform: translateY(-8px) scale(1.02);
     box-shadow:
-        0 0 0 1px rgba(255, 107, 74, 0.3),
+        0 0 0 1px rgba(37, 99, 235, 0.4),
         0 8px 16px rgba(0, 0, 0, 0.2),
         0 24px 48px rgba(0, 0, 0, 0.3),
         0 48px 96px rgba(0, 0, 0, 0.4),
@@ -756,11 +757,11 @@ img {
 }
 
 .review-card[data-platform="ios"] {
-    border-top: 2px solid rgba(163, 163, 163, 0.3);
+    border-top: 2px solid rgba(37, 99, 235, 0.4);
 }
 
 .review-card[data-platform="android"] {
-    border-top: 2px solid rgba(61, 220, 132, 0.3);
+    border-top: 2px solid rgba(59, 130, 246, 0.4);
 }
 
 .review-text {
@@ -810,55 +811,6 @@ img {
     color: #3ddc84;
 }
 
-/* Reviews CTA */
-.reviews-cta {
-    text-align: center;
-    margin-top: 3rem;
-}
-
-.reviews-cta p {
-    font-family: var(--font-body);
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-    margin-bottom: 1.25rem;
-}
-
-.reviews-links {
-    display: flex;
-    justify-content: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
-
-.review-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    font-family: var(--font-body);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    color: var(--text-secondary);
-    transition: all 0.3s var(--ease-out);
-}
-
-.review-link:hover {
-    background: var(--bg-elevated);
-    border-color: var(--border-hover);
-    color: var(--text-primary);
-    transform: translateY(-2px);
-}
-
-.review-link.ios:hover {
-    color: #fff;
-}
-
-.review-link.android:hover {
-    color: #3ddc84;
-}
 
 /* ============================================
    FEATURES SECTION
@@ -908,8 +860,8 @@ img {
     gap: 3rem;
     align-items: center;
     padding: 3rem;
-    background: linear-gradient(135deg, rgba(255, 107, 74, 0.1) 0%, rgba(255, 107, 74, 0.02) 100%);
-    border: 1px solid rgba(255, 107, 74, 0.2);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.02) 100%);
+    border: 1px solid rgba(37, 99, 235, 0.25);
     border-radius: 24px;
     margin-bottom: 3rem;
     position: relative;
@@ -923,7 +875,7 @@ img {
     right: 0;
     width: 50%;
     height: 100%;
-    background: radial-gradient(circle at 80% 50%, rgba(255, 107, 74, 0.15) 0%, transparent 60%);
+    background: radial-gradient(circle at 80% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 60%);
     pointer-events: none;
 }
 
@@ -1009,7 +961,7 @@ img {
     justify-content: center;
     width: 96px;
     height: 96px;
-    background: linear-gradient(135deg, var(--accent) 0%, #ff3d00 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
     border-radius: 28px;
     color: #fff;
     box-shadow: 0 16px 48px -8px var(--accent-glow);
@@ -1029,7 +981,7 @@ img {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border: 1px solid rgba(255, 107, 74, 0.2);
+    border: 1px solid rgba(37, 99, 235, 0.3);
     border-radius: 50%;
     animation: heroRingPulse 3s ease-out infinite;
 }
@@ -1196,7 +1148,7 @@ img {
         0 8px 24px rgba(0, 0, 0, 0.2),
         0 24px 64px rgba(0, 0, 0, 0.4),
         0 0 60px -20px var(--accent-glow);
-    border-color: rgba(255, 107, 74, 0.3);
+    border-color: rgba(37, 99, 235, 0.4);
 }
 
 .gallery-label {
@@ -1228,7 +1180,7 @@ img {
 .cta-card {
     position: relative;
     padding: 4rem;
-    background: linear-gradient(135deg, var(--accent) 0%, #e55a3a 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
     border-radius: 32px;
     overflow: hidden;
     text-align: center;
@@ -1561,16 +1513,6 @@ img {
         width: 60px;
     }
     
-    .reviews-links {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .review-link {
-        width: 100%;
-        max-width: 280px;
-        justify-content: center;
-    }
     
     .cta-card {
         padding: 3rem 2rem;
