@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 import 'dart:typed_data';
+
+import 'package:path_provider/path_provider.dart';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -338,6 +340,51 @@ class VoiceInputService {
   Future<bool> _ensureMicrophonePermission() async {
     try {
       return await _microphonePermissionProbe.hasPermission();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Requests microphone permission if not already granted.
+  /// Returns true if permission is granted, false otherwise.
+  Future<bool> requestMicrophonePermission() async {
+    try {
+      // First check if we already have permission
+      var hasPermission = await _microphonePermissionProbe.hasPermission();
+      if (hasPermission) return true;
+
+      // The record package's start() method will trigger the system permission
+      // dialog if permission hasn't been granted yet. We start a brief recording
+      // and immediately stop it to trigger the permission request.
+      try {
+        // Create a temporary file path for the recording probe.
+        // An empty path only works on web; mobile platforms need a real path.
+        final tempDir = await getTemporaryDirectory();
+        final tempPath =
+            '${tempDir.path}/mic_permission_probe_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+        await _microphonePermissionProbe.start(
+          const RecordConfig(encoder: AudioEncoder.wav),
+          path: tempPath,
+        );
+        await _microphonePermissionProbe.stop();
+
+        // Clean up the temporary file
+        try {
+          final tempFile = File(tempPath);
+          if (await tempFile.exists()) {
+            await tempFile.delete();
+          }
+        } catch (_) {
+          // Ignore cleanup errors
+        }
+      } catch (_) {
+        // Starting may fail if permission is denied, which is expected
+      }
+
+      // Check again after the permission request attempt
+      hasPermission = await _microphonePermissionProbe.hasPermission();
+      return hasPermission;
     } catch (_) {
       return false;
     }
