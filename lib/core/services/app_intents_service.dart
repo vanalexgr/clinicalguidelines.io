@@ -576,6 +576,16 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
       throw StateError('Choose a model before starting a voice call.');
     }
 
+    // Pre-warm socket connection before navigating to voice call.
+    // This reduces the chance of "websocket not connected" errors when
+    // opening voice call right after app start or from deep links.
+    final socketService = ref.read(socketServiceProvider);
+    if (socketService != null && !socketService.isConnected) {
+      // Start connection attempt in parallel, don't wait for full connection
+      // The VoiceCallService.startCall() will wait with extended timeout
+      unawaited(socketService.connect());
+    }
+
     await NavigationService.navigateToChat();
 
     // Wait a tick for navigation to settle so navigator/context are present.

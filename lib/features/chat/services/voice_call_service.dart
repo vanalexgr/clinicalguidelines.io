@@ -158,11 +158,15 @@ class VoiceCallService {
       throw Exception('Preferred speech recognition engine is unavailable');
     }
 
-    // Check microphone permissions
-    final hasMicPermission = await _voiceInput.checkPermissions();
+    // Check and request microphone permissions if needed
+    var hasMicPermission = await _voiceInput.checkPermissions();
     if (!hasMicPermission) {
-      _updateState(VoiceCallState.error);
-      throw Exception('Microphone permission not granted');
+      // Try to request permission
+      hasMicPermission = await _voiceInput.requestMicrophonePermission();
+      if (!hasMicPermission) {
+        _updateState(VoiceCallState.error);
+        throw Exception('Microphone permission not granted');
+      }
     }
 
     // Initialize TTS with current app settings (engine/voice/rate/pitch/volume)
@@ -309,11 +313,14 @@ class VoiceCallService {
       // Enable wake lock to keep screen on and prevent audio interruption
       await WakelockPlus.enable();
 
-      // Ensure socket connection
-      await _socketService.ensureConnected();
+      // Ensure socket connection with extended timeout for app startup scenarios.
+      // Default 2s is too short when app is launched from deep links/shortcuts.
+      final connected = await _socketService.ensureConnected(
+        timeout: const Duration(seconds: 10),
+      );
       _sessionId = _socketService.sessionId;
 
-      if (_sessionId == null) {
+      if (!connected || _sessionId == null) {
         throw Exception('Failed to establish socket connection');
       }
 

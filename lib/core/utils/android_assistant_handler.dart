@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -137,6 +138,16 @@ class AndroidAssistantHandler {
       if (navState != AuthNavigationState.authenticated || model == null) {
         DebugLogger.log('App not ready for voice call', scope: 'assistant');
         return;
+      }
+
+      // Pre-warm socket connection before navigating to voice call.
+      // This reduces the chance of "websocket not connected" errors when
+      // opening voice call right after app start or from Android assistant.
+      final socketService = _ref.read(socketServiceProvider);
+      if (socketService != null && !socketService.isConnected) {
+        // Start connection attempt in parallel, don't wait for full connection
+        // The VoiceCallService.startCall() will wait with extended timeout
+        unawaited(socketService.connect());
       }
 
       // Navigate to chat if not already there
