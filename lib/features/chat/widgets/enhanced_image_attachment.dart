@@ -51,7 +51,9 @@ bool _isSvgUrl(String url) {
 
   // Check for .svg file extension (with or without query string)
   final queryIndex = lowerUrl.indexOf('?');
-  final pathPart = queryIndex >= 0 ? lowerUrl.substring(0, queryIndex) : lowerUrl;
+  final pathPart = queryIndex >= 0
+      ? lowerUrl.substring(0, queryIndex)
+      : lowerUrl;
   if (pathPart.endsWith('.svg')) return true;
 
   // Check for SVG MIME type in query parameters only (not in path)
@@ -75,6 +77,17 @@ bool _isSvgBytes(Uint8List bytes) {
   return header.toLowerCase().contains('<svg');
 }
 
+Map<String, String>? _mergeHeaders(
+  Map<String, String>? defaults,
+  Map<String, String>? overrides,
+) {
+  if ((defaults == null || defaults.isEmpty) &&
+      (overrides == null || overrides.isEmpty)) {
+    return null;
+  }
+  return {...?defaults, ...?overrides};
+}
+
 class EnhancedImageAttachment extends ConsumerStatefulWidget {
   final String attachmentId;
   final bool isMarkdownFormat;
@@ -82,6 +95,7 @@ class EnhancedImageAttachment extends ConsumerStatefulWidget {
   final BoxConstraints? constraints;
   final bool isUserMessage;
   final bool disableAnimation;
+  final Map<String, String>? httpHeaders;
 
   const EnhancedImageAttachment({
     super.key,
@@ -91,6 +105,7 @@ class EnhancedImageAttachment extends ConsumerStatefulWidget {
     this.constraints,
     this.isUserMessage = false,
     this.disableAnimation = false,
+    this.httpHeaders,
   });
 
   @override
@@ -483,7 +498,8 @@ class _EnhancedImageAttachmentState
 
   Widget _buildNetworkImage() {
     // Get authentication headers if available
-    final headers = buildImageHeadersFromWidgetRef(ref);
+    final defaultHeaders = buildImageHeadersFromWidgetRef(ref);
+    final headers = _mergeHeaders(defaultHeaders, widget.httpHeaders);
 
     final cacheManager = ref.watch(selfSignedImageCacheManagerProvider);
     final imageWidget = CachedNetworkImage(
@@ -516,7 +532,8 @@ class _EnhancedImageAttachmentState
 
   Widget _buildNetworkSvg() {
     // Get authentication headers if available
-    final headers = buildImageHeadersFromWidgetRef(ref);
+    final defaultHeaders = buildImageHeadersFromWidgetRef(ref);
+    final headers = _mergeHeaders(defaultHeaders, widget.httpHeaders);
 
     final svgWidget = SvgPicture.network(
       _cachedImageData!,
@@ -647,6 +664,7 @@ class _EnhancedImageAttachmentState
           imageData: _cachedImageData!,
           tag: _heroTag,
           isSvg: _isSvg,
+          customHeaders: widget.httpHeaders,
         ),
       ),
     );
@@ -657,12 +675,14 @@ class FullScreenImageViewer extends ConsumerWidget {
   final String imageData;
   final String tag;
   final bool isSvg;
+  final Map<String, String>? customHeaders;
 
   const FullScreenImageViewer({
     super.key,
     required this.imageData,
     required this.tag,
     this.isSvg = false,
+    this.customHeaders,
   });
 
   @override
@@ -671,7 +691,8 @@ class FullScreenImageViewer extends ConsumerWidget {
 
     if (imageData.startsWith('http')) {
       // Get authentication headers if available
-      final headers = buildImageHeadersFromWidgetRef(ref);
+      final defaultHeaders = buildImageHeadersFromWidgetRef(ref);
+      final headers = _mergeHeaders(defaultHeaders, customHeaders);
 
       if (isSvg || _isSvgUrl(imageData)) {
         imageWidget = SvgPicture.network(
@@ -818,13 +839,14 @@ class FullScreenImageViewer extends ConsumerWidget {
         if (api != null && api.serverConfig.customHeaders.isNotEmpty) {
           headers.addAll(api.serverConfig.customHeaders);
         }
+        final mergedHeaders = _mergeHeaders(headers, customHeaders);
 
         final client = api?.dio ?? dio.Dio();
         final response = await client.get<List<int>>(
           imageData,
           options: dio.Options(
             responseType: dio.ResponseType.bytes,
-            headers: headers.isNotEmpty ? headers : null,
+            headers: mergedHeaders,
           ),
         );
         final data = response.data;

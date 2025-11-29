@@ -150,6 +150,7 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
                   maxHeight: 350,
                 ),
                 disableAnimation: widget.isStreaming,
+                httpHeaders: _headersForFile(imageFiles[0]),
               ),
             ),
           ),
@@ -191,6 +192,7 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
                           maxHeight: 180,
                         ),
                         disableAnimation: widget.isStreaming,
+                        httpHeaders: _headersForFile(entry.value),
                       ),
                     ),
                   ),
@@ -232,6 +234,7 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
                           maxHeight: imageCount == 3 ? 135 : 90,
                         ),
                         disableAnimation: widget.isStreaming,
+                        httpHeaders: _headersForFile(file),
                       ),
                     ),
                   );
@@ -399,6 +402,24 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
         ),
       ],
     );
+  }
+
+  Map<String, String>? _headersForFile(dynamic file) {
+    if (file is! Map) return null;
+    final rawHeaders = file['headers'];
+    if (rawHeaders is! Map) return null;
+    final result = <String, String>{};
+    rawHeaders.forEach((key, value) {
+      final keyString = key?.toString();
+      final valueString = value?.toString();
+      if (keyString != null &&
+          keyString.isNotEmpty &&
+          valueString != null &&
+          valueString.isNotEmpty) {
+        result[keyString] = valueString;
+      }
+    });
+    return result.isEmpty ? null : result;
   }
 
   // Assistant-only helpers removed; this widget renders only user bubbles.

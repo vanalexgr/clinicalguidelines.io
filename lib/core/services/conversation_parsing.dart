@@ -272,6 +272,10 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
         };
         if (entry['name'] != null) fileMap['name'] = entry['name'];
         if (entry['size'] != null) fileMap['size'] = entry['size'];
+        final headers = _coerceStringMap(entry['headers']);
+        if (headers != null && headers.isNotEmpty) {
+          fileMap['headers'] = headers;
+        }
         allFiles.add(fileMap);
 
         final url = entry['url'].toString();
@@ -386,6 +390,24 @@ List<Map<String, dynamic>> _parseStatusHistoryField(dynamic raw) {
         .toList(growable: false);
   }
   return const <Map<String, dynamic>>[];
+}
+
+Map<String, String>? _coerceStringMap(dynamic raw) {
+  if (raw is Map) {
+    final result = <String, String>{};
+    raw.forEach((key, value) {
+      final keyString = key?.toString();
+      final valueString = value?.toString();
+      if (keyString != null &&
+          keyString.isNotEmpty &&
+          valueString != null &&
+          valueString.isNotEmpty) {
+        result[keyString] = valueString;
+      }
+    });
+    return result.isEmpty ? null : result;
+  }
+  return null;
 }
 
 List<String> _coerceStringList(dynamic raw) {
