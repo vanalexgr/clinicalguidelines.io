@@ -1063,6 +1063,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                     ),
                     disableAnimation:
                         false, // Keep animations enabled to prevent black display
+                    httpHeaders: _headersForFile(imageFiles[0]),
                   );
                 },
               ),
@@ -1087,10 +1088,29 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                   ),
                   disableAnimation:
                       false, // Keep animations enabled to prevent black display
+                  httpHeaders: _headersForFile(file),
                 );
               }).toList(),
             ),
     );
+  }
+
+  Map<String, String>? _headersForFile(dynamic file) {
+    if (file is! Map) return null;
+    final rawHeaders = file['headers'];
+    if (rawHeaders is! Map) return null;
+    final result = <String, String>{};
+    rawHeaders.forEach((key, value) {
+      final keyString = key?.toString();
+      final valueString = value?.toString();
+      if (keyString != null &&
+          keyString.isNotEmpty &&
+          valueString != null &&
+          valueString.isNotEmpty) {
+        result[keyString] = valueString;
+      }
+    });
+    return result.isEmpty ? null : result;
   }
 
   Widget _buildNonImageFiles(List<dynamic> nonImageFiles) {

@@ -981,8 +981,8 @@ Future<String?> _getFileAsBase64(dynamic api, String fileId) async {
 
     final ext = fileName.toLowerCase().split('.').last;
 
-    // Only process image files
-    if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext)) {
+    // Only process image files (including SVG)
+    if (!['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].contains(ext)) {
       return null;
     }
 
@@ -1039,6 +1039,8 @@ Future<Map<String, dynamic>> _buildMessagePayloadWithAttachments({
             mimeType = 'image/gif';
           } else if (ext == 'webp') {
             mimeType = 'image/webp';
+          } else if (ext == 'svg') {
+            mimeType = 'image/svg+xml';
           }
 
           final dataUrl = 'data:$mimeType;base64,$base64Data';
