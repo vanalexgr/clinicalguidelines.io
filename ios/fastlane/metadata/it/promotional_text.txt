@@ -1,1 +1,0 @@
-Chiamate native con supporto in background e integrazione Dynamic Island per conversazioni iOS fluide

@@ -1,1 +1,0 @@
-Llamadas nativas con soporte en segundo plano e integración de Dynamic Island para conversaciones iOS fluidas

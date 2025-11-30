@@ -1,1 +1,0 @@
-Native Anrufe mit Hintergrundunterstützung und Dynamic Island Integration für nahtlose iOS-Gespräche
