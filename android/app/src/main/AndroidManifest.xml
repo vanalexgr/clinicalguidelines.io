@@ -31,9 +31,12 @@
         </intent>
     </queries>
 
+    <!-- Custom Application class creates notification channels at startup to prevent
+         ForegroundServiceDidNotStartInTimeException. This ensures channels exist before
+         any foreground service attempts to use them. -->
     <application
         android:label="Conduit"
-        android:name="${applicationName}"
+        android:name=".ConduitApplication"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
