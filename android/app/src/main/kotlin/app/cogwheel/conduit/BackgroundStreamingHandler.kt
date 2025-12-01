@@ -44,16 +44,60 @@ class BackgroundStreamingService : Service() {
         super.onCreate()
         println("BackgroundStreamingService: Service created")
 
-        // Enter foreground immediately to satisfy Android's 5s requirement even
-        // if onStartCommand handling is delayed or cancelled.
-        val initialType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-        } else {
-            0
-        }
-        if (!isForeground) {
-            val notification = createMinimalNotification()
-            startForegroundInternal(notification, initialType)
+        // CRITICAL: Enter foreground IMMEDIATELY to satisfy Android's 5s timeout.
+        // Do this before ANY other initialization to minimize the risk of
+        // ForegroundServiceDidNotStartInTimeException.
+        try {
+            val initialType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            } else {
+                0
+            }
+            if (!isForeground) {
+                // Channel should already exist (created in ConduitApplication)
+                // but ensure it exists as a fallback
+                ensureNotificationChannel()
+                val notification = createMinimalNotification()
+                val success = startForegroundInternal(notification, initialType)
+                if (!success) {
+                    // startForegroundInternal returned false (caught internal exception)
+                    // Throw to trigger the fallback handler
+                    throw IllegalStateException("startForegroundInternal returned false")
+                }
+            }
+        } catch (e: Exception) {
+            // Last resort: try to enter foreground with absolute minimal setup
+            println("BackgroundStreamingService: Error in onCreate, attempting fallback: ${e.message}")
+            try {
+                // Must ensure channel exists before creating notification on Android O+
+                // Otherwise startForeground throws "Bad notification" error
+                ensureNotificationChannel()
+                val fallbackNotification = NotificationCompat.Builder(this, CHANNEL_ID)
+                    .setContentTitle("Conduit")
+                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setSilent(true)
+                    .setOngoing(true)  // Prevent user from dismissing foreground service notification
+                    .build()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        fallbackNotification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                    )
+                    currentForegroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                } else {
+                    @Suppress("DEPRECATION")
+                    startForeground(NOTIFICATION_ID, fallbackNotification)
+                }
+                isForeground = true
+                foregroundStartTime = System.currentTimeMillis()
+            } catch (fallbackError: Exception) {
+                println("BackgroundStreamingService: Fallback also failed: ${fallbackError.message}")
+                // All attempts exhausted - now notify Flutter of the failure
+                // This ensures we don't prematurely notify before trying fallback
+                sendFailureNotification(fallbackError)
+                // Service will be killed by system, but at least we tried
+            }
         }
     }
 
@@ -135,8 +179,8 @@ class BackgroundStreamingService : Service() {
         } catch (e: Exception) {
             // Catch all exceptions including ForegroundServiceStartNotAllowedException
             println("BackgroundStreamingService: Failed to enter foreground: ${e.javaClass.simpleName}: ${e.message}")
-            // Notify Flutter about the failure
-            sendFailureNotification(e)
+            // Don't notify Flutter here - let caller handle fallback attempts first.
+            // Only notify after all attempts (primary + fallback) have been exhausted.
             false
         }
     }
@@ -221,6 +265,18 @@ class BackgroundStreamingService : Service() {
         manager.createNotificationChannel(channel)
     }
     
+    /**
+     * Acquires a wake lock to prevent CPU sleep during active streaming.
+     * 
+     * Timeout is set to 6 minutes (360 seconds) to cover the 5-minute keepAlive
+     * interval with a 1-minute buffer. This ensures continuous wake lock coverage
+     * without gaps between refreshes.
+     * 
+     * Note: Android Play Console may flag wake locks > 1 minute as "excessive",
+     * but continuous CPU availability is required for reliable streaming.
+     * The alternative (60-second timeout with 5-minute refresh) creates 4-minute
+     * gaps where the CPU can sleep, causing streams to stall.
+     */
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) return
 
@@ -229,19 +285,26 @@ class BackgroundStreamingService : Service() {
             PowerManager.PARTIAL_WAKE_LOCK,
             "Conduit::StreamingWakeLock"
         ).apply {
-            // Use shorter wake lock duration to comply with Android restrictions
-            // Refresh periodically via keepAlive instead of long timeout
-            acquire(10 * 60 * 1000L) // 10 minutes (refreshed every 5 minutes)
+            // 6-minute timeout covers the 5-minute keepAlive interval + 1-minute buffer
+            // This ensures no gaps in wake lock coverage during active streaming
+            // Note: Use default reference-counted mode with timeout-based acquire
+            // (setReferenceCounted(false) interferes with timeout auto-release)
+            acquire(6 * 60 * 1000L) // 6 minutes - refreshed every 5 minutes by keepAlive()
         }
-        println("BackgroundStreamingService: Wake lock acquired")
+        println("BackgroundStreamingService: Wake lock acquired (6min timeout)")
     }
     
     private fun releaseWakeLock() {
-        wakeLock?.let {
-            if (it.isHeld) {
-                it.release()
-                println("BackgroundStreamingService: Wake lock released")
+        try {
+            wakeLock?.let {
+                if (it.isHeld) {
+                    it.release()
+                    println("BackgroundStreamingService: Wake lock released")
+                }
             }
+        } catch (e: Exception) {
+            // Wake lock may already be released due to timeout
+            println("BackgroundStreamingService: Wake lock release exception: ${e.message}")
         }
         wakeLock = null
     }
@@ -264,10 +327,13 @@ class BackgroundStreamingService : Service() {
             }
         }
         
-        // Refresh wake lock to extend background processing time
+        // Refresh wake lock to maintain CPU availability for streaming.
+        // Wake lock has 6-minute timeout, keepAlive is called every 5 minutes,
+        // ensuring continuous coverage with 1-minute overlap buffer.
+        // Note: Foreground services prevent process termination but NOT CPU sleep.
         releaseWakeLock()
         acquireWakeLock()
-        println("BackgroundStreamingService: Keep alive - wake lock refreshed")
+        println("BackgroundStreamingService: Keep alive - wake lock refreshed, ${activeStreamCount} active streams")
     }
     
     private fun stopStreaming() {
