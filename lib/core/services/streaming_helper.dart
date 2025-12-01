@@ -204,12 +204,13 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   final hasSocketSignals =
       socketService != null || registerDeltaListener != null;
   if (hasSocketSignals) {
-    // Use a reasonable inactivity timeout - if no data arrives for 45 seconds,
-    // something is likely wrong with the connection
+    // Use a short inactivity timeout - if no data arrives for 10 seconds,
+    // something is likely wrong with the connection. Combined with 1-second
+    // polling and server state sync, this provides fast recovery.
     socketWatchdog = InactivityWatchdog(
-      window: const Duration(seconds: 45),
+      window: const Duration(seconds: 10),
       // Absolute cap ensures streaming never gets stuck indefinitely
-      absoluteCap: const Duration(minutes: 10),
+      absoluteCap: const Duration(minutes: 5),
       onTimeout: () {
         DebugLogger.log(
           'Socket watchdog timeout - finishing streaming gracefully',
