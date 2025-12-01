@@ -37,12 +37,18 @@ final _inlineDetailsPattern = RegExp(
   r'<details([^>]*)>((?:(?!</details>).)*)</details>',
   dotAll: true,
 );
+// Patterns for balancing <think> and <reasoning> tags (similar to <details>)
+final _thinkOpenPattern = RegExp(r'<think>');
+final _thinkClosePattern = RegExp(r'</think>');
+final _reasoningOpenPattern = RegExp(r'<reasoning>');
+final _reasoningClosePattern = RegExp(r'</reasoning>');
 
 /// Sanitizes content to handle malformed HTML-like tags that might cause
 /// parsing issues, particularly with Pipe Functions (e.g., Gemini).
 ///
 /// This function:
-/// - Ensures all `<details>` tags are properly closed
+/// - Ensures all `<details>`, `<think>`, and `<reasoning>` tags are properly
+///   closed
 /// - Converts inline `<details>...</details>` to multi-line format for proper
 ///   block-level parsing
 /// - Removes orphan closing tags (those without matching opening tags)
@@ -51,38 +57,75 @@ final _inlineDetailsPattern = RegExp(
 String sanitizeContentForParsing(String content) {
   if (content.isEmpty) return content;
 
-  // Quick check: skip if no details tags present (check for both opening and closing)
-  if (!content.contains('<details') && !content.contains('</details>')) {
+  String result = content;
+
+  // Check which tag types are present and need balancing
+  final hasDetails =
+      content.contains('<details') || content.contains('</details>');
+  final hasThink = content.contains('<think>') || content.contains('</think>');
+  final hasReasoning =
+      content.contains('<reasoning>') || content.contains('</reasoning>');
+
+  // Quick check: skip if no relevant tags present
+  if (!hasDetails && !hasThink && !hasReasoning) {
     return content;
   }
 
-  String result = content;
-
   // Step 1: Convert inline <details>...</details> to multi-line format
   // This ensures the markdown block parser can properly detect them
-  result = result.replaceAllMapped(_inlineDetailsPattern, (match) {
-    final attrs = match.group(1) ?? '';
-    final inner = match.group(2) ?? '';
-    // Only convert if the inner content doesn't already span multiple lines
-    if (!inner.contains('\n')) {
-      return '<details$attrs>\n$inner\n</details>';
-    }
-    return match.group(0)!;
-  });
+  if (hasDetails) {
+    result = result.replaceAllMapped(_inlineDetailsPattern, (match) {
+      final attrs = match.group(1) ?? '';
+      final inner = match.group(2) ?? '';
+      // Only convert if the inner content doesn't already span multiple lines
+      if (!inner.contains('\n')) {
+        return '<details$attrs>\n$inner\n</details>';
+      }
+      return match.group(0)!;
+    });
+  }
 
   // Step 2: Balance tags by removing orphan closing tags and adding
   // missing closing tags using depth tracking
-  result = _balanceDetailsTags(result);
+  if (hasDetails) {
+    result = _balanceTags(
+      result,
+      _detailsOpenPattern,
+      _detailsClosePattern,
+      '</details>',
+    );
+  }
+  if (hasThink) {
+    result = _balanceTags(
+      result,
+      _thinkOpenPattern,
+      _thinkClosePattern,
+      '</think>',
+    );
+  }
+  if (hasReasoning) {
+    result = _balanceTags(
+      result,
+      _reasoningOpenPattern,
+      _reasoningClosePattern,
+      '</reasoning>',
+    );
+  }
 
   return result;
 }
 
-/// Balances `<details>` tags by removing orphan closing tags and adding
-/// missing closing tags. Uses depth tracking to properly handle nested tags
-/// and identify orphans anywhere in the content.
-String _balanceDetailsTags(String content) {
-  final openMatches = _detailsOpenPattern.allMatches(content).toList();
-  final closeMatches = _detailsClosePattern.allMatches(content).toList();
+/// Balances tags by removing orphan closing tags and adding missing closing
+/// tags. Uses depth tracking to properly handle nested tags and identify
+/// orphans anywhere in the content.
+String _balanceTags(
+  String content,
+  RegExp openPattern,
+  RegExp closePattern,
+  String closeTag,
+) {
+  final openMatches = openPattern.allMatches(content).toList();
+  final closeMatches = closePattern.allMatches(content).toList();
 
   if (openMatches.isEmpty && closeMatches.isEmpty) return content;
 
@@ -121,7 +164,7 @@ String _balanceDetailsTags(String content) {
 
   // Add missing closing tags for unclosed opening tags
   if (depth > 0) {
-    result += '\n</details>' * depth;
+    result += '\n$closeTag' * depth;
   }
 
   return result;
