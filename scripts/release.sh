@@ -146,10 +146,10 @@ rm pubspec.yaml.bak
 print_status "Generating Fastlane changelogs..."
 LINK="https://github.com/cogwheel0/conduit/releases/tag/$TAG_VERSION"
 
-# Android changelog (by build number)
+# Android changelog (default only)
 ANDROID_CHANGELOG_DIR="android/fastlane/metadata/android/en-US/changelogs"
 mkdir -p "$ANDROID_CHANGELOG_DIR"
-echo "$LINK" > "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt"
+echo "$LINK" > "$ANDROID_CHANGELOG_DIR/default.txt"
 
 # iOS release notes in Deliverfile
 IOS_DELIVERFILE="ios/fastlane/Deliverfile"
@@ -159,7 +159,7 @@ rm "${IOS_DELIVERFILE}.bak"
 
 # Commit changes
 print_status "Committing changes..."
-git add pubspec.yaml "$ANDROID_CHANGELOG_DIR/$NEW_BUILD.txt" "$IOS_DELIVERFILE"
+git add pubspec.yaml "$ANDROID_CHANGELOG_DIR/default.txt" "$IOS_DELIVERFILE"
 git commit -m "chore: bump version to $NEW_VERSION"
 
 git push origin main
