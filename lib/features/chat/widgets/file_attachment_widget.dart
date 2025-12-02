@@ -14,6 +14,7 @@ const Set<String> _previewableImageExtensions = <String>{
   '.png',
   '.gif',
   '.webp',
+  '.bmp',
 };
 
 class FileAttachmentWidget extends ConsumerWidget {

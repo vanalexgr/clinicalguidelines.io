@@ -62,8 +62,14 @@ class LocalAttachment {
     return path.extension(file.path).toLowerCase();
   }
 
-  bool get isImage =>
-      <String>{'.jpg', '.jpeg', '.png', '.gif', '.webp'}.contains(extension);
+  bool get isImage => <String>{
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.webp',
+    '.bmp',
+  }.contains(extension);
 }
 
 class FileAttachmentService {

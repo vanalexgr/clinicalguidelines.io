@@ -12,6 +12,8 @@ import 'dart:async';
 import 'dart:ui';
 import 'dart:math' as math;
 import '../providers/chat_providers.dart';
+import '../services/clipboard_attachment_service.dart';
+import '../services/file_attachment_service.dart';
 import '../providers/context_attachments_provider.dart';
 import '../providers/knowledge_cache_provider.dart';
 import '../../tools/providers/tools_providers.dart';
@@ -69,6 +71,9 @@ class ModernChatInput extends ConsumerStatefulWidget {
   final Function()? onCameraCapture;
   final Function()? onWebAttachment;
 
+  /// Callback invoked when images or files are pasted from clipboard.
+  final Future<void> Function(List<LocalAttachment>)? onPastedAttachments;
+
   const ModernChatInput({
     super.key,
     required this.onSendMessage,
@@ -79,6 +84,7 @@ class ModernChatInput extends ConsumerStatefulWidget {
     this.onImageAttachment,
     this.onCameraCapture,
     this.onWebAttachment,
+    this.onPastedAttachments,
   });
 
   @override
@@ -109,6 +115,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   String _currentPromptCommand = '';
   TextRange? _currentPromptRange;
   int _promptSelectionIndex = 0;
+
+  /// Service for handling clipboard paste operations.
+  final ClipboardAttachmentService _clipboardService =
+      ClipboardAttachmentService();
 
   @override
   void initState() {
@@ -225,6 +235,56 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     }
   }
 
+  /// Handles content insertion from keyboard/clipboard (images, files).
+  ///
+  /// This is called when the user pastes rich content into the text field
+  /// on iOS and Android.
+  Future<void> _handleContentInserted(KeyboardInsertedContent content) async {
+    if (!widget.enabled) return;
+
+    // Check if we have a callback to handle pasted attachments
+    final onPasted = widget.onPastedAttachments;
+    if (onPasted == null) return;
+
+    final mimeType = content.mimeType;
+    final data = content.data;
+
+    // Only process image content
+    if (!_clipboardService.isSupportedImageType(mimeType)) {
+      return;
+    }
+
+    // Check if we have actual data
+    if (data == null || data.isEmpty) {
+      return;
+    }
+
+    PlatformUtils.lightHaptic();
+
+    // Create attachment from pasted image data
+    String? suggestedName;
+    final uriString = content.uri;
+    if (uriString.isNotEmpty) {
+      try {
+        final uri = Uri.parse(uriString);
+        if (uri.pathSegments.isNotEmpty) {
+          suggestedName = uri.pathSegments.last;
+        }
+      } catch (_) {
+        // Ignore URI parsing errors
+      }
+    }
+    final attachment = await _clipboardService.createAttachmentFromImageData(
+      imageData: data,
+      mimeType: mimeType,
+      suggestedFileName: suggestedName,
+    );
+
+    if (attachment != null) {
+      await onPasted([attachment]);
+    }
+  }
+
   void _insertNewline() {
     final text = _controller.text;
     TextSelection sel = _controller.selection;
@@ -336,7 +396,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     if (prompts.isEmpty) return const <Prompt>[];
     final String query = _currentPromptCommand.toLowerCase().trim();
     // Strip leading '/' prefix so we can match prompt commands (e.g., "help")
-    final String searchQuery = query.startsWith('/') ? query.substring(1) : query;
+    final String searchQuery = query.startsWith('/')
+        ? query.substring(1)
+        : query;
 
     final List<Prompt> filtered =
         prompts
@@ -470,7 +532,8 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                   final items = selectedBaseId != null
                       ? itemsMap[selectedBaseId] ?? const <KnowledgeBaseItem>[]
                       : const <KnowledgeBaseItem>[];
-                  final loading = cacheState.isLoading ||
+                  final loading =
+                      cacheState.isLoading ||
                       (selectedBaseId != null &&
                           !itemsMap.containsKey(selectedBaseId));
 
@@ -525,15 +588,16 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                                       final item = items[index];
                                       final KnowledgeBase? selectedBase =
                                           bases.isEmpty
-                                              ? null
-                                              : bases.firstWhere(
-                                                  (b) => b.id == selectedBaseId,
-                                                  orElse: () => bases.first,
-                                                );
+                                          ? null
+                                          : bases.firstWhere(
+                                              (b) => b.id == selectedBaseId,
+                                              orElse: () => bases.first,
+                                            );
                                       return ListTile(
                                         title: Text(
                                           item.title ??
-                                              item.metadata['name']?.toString() ??
+                                              item.metadata['name']
+                                                  ?.toString() ??
                                               'Document',
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -550,14 +614,15 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                                                     .notifier,
                                               )
                                               .addKnowledge(
-                                                displayName: item.title ??
+                                                displayName:
+                                                    item.title ??
                                                     item.metadata['name']
                                                         ?.toString() ??
                                                     'Document',
                                                 fileId: item.id,
                                                 collectionName:
                                                     selectedBase?.name ??
-                                                        'Unknown',
+                                                    'Unknown',
                                                 url: item.metadata['source']
                                                     ?.toString(),
                                               );
@@ -1360,6 +1425,13 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                     contentPadding: contentPadding,
                     isDense: true,
                     alignLabelWithHint: true,
+                  ),
+                  // Enable pasting images and files from clipboard
+                  contentInsertionConfiguration: ContentInsertionConfiguration(
+                    allowedMimeTypes: ClipboardAttachmentService
+                        .supportedImageMimeTypes
+                        .toList(),
+                    onContentInserted: _handleContentInserted,
                   ),
                   onSubmitted: (_) {
                     if (sendOnEnter) {

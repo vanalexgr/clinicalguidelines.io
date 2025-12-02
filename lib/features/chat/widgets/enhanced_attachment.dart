@@ -86,7 +86,7 @@ class _EnhancedAttachmentState extends ConsumerState<EnhancedAttachment> {
         .toString()
         .toLowerCase();
     final ext = name.split('.').length > 1 ? name.split('.').last : '';
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext);
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext);
   }
 
   Future<String?> _ensureLocalFile() async {
@@ -234,14 +234,14 @@ class _EnhancedAttachmentState extends ConsumerState<EnhancedAttachment> {
         ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.max,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             _fileIconFor(filename),
             style: const TextStyle(fontSize: AppTypography.headlineLarge),
           ),
           const SizedBox(width: Spacing.sm),
-          Expanded(
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
