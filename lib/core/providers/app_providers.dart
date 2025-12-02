@@ -812,6 +812,9 @@ final _settingsWatcherProvider = Provider<void>((ref) {
 
 // Auto-apply model-specific tools when model changes or tools load
 final modelToolsAutoSelectionProvider = Provider<void>((ref) {
+  // Prevent disposal so listeners remain active throughout app lifecycle
+  ref.keepAlive();
+
   Future<void> applyTools(Model? model) async {
     if (model == null) {
       final current = ref.read(selectedToolIdsProvider);
@@ -894,6 +897,9 @@ final modelToolsAutoSelectionProvider = Provider<void>((ref) {
 // Auto-apply default model from settings when it changes (and not manually overridden)
 // keepAlive to maintain listener throughout app lifecycle
 final defaultModelAutoSelectionProvider = Provider<void>((ref) {
+  // Prevent disposal so listeners remain active throughout app lifecycle
+  ref.keepAlive();
+
   // Initialize the model tools auto-selection
   ref.watch(modelToolsAutoSelectionProvider);
 

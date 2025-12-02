@@ -139,6 +139,14 @@ sealed class Model with _$Model {
       }
     }
 
+    // Fallback to top-level toolIds (for cached models serialized via toJson)
+    if (toolIds == null || toolIds.isEmpty) {
+      final topLevelToolIds = json['toolIds'];
+      if (topLevelToolIds is List) {
+        toolIds = topLevelToolIds.map((e) => e.toString()).toList();
+      }
+    }
+
     final idRaw = json['id'];
     final id = idRaw?.toString();
     if (id == null || id.isEmpty) {
