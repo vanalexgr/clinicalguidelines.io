@@ -355,29 +355,41 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
           final serverMessages = serverConversation.messages;
 
           if (serverMessages.isNotEmpty && state.isNotEmpty) {
-            final serverLast = serverMessages.last;
             final localLast = state.last;
 
-            // If server has the same message but says it's not streaming,
-            // or server has more content, sync from server
-            if (serverLast.id == localLast.id &&
-                serverLast.role == 'assistant') {
-              final serverDone = !serverLast.isStreaming;
-              final serverHasMoreContent =
-                  serverLast.content.length > localLast.content.length;
+            // Case 1: Server has more messages than local - streaming must be done
+            if (serverMessages.length > state.length) {
+              DebugLogger.log(
+                'Server sync: server has more messages '
+                '(${serverMessages.length} vs ${state.length})',
+                scope: 'chat/providers',
+              );
+              state = serverMessages;
+              _cancelMessageStream();
+              return;
+            }
 
-              if (serverDone || serverHasMoreContent) {
-                DebugLogger.log(
-                  'Server sync: adopting server state '
-                  '(serverDone=$serverDone, serverHasMore=$serverHasMoreContent)',
-                  scope: 'chat/providers',
-                );
-                state = serverMessages;
-                // Always cancel local streaming when adopting server state.
-                // If serverDone, streaming is complete. If serverHasMoreContent,
-                // we've adopted server content and continuing local streaming
-                // could cause conflicts or duplicate content.
-                _cancelMessageStream();
+            // Case 2: Find the local streaming message in server messages by ID
+            // This handles cases where last messages differ
+            if (localLast.role == 'assistant' && localLast.isStreaming) {
+              final serverVersion = serverMessages
+                  .where((m) => m.id == localLast.id)
+                  .firstOrNull;
+
+              if (serverVersion != null) {
+                final serverDone = !serverVersion.isStreaming;
+                final serverHasMoreContent =
+                    serverVersion.content.length > localLast.content.length;
+
+                if (serverDone || serverHasMoreContent) {
+                  DebugLogger.log(
+                    'Server sync: adopting server state '
+                    '(serverDone=$serverDone, serverHasMore=$serverHasMoreContent)',
+                    scope: 'chat/providers',
+                  );
+                  state = serverMessages;
+                  _cancelMessageStream();
+                }
               }
             }
           }

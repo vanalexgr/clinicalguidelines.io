@@ -176,7 +176,10 @@ class SocketService with WidgetsBindingObserver {
       requireFocus: requireFocus,
       handler: handler,
     );
-    return SocketEventSubscription(() => _chatEventHandlers.remove(id));
+    return SocketEventSubscription(
+      () => _chatEventHandlers.remove(id),
+      handlerId: id,
+    );
   }
 
   SocketEventSubscription addChannelEventHandler({
@@ -193,7 +196,10 @@ class SocketService with WidgetsBindingObserver {
       requireFocus: requireFocus,
       handler: handler,
     );
-    return SocketEventSubscription(() => _channelEventHandlers.remove(id));
+    return SocketEventSubscription(
+      () => _channelEventHandlers.remove(id),
+      handlerId: id,
+    );
   }
 
   void clearChatEventHandlers() {
@@ -202,6 +208,66 @@ class SocketService with WidgetsBindingObserver {
 
   void clearChannelEventHandlers() {
     _channelEventHandlers.clear();
+  }
+
+  /// Update the session ID for a chat event handler registration.
+  /// Used when socket reconnects and gets a new session ID.
+  void updateChatHandlerSessionId(String handlerId, String newSessionId) {
+    final existing = _chatEventHandlers[handlerId];
+    if (existing != null) {
+      _chatEventHandlers[handlerId] = _ChatEventRegistration(
+        id: existing.id,
+        conversationId: existing.conversationId,
+        sessionId: newSessionId,
+        requireFocus: existing.requireFocus,
+        handler: existing.handler,
+      );
+    }
+  }
+
+  /// Update the session ID for a channel event handler registration.
+  /// Used when socket reconnects and gets a new session ID.
+  void updateChannelHandlerSessionId(String handlerId, String newSessionId) {
+    final existing = _channelEventHandlers[handlerId];
+    if (existing != null) {
+      _channelEventHandlers[handlerId] = _ChannelEventRegistration(
+        id: existing.id,
+        conversationId: existing.conversationId,
+        sessionId: newSessionId,
+        requireFocus: existing.requireFocus,
+        handler: existing.handler,
+      );
+    }
+  }
+
+  /// Update session IDs for all handlers matching a conversation ID.
+  /// Called after socket reconnection to update handlers with the new session.
+  void updateSessionIdForConversation(
+    String conversationId,
+    String newSessionId,
+  ) {
+    for (final entry in _chatEventHandlers.entries.toList()) {
+      if (entry.value.conversationId == conversationId) {
+        _chatEventHandlers[entry.key] = _ChatEventRegistration(
+          id: entry.value.id,
+          conversationId: entry.value.conversationId,
+          sessionId: newSessionId,
+          requireFocus: entry.value.requireFocus,
+          handler: entry.value.handler,
+        );
+      }
+    }
+    for (final entry in _channelEventHandlers.entries.toList()) {
+      if (entry.value.conversationId == conversationId) {
+        _channelEventHandlers[entry.key] = _ChannelEventRegistration(
+          id: entry.value.id,
+          conversationId: entry.value.conversationId,
+          sessionId: newSessionId,
+          requireFocus: entry.value.requireFocus,
+          handler: entry.value.handler,
+        );
+      }
+    }
   }
 
   // Subscribe to an arbitrary socket.io event (used for dynamic tool channels)
@@ -378,17 +444,27 @@ class SocketService with WidgetsBindingObserver {
         incomingSessionId != null &&
         registeredSessionId == incomingSessionId;
 
+    // Must match either conversation or session to be considered
     if (!matchesConversation && !matchesSession) {
       return false;
     }
 
+    // If no focus requirement, always deliver
     if (!requireFocus) {
       return true;
     }
 
+    // Session-targeted messages always bypass focus check (critical for
+    // background streaming - done/delta events must arrive even when backgrounded)
     if (matchesSession) {
-      // Session-targeted messages should always pass through even if unfocused
       return true;
+    }
+
+    // FIX for issue #172: If conversation matches (even without session match),
+    // still deliver when app is in foreground. This handles socket reconnection
+    // where session_id changes but chat_id stays the same.
+    if (matchesConversation && registeredConversationId != null) {
+      return _isAppForeground;
     }
 
     return _isAppForeground;
@@ -487,9 +563,10 @@ class SocketService with WidgetsBindingObserver {
 }
 
 class SocketEventSubscription {
-  SocketEventSubscription(this._dispose);
+  SocketEventSubscription(this._dispose, {this.handlerId});
 
   final VoidCallback _dispose;
+  final String? handlerId;
   bool _isDisposed = false;
 
   void dispose() {
