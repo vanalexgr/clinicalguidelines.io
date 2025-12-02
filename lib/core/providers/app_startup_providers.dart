@@ -173,9 +173,6 @@ class AppStartupFlow extends _$AppStartupFlow {
     keepAlive(appIntentCoordinatorProvider);
     keepAlive(quickActionsCoordinatorProvider);
 
-    // Ensure model tools auto-selection is active throughout app lifecycle
-    keepAlive(defaultModelAutoSelectionProvider);
-
     // Kick background model loading flow (non-blocking)
     Future<void>.delayed(const Duration(milliseconds: 120), () {
       if (!ref.mounted) return;
@@ -279,6 +276,12 @@ class AppStartupFlow extends _$AppStartupFlow {
                   scope: 'startup',
                   data: {'error': e},
                 );
+              } finally {
+                // Ensure model tools auto-selection is active AFTER model load attempt
+                // This guarantees tools are applied for the restored model
+                if (ref.mounted) {
+                  keepAlive(defaultModelAutoSelectionProvider);
+                }
               }
             });
 

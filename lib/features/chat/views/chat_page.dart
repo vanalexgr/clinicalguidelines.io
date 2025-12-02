@@ -602,6 +602,81 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  /// Handles images/files pasted from clipboard into the chat input.
+  Future<void> _handlePastedAttachments(
+    List<LocalAttachment> attachments,
+  ) async {
+    if (attachments.isEmpty) return;
+
+    DebugLogger.log(
+      'Processing ${attachments.length} pasted attachment(s)',
+      scope: 'chat/page',
+    );
+
+    // Validate file count (default 10 files limit like OpenWebUI)
+    final currentFiles = ref.read(attachedFilesProvider);
+    if (!validateFileCount(currentFiles.length, attachments.length, 10)) {
+      if (!mounted) return;
+      return;
+    }
+
+    // Validate file sizes and process each attachment
+    final validAttachments = <LocalAttachment>[];
+    for (final attachment in attachments) {
+      try {
+        final fileSize = await attachment.file.length();
+        DebugLogger.log(
+          'Pasted file: ${attachment.displayName}, size: $fileSize bytes',
+          scope: 'chat/page',
+        );
+
+        // Validate file size (default 20MB limit like OpenWebUI)
+        if (!validateFileSize(fileSize, 20)) {
+          DebugLogger.log(
+            'Skipping oversized pasted file: ${attachment.displayName}',
+            scope: 'chat/page',
+          );
+          continue;
+        }
+
+        validAttachments.add(attachment);
+      } catch (e) {
+        DebugLogger.log(
+          'Error processing pasted attachment: $e',
+          scope: 'chat/page',
+        );
+      }
+    }
+
+    if (validAttachments.isEmpty) return;
+
+    // Add attachments to the list
+    ref.read(attachedFilesProvider.notifier).addFiles(validAttachments);
+
+    // Enqueue uploads via task queue for unified retry/progress
+    final activeConv = ref.read(activeConversationProvider);
+    for (final attachment in validAttachments) {
+      try {
+        final fileSize = await attachment.file.length();
+        await ref
+            .read(taskQueueProvider.notifier)
+            .enqueueUploadMedia(
+              conversationId: activeConv?.id,
+              filePath: attachment.file.path,
+              fileName: attachment.displayName,
+              fileSize: fileSize,
+            );
+      } catch (e) {
+        DebugLogger.log('Enqueue pasted upload failed: $e', scope: 'chat/page');
+      }
+    }
+
+    DebugLogger.log(
+      'Added ${validAttachments.length} pasted attachment(s)',
+      scope: 'chat/page',
+    );
+  }
+
   /// Checks if a URL is a YouTube URL.
   bool _isYoutubeUrl(String url) {
     return url.startsWith('https://www.youtube.com') ||
@@ -2023,6 +2098,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                 onCameraCapture: () =>
                                     _handleImageAttachment(fromCamera: true),
                                 onWebAttachment: _promptAttachWebpage,
+                                onPastedAttachments: _handlePastedAttachments,
                               ),
                             ),
                           ),
