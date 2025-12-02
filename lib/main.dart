@@ -145,13 +145,11 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
       () => ref.read(authApiIntegrationProvider),
       delay: const Duration(milliseconds: 16),
     );
-    queueInit(
-      () => ref.read(defaultModelAutoSelectionProvider),
-      delay: const Duration(milliseconds: 24),
-    );
+    // Note: defaultModelAutoSelectionProvider is now initialized in
+    // AppStartupFlow after authentication to avoid loading tools too early
     queueInit(
       () => ref.read(shareReceiverInitializerProvider),
-      delay: const Duration(milliseconds: 32),
+      delay: const Duration(milliseconds: 24),
     );
 
     SchedulerBinding.instance.addPostFrameCallback((_) {
