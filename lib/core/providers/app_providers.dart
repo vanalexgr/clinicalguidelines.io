@@ -329,6 +329,7 @@ final apiServiceProvider = Provider<ApiService?>((ref) {
 class SocketServiceManager extends _$SocketServiceManager {
   SocketService? _service;
   ProviderSubscription<String?>? _tokenSubscription;
+  int _connectToken = 0;
 
   @override
   FutureOr<SocketService?> build() async {
@@ -390,9 +391,11 @@ class SocketServiceManager extends _$SocketServiceManager {
   }
 
   void _scheduleConnect(SocketService service) {
+    final token = ++_connectToken;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(milliseconds: 150));
       if (!ref.mounted) return;
+      if (_connectToken != token) return;
+      if (!identical(_service, service)) return;
       try {
         unawaited(service.connect());
       } catch (_) {}
@@ -400,6 +403,7 @@ class SocketServiceManager extends _$SocketServiceManager {
   }
 
   void _disposeService() {
+    _connectToken++;
     if (_service == null) return;
     try {
       _service!.dispose();

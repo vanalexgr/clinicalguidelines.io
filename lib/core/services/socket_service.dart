@@ -25,8 +25,10 @@ class SocketService with WidgetsBindingObserver {
   final bool allowWebsocketUpgrade;
   io.Socket? _socket;
   String? _authToken;
+  bool _isConnecting = false;
   bool _isAppForeground = true;
   Timer? _heartbeatTimer;
+  bool _forcePollingFallback = false;
 
   /// Heartbeat interval matching OpenWebUI's 30-second interval.
   static const Duration _heartbeatInterval = Duration(seconds: 30);
@@ -69,6 +71,9 @@ class SocketService with WidgetsBindingObserver {
 
   Future<void> connect({bool force = false}) async {
     if (_socket != null && _socket!.connected && !force) return;
+    if (_isConnecting && !force) return;
+
+    _isConnecting = true;
 
     DebugLogger.log(
       'Connecting to socket',
@@ -80,7 +85,11 @@ class SocketService with WidgetsBindingObserver {
     _stopHeartbeat();
 
     try {
-      _socket?.dispose();
+      final existing = _socket;
+      if (existing != null) {
+        _unbindCoreSocketHandlers(existing);
+        existing.dispose();
+      }
     } catch (_) {}
 
     String base = serverConfig.url.replaceFirst(RegExp(r'/+$'), '');
@@ -94,8 +103,10 @@ class SocketService with WidgetsBindingObserver {
     } catch (_) {}
     final path = '/ws/socket.io';
 
-    final usePollingOnly = !websocketOnly && !allowWebsocketUpgrade;
-    final transports = websocketOnly
+    final usePollingFallback = _forcePollingFallback;
+    final effectiveWebsocketOnly = websocketOnly && !usePollingFallback;
+    final usePollingOnly = !effectiveWebsocketOnly && !allowWebsocketUpgrade;
+    final transports = effectiveWebsocketOnly
         ? const ['websocket']
         : usePollingOnly
         ? const ['polling']
@@ -104,8 +115,8 @@ class SocketService with WidgetsBindingObserver {
     final builder = io.OptionBuilder()
         // Transport selection switches between WebSocket-only and polling fallback
         .setTransports(transports)
-        .setRememberUpgrade(!websocketOnly && allowWebsocketUpgrade)
-        .setUpgrade(!websocketOnly && allowWebsocketUpgrade)
+        .setRememberUpgrade(!effectiveWebsocketOnly && allowWebsocketUpgrade)
+        .setUpgrade(!effectiveWebsocketOnly && allowWebsocketUpgrade)
         // Tune reconnect/backoff and timeouts
         // Note: In socket_io_client, pass a very large number for "unlimited" attempts.
         // Using double.maxFinite.toInt() ensures unlimited reconnection attempts.
@@ -154,13 +165,17 @@ class SocketService with WidgetsBindingObserver {
       builder.setExtraHeaders(extraHeaders);
     }
 
-    _socket = createSocketWithOptionalBadCertOverride(
-      base,
-      builder,
-      serverConfig,
-    );
-
-    _bindCoreSocketHandlers();
+    try {
+      _socket = createSocketWithOptionalBadCertOverride(
+        base,
+        builder,
+        serverConfig,
+      );
+      _bindCoreSocketHandlers();
+    } catch (_) {
+      _isConnecting = false;
+      rethrow;
+    }
   }
 
   /// Update the auth token used by the socket service.
@@ -298,7 +313,11 @@ class SocketService with WidgetsBindingObserver {
   void dispose() {
     _stopHeartbeat();
     try {
-      _socket?.dispose();
+      final existing = _socket;
+      if (existing != null) {
+        _unbindCoreSocketHandlers(existing);
+        existing.dispose();
+      }
     } catch (_) {}
     _socket = null;
     WidgetsBinding.instance.removeObserver(this);
@@ -327,17 +346,7 @@ class SocketService with WidgetsBindingObserver {
     final socket = _socket;
     if (socket == null) return;
 
-    socket
-      ..off('events', _handleChatEvent)
-      ..off('chat-events', _handleChatEvent)
-      ..off('events:channel', _handleChannelEvent)
-      ..off('channel-events', _handleChannelEvent)
-      ..off('connect', _handleConnect)
-      ..off('connect_error', _handleConnectError)
-      ..off('reconnect_attempt', _handleReconnectAttempt)
-      ..off('reconnect', _handleReconnect)
-      ..off('reconnect_failed', _handleReconnectFailed)
-      ..off('disconnect', _handleDisconnect);
+    _unbindCoreSocketHandlers(socket);
 
     socket
       ..on('events', _handleChatEvent)
@@ -352,7 +361,22 @@ class SocketService with WidgetsBindingObserver {
       ..on('disconnect', _handleDisconnect);
   }
 
+  void _unbindCoreSocketHandlers(io.Socket socket) {
+    socket
+      ..off('events', _handleChatEvent)
+      ..off('chat-events', _handleChatEvent)
+      ..off('events:channel', _handleChannelEvent)
+      ..off('channel-events', _handleChannelEvent)
+      ..off('connect', _handleConnect)
+      ..off('connect_error', _handleConnectError)
+      ..off('reconnect_attempt', _handleReconnectAttempt)
+      ..off('reconnect', _handleReconnect)
+      ..off('reconnect_failed', _handleReconnectFailed)
+      ..off('disconnect', _handleDisconnect);
+  }
+
   void _handleConnect(dynamic _) {
+    _isConnecting = false;
     DebugLogger.log(
       'Socket connected',
       scope: 'socket',
@@ -370,6 +394,7 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleReconnectAttempt(dynamic attempt) {
+    _isConnecting = true;
     DebugLogger.log(
       'Socket reconnection attempt',
       scope: 'socket',
@@ -378,6 +403,7 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleReconnect(dynamic attempt) {
+    _isConnecting = false;
     DebugLogger.log(
       'Socket reconnected',
       scope: 'socket',
@@ -400,15 +426,29 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleConnectError(dynamic err) {
+    _isConnecting = false;
     DebugLogger.error(
       'Socket connection error',
       scope: 'socket',
       error: err,
       data: {'serverUrl': serverConfig.url},
     );
+
+    // If WebSocket-only handshake fails, retry once with polling+websocket
+    // transports to avoid endless spinners (issue #172).
+    if (websocketOnly && !_forcePollingFallback) {
+      _forcePollingFallback = true;
+      DebugLogger.warning(
+        'WebSocket connect failed; retrying with polling fallback',
+        scope: 'socket',
+        data: {'reason': err?.toString()},
+      );
+      unawaited(connect(force: true));
+    }
   }
 
   void _handleReconnectFailed(dynamic _) {
+    _isConnecting = false;
     DebugLogger.error(
       'Socket reconnection failed after all attempts',
       scope: 'socket',
@@ -417,6 +457,7 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleDisconnect(dynamic reason) {
+    _isConnecting = false;
     DebugLogger.warning(
       'Socket disconnected',
       scope: 'socket',
