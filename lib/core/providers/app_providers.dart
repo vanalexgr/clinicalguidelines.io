@@ -675,7 +675,6 @@ class Models extends _$Models {
         });
         return cached;
       }
-      DebugLogger.log('cache-empty', scope: 'models/cache');
     } catch (error, stackTrace) {
       DebugLogger.error(
         'cache-load-failed',
@@ -1012,14 +1011,8 @@ class Conversations extends _$Conversations {
             );
           }
         });
-        DebugLogger.log(
-          'cache-restored',
-          scope: 'conversations/cache',
-          data: {'count': sortedCached.length},
-        );
         return sortedCached;
       }
-      DebugLogger.log('cache-empty', scope: 'conversations/cache');
     } catch (error, stackTrace) {
       DebugLogger.error(
         'cache-load-failed',
@@ -1125,11 +1118,6 @@ class Conversations extends _$Conversations {
       Future<void>(() async {
         try {
           await storage.saveLocalConversations(conversations);
-          DebugLogger.log(
-            'cache-saved',
-            scope: 'conversations/cache',
-            data: {'count': conversations.length},
-          );
         } catch (error, stackTrace) {
           DebugLogger.error(
             'cache-save-failed',
@@ -1205,22 +1193,8 @@ class Conversations extends _$Conversations {
 
       final conversationToFolder = <String, String>{};
       for (final folder in folders) {
-        DebugLogger.log(
-          'folder',
-          scope: 'conversations/map',
-          data: {
-            'id': folder.id,
-            'name': folder.name,
-            'count': folder.conversationIds.length,
-          },
-        );
         for (final conversationId in folder.conversationIds) {
           conversationToFolder[conversationId] = folder.id;
-          DebugLogger.log(
-            'map',
-            scope: 'conversations/map',
-            data: {'conversationId': conversationId, 'folderId': folder.id},
-          );
         }
       }
 
@@ -1233,15 +1207,6 @@ class Conversations extends _$Conversations {
         if (folderIdToUse != null) {
           conversationMap[conversation.id] = conversation.copyWith(
             folderId: folderIdToUse,
-          );
-          DebugLogger.log(
-            'update-folder',
-            scope: 'conversations/map',
-            data: {
-              'conversationId': conversation.id,
-              'folderId': folderIdToUse,
-              'explicit': explicitFolderId != null,
-            },
           );
         } else {
           conversationMap[conversation.id] = conversation;
@@ -1261,8 +1226,6 @@ class Conversations extends _$Conversations {
             'preview': missingInBase.take(5).toList(),
           },
         );
-      } else {
-        DebugLogger.log('folders-synced', scope: 'conversations/map');
       }
 
       for (final folder in folders) {
@@ -1311,11 +1274,6 @@ class Conversations extends _$Conversations {
                 : fetched;
             conversationMap[toAdd.id] = toAdd;
             existingIds.add(toAdd.id);
-            DebugLogger.log(
-              'add-missing',
-              scope: 'conversations/map',
-              data: {'conversationId': toAdd.id, 'folderId': folder.id},
-            );
           } else {
             final placeholder = Conversation(
               id: convId,
@@ -1327,11 +1285,6 @@ class Conversations extends _$Conversations {
             );
             conversationMap[convId] = placeholder;
             existingIds.add(convId);
-            DebugLogger.log(
-              'add-placeholder',
-              scope: 'conversations/map',
-              data: {'conversationId': convId, 'folderId': folder.id},
-            );
           }
         }
 
@@ -1342,22 +1295,12 @@ class Conversations extends _$Conversations {
                 : conv;
             conversationMap[toAdd.id] = toAdd;
             existingIds.add(toAdd.id);
-            DebugLogger.log(
-              'add-folder-fetch',
-              scope: 'conversations/map',
-              data: {'conversationId': toAdd.id, 'folderId': folder.id},
-            );
           }
         }
       }
 
       final sortedConversations = _sortByUpdatedAt(
         conversationMap.values.toList(),
-      );
-      DebugLogger.log(
-        'sort',
-        scope: 'conversations',
-        data: {'source': 'folder-sync'},
       );
       _updateCacheTimestamp(DateTime.now());
       return sortedConversations;
@@ -2083,11 +2026,6 @@ class Folders extends _$Folders {
     final storage = ref.watch(optimizedStorageServiceProvider);
     final cached = await storage.getLocalFolders();
     if (cached.isNotEmpty) {
-      DebugLogger.log(
-        'cache-restored',
-        scope: 'folders/cache',
-        data: {'count': cached.length},
-      );
       Future.microtask(() async {
         try {
           await refresh();
@@ -2103,7 +2041,6 @@ class Folders extends _$Folders {
       return _sort(cached);
     }
 
-    DebugLogger.log('cache-empty', scope: 'folders/cache');
     final api = ref.watch(apiServiceProvider);
     if (api == null) {
       DebugLogger.warning('api-missing', scope: 'folders');

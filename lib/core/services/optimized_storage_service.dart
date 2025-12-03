@@ -344,10 +344,6 @@ class OptimizedStorageService {
             'items': jsonReady,
           }, debugLabel: 'encode_local_conversations');
       await _cachesBox.put(_localConversationsKey, serialized);
-      DebugLogger.log(
-        'Saved ${conversations.length} local conversations',
-        scope: 'storage/optimized',
-      );
     } catch (error, stack) {
       DebugLogger.error(
         'Failed to save local conversations',
@@ -390,10 +386,6 @@ class OptimizedStorageService {
             'items': jsonReady,
           }, debugLabel: 'encode_local_folders');
       await _cachesBox.put(_localFoldersKey, serialized);
-      DebugLogger.log(
-        'Saved ${folders.length} local folders',
-        scope: 'storage/optimized',
-      );
     } catch (error, stack) {
       DebugLogger.error(
         'Failed to save local folders',
@@ -436,7 +428,6 @@ class OptimizedStorageService {
       }
       final serialized = jsonEncode(user.toJson());
       await _cachesBox.put(_localUserKey, serialized);
-      DebugLogger.log('Saved local user profile', scope: 'storage/optimized');
     } catch (error, stack) {
       DebugLogger.error(
         'Failed to save local user',
@@ -649,10 +640,6 @@ class OptimizedStorageService {
             'items': jsonReady,
           }, debugLabel: 'encode_local_models');
       await _cachesBox.put(_localModelsKey, _wrapServerScoped(serialized));
-      DebugLogger.log(
-        'Saved ${models.length} local models',
-        scope: 'storage/optimized',
-      );
     } catch (error, stack) {
       DebugLogger.error(
         'Failed to save local models',
@@ -699,10 +686,6 @@ class OptimizedStorageService {
             'items': jsonReady,
           }, debugLabel: 'encode_local_tools');
       await _cachesBox.put(_localToolsKey, _wrapServerScoped(serialized));
-      DebugLogger.log(
-        'Saved ${tools.length} local tools',
-        scope: 'storage/optimized',
-      );
     } catch (error, stack) {
       DebugLogger.error(
         'Failed to save local tools',
