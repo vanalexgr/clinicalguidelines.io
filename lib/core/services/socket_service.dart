@@ -25,6 +25,7 @@ class SocketService with WidgetsBindingObserver {
   final bool allowWebsocketUpgrade;
   io.Socket? _socket;
   String? _authToken;
+  bool _isConnecting = false;
   bool _isAppForeground = true;
   Timer? _heartbeatTimer;
 
@@ -69,6 +70,9 @@ class SocketService with WidgetsBindingObserver {
 
   Future<void> connect({bool force = false}) async {
     if (_socket != null && _socket!.connected && !force) return;
+    if (_isConnecting && !force) return;
+
+    _isConnecting = true;
 
     DebugLogger.log(
       'Connecting to socket',
@@ -80,7 +84,11 @@ class SocketService with WidgetsBindingObserver {
     _stopHeartbeat();
 
     try {
-      _socket?.dispose();
+      final existing = _socket;
+      if (existing != null) {
+        _unbindCoreSocketHandlers(existing);
+        existing.dispose();
+      }
     } catch (_) {}
 
     String base = serverConfig.url.replaceFirst(RegExp(r'/+$'), '');
@@ -154,13 +162,17 @@ class SocketService with WidgetsBindingObserver {
       builder.setExtraHeaders(extraHeaders);
     }
 
-    _socket = createSocketWithOptionalBadCertOverride(
-      base,
-      builder,
-      serverConfig,
-    );
-
-    _bindCoreSocketHandlers();
+    try {
+      _socket = createSocketWithOptionalBadCertOverride(
+        base,
+        builder,
+        serverConfig,
+      );
+      _bindCoreSocketHandlers();
+    } catch (_) {
+      _isConnecting = false;
+      rethrow;
+    }
   }
 
   /// Update the auth token used by the socket service.
@@ -298,7 +310,11 @@ class SocketService with WidgetsBindingObserver {
   void dispose() {
     _stopHeartbeat();
     try {
-      _socket?.dispose();
+      final existing = _socket;
+      if (existing != null) {
+        _unbindCoreSocketHandlers(existing);
+        existing.dispose();
+      }
     } catch (_) {}
     _socket = null;
     WidgetsBinding.instance.removeObserver(this);
@@ -327,17 +343,7 @@ class SocketService with WidgetsBindingObserver {
     final socket = _socket;
     if (socket == null) return;
 
-    socket
-      ..off('events', _handleChatEvent)
-      ..off('chat-events', _handleChatEvent)
-      ..off('events:channel', _handleChannelEvent)
-      ..off('channel-events', _handleChannelEvent)
-      ..off('connect', _handleConnect)
-      ..off('connect_error', _handleConnectError)
-      ..off('reconnect_attempt', _handleReconnectAttempt)
-      ..off('reconnect', _handleReconnect)
-      ..off('reconnect_failed', _handleReconnectFailed)
-      ..off('disconnect', _handleDisconnect);
+    _unbindCoreSocketHandlers(socket);
 
     socket
       ..on('events', _handleChatEvent)
@@ -352,7 +358,22 @@ class SocketService with WidgetsBindingObserver {
       ..on('disconnect', _handleDisconnect);
   }
 
+  void _unbindCoreSocketHandlers(io.Socket socket) {
+    socket
+      ..off('events', _handleChatEvent)
+      ..off('chat-events', _handleChatEvent)
+      ..off('events:channel', _handleChannelEvent)
+      ..off('channel-events', _handleChannelEvent)
+      ..off('connect', _handleConnect)
+      ..off('connect_error', _handleConnectError)
+      ..off('reconnect_attempt', _handleReconnectAttempt)
+      ..off('reconnect', _handleReconnect)
+      ..off('reconnect_failed', _handleReconnectFailed)
+      ..off('disconnect', _handleDisconnect);
+  }
+
   void _handleConnect(dynamic _) {
+    _isConnecting = false;
     DebugLogger.log(
       'Socket connected',
       scope: 'socket',
@@ -370,6 +391,7 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleReconnectAttempt(dynamic attempt) {
+    _isConnecting = true;
     DebugLogger.log(
       'Socket reconnection attempt',
       scope: 'socket',
@@ -378,6 +400,7 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleReconnect(dynamic attempt) {
+    _isConnecting = false;
     DebugLogger.log(
       'Socket reconnected',
       scope: 'socket',
@@ -400,6 +423,7 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleConnectError(dynamic err) {
+    _isConnecting = false;
     DebugLogger.error(
       'Socket connection error',
       scope: 'socket',
@@ -409,6 +433,7 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleReconnectFailed(dynamic _) {
+    _isConnecting = false;
     DebugLogger.error(
       'Socket reconnection failed after all attempts',
       scope: 'socket',
@@ -417,6 +442,7 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleDisconnect(dynamic reason) {
+    _isConnecting = false;
     DebugLogger.warning(
       'Socket disconnected',
       scope: 'socket',
