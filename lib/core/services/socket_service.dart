@@ -28,6 +28,7 @@ class SocketService with WidgetsBindingObserver {
   bool _isConnecting = false;
   bool _isAppForeground = true;
   Timer? _heartbeatTimer;
+  bool _forcePollingFallback = false;
 
   /// Heartbeat interval matching OpenWebUI's 30-second interval.
   static const Duration _heartbeatInterval = Duration(seconds: 30);
@@ -102,8 +103,10 @@ class SocketService with WidgetsBindingObserver {
     } catch (_) {}
     final path = '/ws/socket.io';
 
-    final usePollingOnly = !websocketOnly && !allowWebsocketUpgrade;
-    final transports = websocketOnly
+    final usePollingFallback = _forcePollingFallback;
+    final effectiveWebsocketOnly = websocketOnly && !usePollingFallback;
+    final usePollingOnly = !effectiveWebsocketOnly && !allowWebsocketUpgrade;
+    final transports = effectiveWebsocketOnly
         ? const ['websocket']
         : usePollingOnly
         ? const ['polling']
@@ -112,8 +115,8 @@ class SocketService with WidgetsBindingObserver {
     final builder = io.OptionBuilder()
         // Transport selection switches between WebSocket-only and polling fallback
         .setTransports(transports)
-        .setRememberUpgrade(!websocketOnly && allowWebsocketUpgrade)
-        .setUpgrade(!websocketOnly && allowWebsocketUpgrade)
+        .setRememberUpgrade(!effectiveWebsocketOnly && allowWebsocketUpgrade)
+        .setUpgrade(!effectiveWebsocketOnly && allowWebsocketUpgrade)
         // Tune reconnect/backoff and timeouts
         // Note: In socket_io_client, pass a very large number for "unlimited" attempts.
         // Using double.maxFinite.toInt() ensures unlimited reconnection attempts.
@@ -430,6 +433,18 @@ class SocketService with WidgetsBindingObserver {
       error: err,
       data: {'serverUrl': serverConfig.url},
     );
+
+    // If WebSocket-only handshake fails, retry once with polling+websocket
+    // transports to avoid endless spinners (issue #172).
+    if (websocketOnly && !_forcePollingFallback) {
+      _forcePollingFallback = true;
+      DebugLogger.warning(
+        'WebSocket connect failed; retrying with polling fallback',
+        scope: 'socket',
+        data: {'reason': err?.toString()},
+      );
+      unawaited(connect(force: true));
+    }
   }
 
   void _handleReconnectFailed(dynamic _) {
