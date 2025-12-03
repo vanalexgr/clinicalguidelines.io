@@ -19,13 +19,7 @@ typedef WorkerTask<Q, R> = ComputeCallback<Q, R>;
 /// synchronously because secondary isolates are not supported.
 class WorkerManager {
   WorkerManager({int maxConcurrentTasks = _defaultMaxConcurrentTasks})
-    : _maxConcurrentTasks = math.max(1, maxConcurrentTasks) {
-    DebugLogger.log(
-      'initialized',
-      scope: 'worker',
-      data: {'max': _maxConcurrentTasks},
-    );
-  }
+    : _maxConcurrentTasks = math.max(1, maxConcurrentTasks);
 
   static const int _defaultMaxConcurrentTasks = 2;
 
@@ -73,18 +67,6 @@ class WorkerManager {
     );
 
     _pendingJobs.add(job);
-
-    DebugLogger.log(
-      'queued',
-      scope: 'worker',
-      data: {
-        'id': jobId,
-        if (debugLabel != null) 'label': debugLabel,
-        'pending': _pendingJobs.length,
-        'active': _activeJobs,
-      },
-    );
-
     _processQueue();
 
     return completer.future;
@@ -104,7 +86,6 @@ class WorkerManager {
       );
     }
 
-    DebugLogger.log('disposed', scope: 'worker', data: {'active': _activeJobs});
   }
 
   void _processQueue() {
@@ -120,17 +101,6 @@ class WorkerManager {
 
   void _startJob(_EnqueuedJob job) {
     _activeJobs++;
-
-    DebugLogger.log(
-      'started',
-      scope: 'worker',
-      data: {
-        'id': job.id,
-        if (job.debugLabel != null) 'label': job.debugLabel,
-        'active': _activeJobs,
-      },
-    );
-
     unawaited(_runJob(job));
   }
 
@@ -138,16 +108,6 @@ class WorkerManager {
     try {
       final result = await job.run();
       job.onComplete(result);
-
-      DebugLogger.log(
-        'completed',
-        scope: 'worker',
-        data: {
-          'id': job.id,
-          if (job.debugLabel != null) 'label': job.debugLabel,
-          'pending': _pendingJobs.length,
-        },
-      );
     } catch (error, stackTrace) {
       job.onError(error, stackTrace);
 

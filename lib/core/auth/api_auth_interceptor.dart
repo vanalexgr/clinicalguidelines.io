@@ -85,10 +85,6 @@ class ApiAuthInterceptor extends Interceptor {
     final requiresAuth = _requiresAuth(path);
     final hasOptionalAuth = _hasOptionalAuth(path);
 
-    DebugLogger.auth(
-      'Auth interceptor for $path - requires: $requiresAuth, optional: $hasOptionalAuth, token present: ${_authToken != null}',
-    );
-
     if (requiresAuth) {
       // Strictly required authentication
       if (_authToken == null || _authToken!.isEmpty) {
