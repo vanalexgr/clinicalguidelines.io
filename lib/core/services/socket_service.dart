@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../models/server_config.dart';
+import '../utils/debug_logger.dart';
 import 'socket_tls_override.dart';
 
 typedef SocketChatEventHandler =
@@ -25,6 +26,10 @@ class SocketService with WidgetsBindingObserver {
   io.Socket? _socket;
   String? _authToken;
   bool _isAppForeground = true;
+  Timer? _heartbeatTimer;
+
+  /// Heartbeat interval matching OpenWebUI's 30-second interval.
+  static const Duration _heartbeatInterval = Duration(seconds: 30);
 
   final Map<String, _ChatEventRegistration> _chatEventHandlers = {};
   final Map<String, _ChannelEventRegistration> _channelEventHandlers = {};
@@ -65,6 +70,15 @@ class SocketService with WidgetsBindingObserver {
   Future<void> connect({bool force = false}) async {
     if (_socket != null && _socket!.connected && !force) return;
 
+    DebugLogger.log(
+      'Connecting to socket',
+      scope: 'socket',
+      data: {'force': force, 'serverUrl': serverConfig.url},
+    );
+
+    // Stop any existing heartbeat before disposing old socket
+    _stopHeartbeat();
+
     try {
       _socket?.dispose();
     } catch (_) {}
@@ -93,7 +107,9 @@ class SocketService with WidgetsBindingObserver {
         .setRememberUpgrade(!websocketOnly && allowWebsocketUpgrade)
         .setUpgrade(!websocketOnly && allowWebsocketUpgrade)
         // Tune reconnect/backoff and timeouts
-        .setReconnectionAttempts(0) // 0/Infinity semantics: unlimited attempts
+        // Note: In socket_io_client, pass a very large number for "unlimited" attempts.
+        // Using double.maxFinite.toInt() ensures unlimited reconnection attempts.
+        .setReconnectionAttempts(double.maxFinite.toInt())
         .setReconnectionDelay(1000)
         .setReconnectionDelayMax(5000)
         .setRandomizationFactor(0.5)
@@ -280,6 +296,7 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void dispose() {
+    _stopHeartbeat();
     try {
       _socket?.dispose();
     } catch (_) {}
@@ -336,35 +353,95 @@ class SocketService with WidgetsBindingObserver {
   }
 
   void _handleConnect(dynamic _) {
+    DebugLogger.log(
+      'Socket connected',
+      scope: 'socket',
+      data: {'sessionId': _socket?.id},
+    );
+
     if (_authToken != null && _authToken!.isNotEmpty) {
       _socket?.emit('user-join', {
         'auth': {'token': _authToken},
       });
     }
+
+    // Start heartbeat timer to keep connection alive
+    _startHeartbeat();
   }
 
   void _handleReconnectAttempt(dynamic attempt) {
-    // Silent reconnection attempt
+    DebugLogger.log(
+      'Socket reconnection attempt',
+      scope: 'socket',
+      data: {'attempt': attempt},
+    );
   }
 
   void _handleReconnect(dynamic attempt) {
+    DebugLogger.log(
+      'Socket reconnected',
+      scope: 'socket',
+      data: {'attempt': attempt, 'sessionId': _socket?.id},
+    );
+
     if (_authToken != null && _authToken!.isNotEmpty) {
       _socket?.emit('user-join', {
         'auth': {'token': _authToken},
       });
     }
+
+    // Restart heartbeat after reconnection
+    _startHeartbeat();
+
     // Notify listeners that a reconnection occurred so they can refresh state
     if (!_reconnectController.isClosed) {
       _reconnectController.add(null);
     }
   }
 
-  void _handleConnectError(dynamic err) {}
+  void _handleConnectError(dynamic err) {
+    DebugLogger.error(
+      'Socket connection error',
+      scope: 'socket',
+      error: err,
+      data: {'serverUrl': serverConfig.url},
+    );
+  }
 
-  void _handleReconnectFailed(dynamic _) {}
+  void _handleReconnectFailed(dynamic _) {
+    DebugLogger.error(
+      'Socket reconnection failed after all attempts',
+      scope: 'socket',
+      data: {'serverUrl': serverConfig.url},
+    );
+  }
 
   void _handleDisconnect(dynamic reason) {
-    // Silent disconnect
+    DebugLogger.warning(
+      'Socket disconnected',
+      scope: 'socket',
+      data: {'reason': reason?.toString()},
+    );
+
+    // Stop heartbeat when disconnected
+    _stopHeartbeat();
+  }
+
+  /// Starts the heartbeat timer to keep the connection alive.
+  /// Sends a heartbeat event every 30 seconds matching OpenWebUI's behavior.
+  void _startHeartbeat() {
+    _stopHeartbeat();
+    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
+      if (_socket?.connected == true) {
+        _socket?.emit('heartbeat', <String, dynamic>{});
+      }
+    });
+  }
+
+  /// Stops the heartbeat timer.
+  void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
   }
 
   void _handleChatEvent(dynamic data, [dynamic ack]) {
