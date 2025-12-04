@@ -2,7 +2,6 @@ import AVFoundation
 import BackgroundTasks
 import Flutter
 import AppIntents
-import flutter_app_intents
 import UIKit
 import UniformTypeIdentifiers
 
@@ -311,6 +310,48 @@ class BackgroundStreamingHandler: NSObject {
   }
 }
 
+/// Manages the method channel for App Intent invocations to Flutter.
+/// Native Swift intents call this to invoke Flutter-side business logic.
+final class AppIntentMethodChannel {
+    static var shared: AppIntentMethodChannel?
+
+    private let channel: FlutterMethodChannel
+
+    init(messenger: FlutterBinaryMessenger) {
+        channel = FlutterMethodChannel(
+            name: "conduit/app_intents",
+            binaryMessenger: messenger
+        )
+    }
+
+    /// Invokes a Flutter handler for the given intent identifier.
+    func invokeIntent(
+        identifier: String,
+        parameters: [String: Any]
+    ) async -> [String: Any] {
+        // No [weak self] needed here - the closure executes immediately on the
+        // main queue and there's no retain cycle risk. Using weak self would
+        // risk the continuation never resuming if self became nil.
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.main.async {
+                self.channel.invokeMethod(
+                    identifier,
+                    arguments: parameters
+                ) { result in
+                    if let dict = result as? [String: Any] {
+                        continuation.resume(returning: dict)
+                    } else {
+                        continuation.resume(returning: [
+                            "success": false,
+                            "error": "Invalid response from Flutter"
+                        ])
+                    }
+                }
+            }
+        }
+    }
+}
+
 @available(iOS 16.0, *)
 enum AppIntentError: Error {
     case executionFailed(String)
@@ -340,11 +381,14 @@ struct AskConduitIntent: AppIntent {
     func perform() async throws
         -> some IntentResult & ReturnsValue<String> & OpensIntent
     {
+        guard let channel = AppIntentMethodChannel.shared else {
+            throw AppIntentError.executionFailed("App not ready")
+        }
+
         let parameters: [String: Any] = prompt?.isEmpty == false
             ? ["prompt": prompt ?? ""]
             : [:]
-        let plugin = FlutterAppIntentsPlugin.shared
-        let result = await plugin.handleIntentInvocation(
+        let result = await channel.invokeIntent(
             identifier: "app.cogwheel.conduit.ask_chat",
             parameters: parameters
         )
@@ -372,8 +416,11 @@ struct StartVoiceCallIntent: AppIntent {
     func perform() async throws
         -> some IntentResult & ReturnsValue<String> & OpensIntent
     {
-        let plugin = FlutterAppIntentsPlugin.shared
-        let result = await plugin.handleIntentInvocation(
+        guard let channel = AppIntentMethodChannel.shared else {
+            throw AppIntentError.executionFailed("App not ready")
+        }
+
+        let result = await channel.invokeIntent(
             identifier: "app.cogwheel.conduit.start_voice_call",
             parameters: [:]
         )
@@ -407,9 +454,12 @@ struct ConduitSendTextIntent: AppIntent {
     func perform() async throws
         -> some IntentResult & ReturnsValue<String> & OpensIntent
     {
-        let plugin = FlutterAppIntentsPlugin.shared
+        guard let channel = AppIntentMethodChannel.shared else {
+            throw AppIntentError.executionFailed("App not ready")
+        }
+
         let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let result = await plugin.handleIntentInvocation(
+        let result = await channel.invokeIntent(
             identifier: "app.cogwheel.conduit.send_text",
             parameters: ["text": trimmed ?? ""]
         )
@@ -442,8 +492,11 @@ struct ConduitSendUrlIntent: AppIntent {
     func perform() async throws
         -> some IntentResult & ReturnsValue<String> & OpensIntent
     {
-        let plugin = FlutterAppIntentsPlugin.shared
-        let result = await plugin.handleIntentInvocation(
+        guard let channel = AppIntentMethodChannel.shared else {
+            throw AppIntentError.executionFailed("App not ready")
+        }
+
+        let result = await channel.invokeIntent(
             identifier: "app.cogwheel.conduit.send_url",
             parameters: ["url": url.absoluteString]
         )
@@ -476,6 +529,10 @@ struct ConduitSendImageIntent: AppIntent {
     func perform() async throws
         -> some IntentResult & ReturnsValue<String> & OpensIntent
     {
+        guard let channel = AppIntentMethodChannel.shared else {
+            throw AppIntentError.executionFailed("App not ready")
+        }
+
         if let type = image.type, !type.conforms(to: .image) {
             throw AppIntentError.executionFailed(
                 "Only image files are supported."
@@ -486,8 +543,7 @@ struct ConduitSendImageIntent: AppIntent {
         let base64 = data.base64EncodedString()
         let name = image.filename ?? "shared_image.jpg"
 
-        let plugin = FlutterAppIntentsPlugin.shared
-        let result = await plugin.handleIntentInvocation(
+        let result = await channel.invokeIntent(
             identifier: "app.cogwheel.conduit.send_image",
             parameters: [
                 "filename": name,
@@ -562,6 +618,13 @@ struct AppShortcuts: AppShortcutsProvider {
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+
+    // Setup App Intents method channel for native -> Flutter communication
+    if let registrar = self.registrar(forPlugin: "AppIntentMethodChannel") {
+      AppIntentMethodChannel.shared = AppIntentMethodChannel(
+        messenger: registrar.messenger()
+      )
+    }
 
     // Setup background streaming handler using the plugin registry messenger
     if let registrar = self.registrar(forPlugin: "BackgroundStreamingHandler") {
