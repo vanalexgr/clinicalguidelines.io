@@ -1642,6 +1642,15 @@ Future<void> regenerateMessage(
 
     final registerDeltaListener = createConversationDeltaRegistrar(ref);
 
+    // Check if model uses reasoning based on common naming patterns
+    final modelLower = selectedModel.id.toLowerCase();
+    final modelUsesReasoning =
+        modelLower.contains('o1') ||
+        modelLower.contains('o3') ||
+        modelLower.contains('deepseek-r1') ||
+        modelLower.contains('reasoning') ||
+        modelLower.contains('think');
+
     final activeStream = attachUnifiedChunkedStreaming(
       stream: stream,
       webSearchEnabled: webSearchEnabled,
@@ -1676,6 +1685,11 @@ Future<void> regenerateMessage(
       updateMessageById: (messageId, updater) => ref
           .read(chatMessagesProvider.notifier)
           .updateMessageById(messageId, updater),
+      modelUsesReasoning: modelUsesReasoning,
+      toolsEnabled:
+          selectedToolIds.isNotEmpty ||
+          (toolServers != null && toolServers.isNotEmpty) ||
+          imageGenerationEnabled,
       onChatTitleUpdated: (newTitle) {
         final active = ref.read(activeConversationProvider);
         if (active != null) {
@@ -2258,6 +2272,15 @@ Future<void> _sendMessageInternal(
 
     final registerDeltaListener = createConversationDeltaRegistrar(ref);
 
+    // Check if model uses reasoning based on common naming patterns
+    final modelLower2 = selectedModel.id.toLowerCase();
+    final modelUsesReasoning2 =
+        modelLower2.contains('o1') ||
+        modelLower2.contains('o3') ||
+        modelLower2.contains('deepseek-r1') ||
+        modelLower2.contains('reasoning') ||
+        modelLower2.contains('think');
+
     final activeStream = attachUnifiedChunkedStreaming(
       stream: stream,
       webSearchEnabled: webSearchEnabled,
@@ -2292,6 +2315,11 @@ Future<void> _sendMessageInternal(
       updateMessageById: (messageId, updater) => ref
           .read(chatMessagesProvider.notifier)
           .updateMessageById(messageId, updater),
+      modelUsesReasoning: modelUsesReasoning2,
+      toolsEnabled:
+          (toolIdsForApi != null && toolIdsForApi.isNotEmpty) ||
+          (toolServers != null && toolServers.isNotEmpty) ||
+          imageGenerationEnabled,
       onChatTitleUpdated: (newTitle) {
         final active = ref.read(activeConversationProvider);
         if (active != null) {

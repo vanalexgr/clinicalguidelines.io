@@ -210,6 +210,12 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   void Function()? onChatTagsUpdated,
   required void Function() finishStreaming,
   required List<ChatMessage> Function() getMessages,
+
+  /// Whether the model uses reasoning/thinking (needs longer watchdog window).
+  bool modelUsesReasoning = false,
+
+  /// Whether tools are enabled (needs longer watchdog window).
+  bool toolsEnabled = false,
 }) {
   // Track if streaming has been finished to avoid duplicate cleanup
   bool hasFinished = false;
@@ -257,11 +263,11 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   // Must not be `late` to avoid LateInitializationError if callbacks fire early.
   void Function() syncImages = () {};
 
-  // Shared helper to poll server for message content.
+  // Shared helper to poll server for message content with exponential backoff.
   // Used by watchdog timeout and reconnection handler to recover from missed events.
   // Returns (content, followUps, isDone) or null if fetch fails or message not found.
   Future<({String content, List<String> followUps, bool isDone})?>
-  pollServerForMessage() async {
+  pollServerForMessage({int attempt = 0, int maxAttempts = 3}) async {
     try {
       final chatId = activeConversationId;
       if (chatId == null || chatId.isEmpty) return null;
@@ -307,7 +313,21 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
 
       return (content: content, followUps: followUps, isDone: isDone);
     } catch (e) {
-      DebugLogger.log('Server poll failed: $e', scope: 'streaming/helper');
+      DebugLogger.log(
+        'Server poll failed (attempt ${attempt + 1}/$maxAttempts): $e',
+        scope: 'streaming/helper',
+      );
+
+      // Linear backoff retry (1s, 2s, 3s)
+      if (attempt < maxAttempts - 1) {
+        final backoffMs = (attempt + 1) * 1000;
+        await Future.delayed(Duration(milliseconds: backoffMs));
+        return pollServerForMessage(
+          attempt: attempt + 1,
+          maxAttempts: maxAttempts,
+        );
+      }
+
       return null;
     }
   }
@@ -344,11 +364,33 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   }
 
   if (hasSocketSignals) {
-    // Inactivity timeout - if no data arrives for 10 seconds, poll server
+    // Adaptive inactivity timeout based on model capabilities.
+    // Reasoning models and tool-enabled flows need longer windows as they may
+    // have longer gaps between tokens during processing.
+    final watchdogWindow = modelUsesReasoning || toolsEnabled
+        ? const Duration(seconds: 30) // Longer for reasoning/tools
+        : const Duration(seconds: 15); // Standard for regular models
+
+    final watchdogCap = modelUsesReasoning || toolsEnabled
+        ? const Duration(minutes: 10) // Longer cap for complex operations
+        : const Duration(minutes: 5);
+
+    DebugLogger.log(
+      'Initializing watchdog',
+      scope: 'streaming/helper',
+      data: {
+        'windowSeconds': watchdogWindow.inSeconds,
+        'capMinutes': watchdogCap.inMinutes,
+        'modelUsesReasoning': modelUsesReasoning,
+        'toolsEnabled': toolsEnabled,
+      },
+    );
+
+    // Inactivity timeout - if no data arrives within window, poll server
     // and finish streaming. This handles stuck connections (issue #172).
     socketWatchdog = InactivityWatchdog(
-      window: const Duration(seconds: 10),
-      absoluteCap: const Duration(minutes: 5),
+      window: watchdogWindow,
+      absoluteCap: watchdogCap,
       onTimeout: () async {
         DebugLogger.log(
           'Socket watchdog timeout - polling server',
@@ -1463,14 +1505,26 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
       if (isRecoverable && socketService != null) {
         // Try to recover via socket connection if available
         try {
-          await socketService.ensureConnected(
+          final connected = await socketService.ensureConnected(
             timeout: const Duration(seconds: 5),
           );
-          // Don't finish streaming immediately - let socket recovery handle it
-          socketWatchdog?.stop();
-          return;
-        } catch (_) {
-          // Socket recovery failed, fall through to cleanup
+
+          if (connected) {
+            DebugLogger.log(
+              'Socket recovery successful - restarting watchdog',
+              scope: 'streaming/helper',
+            );
+            // Restart watchdog instead of stopping it - this ensures we
+            // still have a timeout mechanism if socket recovery succeeds
+            // but events don't resume (fixes premature watchdog stop bug)
+            socketWatchdog?.ping();
+            return;
+          }
+        } catch (e) {
+          DebugLogger.log(
+            'Socket recovery failed: $e',
+            scope: 'streaming/helper',
+          );
         }
       }
 
