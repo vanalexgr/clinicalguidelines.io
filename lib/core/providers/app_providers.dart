@@ -22,6 +22,7 @@ import '../models/knowledge_base.dart';
 import '../services/settings_service.dart';
 import '../services/optimized_storage_service.dart';
 import '../services/socket_service.dart';
+import '../services/connectivity_service.dart';
 import '../utils/debug_logger.dart';
 import '../models/socket_event.dart';
 import '../services/worker_manager.dart';
@@ -329,6 +330,7 @@ final apiServiceProvider = Provider<ApiService?>((ref) {
 class SocketServiceManager extends _$SocketServiceManager {
   SocketService? _service;
   ProviderSubscription<String?>? _tokenSubscription;
+  ProviderSubscription<ConnectivityStatus>? _connectivitySubscription;
   int _connectToken = 0;
 
   @override
@@ -381,9 +383,39 @@ class SocketServiceManager extends _$SocketServiceManager {
       _service?.updateAuthToken(next);
     });
 
+    // Listen to connectivity changes to proactively manage socket connection.
+    // When network goes offline, we can save resources by not attempting
+    // reconnections. When network comes back, we force a reconnect.
+    _connectivitySubscription ??= ref.listen<ConnectivityStatus>(
+      connectivityStatusProvider,
+      (previous, next) {
+        final service = _service;
+        if (service == null) return;
+
+        if (next == ConnectivityStatus.offline) {
+          // Network is offline - socket will handle its own disconnection
+          // via the underlying transport. We just log it for debugging.
+          DebugLogger.log(
+            'Connectivity offline - socket may disconnect',
+            scope: 'socket/provider',
+          );
+        } else if (previous == ConnectivityStatus.offline &&
+            next == ConnectivityStatus.online) {
+          // Network just came back online - force reconnect to restore socket
+          DebugLogger.log(
+            'Connectivity restored - forcing socket reconnect',
+            scope: 'socket/provider',
+          );
+          unawaited(service.connect(force: true));
+        }
+      },
+    );
+
     ref.onDispose(() {
       _tokenSubscription?.close();
       _tokenSubscription = null;
+      _connectivitySubscription?.close();
+      _connectivitySubscription = null;
       _disposeService();
     });
 
