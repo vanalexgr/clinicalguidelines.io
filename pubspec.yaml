@@ -77,6 +77,7 @@ dependencies:
   flutter_app_intents: ^0.7.0
   quick_actions: 1.1.0
   flutter_svg: ^2.2.3
+  html_unescape: ^2.0.0
   
   # Clipboard functionality is available through flutter/services (part of Flutter SDK)
 

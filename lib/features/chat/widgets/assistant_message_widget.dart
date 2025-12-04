@@ -30,146 +30,6 @@ import '../../../core/services/worker_manager.dart';
 final _base64ImagePattern = RegExp(r'data:image/[^;]+;base64,[A-Za-z0-9+/]+=*');
 final _fileIdPattern = RegExp(r'/api/v1/files/([^/]+)/content');
 
-// Pre-compiled regex patterns for content sanitization (performance optimization)
-final _detailsOpenPattern = RegExp(r'<details[^>]*>');
-final _detailsClosePattern = RegExp(r'</details>');
-final _inlineDetailsPattern = RegExp(
-  r'<details([^>]*)>((?:(?!</details>).)*)</details>',
-  dotAll: true,
-);
-// Patterns for balancing <think> and <reasoning> tags (similar to <details>)
-final _thinkOpenPattern = RegExp(r'<think>');
-final _thinkClosePattern = RegExp(r'</think>');
-final _reasoningOpenPattern = RegExp(r'<reasoning>');
-final _reasoningClosePattern = RegExp(r'</reasoning>');
-
-/// Sanitizes content to handle malformed HTML-like tags that might cause
-/// parsing issues, particularly with Pipe Functions (e.g., Gemini).
-///
-/// This function:
-/// - Ensures all `<details>`, `<think>`, and `<reasoning>` tags are properly
-///   closed
-/// - Converts inline `<details>...</details>` to multi-line format for proper
-///   block-level parsing
-/// - Removes orphan closing tags (those without matching opening tags)
-/// - Adds missing closing tags for unclosed opening tags
-/// - Prevents infinite loops in parsers caused by malformed content
-String sanitizeContentForParsing(String content) {
-  if (content.isEmpty) return content;
-
-  String result = content;
-
-  // Check which tag types are present and need balancing
-  final hasDetails =
-      content.contains('<details') || content.contains('</details>');
-  final hasThink = content.contains('<think>') || content.contains('</think>');
-  final hasReasoning =
-      content.contains('<reasoning>') || content.contains('</reasoning>');
-
-  // Quick check: skip if no relevant tags present
-  if (!hasDetails && !hasThink && !hasReasoning) {
-    return content;
-  }
-
-  // Step 1: Convert inline <details>...</details> to multi-line format
-  // This ensures the markdown block parser can properly detect them
-  if (hasDetails) {
-    result = result.replaceAllMapped(_inlineDetailsPattern, (match) {
-      final attrs = match.group(1) ?? '';
-      final inner = match.group(2) ?? '';
-      // Only convert if the inner content doesn't already span multiple lines
-      if (!inner.contains('\n')) {
-        return '<details$attrs>\n$inner\n</details>';
-      }
-      return match.group(0)!;
-    });
-  }
-
-  // Step 2: Balance tags by removing orphan closing tags and adding
-  // missing closing tags using depth tracking
-  if (hasDetails) {
-    result = _balanceTags(
-      result,
-      _detailsOpenPattern,
-      _detailsClosePattern,
-      '</details>',
-    );
-  }
-  if (hasThink) {
-    result = _balanceTags(
-      result,
-      _thinkOpenPattern,
-      _thinkClosePattern,
-      '</think>',
-    );
-  }
-  if (hasReasoning) {
-    result = _balanceTags(
-      result,
-      _reasoningOpenPattern,
-      _reasoningClosePattern,
-      '</reasoning>',
-    );
-  }
-
-  return result;
-}
-
-/// Balances tags by removing orphan closing tags and adding missing closing
-/// tags. Uses depth tracking to properly handle nested tags and identify
-/// orphans anywhere in the content.
-String _balanceTags(
-  String content,
-  RegExp openPattern,
-  RegExp closePattern,
-  String closeTag,
-) {
-  final openMatches = openPattern.allMatches(content).toList();
-  final closeMatches = closePattern.allMatches(content).toList();
-
-  if (openMatches.isEmpty && closeMatches.isEmpty) return content;
-
-  // Build sorted list of all tags: (start, end, isOpen)
-  final tags = <({int start, int end, bool isOpen})>[];
-  for (final m in openMatches) {
-    tags.add((start: m.start, end: m.end, isOpen: true));
-  }
-  for (final m in closeMatches) {
-    tags.add((start: m.start, end: m.end, isOpen: false));
-  }
-  tags.sort((a, b) => a.start.compareTo(b.start));
-
-  // Find orphan closing tags using depth tracking
-  // An orphan is a closing tag encountered when depth is already 0
-  final orphanRanges = <(int, int)>[];
-  int depth = 0;
-  for (final tag in tags) {
-    if (tag.isOpen) {
-      depth++;
-    } else {
-      if (depth > 0) {
-        depth--;
-      } else {
-        // Orphan closing tag - no matching opening tag
-        orphanRanges.add((tag.start, tag.end));
-      }
-    }
-  }
-
-  // Remove orphan closing tags from end to start to preserve indices
-  var result = content;
-  for (final range in orphanRanges.reversed) {
-    result = result.substring(0, range.$1) + result.substring(range.$2);
-  }
-
-  // Add missing closing tags for unclosed opening tags
-  if (depth > 0) {
-    result += '\n$closeTag' * depth;
-  }
-
-  return result;
-}
-
 class AssistantMessageWidget extends ConsumerStatefulWidget {
   final dynamic message;
   final bool isStreaming;
@@ -301,13 +161,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
     if (raw.startsWith(searchBanner)) {
       raw = raw.substring(searchBanner.length);
-    }
-
-    // Sanitize content to handle malformed HTML-like tags from Pipe Functions
-    // (e.g., Gemini) that might cause parsing issues or infinite loops.
-    // Only sanitize when NOT streaming to avoid interfering with partial content.
-    if (!widget.isStreaming) {
-      raw = sanitizeContentForParsing(raw);
     }
 
     // Do not truncate content during streaming; segmented parser skips
@@ -1011,39 +864,13 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       return const SizedBox.shrink();
     }
 
-    // Note: The markdown parser now handles <details> tags (including type="reasoning"
-    // and type="tool_calls") via a custom block syntax, so they won't be rendered as
-    // plain text during streaming. This prevents character flashing.
-
-    // Quick check: only run cleanup if raw tags might exist (rare case)
-    String cleaned = content;
-    if (content.contains('<think>') || content.contains('<reasoning>')) {
-      // Clean raw reasoning tags as a fallback for raw mode or direct API responses.
-      // The server normally converts these to <details> format.
-      cleaned = content
-          .replaceAll(
-            RegExp(r'<think>[\s\S]*?<\/think>', multiLine: true, dotAll: true),
-            '',
-          )
-          .replaceAll(
-            RegExp(
-              r'<reasoning>[\s\S]*?<\/reasoning>',
-              multiLine: true,
-              dotAll: true,
-            ),
-            '',
-          );
-    }
-
-    // Sanitize content for markdown rendering to prevent parser issues with
-    // malformed <details> blocks from Pipe Functions (e.g., Gemini).
-    // Only sanitize when NOT streaming to avoid interfering with partial content.
-    if (!widget.isStreaming) {
-      cleaned = sanitizeContentForParsing(cleaned);
-    }
+    // Note: The reasoning/tool-calls parsers now handle all tag formats including
+    // raw tags like <think>, <thinking>, <reasoning>, etc. They are extracted
+    // and rendered as collapsible tiles, so we don't need to strip them here.
+    // The markdown widget will receive only the text segments.
 
     // Process images in the remaining text
-    final processedContent = _processContentForImages(cleaned);
+    final processedContent = _processContentForImages(content);
 
     Widget buildDefault(BuildContext context) => StreamingMarkdownWidget(
       content: processedContent,
