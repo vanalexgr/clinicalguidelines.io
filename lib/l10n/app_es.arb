@@ -106,6 +106,7 @@
   "onboardQuickBullet2": "Inicia Nueva conversación o gestiona modelos desde la barra superior",
   "attachmentLabel": "Adjunto",
   "tools": "Herramientas",
+  "filters": "Filtros",
   "voiceInput": "Entrada de voz",
   "voice": "Voz",
   "voiceStatusListening": "Escuchando...",

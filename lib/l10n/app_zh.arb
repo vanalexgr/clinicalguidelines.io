@@ -106,6 +106,7 @@
   "onboardQuickBullet2": "从顶部栏开始新对话或管理模型",
   "attachmentLabel": "附件",
   "tools": "工具",
+  "filters": "过滤器",
   "voiceInput": "语音输入",
   "voice": "语音",
   "voiceStatusListening": "正在听...",

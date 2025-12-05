@@ -2687,6 +2687,7 @@ class ApiService {
     required String model,
     String? conversationId,
     List<String>? toolIds,
+    List<String>? filterIds,
     bool enableWebSearch = false,
     bool enableImageGeneration = false,
     Map<String, dynamic>? modelItem,
@@ -2796,6 +2797,12 @@ class ApiService {
     data['id'] = messageId;
 
     // No default reasoning parameters included; providers handle thinking UIs natively.
+
+    // Add filter_ids if provided (Open-WebUI toggle filters)
+    if (filterIds != null && filterIds.isNotEmpty) {
+      data['filter_ids'] = filterIds;
+      _traceApi('Including filter_ids in streaming request: $filterIds');
+    }
 
     // Add tool_ids if provided (Open-WebUI expects tool_ids as array of strings)
     if (toolIds != null && toolIds.isNotEmpty) {

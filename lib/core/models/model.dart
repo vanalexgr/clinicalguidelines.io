@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'toggle_filter.dart';
 
 part 'model.freezed.dart';
 
@@ -17,6 +18,10 @@ sealed class Model with _$Model {
     Map<String, dynamic>? metadata,
     List<String>? supportedParameters,
     List<String>? toolIds,
+
+    /// Toggleable filters that can be enabled/disabled per chat.
+    /// These come from OpenWebUI filters with `toggle = True`.
+    List<ToggleFilter>? filters,
   }) = _Model;
 
   factory Model.fromJson(Map<String, dynamic> json) {
@@ -147,6 +152,17 @@ sealed class Model with _$Model {
       }
     }
 
+    // Extract toggle filters from the model response
+    // These come from OpenWebUI filters with toggle=True set
+    List<ToggleFilter>? filters;
+    final filtersData = json['filters'];
+    if (filtersData is List && filtersData.isNotEmpty) {
+      filters = filtersData
+          .whereType<Map<String, dynamic>>()
+          .map((f) => ToggleFilter.fromJson(f))
+          .toList();
+    }
+
     final idRaw = json['id'];
     final id = idRaw?.toString();
     if (id == null || id.isEmpty) {
@@ -174,6 +190,7 @@ sealed class Model with _$Model {
       },
       metadata: mergedMetadata,
       toolIds: toolIds,
+      filters: filters,
     );
   }
 
@@ -190,6 +207,7 @@ sealed class Model with _$Model {
       'metadata': metadata,
       'architecture': capabilities?['architecture'],
       'toolIds': toolIds,
+      'filters': filters?.map((f) => f.toJson()).toList(),
     };
     data.removeWhere((_, value) => value == null);
     return data;

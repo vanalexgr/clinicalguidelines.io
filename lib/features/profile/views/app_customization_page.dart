@@ -306,7 +306,18 @@ class AppCustomizationPage extends ConsumerWidget {
       data: (value) => value,
       orElse: () => const <Tool>[],
     );
-    final allowed = <String>{'web', 'image', ...tools.map((t) => t.id)};
+
+    // Get filters from the selected model
+    final selectedModel = ref.watch(selectedModelProvider);
+    final filters = selectedModel?.filters ?? const [];
+
+    // Include filter IDs in allowed set (prefixed with 'filter:' to avoid collisions)
+    final allowed = <String>{
+      'web',
+      'image',
+      ...tools.map((t) => t.id),
+      ...filters.map((f) => 'filter:${f.id}'),
+    };
 
     final selected = selectedRaw
         .where((id) => allowed.contains(id))
@@ -340,6 +351,20 @@ class AppCustomizationPage extends ConsumerWidget {
           icon: Icons.extension,
           isSelected: isSelected,
           onTap: canSelect ? () => toggle(tool.id) : null,
+        );
+      }).toList();
+    }
+
+    List<Widget> buildFilterChips() {
+      return filters.map((filter) {
+        final filterId = 'filter:${filter.id}';
+        final isSelected = selected.contains(filterId);
+        final canSelect = selectedCount < maxPills || isSelected;
+        return ConduitChip(
+          label: filter.name,
+          icon: Platform.isIOS ? CupertinoIcons.sparkles : Icons.auto_awesome,
+          isSelected: isSelected,
+          onTap: canSelect ? () => toggle(filterId) : null,
         );
       }).toList();
     }
@@ -378,6 +403,7 @@ class AppCustomizationPage extends ConsumerWidget {
                     : null,
               ),
               ...buildToolChips(),
+              ...buildFilterChips(),
               if (selected.isNotEmpty)
                 ConduitChip(
                   label: l10n.clear,

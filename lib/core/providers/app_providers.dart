@@ -750,6 +750,34 @@ class Models extends _$Models {
     final result = await AsyncValue.guard(() => _load(api));
     if (!ref.mounted) return;
     state = result;
+
+    // Update selected model with fresh data (e.g., filters) if it exists
+    // in the new models list
+    if (result.hasValue) {
+      final freshModels = result.value!;
+      final currentSelected = ref.read(selectedModelProvider);
+      if (currentSelected != null) {
+        try {
+          final freshModel = freshModels.firstWhere(
+            (m) => m.id == currentSelected.id,
+          );
+          // Update selected model with fresh data (filters, etc.)
+          if (freshModel != currentSelected) {
+            ref.read(selectedModelProvider.notifier).set(freshModel);
+            DebugLogger.log(
+              'selected-model-refreshed',
+              scope: 'models',
+              data: {
+                'id': freshModel.id,
+                'filters': freshModel.filters?.length ?? 0,
+              },
+            );
+          }
+        } catch (_) {
+          // Model no longer available - keep current selection
+        }
+      }
+    }
   }
 
   Future<List<Model>> _load(ApiService api) async {
@@ -939,14 +967,58 @@ final modelToolsAutoSelectionProvider = Provider<void>((ref) {
   });
 });
 
+// Auto-clear invalid filter selections when model changes
+// Filters are model-specific, so we need to validate selections against new model
+final modelFiltersAutoSelectionProvider = Provider<void>((ref) {
+  // Prevent disposal so listeners remain active throughout app lifecycle
+  ref.keepAlive();
+
+  void validateFilters(Model? model) {
+    final currentFilterIds = ref.read(selectedFilterIdsProvider);
+    if (currentFilterIds.isEmpty) return;
+
+    // Get available filters from the model
+    final availableFilters = model?.filters ?? const [];
+    final validFilterIds = availableFilters.map((f) => f.id).toSet();
+
+    // Filter out any selected IDs that aren't valid for this model
+    final validSelection = currentFilterIds
+        .where((id) => validFilterIds.contains(id))
+        .toList();
+
+    // Only update if something changed
+    if (validSelection.length != currentFilterIds.length) {
+      ref.read(selectedFilterIdsProvider.notifier).set(validSelection);
+      DebugLogger.log(
+        'filter-selection-validated',
+        scope: 'models/filters',
+        data: {
+          'modelId': model?.id,
+          'previousCount': currentFilterIds.length,
+          'validCount': validSelection.length,
+        },
+      );
+    }
+  }
+
+  // Validate on model change
+  ref.listen<Model?>(selectedModelProvider, (previous, next) {
+    if (previous?.id == next?.id && previous != null) {
+      return;
+    }
+    Future.microtask(() => validateFilters(next));
+  });
+});
+
 // Auto-apply default model from settings when it changes (and not manually overridden)
 // keepAlive to maintain listener throughout app lifecycle
 final defaultModelAutoSelectionProvider = Provider<void>((ref) {
   // Prevent disposal so listeners remain active throughout app lifecycle
   ref.keepAlive();
 
-  // Initialize the model tools auto-selection
+  // Initialize the model tools and filters auto-selection
   ref.watch(modelToolsAutoSelectionProvider);
+  ref.watch(modelFiltersAutoSelectionProvider);
 
   ref.listen<AppSettings>(appSettingsProvider, (previous, next) {
     // Only react when default model value changes

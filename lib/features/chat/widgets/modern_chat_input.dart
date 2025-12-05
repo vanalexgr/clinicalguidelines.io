@@ -20,6 +20,7 @@ import '../../tools/providers/tools_providers.dart';
 import '../../prompts/providers/prompts_providers.dart';
 import '../../../core/models/tool.dart';
 import '../../../core/models/prompt.dart';
+import '../../../core/models/toggle_filter.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/settings_service.dart';
 import '../../chat/services/voice_input_service.dart';
@@ -901,6 +902,11 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       orElse: () => false,
     );
     final selectedToolIds = ref.watch(selectedToolIdsProvider);
+    final selectedFilterIds = ref.watch(selectedFilterIdsProvider);
+
+    // Get filters from the selected model for quick pills
+    final selectedModel = ref.watch(selectedModelProvider);
+    final availableFilters = selectedModel?.filters ?? const [];
 
     final focusTick = ref.watch(inputFocusTriggerProvider);
     final autofocusEnabled = ref.watch(composerAutofocusEnabledProvider);
@@ -974,7 +980,39 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             onTap: widget.enabled && !_isRecording ? handleTap : null,
           ),
         );
+      } else if (id.startsWith('filter:')) {
+        // Handle filter quick pills
+        final filterId = id.substring(7); // Remove 'filter:' prefix
+        ToggleFilter? filter;
+        for (final f in availableFilters) {
+          if (f.id == filterId) {
+            filter = f;
+            break;
+          }
+        }
+        if (filter != null) {
+          final bool isSelected = selectedFilterIds.contains(filterId);
+          final String label = filter.name;
+          final IconData icon = Platform.isIOS
+              ? CupertinoIcons.sparkles
+              : Icons.auto_awesome;
+
+          void handleTap() {
+            ref.read(selectedFilterIdsProvider.notifier).toggle(filterId);
+          }
+
+          quickPills.add(
+            _buildPillButton(
+              icon: icon,
+              label: label,
+              isActive: isSelected,
+              onTap: widget.enabled && !_isRecording ? handleTap : null,
+              iconUrl: filter.icon,
+            ),
+          );
+        }
       } else {
+        // Handle tool quick pills
         Tool? tool;
         for (final t in availableTools) {
           if (t.id == id) {
@@ -1064,6 +1102,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 webSearchActive: webSearchEnabled,
                 imageGenerationActive: imageGenEnabled,
                 toolsActive: selectedToolIds.isNotEmpty,
+                filtersActive: selectedFilterIds.isNotEmpty,
               ),
               const SizedBox(width: Spacing.sm),
               Expanded(
@@ -1176,6 +1215,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 webSearchActive: webSearchEnabled,
                 imageGenerationActive: imageGenEnabled,
                 toolsActive: selectedToolIds.isNotEmpty,
+                filtersActive: selectedFilterIds.isNotEmpty,
               ),
               const SizedBox(width: Spacing.xs),
               Expanded(
@@ -1462,6 +1502,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     required bool webSearchActive,
     required bool imageGenerationActive,
     required bool toolsActive,
+    required bool filtersActive,
   }) {
     final bool enabled = widget.enabled && !_isRecording;
 
@@ -1475,6 +1516,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       activeColor = context.conduitTheme.buttonPrimary;
     } else if (toolsActive) {
       icon = Platform.isIOS ? CupertinoIcons.wrench : Icons.build;
+      activeColor = context.conduitTheme.buttonPrimary;
+    } else if (filtersActive) {
+      icon = Platform.isIOS ? CupertinoIcons.sparkles : Icons.auto_awesome;
       activeColor = context.conduitTheme.buttonPrimary;
     } else {
       icon = Platform.isIOS ? CupertinoIcons.add : Icons.add;
@@ -1829,6 +1873,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     required String label,
     required bool isActive,
     VoidCallback? onTap,
+    String? iconUrl,
   }) {
     final bool enabled = onTap != null;
     final Brightness brightness = Theme.of(context).brightness;
@@ -1913,7 +1958,24 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOutCubic,
-                  child: Icon(icon, size: IconSize.small + 1, color: iconColor),
+                  child: iconUrl != null && iconUrl.isNotEmpty
+                      ? SizedBox(
+                          width: IconSize.small + 1,
+                          height: IconSize.small + 1,
+                          child: Image.network(
+                            iconUrl,
+                            width: IconSize.small + 1,
+                            height: IconSize.small + 1,
+                            color: iconUrl.endsWith('.svg') ? iconColor : null,
+                            colorBlendMode: BlendMode.srcIn,
+                            errorBuilder: (_, __, ___) => Icon(
+                              icon,
+                              size: IconSize.small + 1,
+                              color: iconColor,
+                            ),
+                          ),
+                        )
+                      : Icon(icon, size: IconSize.small + 1, color: iconColor),
                 ),
                 const SizedBox(width: Spacing.xs + 1),
                 AnimatedDefaultTextStyle(
@@ -2109,6 +2171,38 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             ..add(_buildSectionLabel(l10n.tools))
             ..add(toolsSection);
 
+          // Add filters section (like tools section)
+          final modalSelectedModel = modalRef.watch(selectedModelProvider);
+          final modalToggleFilters =
+              modalSelectedModel?.filters ?? const <ToggleFilter>[];
+
+          if (modalToggleFilters.isNotEmpty) {
+            final modalSelectedFilterIds = modalRef.watch(
+              selectedFilterIdsProvider,
+            );
+            final filterTiles = modalToggleFilters.map((filter) {
+              final isSelected = modalSelectedFilterIds.contains(filter.id);
+              return _buildFilterTile(
+                filter: filter,
+                selected: isSelected,
+                onToggle: () {
+                  modalRef
+                      .read(selectedFilterIdsProvider.notifier)
+                      .toggle(filter.id);
+                },
+              );
+            }).toList();
+
+            bodyChildren
+              ..add(const SizedBox(height: Spacing.sm))
+              ..add(_buildSectionLabel(l10n.filters))
+              ..add(
+                Column(
+                  children: _withVerticalSpacing(filterTiles, Spacing.xxs),
+                ),
+              );
+          }
+
           // Measure content height and cap the sheet's max size to avoid extra blank space
           final GlobalKey sheetContentKey = GlobalKey();
           double? measuredContentHeight;
@@ -2247,6 +2341,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     String? subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
+    String? iconUrl,
   }) {
     final theme = context.conduitTheme;
     final brightness = Theme.of(context).brightness;
@@ -2290,7 +2385,17 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _buildToolGlyph(icon: icon, selected: value, theme: theme),
+                iconUrl != null && iconUrl.isNotEmpty
+                    ? _buildFilterGlyph(
+                        iconUrl: iconUrl,
+                        selected: value,
+                        theme: theme,
+                      )
+                    : _buildToolGlyph(
+                        icon: icon,
+                        selected: value,
+                        theme: theme,
+                      ),
                 const SizedBox(width: Spacing.xs),
                 Expanded(
                   child: Column(
@@ -2424,6 +2529,99 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     );
   }
 
+  Widget _buildFilterTile({
+    required ToggleFilter filter,
+    required bool selected,
+    required VoidCallback onToggle,
+  }) {
+    final theme = context.conduitTheme;
+    final brightness = Theme.of(context).brightness;
+    final description = filter.description ?? '';
+    final Color background = selected
+        ? theme.buttonPrimary.withValues(
+            alpha: brightness == Brightness.dark ? 0.28 : 0.16,
+          )
+        : theme.surfaceContainer.withValues(
+            alpha: brightness == Brightness.dark ? 0.32 : 0.12,
+          );
+    final Color borderColor = selected
+        ? theme.buttonPrimary.withValues(alpha: 0.7)
+        : theme.cardBorder.withValues(alpha: 0.55);
+
+    return Semantics(
+      button: true,
+      toggled: selected,
+      label: filter.name,
+      hint: description.isEmpty ? null : description,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppBorderRadius.input),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onToggle();
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            margin: const EdgeInsets.symmetric(vertical: Spacing.xxs),
+            padding: const EdgeInsets.all(Spacing.sm),
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(AppBorderRadius.input),
+              border: Border.all(color: borderColor, width: BorderWidth.thin),
+              boxShadow: selected ? ConduitShadows.low(context) : const [],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildFilterGlyph(
+                  iconUrl: filter.icon,
+                  selected: selected,
+                  theme: theme,
+                ),
+                const SizedBox(width: Spacing.xs),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        filter.name,
+                        style: AppTypography.bodySmallStyle.copyWith(
+                          color: theme.textPrimary,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (description.isNotEmpty) ...[
+                        const SizedBox(height: Spacing.xs),
+                        Text(
+                          description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.captionStyle.copyWith(
+                            color: theme.textSecondary.withValues(
+                              alpha: Alpha.strong,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Spacing.xs),
+                _buildTogglePill(isOn: selected, theme: theme),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildToolGlyph({
     required IconData icon,
     required bool selected,
@@ -2499,6 +2697,57 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       if (trimmed.isNotEmpty) return trimmed;
     }
     return null;
+  }
+
+  /// Builds the circular glyph/avatar for a filter tile.
+  Widget _buildFilterGlyph({
+    String? iconUrl,
+    required bool selected,
+    required ConduitThemeExtension theme,
+  }) {
+    final Color accentStart = theme.buttonPrimary.withValues(
+      alpha: selected ? Alpha.active : Alpha.hover,
+    );
+    final Color accentEnd = theme.buttonPrimary.withValues(
+      alpha: selected ? Alpha.highlight : Alpha.focus,
+    );
+    final Color iconColor = selected
+        ? theme.buttonPrimaryText
+        : theme.iconPrimary.withValues(alpha: Alpha.strong);
+
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [accentStart, accentEnd],
+        ),
+      ),
+      child: iconUrl != null && iconUrl.isNotEmpty
+          ? ClipOval(
+              child: Image.network(
+                iconUrl,
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+                color: iconUrl.endsWith('.svg') ? iconColor : null,
+                colorBlendMode: BlendMode.srcIn,
+                errorBuilder: (_, __, ___) => Icon(
+                  Platform.isIOS ? CupertinoIcons.sparkles : Icons.auto_awesome,
+                  color: iconColor,
+                  size: IconSize.modal,
+                ),
+              ),
+            )
+          : Icon(
+              Platform.isIOS ? CupertinoIcons.sparkles : Icons.auto_awesome,
+              color: iconColor,
+              size: IconSize.modal,
+            ),
+    );
   }
 
   Widget _buildTogglePill({
