@@ -1285,6 +1285,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   }) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      // Exclude from semantics so screen readers interact directly with the
+      // TextField, which provides its own accessibility via hintText.
+      excludeFromSemantics: true,
       onTap: () {
         if (!widget.enabled) return;
         // Explicit user intent to focus: re-enable autofocus and focus
@@ -1293,164 +1296,158 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         } catch (_) {}
         _ensureFocusedIfEnabled();
       },
-      child: MergeSemantics(
-        child: Semantics(
-          label: AppLocalizations.of(context)!.messageInputLabel,
-          hint: AppLocalizations.of(context)!.messageInputHint,
-          child: Shortcuts(
-            shortcuts: () {
-              final map = <LogicalKeySet, Intent>{
-                LogicalKeySet(
-                  LogicalKeyboardKey.meta,
+      child: Shortcuts(
+        shortcuts: () {
+          final map = <LogicalKeySet, Intent>{
+            LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.enter):
+                const _SendMessageIntent(),
+            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.enter):
+                const _SendMessageIntent(),
+          };
+          if (sendOnEnter) {
+            map[LogicalKeySet(LogicalKeyboardKey.enter)] =
+                const _SendMessageIntent();
+            map[LogicalKeySet(
+                  LogicalKeyboardKey.shift,
                   LogicalKeyboardKey.enter,
-                ): const _SendMessageIntent(),
-                LogicalKeySet(
-                  LogicalKeyboardKey.control,
-                  LogicalKeyboardKey.enter,
-                ): const _SendMessageIntent(),
-              };
-              if (sendOnEnter) {
-                map[LogicalKeySet(LogicalKeyboardKey.enter)] =
-                    const _SendMessageIntent();
-                map[LogicalKeySet(
-                      LogicalKeyboardKey.shift,
-                      LogicalKeyboardKey.enter,
-                    )] =
-                    const _InsertNewlineIntent();
-              }
-              if (_showPromptOverlay) {
-                map[LogicalKeySet(LogicalKeyboardKey.arrowDown)] =
-                    const _SelectNextPromptIntent();
-                map[LogicalKeySet(LogicalKeyboardKey.arrowUp)] =
-                    const _SelectPreviousPromptIntent();
-                map[LogicalKeySet(LogicalKeyboardKey.escape)] =
-                    const _DismissPromptIntent();
-              }
-              return map;
-            }(),
-            child: Actions(
-              actions: <Type, Action<Intent>>{
-                _SendMessageIntent: CallbackAction<_SendMessageIntent>(
-                  onInvoke: (intent) {
-                    if (_showPromptOverlay) {
-                      _confirmPromptSelection();
-                      return null;
-                    }
-                    _sendMessage();
-                    return null;
-                  },
-                ),
-                _InsertNewlineIntent: CallbackAction<_InsertNewlineIntent>(
-                  onInvoke: (intent) {
-                    _insertNewline();
-                    return null;
-                  },
-                ),
-                _SelectNextPromptIntent:
-                    CallbackAction<_SelectNextPromptIntent>(
-                      onInvoke: (intent) {
-                        _movePromptSelection(1);
-                        return null;
-                      },
-                    ),
-                _SelectPreviousPromptIntent:
-                    CallbackAction<_SelectPreviousPromptIntent>(
-                      onInvoke: (intent) {
-                        _movePromptSelection(-1);
-                        return null;
-                      },
-                    ),
-                _DismissPromptIntent: CallbackAction<_DismissPromptIntent>(
-                  onInvoke: (intent) {
-                    _hidePromptOverlay();
-                    return null;
-                  },
-                ),
+                )] =
+                const _InsertNewlineIntent();
+          }
+          if (_showPromptOverlay) {
+            map[LogicalKeySet(LogicalKeyboardKey.arrowDown)] =
+                const _SelectNextPromptIntent();
+            map[LogicalKeySet(LogicalKeyboardKey.arrowUp)] =
+                const _SelectPreviousPromptIntent();
+            map[LogicalKeySet(LogicalKeyboardKey.escape)] =
+                const _DismissPromptIntent();
+          }
+          return map;
+        }(),
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            _SendMessageIntent: CallbackAction<_SendMessageIntent>(
+              onInvoke: (intent) {
+                if (_showPromptOverlay) {
+                  _confirmPromptSelection();
+                  return null;
+                }
+                _sendMessage();
+                return null;
               },
-              child: Builder(
-                builder: (context) {
-                  final double factor = isActive ? 1.0 : 0.0;
-                  final Color animatedPlaceholder = Color.lerp(
-                    placeholderBase,
-                    placeholderFocused,
-                    factor,
-                  )!;
-                  final Color animatedTextColor = Color.lerp(
-                    context.conduitTheme.inputText.withValues(alpha: 0.88),
-                    context.conduitTheme.inputText,
-                    factor,
-                  )!;
+            ),
+            _InsertNewlineIntent: CallbackAction<_InsertNewlineIntent>(
+              onInvoke: (intent) {
+                _insertNewline();
+                return null;
+              },
+            ),
+            _SelectNextPromptIntent: CallbackAction<_SelectNextPromptIntent>(
+              onInvoke: (intent) {
+                _movePromptSelection(1);
+                return null;
+              },
+            ),
+            _SelectPreviousPromptIntent:
+                CallbackAction<_SelectPreviousPromptIntent>(
+                  onInvoke: (intent) {
+                    _movePromptSelection(-1);
+                    return null;
+                  },
+                ),
+            _DismissPromptIntent: CallbackAction<_DismissPromptIntent>(
+              onInvoke: (intent) {
+                _hidePromptOverlay();
+                return null;
+              },
+            ),
+          },
+          child: Builder(
+            builder: (context) {
+              final double factor = isActive ? 1.0 : 0.0;
+              final Color animatedPlaceholder = Color.lerp(
+                placeholderBase,
+                placeholderFocused,
+                factor,
+              )!;
+              final Color animatedTextColor = Color.lerp(
+                context.conduitTheme.inputText.withValues(alpha: 0.88),
+                context.conduitTheme.inputText,
+                factor,
+              )!;
 
-                  final FontWeight recordingWeight = _isRecording
-                      ? FontWeight.w500
-                      : FontWeight.w400;
-                  final TextStyle baseChatStyle =
-                      AppTypography.chatMessageStyle;
+              final FontWeight recordingWeight = _isRecording
+                  ? FontWeight.w500
+                  : FontWeight.w400;
+              final TextStyle baseChatStyle = AppTypography.chatMessageStyle;
 
-                  return TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    enabled: widget.enabled,
-                    autofocus: false,
-                    minLines: 1,
-                    maxLines: null,
-                    keyboardType: TextInputType.multiline,
-                    textCapitalization: TextCapitalization.sentences,
-                    textInputAction: sendOnEnter
-                        ? TextInputAction.send
-                        : TextInputAction.newline,
-                    autofillHints: const <String>[],
-                    showCursor: true,
-                    scrollPadding: const EdgeInsets.only(bottom: 80),
-                    keyboardAppearance: brightness,
-                    cursorColor: animatedTextColor,
-                    style: baseChatStyle.copyWith(
-                      color: animatedTextColor,
+              // Wrap with Semantics to provide an accessible label for screen
+              // readers. We avoid MergeSemantics which caused double-
+              // announcements. The TextField provides its own text field
+              // semantics; this just adds the descriptive label.
+              return Semantics(
+                label: AppLocalizations.of(context)!.messageInputLabel,
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  enabled: widget.enabled,
+                  autofocus: false,
+                  minLines: 1,
+                  maxLines: null,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: sendOnEnter
+                      ? TextInputAction.send
+                      : TextInputAction.newline,
+                  autofillHints: const <String>[],
+                  showCursor: true,
+                  scrollPadding: const EdgeInsets.only(bottom: 80),
+                  keyboardAppearance: brightness,
+                  cursorColor: animatedTextColor,
+                  style: baseChatStyle.copyWith(
+                    color: animatedTextColor,
+                    fontStyle: _isRecording
+                        ? FontStyle.italic
+                        : FontStyle.normal,
+                    fontWeight: recordingWeight,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context)!.messageHintText,
+                    hintStyle: baseChatStyle.copyWith(
+                      color: animatedPlaceholder,
+                      fontWeight: recordingWeight,
                       fontStyle: _isRecording
                           ? FontStyle.italic
                           : FontStyle.normal,
-                      fontWeight: recordingWeight,
                     ),
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.messageHintText,
-                      hintStyle: baseChatStyle.copyWith(
-                        color: animatedPlaceholder,
-                        fontWeight: recordingWeight,
-                        fontStyle: _isRecording
-                            ? FontStyle.italic
-                            : FontStyle.normal,
-                      ),
-                      filled: false,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      contentPadding: contentPadding,
-                      isDense: true,
-                      alignLabelWithHint: true,
-                    ),
-                    // Enable pasting images and files from clipboard
-                    contentInsertionConfiguration:
-                        ContentInsertionConfiguration(
-                          allowedMimeTypes: ClipboardAttachmentService
-                              .supportedImageMimeTypes
-                              .toList(),
-                          onContentInserted: _handleContentInserted,
-                        ),
-                    onSubmitted: (_) {
-                      if (sendOnEnter) {
-                        _sendMessage();
-                      }
-                    },
-                    onTap: () {
-                      if (!widget.enabled) return;
-                      _ensureFocusedIfEnabled();
-                    },
-                  );
-                },
-              ),
-            ),
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    contentPadding: contentPadding,
+                    isDense: true,
+                    alignLabelWithHint: true,
+                  ),
+                  // Enable pasting images and files from clipboard
+                  contentInsertionConfiguration: ContentInsertionConfiguration(
+                    allowedMimeTypes: ClipboardAttachmentService
+                        .supportedImageMimeTypes
+                        .toList(),
+                    onContentInserted: _handleContentInserted,
+                  ),
+                  onSubmitted: (_) {
+                    if (sendOnEnter) {
+                      _sendMessage();
+                    }
+                  },
+                  onTap: () {
+                    if (!widget.enabled) return;
+                    _ensureFocusedIfEnabled();
+                  },
+                ),
+              );
+            },
           ),
         ),
       ),
