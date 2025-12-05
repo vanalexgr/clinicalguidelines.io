@@ -370,7 +370,7 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     final context = NavigationService.navigatorKey.currentContext;
-    if (context == null) {
+    if (context == null || !context.mounted) {
       throw StateError('Navigation context not available.');
     }
 
@@ -378,6 +378,7 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
     FocusScope.of(context).unfocus();
 
     // Navigate to voice call page with new conversation flag
+    if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const VoiceCallPage(startNewConversation: true),

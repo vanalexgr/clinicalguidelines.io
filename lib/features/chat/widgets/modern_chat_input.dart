@@ -1965,7 +1965,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                             height: IconSize.small + 1,
                             color: iconUrl.endsWith('.svg') ? iconColor : null,
                             colorBlendMode: BlendMode.srcIn,
-                            errorBuilder: (_, __, ___) => Icon(
+                            errorBuilder: (_, _, _) => Icon(
                               icon,
                               size: IconSize.small + 1,
                               color: iconColor,
@@ -2732,7 +2732,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 fit: BoxFit.cover,
                 color: iconUrl.endsWith('.svg') ? iconColor : null,
                 colorBlendMode: BlendMode.srcIn,
-                errorBuilder: (_, __, ___) => Icon(
+                errorBuilder: (_, _, _) => Icon(
                   Platform.isIOS ? CupertinoIcons.sparkles : Icons.auto_awesome,
                   color: iconColor,
                   size: IconSize.modal,
