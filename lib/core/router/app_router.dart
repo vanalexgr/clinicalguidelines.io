@@ -62,6 +62,14 @@ class RouterNotifier extends ChangeNotifier {
     final reviewerMode = ref.read(reviewerModeProvider);
     final activeServerAsync = ref.read(activeServerProvider);
 
+    // Check for API key forced logout first - redirect to authentication
+    final authSnapshot = ref
+        .read(authStateManagerProvider)
+        .maybeWhen(data: (s) => s, orElse: () => null);
+    if (authSnapshot?.error?.contains('apiKey') == true) {
+      return location == Routes.authentication ? null : Routes.authentication;
+    }
+
     if (reviewerMode) {
       // Stay on whatever route if already in chat; otherwise go to chat
       if (location == Routes.chat) return null;

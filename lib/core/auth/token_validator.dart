@@ -6,7 +6,15 @@ import '../utils/debug_logger.dart';
 class TokenValidator {
   static const Duration _validationTimeout = Duration(seconds: 5);
 
-  /// Validate token format (supports both JWT and API key formats)
+  /// Check if token is an API key format (sk-, api-, key-)
+  /// API keys are not supported for streaming.
+  static bool isApiKey(String token) {
+    return token.startsWith('sk-') ||
+        token.startsWith('api-') ||
+        token.startsWith('key-');
+  }
+
+  /// Validate token format (JWT tokens only - API keys not supported)
   static TokenValidationResult validateTokenFormat(String token) {
     try {
       // Basic format check
@@ -14,15 +22,11 @@ class TokenValidator {
         return TokenValidationResult.invalid('Token too short');
       }
 
-      // Check if it's an API key format (starts with sk- or similar)
-      if (token.startsWith('sk-') ||
-          token.startsWith('api-') ||
-          token.startsWith('key-')) {
-        // API key format - validate differently
-        if (token.length < 20) {
-          return TokenValidationResult.invalid('API key too short');
-        }
-        return TokenValidationResult.valid('API key format valid');
+      // Reject API keys - they don't support streaming
+      if (isApiKey(token)) {
+        return TokenValidationResult.apiKeyNotSupported(
+          'API keys are not supported. Please use a JWT token.',
+        );
       }
 
       // Check if it looks like a JWT (has at least 2 dots)
@@ -209,6 +213,9 @@ class TokenValidationResult {
   const TokenValidationResult.networkError(String message)
     : this._(false, TokenValidationStatus.networkError, message);
 
+  const TokenValidationResult.apiKeyNotSupported(String message)
+    : this._(false, TokenValidationStatus.apiKeyNotSupported, message);
+
   final bool isValid;
   final TokenValidationStatus status;
   final String message;
@@ -218,6 +225,8 @@ class TokenValidationResult {
   bool get isExpired => status == TokenValidationStatus.expired;
   bool get isExpiringSoon => status == TokenValidationStatus.expiringSoon;
   bool get hasNetworkError => status == TokenValidationStatus.networkError;
+  bool get isApiKeyNotSupported =>
+      status == TokenValidationStatus.apiKeyNotSupported;
 
   @override
   String toString() =>
@@ -230,6 +239,7 @@ enum TokenValidationStatus {
   expired,
   expiringSoon,
   networkError,
+  apiKeyNotSupported,
 }
 
 /// Cache for token validation results

@@ -187,6 +187,23 @@ class AuthStateManager extends _$AuthStateManager {
 
       if (token != null && token.isNotEmpty) {
         DebugLogger.auth('Found stored token during initialization');
+
+        // Check if stored token is an API key - force logout if so
+        if (TokenValidator.isApiKey(token)) {
+          DebugLogger.auth('Detected API key token, forcing logout');
+          await storage.deleteAuthToken();
+          await storage.deleteSavedCredentials();
+          _update(
+            (current) => current.copyWith(
+              status: AuthStatus.credentialError,
+              error: 'apiKeyNoLongerSupported',
+              isLoading: false,
+              clearToken: true,
+            ),
+          );
+          return;
+        }
+
         // Fast path: trust token format to avoid blocking startup on network
         final formatOk = _isValidTokenFormat(token);
         if (formatOk) {
@@ -270,7 +287,8 @@ class AuthStateManager extends _$AuthStateManager {
     }
   }
 
-  /// Perform login with API key
+  /// Perform login with JWT token
+  /// Note: API keys (sk-...) are not supported for streaming.
   Future<bool> loginWithApiKey(
     String apiKey, {
     bool rememberCredentials = false,
@@ -284,9 +302,16 @@ class AuthStateManager extends _$AuthStateManager {
     );
 
     try {
-      // Validate API key format
+      // Validate token is not empty
       if (apiKey.trim().isEmpty) {
-        throw Exception('API key cannot be empty');
+        throw Exception('Token cannot be empty');
+      }
+
+      final tokenStr = apiKey.trim();
+
+      // Reject API keys - they don't support streaming
+      if (TokenValidator.isApiKey(tokenStr)) {
+        throw Exception('apiKeyNotSupported');
       }
 
       // Ensure API service is available
@@ -296,12 +321,9 @@ class AuthStateManager extends _$AuthStateManager {
         throw Exception('No server connection available');
       }
 
-      // Use API key directly as Bearer token
-      final tokenStr = apiKey.trim();
-
-      // Validate token format (consistent with credentials method)
+      // Validate token format
       if (!_isValidTokenFormat(tokenStr)) {
-        throw Exception('Invalid API key format');
+        throw Exception('Invalid token format');
       }
 
       // Update API service with the API key
@@ -315,16 +337,15 @@ class AuthStateManager extends _$AuthStateManager {
         final storage = ref.read(optimizedStorageServiceProvider);
         await storage.saveAuthToken(tokenStr);
 
-        // Save API key if requested (for convenience, though less secure than credentials)
+        // Save JWT token if requested
         if (rememberCredentials) {
           final activeServer = await ref.read(activeServerProvider.future);
           if (activeServer != null) {
-            // Store API key as a special credential type
+            // Store JWT as a special credential type
             await storage.saveCredentials(
               serverId: activeServer.id,
-              username:
-                  'api_key_user', // Special username to indicate API key auth
-              password: tokenStr, // Store API key in password field
+              username: 'jwt_user', // Special username to indicate JWT auth
+              password: tokenStr, // Store JWT in password field
             );
           }
         }
@@ -348,11 +369,11 @@ class AuthStateManager extends _$AuthStateManager {
         _loadUserData();
         _prefetchConversations();
 
-        DebugLogger.auth('API key login successful');
+        DebugLogger.auth('JWT token login successful');
         return true;
       } catch (e) {
-        // If user fetch fails, the API key might be invalid
-        throw Exception('Invalid API key or insufficient permissions');
+        // If user fetch fails, the token might be invalid
+        throw Exception('Invalid token or insufficient permissions');
       }
     } catch (e, stack) {
       DebugLogger.error(
@@ -561,8 +582,8 @@ class AuthStateManager extends _$AuthStateManager {
       }
 
       // Attempt login (detect API key vs normal credentials)
-      if (username == 'api_key_user') {
-        // This is a saved API key
+      if (username == 'api_key_user' || username == 'jwt_user') {
+        // This is a saved JWT token (or legacy API key)
         return await loginWithApiKey(password, rememberCredentials: false);
       } else {
         // Normal username/password credentials

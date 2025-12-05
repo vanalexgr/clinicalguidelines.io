@@ -216,6 +216,10 @@
   "@apiKey": {
     "description": "Label for API key input field."
   },
+  "token": "Token",
+  "@token": {
+    "description": "Label for JWT token input field."
+  },
   "usernameOrEmail": "Username or Email",
   "@usernameOrEmail": {
     "description": "Label for username/email input field."
@@ -227,6 +231,10 @@
   "signInWithApiKey": "Sign in with API Key",
   "@signInWithApiKey": {
     "description": "Alternative sign-in method using an API key."
+  },
+  "signInWithToken": "Sign in with Token",
+  "@signInWithToken": {
+    "description": "Alternative sign-in method using a JWT token."
   },
   "connectToServer": "Connect to Server",
   "@connectToServer": {
@@ -1003,6 +1011,26 @@
   "enterApiKey": "Enter your API key",
   "@enterApiKey": {
     "description": "Hint text for API key input."
+  },
+  "enterToken": "Enter your JWT token",
+  "@enterToken": {
+    "description": "Hint text for JWT token input."
+  },
+  "tokenHint": "Get the JWT token from OpenWebUI settings. API keys (sk-...) are not supported for streaming.",
+  "@tokenHint": {
+    "description": "Help text explaining what type of token to use."
+  },
+  "apiKeyNotSupported": "API keys (sk-...) are not supported. Please use a JWT token instead.",
+  "@apiKeyNotSupported": {
+    "description": "Error message when user tries to use an API key instead of JWT token."
+  },
+  "apiKeyNoLongerSupported": "You were logged out because API keys are no longer supported. Please sign in with a JWT token from OpenWebUI settings.",
+  "@apiKeyNoLongerSupported": {
+    "description": "Error message shown when user is forced logged out due to using an API key."
+  },
+  "tokenTooShort": "Token is too short",
+  "@tokenTooShort": {
+    "description": "Error message when token is too short."
   },
   "signingIn": "Signing in...",
   "@signingIn": {

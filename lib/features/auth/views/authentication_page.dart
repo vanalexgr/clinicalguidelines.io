@@ -43,6 +43,23 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   void initState() {
     super.initState();
     _loadSavedCredentials();
+    // Check for auth errors (e.g., forced logout due to API key)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthStateError();
+    });
+  }
+
+  void _checkAuthStateError() {
+    final authState = ref.read(authStateManagerProvider).asData?.value;
+    if (authState?.error != null && authState!.error!.isNotEmpty) {
+      setState(() {
+        _loginError = _formatLoginError(authState.error!);
+        // Switch to token tab if the error is about API keys
+        if (authState.error!.contains('apiKey')) {
+          _useApiKey = true;
+        }
+      });
+    }
   }
 
   Future<void> _loadSavedCredentials() async {
@@ -127,16 +144,21 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   }
 
   String _formatLoginError(String error) {
-    if (error.contains('401') || error.contains('Unauthorized')) {
-      return AppLocalizations.of(context)!.invalidCredentials;
+    final l10n = AppLocalizations.of(context)!;
+    if (error.contains('apiKeyNotSupported')) {
+      return l10n.apiKeyNotSupported;
+    } else if (error.contains('apiKeyNoLongerSupported')) {
+      return l10n.apiKeyNoLongerSupported;
+    } else if (error.contains('401') || error.contains('Unauthorized')) {
+      return l10n.invalidCredentials;
     } else if (error.contains('redirect')) {
-      return AppLocalizations.of(context)!.serverRedirectingHttps;
+      return l10n.serverRedirectingHttps;
     } else if (error.contains('SocketException')) {
-      return AppLocalizations.of(context)!.unableToConnectServer;
+      return l10n.unableToConnectServer;
     } else if (error.contains('timeout')) {
-      return AppLocalizations.of(context)!.requestTimedOut;
+      return l10n.requestTimedOut;
     }
-    return AppLocalizations.of(context)!.genericSignInFailed;
+    return l10n.genericSignInFailed;
   }
 
   @override
@@ -399,7 +421,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
               icon: Platform.isIOS
                   ? CupertinoIcons.lock_shield
                   : Icons.vpn_key_outlined,
-              label: AppLocalizations.of(context)!.apiKey,
+              label: AppLocalizations.of(context)!.token,
               isSelected: _useApiKey,
               onTap: () => setState(() => _useApiKey = true),
             ),
@@ -480,24 +502,43 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
     );
   }
 
+  /// Validates that a token is a JWT and not an API key.
+  /// API keys (sk-, api-, key-) don't work with WebSocket authentication.
+  String? _validateJwtToken(String? value) {
+    if (value == null || value.isEmpty) {
+      return AppLocalizations.of(context)!.validationMissingRequired;
+    }
+
+    final trimmed = value.trim();
+    final lowerTrimmed = trimmed.toLowerCase();
+
+    // Reject API keys - they don't work with socket authentication
+    // Case-insensitive check to catch SK-, API-, KEY- variants
+    if (lowerTrimmed.startsWith('sk-') ||
+        lowerTrimmed.startsWith('api-') ||
+        lowerTrimmed.startsWith('key-')) {
+      return AppLocalizations.of(context)!.apiKeyNotSupported;
+    }
+
+    // Check minimum length
+    if (trimmed.length < 10) {
+      return AppLocalizations.of(context)!.tokenTooShort;
+    }
+
+    return null;
+  }
+
   Widget _buildApiKeyForm() {
     return Column(
       key: const ValueKey('api_key_form'),
       children: [
         AccessibleFormField(
-          label: AppLocalizations.of(context)!.apiKey,
-          hint: 'sk-...',
+          label: AppLocalizations.of(context)!.token,
+          hint: 'eyJ...',
           controller: _apiKeyController,
-          validator: InputValidationService.combine([
-            InputValidationService.validateRequired,
-            (value) => InputValidationService.validateMinLength(
-              value,
-              10,
-              fieldName: AppLocalizations.of(context)!.apiKey,
-            ),
-          ]),
+          validator: _validateJwtToken,
           obscureText: _obscurePassword,
-          semanticLabel: AppLocalizations.of(context)!.enterApiKey,
+          semanticLabel: AppLocalizations.of(context)!.enterToken,
           prefixIcon: Icon(
             Platform.isIOS
                 ? CupertinoIcons.lock_shield
@@ -519,6 +560,13 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
           onSubmitted: (_) => _signIn(),
           isRequired: true,
           autofillHints: const [AutofillHints.password],
+        ),
+        const SizedBox(height: Spacing.sm),
+        Text(
+          AppLocalizations.of(context)!.tokenHint,
+          style: context.conduitTheme.bodySmall?.copyWith(
+            color: context.conduitTheme.textSecondary,
+          ),
         ),
       ],
     );
@@ -591,7 +639,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         text: _isSigningIn
             ? AppLocalizations.of(context)!.signingIn
             : _useApiKey
-            ? AppLocalizations.of(context)!.signInWithApiKey
+            ? AppLocalizations.of(context)!.signInWithToken
             : AppLocalizations.of(context)!.signIn,
         icon: _isSigningIn
             ? null
