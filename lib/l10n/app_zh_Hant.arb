@@ -230,6 +230,7 @@
   "enterToken": "輸入您的 JWT 令牌",
   "tokenHint": "從 OpenWebUI 設定取得 JWT 令牌。API 密鑰 (sk-...) 不支援串流。",
   "apiKeyNotSupported": "不支援 API 密鑰 (sk-...)。請改用 JWT 令牌。",
+  "apiKeyNoLongerSupported": "由於不再支援 API 密鑰，您已被登出。請使用 OpenWebUI 設定中的 JWT 令牌登入。",
   "tokenTooShort": "令牌太短",
   "signingIn": "正在登錄...",
   "advancedSettings": "高級設置",

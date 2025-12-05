@@ -1024,6 +1024,10 @@
   "@apiKeyNotSupported": {
     "description": "Error message when user tries to use an API key instead of JWT token."
   },
+  "apiKeyNoLongerSupported": "You were logged out because API keys are no longer supported. Please sign in with a JWT token from OpenWebUI settings.",
+  "@apiKeyNoLongerSupported": {
+    "description": "Error message shown when user is forced logged out due to using an API key."
+  },
   "tokenTooShort": "Token is too short",
   "@tokenTooShort": {
     "description": "Error message when token is too short."

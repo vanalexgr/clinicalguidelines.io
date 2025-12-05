@@ -230,6 +230,7 @@
   "enterToken": "Entrez votre jeton JWT",
   "tokenHint": "Obtenez le jeton JWT dans les paramètres d'OpenWebUI. Les clés API (sk-...) ne sont pas prises en charge pour le streaming.",
   "apiKeyNotSupported": "Les clés API (sk-...) ne sont pas prises en charge. Veuillez utiliser un jeton JWT à la place.",
+  "apiKeyNoLongerSupported": "Vous avez été déconnecté car les clés API ne sont plus prises en charge. Veuillez vous connecter avec un jeton JWT depuis les paramètres d'OpenWebUI.",
   "tokenTooShort": "Le jeton est trop court",
   "signingIn": "Connexion en cours...",
   "advancedSettings": "Paramètres avancés",

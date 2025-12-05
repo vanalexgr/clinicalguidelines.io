@@ -230,6 +230,7 @@
   "enterToken": "Gib dein JWT-Token ein",
   "tokenHint": "Hole das JWT-Token aus den OpenWebUI-Einstellungen. API-Schlüssel (sk-...) werden für Streaming nicht unterstützt.",
   "apiKeyNotSupported": "API-Schlüssel (sk-...) werden nicht unterstützt. Bitte verwende stattdessen ein JWT-Token.",
+  "apiKeyNoLongerSupported": "Du wurdest abgemeldet, da API-Schlüssel nicht mehr unterstützt werden. Bitte melde dich mit einem JWT-Token aus den OpenWebUI-Einstellungen an.",
   "tokenTooShort": "Token ist zu kurz",
   "signingIn": "Anmeldung läuft...",
   "advancedSettings": "Erweiterte Einstellungen",

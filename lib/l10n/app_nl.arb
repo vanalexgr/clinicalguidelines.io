@@ -230,6 +230,7 @@
   "enterToken": "Voer je JWT-token in",
   "tokenHint": "Haal het JWT-token uit de OpenWebUI-instellingen. API-sleutels (sk-...) worden niet ondersteund voor streaming.",
   "apiKeyNotSupported": "API-sleutels (sk-...) worden niet ondersteund. Gebruik in plaats daarvan een JWT-token.",
+  "apiKeyNoLongerSupported": "Je bent uitgelogd omdat API-sleutels niet meer worden ondersteund. Log in met een JWT-token uit de OpenWebUI-instellingen.",
   "tokenTooShort": "Token is te kort",
   "signingIn": "Inloggen...",
   "advancedSettings": "Geavanceerde instellingen",

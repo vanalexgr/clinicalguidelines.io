@@ -340,6 +340,7 @@
   "enterToken": "JWT 토큰을 입력하세요",
   "tokenHint": "OpenWebUI 설정에서 JWT 토큰을 가져오세요. API 키(sk-...)는 스트리밍에 지원되지 않습니다.",
   "apiKeyNotSupported": "API 키(sk-...)는 지원되지 않습니다. JWT 토큰을 사용하세요.",
+  "apiKeyNoLongerSupported": "API 키가 더 이상 지원되지 않아 로그아웃되었습니다. OpenWebUI 설정에서 JWT 토큰으로 로그인하세요.",
   "tokenTooShort": "토큰이 너무 짧습니다",
   "signingIn": "로그인 중...",
   "advancedSettings": "고급 설정",

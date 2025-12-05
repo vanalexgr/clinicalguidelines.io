@@ -43,6 +43,23 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   void initState() {
     super.initState();
     _loadSavedCredentials();
+    // Check for auth errors (e.g., forced logout due to API key)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthStateError();
+    });
+  }
+
+  void _checkAuthStateError() {
+    final authState = ref.read(authStateManagerProvider).asData?.value;
+    if (authState?.error != null && authState!.error!.isNotEmpty) {
+      setState(() {
+        _loginError = _formatLoginError(authState.error!);
+        // Switch to token tab if the error is about API keys
+        if (authState.error!.contains('apiKey')) {
+          _useApiKey = true;
+        }
+      });
+    }
   }
 
   Future<void> _loadSavedCredentials() async {
@@ -127,16 +144,21 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   }
 
   String _formatLoginError(String error) {
-    if (error.contains('401') || error.contains('Unauthorized')) {
-      return AppLocalizations.of(context)!.invalidCredentials;
+    final l10n = AppLocalizations.of(context)!;
+    if (error.contains('apiKeyNotSupported')) {
+      return l10n.apiKeyNotSupported;
+    } else if (error.contains('apiKeyNoLongerSupported')) {
+      return l10n.apiKeyNoLongerSupported;
+    } else if (error.contains('401') || error.contains('Unauthorized')) {
+      return l10n.invalidCredentials;
     } else if (error.contains('redirect')) {
-      return AppLocalizations.of(context)!.serverRedirectingHttps;
+      return l10n.serverRedirectingHttps;
     } else if (error.contains('SocketException')) {
-      return AppLocalizations.of(context)!.unableToConnectServer;
+      return l10n.unableToConnectServer;
     } else if (error.contains('timeout')) {
-      return AppLocalizations.of(context)!.requestTimedOut;
+      return l10n.requestTimedOut;
     }
-    return AppLocalizations.of(context)!.genericSignInFailed;
+    return l10n.genericSignInFailed;
   }
 
   @override
