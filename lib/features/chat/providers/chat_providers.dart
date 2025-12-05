@@ -1335,6 +1335,8 @@ Future<void> regenerateMessage(
 
     // Include selected tool ids so provider-native tool calling is triggered
     final selectedToolIds = ref.read(selectedToolIdsProvider);
+    // Include selected filter ids (toggle filters enabled by user)
+    final selectedFilterIds = ref.read(selectedFilterIdsProvider);
     // Get conversation history for context (excluding the removed assistant message)
     final List<ChatMessage> messages = ref.read(chatMessagesProvider);
     final List<Map<String, dynamic>> conversationMessages =
@@ -1609,6 +1611,7 @@ Future<void> regenerateMessage(
       model: selectedModel.id,
       conversationId: activeConversation.id,
       toolIds: selectedToolIds.isNotEmpty ? selectedToolIds : null,
+      filterIds: selectedFilterIds.isNotEmpty ? selectedFilterIds : null,
       enableWebSearch: webSearchEnabled,
       enableImageGeneration: imageGenerationEnabled,
       modelItem: modelItem,
@@ -2011,6 +2014,11 @@ Future<void> _sendMessageInternal(
       ? toolIds
       : null;
 
+  // Get selected toggle filter IDs
+  final selectedFilterIds = ref.read(selectedFilterIdsProvider);
+  final List<String>? filterIdsForApi =
+      selectedFilterIds.isNotEmpty ? selectedFilterIds : null;
+
   try {
     // Pre-seed assistant skeleton on server to ensure correct chain
     // Generate assistant message id now (must be consistent across client/server)
@@ -2234,6 +2242,7 @@ Future<void> _sendMessageInternal(
       model: selectedModel.id,
       conversationId: activeConversation?.id,
       toolIds: toolIdsForApi,
+      filterIds: filterIdsForApi,
       enableWebSearch: webSearchEnabled,
       // Enable image generation on the server when requested
       enableImageGeneration: imageGenerationEnabled,

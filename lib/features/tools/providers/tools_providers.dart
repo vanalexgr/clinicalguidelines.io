@@ -63,3 +63,26 @@ class SelectedToolIds extends _$SelectedToolIds {
 
   void set(List<String> ids) => state = List<String>.from(ids);
 }
+
+/// Provider for selected filter IDs (toggle filters enabled by user).
+///
+/// These filters are dynamically created by OpenWebUI filters with
+/// `toggle = True` set in their module. They appear as toggleable
+/// buttons in the chat input UI.
+@Riverpod(keepAlive: true)
+class SelectedFilterIds extends _$SelectedFilterIds {
+  @override
+  List<String> build() => [];
+
+  void set(List<String> ids) => state = List<String>.from(ids);
+
+  void toggle(String id) {
+    if (state.contains(id)) {
+      state = state.where((i) => i != id).toList();
+    } else {
+      state = [...state, id];
+    }
+  }
+
+  void clear() => state = [];
+}

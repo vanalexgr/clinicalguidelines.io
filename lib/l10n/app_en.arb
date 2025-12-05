@@ -462,6 +462,10 @@
   "@tools": {
     "description": "Header for a tools/actions section."
   },
+  "filters": "Filters",
+  "@filters": {
+    "description": "Header for toggle filters section."
+  },
   "voiceInput": "Voice input",
   "@voiceInput": {
     "description": "Label for voice input feature."
