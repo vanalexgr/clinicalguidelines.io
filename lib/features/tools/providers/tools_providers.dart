@@ -43,6 +43,7 @@ class ToolsList extends _$ToolsList {
       return;
     }
     Future.microtask(() async {
+      if (!ref.mounted) return;
       await refresh();
     });
   }
