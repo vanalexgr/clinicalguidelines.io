@@ -851,6 +851,16 @@ final modelToolsAutoSelectionProvider = Provider<void>((ref) {
   ref.keepAlive();
 
   Future<void> applyTools(Model? model) async {
+    // Skip if not authenticated - prevents API calls after logout
+    final authState = ref.read(authStateManagerProvider).asData?.value;
+    if (authState == null || !authState.isAuthenticated) {
+      final current = ref.read(selectedToolIdsProvider);
+      if (current.isNotEmpty) {
+        ref.read(selectedToolIdsProvider.notifier).set([]);
+      }
+      return;
+    }
+
     if (model == null) {
       final current = ref.read(selectedToolIdsProvider);
       if (current.isNotEmpty) {

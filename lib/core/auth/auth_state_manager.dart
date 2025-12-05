@@ -10,6 +10,7 @@ import 'token_validator.dart';
 import 'auth_cache_manager.dart';
 import '../utils/debug_logger.dart';
 import '../utils/user_avatar_utils.dart';
+import '../../features/tools/providers/tools_providers.dart';
 
 part 'auth_state_manager.g.dart';
 
@@ -807,6 +808,7 @@ class AuthStateManager extends _$AuthStateManager {
       // Invalidate all auth-related providers to clear cached data
       ref.invalidate(activeServerProvider);
       ref.invalidate(serverConfigsProvider);
+      ref.invalidate(toolsListProvider);
 
       // Clear auth cache manager
       _cacheManager.clearAuthCache();
