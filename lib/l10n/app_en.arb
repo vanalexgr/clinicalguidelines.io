@@ -1016,7 +1016,7 @@
   "@enterToken": {
     "description": "Hint text for JWT token input."
   },
-  "tokenHint": "Use a JWT token from browser cookies or API login. API keys (sk-...) are not supported for streaming.",
+  "tokenHint": "Get the JWT token from OpenWebUI settings. API keys (sk-...) are not supported for streaming.",
   "@tokenHint": {
     "description": "Help text explaining what type of token to use."
   },

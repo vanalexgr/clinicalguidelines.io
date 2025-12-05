@@ -228,7 +228,7 @@
   "passwordHint": "Voer je wachtwoord in",
   "enterApiKey": "Voer je API-sleutel in",
   "enterToken": "Voer je JWT-token in",
-  "tokenHint": "Gebruik een JWT-token van browsercookies of API-login. API-sleutels (sk-...) worden niet ondersteund voor streaming.",
+  "tokenHint": "Haal het JWT-token uit de OpenWebUI-instellingen. API-sleutels (sk-...) worden niet ondersteund voor streaming.",
   "apiKeyNotSupported": "API-sleutels (sk-...) worden niet ondersteund. Gebruik in plaats daarvan een JWT-token.",
   "tokenTooShort": "Token is te kort",
   "signingIn": "Inloggen...",

@@ -228,7 +228,7 @@
   "passwordHint": "输入您的密码",
   "enterApiKey": "输入您的 API 密钥",
   "enterToken": "输入您的 JWT 令牌",
-  "tokenHint": "请使用浏览器 cookie 或 API 登录中的 JWT 令牌。API 密钥 (sk-...) 不支持流式传输。",
+  "tokenHint": "从 OpenWebUI 设置获取 JWT 令牌。API 密钥 (sk-...) 不支持流式传输。",
   "apiKeyNotSupported": "不支持 API 密钥 (sk-...)。请改用 JWT 令牌。",
   "tokenTooShort": "令牌太短",
   "signingIn": "正在登录...",

@@ -228,7 +228,7 @@
   "passwordHint": "Entrez votre mot de passe",
   "enterApiKey": "Entrez votre clé API",
   "enterToken": "Entrez votre jeton JWT",
-  "tokenHint": "Utilisez un jeton JWT des cookies du navigateur ou de la connexion API. Les clés API (sk-...) ne sont pas prises en charge pour le streaming.",
+  "tokenHint": "Obtenez le jeton JWT dans les paramètres d'OpenWebUI. Les clés API (sk-...) ne sont pas prises en charge pour le streaming.",
   "apiKeyNotSupported": "Les clés API (sk-...) ne sont pas prises en charge. Veuillez utiliser un jeton JWT à la place.",
   "tokenTooShort": "Le jeton est trop court",
   "signingIn": "Connexion en cours...",

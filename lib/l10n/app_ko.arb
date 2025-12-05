@@ -338,7 +338,7 @@
   "passwordHint": "비밀번호를 입력하세요",
   "enterApiKey": "API 키를 입력하세요",
   "enterToken": "JWT 토큰을 입력하세요",
-  "tokenHint": "브라우저 쿠키 또는 API 로그인에서 JWT 토큰을 사용하세요. API 키(sk-...)는 스트리밍에 지원되지 않습니다.",
+  "tokenHint": "OpenWebUI 설정에서 JWT 토큰을 가져오세요. API 키(sk-...)는 스트리밍에 지원되지 않습니다.",
   "apiKeyNotSupported": "API 키(sk-...)는 지원되지 않습니다. JWT 토큰을 사용하세요.",
   "tokenTooShort": "토큰이 너무 짧습니다",
   "signingIn": "로그인 중...",

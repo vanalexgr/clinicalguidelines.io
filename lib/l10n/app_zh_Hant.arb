@@ -228,7 +228,7 @@
   "passwordHint": "輸入您的密碼",
   "enterApiKey": "輸入您的 API 密鑰",
   "enterToken": "輸入您的 JWT 令牌",
-  "tokenHint": "請使用瀏覽器 cookie 或 API 登入中的 JWT 令牌。API 密鑰 (sk-...) 不支援串流。",
+  "tokenHint": "從 OpenWebUI 設定取得 JWT 令牌。API 密鑰 (sk-...) 不支援串流。",
   "apiKeyNotSupported": "不支援 API 密鑰 (sk-...)。請改用 JWT 令牌。",
   "tokenTooShort": "令牌太短",
   "signingIn": "正在登錄...",
