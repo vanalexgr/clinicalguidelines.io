@@ -1181,8 +1181,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     );
   }
 
-  // Deprecated: old in-content version switcher replaced by inline controls with action buttons.
-
   Widget _buildActionButtons() {
     final l10n = AppLocalizations.of(context)!;
     final ttsState = ref.watch(textToSpeechControllerProvider);
@@ -2291,62 +2289,6 @@ class CodeExecutionListView extends StatelessWidget {
     );
   }
 }
-
-// Legacy CitationListView - replaced with OpenWebUISourcesWidget
-// Keeping for reference, can be removed after testing
-/*
-class CitationListView extends StatelessWidget {
-  const CitationListView({super.key, required this.sources});
-
-  final List<ChatSourceReference> sources;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.conduitTheme;
-    if (sources.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          sources.length == 1 ? 'Source' : 'Sources',
-          style: TextStyle(
-            color: theme.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: AppTypography.bodyLarge,
-          ),
-        ),
-        const SizedBox(height: Spacing.xs),
-        ...sources.map((source) {
-          final title = source.title?.isNotEmpty == true
-              ? source.title!
-              : source.url ?? 'Citation';
-          final subtitle = source.snippet?.isNotEmpty == true
-              ? source.snippet!
-              : source.url;
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: Spacing.xs),
-            color: theme.surfaceContainer,
-            child: ListTile(
-              onTap: source.url != null ? () => _launchUri(source.url!) : null,
-              title: Text(title, style: TextStyle(color: theme.textPrimary)),
-              subtitle: subtitle != null
-                  ? Text(subtitle, style: TextStyle(color: theme.textSecondary))
-                  : null,
-              trailing: source.url != null
-                  ? const Icon(Icons.open_in_new, size: 18)
-                  : null,
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
-*/
 
 class FollowUpSuggestionBar extends StatelessWidget {
   const FollowUpSuggestionBar({

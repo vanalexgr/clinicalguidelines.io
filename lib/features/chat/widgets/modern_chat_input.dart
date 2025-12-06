@@ -102,12 +102,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   final FocusNode _focusNode = FocusNode();
   bool _pendingFocus = false;
   bool _isRecording = false;
-  // final String _voiceInputText = '';
   bool _hasText = false; // track locally without rebuilding on each keystroke
   StreamSubscription<String>? _voiceStreamSubscription;
   late VoiceInputService _voiceService;
-  StreamSubscription<int>?
-  _intensitySub; // removed usage; will be cleaned fully
   StreamSubscription<String>? _textSub;
   String _baseTextAtStart = '';
   bool _isDeactivated = false;
@@ -167,7 +164,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     _focusNode.dispose();
     _pendingFocus = false;
     _voiceStreamSubscription?.cancel();
-    _intensitySub?.cancel();
     _textSub?.cancel();
     _voiceService.stopListening();
     super.dispose();
@@ -2949,8 +2945,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         _isRecording = true;
         _baseTextAtStart = _controller.text;
       });
-      _intensitySub?.cancel();
-      // intensity stream no longer used for UI; stop listening
       _textSub?.cancel();
       _textSub = stream.listen(
         (text) async {
@@ -2965,14 +2959,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         onDone: () {
           if (!mounted) return;
           setState(() => _isRecording = false);
-          _intensitySub?.cancel();
-          _intensitySub = null;
         },
         onError: (_) {
           if (!mounted) return;
           setState(() => _isRecording = false);
-          _intensitySub?.cancel();
-          _intensitySub = null;
         },
       );
       _ensureFocusedIfEnabled();
@@ -2987,8 +2977,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   }
 
   Future<void> _stopVoice() async {
-    _intensitySub?.cancel();
-    _intensitySub = null;
     await _voiceService.stopListening();
     if (!mounted) return;
     setState(() => _isRecording = false);

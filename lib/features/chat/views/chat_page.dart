@@ -2242,11 +2242,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       isDestructive: true,
     ).then((confirmed) async {
       if (confirmed == true) {
-        // for (final selectedMessage in selectedMessages) {
-        //   ref.read(chatMessagesProvider.notifier).removeMessage(selectedMessage.id);
-        // }
         _clearSelection();
-        if (mounted) {}
       }
     });
   }
@@ -2762,7 +2758,6 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
       setState(() {
         _isListening = false;
       });
-      if (mounted) {}
     }
   }
 
