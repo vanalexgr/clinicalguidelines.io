@@ -1620,6 +1620,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       orElse: () => authUser,
     );
     final api = ref.watch(apiServiceProvider);
+    final notesEnabled = ref.watch(notesFeatureEnabledProvider);
 
     String initialFor(String name) {
       if (name.isEmpty) return 'U';
@@ -1630,6 +1631,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     final displayName = deriveUserDisplayName(user);
     final initial = initialFor(displayName);
     final avatarUrl = resolveUserAvatarUrlForUser(api, user);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(Spacing.sm, 0, Spacing.sm, Spacing.sm),
       child: Column(
@@ -1683,6 +1685,23 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                       ),
                     ),
                   ),
+                  // Notes icon (hidden when feature is disabled)
+                  if (notesEnabled)
+                    IconButton(
+                      tooltip: AppLocalizations.of(context)!.notes,
+                      onPressed: () {
+                        Navigator.of(context).maybePop();
+                        context.pushNamed(RouteNames.notes);
+                      },
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        Platform.isIOS
+                            ? CupertinoIcons.doc_text
+                            : Icons.note_alt_outlined,
+                        color: sidebarTheme.foreground.withValues(alpha: 0.8),
+                        size: IconSize.medium,
+                      ),
+                    ),
                   IconButton(
                     tooltip: AppLocalizations.of(context)!.manage,
                     onPressed: () {

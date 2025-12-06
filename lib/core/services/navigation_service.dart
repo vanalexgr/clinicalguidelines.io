@@ -103,6 +103,8 @@ class Routes {
   static const String authentication = '/authentication';
   static const String profile = '/profile';
   static const String appCustomization = '/profile/customization';
+  static const String notes = '/notes';
+  static const String noteEditor = '/notes/:id';
 }
 
 /// Friendly names for GoRouter routes to support context.pushNamed.
@@ -115,4 +117,6 @@ class RouteNames {
   static const String authentication = 'authentication';
   static const String profile = 'profile';
   static const String appCustomization = 'app-customization';
+  static const String notes = 'notes';
+  static const String noteEditor = 'note-editor';
 }

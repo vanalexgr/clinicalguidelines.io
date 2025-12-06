@@ -1586,5 +1586,205 @@
   "transportModeWsInfo": "Lower overhead, but may fail behind strict proxies/firewalls.",
   "@transportModeWsInfo": {
     "description": "Footnote text for the WebSocket-only transport mode."
+  },
+  "notes": "Notes",
+  "@notes": {
+    "description": "Navigation item and page title for notes feature."
+  },
+  "searchNotes": "Search notes...",
+  "@searchNotes": {
+    "description": "Placeholder text for notes search field."
+  },
+  "createNote": "Create Note",
+  "@createNote": {
+    "description": "Tooltip/button label for creating a new note."
+  },
+  "noNotesYet": "No notes yet",
+  "@noNotesYet": {
+    "description": "Empty state title when user has no notes."
+  },
+  "noNotesFound": "No notes found",
+  "@noNotesFound": {
+    "description": "Empty state title when search returns no results."
+  },
+  "createFirstNoteHint": "Tap the + button to create your first note.",
+  "@createFirstNoteHint": {
+    "description": "Hint text encouraging user to create their first note."
+  },
+  "tryDifferentSearch": "Try a different search term.",
+  "@tryDifferentSearch": {
+    "description": "Hint text when note search returns no results."
+  },
+  "loadingNotes": "Loading notes...",
+  "@loadingNotes": {
+    "description": "Progress message while fetching notes list."
+  },
+  "loadingNote": "Loading note...",
+  "@loadingNote": {
+    "description": "Progress message while fetching a single note."
+  },
+  "failedToLoadNotes": "Failed to load notes",
+  "@failedToLoadNotes": {
+    "description": "Error message when notes list cannot be retrieved."
+  },
+  "deleteNoteTitle": "Delete Note",
+  "@deleteNoteTitle": {
+    "description": "Dialog title for confirming note deletion."
+  },
+  "deleteNoteMessage": "Delete \"{title}\"? This cannot be undone.",
+  "@deleteNoteMessage": {
+    "description": "Confirmation message for deleting a note.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "My Note"
+      }
+    }
+  },
+  "noteTitle": "Note title",
+  "@noteTitle": {
+    "description": "Hint text for note title input field."
+  },
+  "writeNote": "Write something...",
+  "@writeNote": {
+    "description": "Hint text for note content input field."
+  },
+  "noteSaved": "Note saved",
+  "@noteSaved": {
+    "description": "Confirmation message when note is saved."
+  },
+  "saving": "Saving...",
+  "@saving": {
+    "description": "Status text while saving."
+  },
+  "saved": "Saved",
+  "@saved": {
+    "description": "Status text when content is saved."
+  },
+  "unsavedChanges": "Unsaved changes",
+  "@unsavedChanges": {
+    "description": "Status text when there are unsaved changes."
+  },
+  "noteCopiedToClipboard": "Note copied to clipboard",
+  "@noteCopiedToClipboard": {
+    "description": "Confirmation message when note content is copied to clipboard."
+  },
+  "generateTitle": "Generate Title",
+  "@generateTitle": {
+    "description": "Tooltip for generating a title with AI."
+  },
+  "generatingTitle": "Generating title...",
+  "@generatingTitle": {
+    "description": "Placeholder while AI generates a title."
+  },
+  "noContentToGenerateTitle": "Add some content first to generate a title",
+  "@noContentToGenerateTitle": {
+    "description": "Error when trying to generate title with empty content."
+  },
+  "failedToGenerateTitle": "Failed to generate title",
+  "@failedToGenerateTitle": {
+    "description": "Error message when title generation fails."
+  },
+  "noContentToEnhance": "Add some content first to enhance",
+  "@noContentToEnhance": {
+    "description": "Error when trying to enhance empty content."
+  },
+  "noteEnhanced": "Note enhanced with AI",
+  "@noteEnhanced": {
+    "description": "Success message after AI enhancement."
+  },
+  "failedToEnhanceNote": "Failed to enhance note",
+  "@failedToEnhanceNote": {
+    "description": "Error message when enhancement fails."
+  },
+  "noModelSelected": "Please select a model first",
+  "@noModelSelected": {
+    "description": "Error message when no AI model is selected."
+  },
+  "enhanceWithAI": "Enhance with AI",
+  "@enhanceWithAI": {
+    "description": "Tooltip for AI enhance button."
+  },
+  "enhanceNote": "Enhance Note",
+  "@enhanceNote": {
+    "description": "Menu item to enhance note content."
+  },
+  "startDictation": "Start dictation",
+  "@startDictation": {
+    "description": "Tooltip for dictation button."
+  },
+  "stopRecording": "Stop recording",
+  "@stopRecording": {
+    "description": "Tooltip for stop recording button."
+  },
+  "voiceInputUnavailable": "Voice input is not available",
+  "@voiceInputUnavailable": {
+    "description": "Error when voice input is not available."
+  },
+  "failedToStartDictation": "Failed to start dictation",
+  "@failedToStartDictation": {
+    "description": "Error when starting dictation fails."
+  },
+  "noteNotFound": "Note not found",
+  "@noteNotFound": {
+    "description": "Error message when a note cannot be found."
+  },
+  "untitled": "Untitled",
+  "@untitled": {
+    "description": "Default title for notes without a title."
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Time range label for items from today."
+  },
+  "yesterday": "Yesterday",
+  "@yesterday": {
+    "description": "Time range label for items from yesterday."
+  },
+  "previous7Days": "Previous 7 Days",
+  "@previous7Days": {
+    "description": "Time range label for items from the last week."
+  },
+  "previous30Days": "Previous 30 Days",
+  "@previous30Days": {
+    "description": "Time range label for items from the last month."
+  },
+  "older": "Older",
+  "@older": {
+    "description": "Time range label for items older than 30 days."
+  },
+  "tapToExpand": "Tap to expand",
+  "@tapToExpand": {
+    "description": "Hint text shown on collapsed sections."
+  },
+  "byAuthor": "By {name}",
+  "@byAuthor": {
+    "description": "Attribution text showing the note author.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "John"
+      }
+    }
+  },
+  "wordCount": "{count} words",
+  "@wordCount": {
+    "description": "Status bar text showing word count.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "150"
+      }
+    }
+  },
+  "charCount": "{count} characters",
+  "@charCount": {
+    "description": "Status bar text showing character count.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "500"
+      }
+    }
   }
 }
