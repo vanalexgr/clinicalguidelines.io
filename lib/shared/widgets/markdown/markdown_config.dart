@@ -226,6 +226,7 @@ class ConduitMarkdown {
     required ConduitThemeExtension conduitTheme,
     required String code,
   }) {
+    final l10n = AppLocalizations.of(context);
     final textStyle = AppTypography.bodySmallStyle.copyWith(
       color: conduitTheme.codeText.withValues(alpha: 0.7),
     );
@@ -246,7 +247,8 @@ class ConduitMarkdown {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Mermaid preview is not available on this platform.',
+            l10n?.mermaidPreviewUnavailable ??
+                'Mermaid preview is not available on this platform.',
             style: textStyle,
           ),
           const SizedBox(height: Spacing.xs),
@@ -324,6 +326,7 @@ class ConduitMarkdown {
     required BuildContext context,
     required ConduitThemeExtension conduitTheme,
   }) {
+    final l10n = AppLocalizations.of(context);
     final textStyle = AppTypography.bodySmallStyle.copyWith(
       color: conduitTheme.codeText.withValues(alpha: 0.7),
     );
@@ -340,7 +343,8 @@ class ConduitMarkdown {
         ),
       ),
       child: Text(
-        'Chart preview is not available on this platform.',
+        l10n?.chartPreviewUnavailable ??
+            'Chart preview is not available on this platform.',
         style: textStyle,
       ),
     );
