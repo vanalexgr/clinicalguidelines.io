@@ -1599,6 +1599,15 @@ Future<void> regenerateMessage(
         (toolServers != null && toolServers.isNotEmpty);
     final bool isBackgroundWebSearchPre = webSearchEnabled;
 
+    // Find the last user message ID for proper parent linking
+    String? lastUserMessageId;
+    for (int i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role == 'user') {
+        lastUserMessageId = messages[i].id;
+        break;
+      }
+    }
+
     // Dispatch using unified send pipeline (background tools flow)
     final bool isBackgroundFlowPre =
         isBackgroundToolsFlowPre ||
@@ -1621,6 +1630,7 @@ Future<void> regenerateMessage(
       backgroundTasks: bgTasks,
       responseMessageId: assistantMessageId,
       userSettings: userSettingsData,
+      parentMessageId: lastUserMessageId,
     );
 
     final stream = response.stream;
@@ -2016,8 +2026,9 @@ Future<void> _sendMessageInternal(
 
   // Get selected toggle filter IDs
   final selectedFilterIds = ref.read(selectedFilterIdsProvider);
-  final List<String>? filterIdsForApi =
-      selectedFilterIds.isNotEmpty ? selectedFilterIds : null;
+  final List<String>? filterIdsForApi = selectedFilterIds.isNotEmpty
+      ? selectedFilterIds
+      : null;
 
   try {
     // Pre-seed assistant skeleton on server to ensure correct chain
@@ -2230,6 +2241,15 @@ Future<void> _sendMessageInternal(
         (toolServers != null && toolServers.isNotEmpty);
     final bool isBackgroundWebSearchPre = webSearchEnabled;
 
+    // Find the last user message ID for proper parent linking
+    String? lastUserMessageId;
+    for (int i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role == 'user') {
+        lastUserMessageId = messages[i].id;
+        break;
+      }
+    }
+
     final bool shouldBindSession =
         wantSessionBinding &&
         (isBackgroundToolsFlowPre ||
@@ -2255,6 +2275,7 @@ Future<void> _sendMessageInternal(
       backgroundTasks: bgTasks,
       responseMessageId: assistantMessageId,
       userSettings: userSettingsData,
+      parentMessageId: lastUserMessageId,
     );
 
     final stream = response.stream;
