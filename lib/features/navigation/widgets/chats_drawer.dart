@@ -11,7 +11,6 @@ import '../../../core/providers/app_providers.dart';
 import '../../auth/providers/unified_auth_providers.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../chat/providers/chat_providers.dart' as chat;
-// import '../../files/views/files_page.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/services/navigation_service.dart';
 import '../../../shared/widgets/themed_dialogs.dart';
@@ -155,12 +154,6 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       setState(() => _query = _searchController.text.trim());
     });
   }
-
-  // Payload for drag-and-drop of conversations
-  // Kept local to this widget
-  // ignore: unused_element
-  static _DragConversationData _dragData(String id, String title) =>
-      _DragConversationData(id: id, title: title);
 
   @override
   Widget build(BuildContext context) {
@@ -1141,7 +1134,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   String? _conversationId(dynamic item) {
     if (item is Conversation) return item.id;
     try {
-      final value = (item as dynamic).id;
+      final value = item.id;
       if (value is String) {
         return value;
       }
