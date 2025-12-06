@@ -35,6 +35,13 @@ class ApiAuthInterceptor extends Interceptor {
     '/api/v1/configs/models',
   };
 
+  // Endpoints for features that can be disabled server-side.
+  // A 403 on these indicates the feature is disabled, not an auth failure.
+  static const Set<String> _featureEndpoints = {
+    '/api/v1/folders/',
+    '/api/v1/folders',
+  };
+
   ApiAuthInterceptor({
     String? authToken,
     this.onAuthTokenInvalid,
@@ -77,6 +84,20 @@ class ApiAuthInterceptor extends Interceptor {
   /// Check if endpoint is better with auth but works without
   bool _hasOptionalAuth(String path) {
     return _optionalAuthEndpoints.contains(path);
+  }
+
+  /// Check if endpoint is for a feature that can be disabled server-side.
+  /// A 403 on these indicates feature disabled, not an auth failure.
+  bool _isFeatureEndpoint(String path) {
+    // Direct match for exact paths like /api/v1/folders or /api/v1/folders/
+    if (_featureEndpoints.contains(path)) {
+      return true;
+    }
+    // Check for folder sub-paths (e.g., /api/v1/folders/{id})
+    if (path.startsWith('/api/v1/folders/')) {
+      return true;
+    }
+    return false;
   }
 
   @override
@@ -153,9 +174,15 @@ class ApiAuthInterceptor extends Interceptor {
       }
     } else if (statusCode == 403) {
       // 403 on protected endpoints indicates insufficient permissions or invalid token
+      // BUT 403 on feature endpoints indicates the feature is disabled server-side
       final requiresAuth = _requiresAuth(path);
       final optionalAuth = _hasOptionalAuth(path);
-      if (requiresAuth && !optionalAuth) {
+      final isFeatureEndpoint = _isFeatureEndpoint(path);
+      if (isFeatureEndpoint) {
+        DebugLogger.auth(
+          '403 Forbidden on feature endpoint $path - feature likely disabled server-side',
+        );
+      } else if (requiresAuth && !optionalAuth) {
         _notifyAuthFailure(
           '403 Forbidden on protected endpoint $path - notifying app without clearing token',
         );

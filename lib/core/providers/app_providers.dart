@@ -1285,7 +1285,10 @@ class Conversations extends _$Conversations {
           error: error,
           stackTrace: stackTrace,
         );
-        return <Map<String, dynamic>>[];
+        // Preserve the existing enabled state on error (don't override a
+        // previously determined disabled state due to network errors)
+        final currentEnabled = ref.read(foldersFeatureEnabledProvider);
+        return (const <Map<String, dynamic>>[], currentEnabled);
       });
 
       final results = await Future.wait<dynamic>([
@@ -1293,7 +1296,14 @@ class Conversations extends _$Conversations {
         foldersFuture,
       ]);
       final conversations = results[0] as List<Conversation>;
-      final foldersData = results[1] as List<Map<String, dynamic>>;
+      final foldersResult = results[1] as (List<Map<String, dynamic>>, bool);
+      final foldersData = foldersResult.$1;
+      final foldersEnabled = foldersResult.$2;
+
+      // Update the folders feature enabled state
+      ref
+          .read(foldersFeatureEnabledProvider.notifier)
+          .setEnabled(foldersEnabled);
       DebugLogger.log(
         'fetch-ok',
         scope: 'conversations',
@@ -2130,6 +2140,22 @@ final webSearchAvailableProvider = Provider<bool>((ref) {
   );
 });
 
+/// Tracks whether the folders feature is enabled on the server.
+/// When the server returns 403 for folders endpoint, this becomes false.
+final foldersFeatureEnabledProvider =
+    NotifierProvider<FoldersFeatureEnabledNotifier, bool>(
+      FoldersFeatureEnabledNotifier.new,
+    );
+
+class FoldersFeatureEnabledNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void setEnabled(bool enabled) {
+    state = enabled;
+  }
+}
+
 // Folders provider
 @Riverpod(keepAlive: true)
 class Folders extends _$Folders {
@@ -2224,14 +2250,20 @@ class Folders extends _$Folders {
 
   Future<List<Folder>> _load(ApiService api) async {
     try {
-      final foldersData = await api.getFolders();
+      final (foldersData, featureEnabled) = await api.getFolders();
+
+      // Update the folders feature enabled state
+      ref
+          .read(foldersFeatureEnabledProvider.notifier)
+          .setEnabled(featureEnabled);
+
       final folders = foldersData
           .map((folderData) => Folder.fromJson(folderData))
           .toList();
       DebugLogger.log(
         'fetch-ok',
         scope: 'folders',
-        data: {'count': folders.length},
+        data: {'count': folders.length, 'enabled': featureEnabled},
       );
       final sorted = _sort(folders);
       _persistFoldersAsync(sorted);

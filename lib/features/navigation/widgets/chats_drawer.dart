@@ -327,6 +327,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           final showPinned = ref.watch(_showPinnedProvider);
           final showFolders = ref.watch(_showFoldersProvider);
           final showRecent = ref.watch(_showRecentProvider);
+          final foldersEnabled = ref.watch(foldersFeatureEnabledProvider);
 
           final slivers = <Widget>[
             if (pinned.isNotEmpty) ...[
@@ -347,12 +348,14 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
               const SliverToBoxAdapter(child: SizedBox(height: Spacing.md)),
             ],
 
-            // Folders section (shown even if empty)
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
-              sliver: SliverToBoxAdapter(child: _buildFoldersSectionHeader()),
-            ),
-            if (showFolders) ...[
+            // Folders section (hidden when feature is disabled server-side)
+            if (foldersEnabled) ...[
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+                sliver: SliverToBoxAdapter(child: _buildFoldersSectionHeader()),
+              ),
+            ],
+            if (showFolders && foldersEnabled) ...[
               const SliverToBoxAdapter(child: SizedBox(height: Spacing.xs)),
               if (_isDragging && _draggingHasFolder) ...[
                 SliverPadding(
@@ -586,14 +589,18 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           );
         }
 
-        slivers.add(
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
-            sliver: SliverToBoxAdapter(child: _buildFoldersSectionHeader()),
-          ),
-        );
+        // Folders section (hidden when feature is disabled server-side)
+        final foldersEnabled = ref.watch(foldersFeatureEnabledProvider);
+        if (foldersEnabled) {
+          slivers.add(
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+              sliver: SliverToBoxAdapter(child: _buildFoldersSectionHeader()),
+            ),
+          );
+        }
 
-        if (showFolders) {
+        if (showFolders && foldersEnabled) {
           slivers.add(
             const SliverToBoxAdapter(child: SizedBox(height: Spacing.xs)),
           );
