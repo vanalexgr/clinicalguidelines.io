@@ -1878,12 +1878,16 @@ Future<void> _sendMessageInternal(
         // Adding a small delay to prevent rapid invalidations that could cause duplicates
         Future.delayed(const Duration(milliseconds: 100), () {
           try {
-            // Guard against using ref after widget disposal
-            if (ref.mounted == true) {
+            // Guard against using ref after provider disposal
+            // Only Ref has .mounted; WidgetRef/ProviderContainer don't support
+            // this check, so we proceed and let the underlying read operations
+            // handle any disposal gracefully.
+            final isMounted = ref is Ref ? ref.mounted : true;
+            if (isMounted) {
               refreshConversationsCache(ref);
             }
           } catch (_) {
-            // If ref doesn't support mounted or is disposed, skip
+            // If ref is disposed or invalid, skip
           }
         });
       } catch (e) {
