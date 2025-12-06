@@ -88,6 +88,8 @@ class ConduitMarkdown {
     final codeBackground = theme.surfaceContainer.withValues(alpha: 0.55);
     final borderColor = theme.cardBorder.withValues(alpha: 0.25);
 
+    final tableBorderColor = theme.textSecondary.withValues(alpha: 0.5);
+
     return MarkdownStyleSheet(
       p: baseBody,
       h1: AppTypography.headlineLargeStyle.copyWith(color: theme.textPrimary),
@@ -129,14 +131,16 @@ class ConduitMarkdown {
       tableHead: secondaryBody.copyWith(fontWeight: FontWeight.w600),
       tableBody: secondaryBody,
       tableBorder: TableBorder.all(
-        color: borderColor,
-        width: BorderWidth.micro,
+        color: tableBorderColor,
+        width: BorderWidth.thin,
       ),
       tableHeadAlign: TextAlign.start,
-      tableColumnWidth: const FlexColumnWidth(),
+      // Use IntrinsicColumnWidth so columns size to content instead of being
+      // squashed. Tables are wrapped in horizontal scroll for overflow.
+      tableColumnWidth: const IntrinsicColumnWidth(),
       tableCellsPadding: const EdgeInsets.symmetric(
-        horizontal: Spacing.sm,
-        vertical: Spacing.xs,
+        horizontal: Spacing.md,
+        vertical: Spacing.sm,
       ),
       horizontalRuleDecoration: BoxDecoration(
         border: Border(
@@ -155,6 +159,7 @@ class ConduitMarkdown {
       'mermaid': _MermaidBuilder(context),
       'latex': _LatexBuilder(context),
       'details': _DetailsBuilder(context),
+      'table': _TableBuilder(context),
     };
   }
 
@@ -426,6 +431,179 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
       ),
     );
   }
+}
+
+// Custom table builder for horizontally scrollable tables
+class _TableBuilder extends MarkdownElementBuilder {
+  _TableBuilder(this.context);
+
+  final BuildContext context;
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final theme = context.conduitTheme;
+    final tableBorderColor = theme.textSecondary.withValues(alpha: 0.5);
+    final headerBgColor = theme.surfaceContainer.withValues(alpha: 0.4);
+
+    // Collect row data first to determine max column count
+    final rowData = <_TableRowData>[];
+
+    // Parse table structure
+    for (final child in element.children ?? <md.Node>[]) {
+      if (child is! md.Element) continue;
+
+      final isHeader = child.tag == 'thead';
+      final bodyElement = child.tag == 'tbody' ? child : null;
+
+      // Handle thead
+      if (isHeader) {
+        for (final row in child.children ?? <md.Node>[]) {
+          if (row is! md.Element || row.tag != 'tr') continue;
+          rowData.add(_parseTableRow(row, isHeader: true));
+        }
+      }
+
+      // Handle tbody
+      if (bodyElement != null) {
+        for (final row in bodyElement.children ?? <md.Node>[]) {
+          if (row is! md.Element || row.tag != 'tr') continue;
+          rowData.add(_parseTableRow(row, isHeader: false));
+        }
+      }
+
+      // Handle direct tr children (some markdown parsers)
+      if (child.tag == 'tr') {
+        final hasHeaderCells = (child.children ?? []).any(
+          (c) => c is md.Element && c.tag == 'th',
+        );
+        rowData.add(_parseTableRow(child, isHeader: hasHeaderCells));
+      }
+    }
+
+    if (rowData.isEmpty) return null;
+
+    // Find max column count to ensure all rows have same cell count
+    final maxColumns = rowData.fold<int>(
+      0,
+      (max, row) => row.cells.length > max ? row.cells.length : max,
+    );
+
+    if (maxColumns == 0) return null;
+
+    // Build TableRows, padding shorter rows with empty cells
+    final rows = rowData.map((data) {
+      return _buildTableRow(
+        data,
+        maxColumns: maxColumns,
+        headerBgColor: headerBgColor,
+      );
+    }).toList();
+
+    // Use symmetric borders for internal cell dividers only;
+    // the Container provides the outer border with rounded corners
+    final cellBorder = BorderSide(
+      color: tableBorderColor,
+      width: BorderWidth.thin,
+    );
+    final table = Table(
+      border: TableBorder.symmetric(inside: cellBorder),
+      defaultColumnWidth: const IntrinsicColumnWidth(),
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children: rows,
+    );
+
+    // Wrap in horizontal scroll for tables that overflow
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppBorderRadius.xs),
+        border: Border.all(color: tableBorderColor, width: BorderWidth.thin),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: table,
+      ),
+    );
+  }
+
+  /// Parses a table row element into cell data without building widgets yet.
+  _TableRowData _parseTableRow(md.Element row, {required bool isHeader}) {
+    final cells = <String>[];
+    for (final cell in row.children ?? <md.Node>[]) {
+      if (cell is! md.Element) continue;
+      if (cell.tag != 'th' && cell.tag != 'td') continue;
+      cells.add(_extractText(cell));
+    }
+    return _TableRowData(cells: cells, isHeader: isHeader);
+  }
+
+  /// Builds a TableRow from parsed data, padding with empty cells if needed.
+  TableRow _buildTableRow(
+    _TableRowData data, {
+    required int maxColumns,
+    Color? headerBgColor,
+  }) {
+    final theme = context.conduitTheme;
+    final cells = <Widget>[];
+
+    final textStyle = data.isHeader
+        ? AppTypography.bodySmallStyle.copyWith(
+            color: theme.textSecondary,
+            fontWeight: FontWeight.w600,
+          )
+        : AppTypography.bodySmallStyle.copyWith(color: theme.textSecondary);
+
+    // Build cells from parsed data
+    for (final cellText in data.cells) {
+      cells.add(
+        Container(
+          color: data.isHeader ? headerBgColor : null,
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.md,
+            vertical: Spacing.sm,
+          ),
+          child: Text(cellText, style: textStyle, softWrap: false),
+        ),
+      );
+    }
+
+    // Pad with empty cells if this row has fewer columns than max
+    while (cells.length < maxColumns) {
+      cells.add(
+        Container(
+          color: data.isHeader ? headerBgColor : null,
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.md,
+            vertical: Spacing.sm,
+          ),
+          child: Text('', style: textStyle),
+        ),
+      );
+    }
+
+    return TableRow(children: cells);
+  }
+
+  String _extractText(md.Element element) {
+    final buffer = StringBuffer();
+    for (final node in element.children ?? <md.Node>[]) {
+      if (node is md.Text) {
+        buffer.write(node.text);
+      } else if (node is md.Element) {
+        buffer.write(_extractText(node));
+      }
+    }
+    return buffer.toString();
+  }
+}
+
+/// Intermediate data structure for table row parsing.
+class _TableRowData {
+  const _TableRowData({required this.cells, required this.isHeader});
+
+  final List<String> cells;
+  final bool isHeader;
 }
 
 // Custom image builder
