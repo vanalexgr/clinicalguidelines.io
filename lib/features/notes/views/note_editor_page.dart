@@ -117,10 +117,21 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   }
 
   void _onContentChanged() {
-    if (!_hasChanges && mounted) {
-      setState(() => _hasChanges = true);
+    if (!mounted || _isLoading) return;
+
+    // Check if content actually changed from the saved note
+    final titleChanged = _note != null && _titleController.text != _note!.title;
+    final contentChanged =
+        _note != null && _contentController.text != _note!.markdownContent;
+    final hasRealChanges = titleChanged || contentChanged;
+
+    if (hasRealChanges != _hasChanges) {
+      setState(() => _hasChanges = hasRealChanges);
     }
-    _debounceSave();
+
+    if (hasRealChanges) {
+      _debounceSave();
+    }
   }
 
   void _debounceSave() {
@@ -378,9 +389,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   }
 
   Future<void> _startDictation() async {
-    _voiceService ??= VoiceInputService(
-      api: ref.read(apiServiceProvider),
-    );
+    _voiceService ??= VoiceInputService(api: ref.read(apiServiceProvider));
 
     try {
       final ok = await _voiceService!.initialize();
@@ -474,10 +483,12 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       canPop: !_hasChanges,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return; // Already popped, nothing to do
+        // Capture navigator before async gap
+        final navigator = Navigator.of(context);
         // Save changes before allowing pop
         await _saveNote(showFeedback: false);
         if (!mounted) return;
-        Navigator.of(context).pop();
+        navigator.pop();
       },
       child: ErrorBoundary(
         child: Scaffold(
@@ -572,7 +583,9 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
 
           // Generate title button - aligned with other header icons
           AnimatedOpacity(
-            opacity: _titleFocusNode.hasFocus && !_isGeneratingTitle ? 1.0 : 0.0,
+            opacity: _titleFocusNode.hasFocus && !_isGeneratingTitle
+                ? 1.0
+                : 0.0,
             duration: const Duration(milliseconds: 150),
             child: IgnorePointer(
               ignoring: !_titleFocusNode.hasFocus || _isGeneratingTitle,
@@ -846,11 +859,11 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
             context,
             icon: _isRecording
                 ? (Platform.isIOS
-                    ? CupertinoIcons.stop_fill
-                    : Icons.stop_rounded)
+                      ? CupertinoIcons.stop_fill
+                      : Icons.stop_rounded)
                 : (Platform.isIOS
-                    ? CupertinoIcons.mic_fill
-                    : Icons.mic_rounded),
+                      ? CupertinoIcons.mic_fill
+                      : Icons.mic_rounded),
             color: _isRecording ? theme.error : null,
             isLoading: false,
             tooltip: _isRecording ? l10n.stopRecording : l10n.startDictation,
@@ -909,11 +922,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                 ),
               ),
             )
-          : Icon(
-              icon,
-              color: color ?? theme.iconPrimary,
-              size: IconSize.lg,
-            ),
+          : Icon(icon, color: color ?? theme.iconPrimary, size: IconSize.lg),
     );
 
     if (showMenu) {
@@ -932,22 +941,22 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           }
         },
         itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'enhance',
-                child: Row(
-                  children: [
-                    Icon(
-                      Platform.isIOS
-                          ? CupertinoIcons.sparkles
-                          : Icons.auto_fix_high_rounded,
-                      color: theme.buttonPrimary,
-                      size: IconSize.md,
-                    ),
-                    const SizedBox(width: Spacing.sm),
-                    Text(l10n.enhanceNote),
-                  ],
+          PopupMenuItem(
+            value: 'enhance',
+            child: Row(
+              children: [
+                Icon(
+                  Platform.isIOS
+                      ? CupertinoIcons.sparkles
+                      : Icons.auto_fix_high_rounded,
+                  color: theme.buttonPrimary,
+                  size: IconSize.md,
                 ),
-              ),
+                const SizedBox(width: Spacing.sm),
+                Text(l10n.enhanceNote),
+              ],
+            ),
+          ),
           PopupMenuItem(
             value: 'title',
             child: Row(
