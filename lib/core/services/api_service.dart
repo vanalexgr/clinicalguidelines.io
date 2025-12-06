@@ -2697,6 +2697,7 @@ class ApiService {
     Map<String, dynamic>? backgroundTasks,
     String? responseMessageId,
     Map<String, dynamic>? userSettings,
+    String? parentMessageId,
   }) {
     final streamController = StreamController<String>();
 
@@ -2869,6 +2870,11 @@ class ApiService {
     data['id'] = messageId;
     if (conversationId != null) {
       data['chat_id'] = conversationId;
+    }
+    // Include parent_id for proper message linking (required since OpenWebUI 0.6.41)
+    // This links the assistant response to the user message it's responding to
+    if (parentMessageId != null) {
+      data['parent_id'] = parentMessageId;
     }
 
     // Attach background_tasks if provided
