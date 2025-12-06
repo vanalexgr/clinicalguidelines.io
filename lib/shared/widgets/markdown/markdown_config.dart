@@ -259,6 +259,87 @@ class ConduitMarkdown {
       ),
     );
   }
+
+  /// Checks if HTML content contains ChartJS code patterns.
+  static bool containsChartJs(String html) {
+    return html.contains('new Chart(') || html.contains('Chart.');
+  }
+
+  /// Builds a ChartJS block for rendering in a WebView.
+  static Widget buildChartJsBlock(BuildContext context, String htmlContent) {
+    final conduitTheme = context.conduitTheme;
+    final materialTheme = Theme.of(context);
+
+    if (ChartJsDiagram.isSupported) {
+      return _buildChartJsContainer(
+        context: context,
+        conduitTheme: conduitTheme,
+        materialTheme: materialTheme,
+        htmlContent: htmlContent,
+      );
+    }
+
+    return _buildUnsupportedChartJsContainer(
+      context: context,
+      conduitTheme: conduitTheme,
+    );
+  }
+
+  static Widget _buildChartJsContainer({
+    required BuildContext context,
+    required ConduitThemeExtension conduitTheme,
+    required ThemeData materialTheme,
+    required String htmlContent,
+  }) {
+    final tokens = context.colorTokens;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        border: Border.all(
+          color: conduitTheme.cardBorder.withValues(alpha: 0.4),
+          width: BorderWidth.micro,
+        ),
+      ),
+      height: 320,
+      width: double.infinity,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        child: ChartJsDiagram(
+          htmlContent: htmlContent,
+          brightness: materialTheme.brightness,
+          colorScheme: materialTheme.colorScheme,
+          tokens: tokens,
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildUnsupportedChartJsContainer({
+    required BuildContext context,
+    required ConduitThemeExtension conduitTheme,
+  }) {
+    final textStyle = AppTypography.bodySmallStyle.copyWith(
+      color: conduitTheme.codeText.withValues(alpha: 0.7),
+    );
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
+      padding: const EdgeInsets.all(Spacing.sm),
+      decoration: BoxDecoration(
+        color: conduitTheme.surfaceContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        border: Border.all(
+          color: conduitTheme.cardBorder.withValues(alpha: 0.4),
+          width: BorderWidth.micro,
+        ),
+      ),
+      child: Text(
+        'Chart preview is not available on this platform.',
+        style: textStyle,
+      ),
+    );
+  }
 }
 
 // Code syntax highlighting
@@ -551,6 +632,262 @@ class _LatexInlineSyntax extends md.InlineSyntax {
     element.attributes['isInline'] = isInline.toString();
     parser.addNode(element);
     return true;
+  }
+}
+
+// ChartJS diagram WebView widget
+class ChartJsDiagram extends StatefulWidget {
+  const ChartJsDiagram({
+    super.key,
+    required this.htmlContent,
+    required this.brightness,
+    required this.colorScheme,
+    required this.tokens,
+  });
+
+  final String htmlContent;
+  final Brightness brightness;
+  final ColorScheme colorScheme;
+  final AppColorTokens tokens;
+
+  static bool get isSupported => !kIsWeb;
+
+  static Future<String> _loadScript() {
+    return _scriptFuture ??= rootBundle.loadString('assets/chartjs.min.js');
+  }
+
+  static Future<String>? _scriptFuture;
+
+  @override
+  State<ChartJsDiagram> createState() => _ChartJsDiagramState();
+}
+
+class _ChartJsDiagramState extends State<ChartJsDiagram> {
+  WebViewController? _controller;
+  String? _script;
+  final Set<Factory<OneSequenceGestureRecognizer>> _gestureRecognizers =
+      <Factory<OneSequenceGestureRecognizer>>{
+        Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+      };
+
+  @override
+  void initState() {
+    super.initState();
+    if (!ChartJsDiagram.isSupported) {
+      return;
+    }
+    ChartJsDiagram._loadScript().then((value) {
+      if (!mounted) {
+        return;
+      }
+      _script = value;
+      _controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(Colors.transparent);
+      _loadHtml();
+      setState(() {});
+    });
+  }
+
+  @override
+  void didUpdateWidget(ChartJsDiagram oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_controller == null || _script == null) {
+      return;
+    }
+    final contentChanged = oldWidget.htmlContent != widget.htmlContent;
+    final themeChanged =
+        oldWidget.brightness != widget.brightness ||
+        oldWidget.colorScheme != widget.colorScheme ||
+        oldWidget.tokens != widget.tokens;
+    if (contentChanged || themeChanged) {
+      _loadHtml();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_controller == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return SizedBox.expand(
+      child: WebViewWidget(
+        controller: _controller!,
+        gestureRecognizers: _gestureRecognizers,
+      ),
+    );
+  }
+
+  void _loadHtml() {
+    if (_controller == null || _script == null) {
+      return;
+    }
+    _controller!.loadHtmlString(_buildHtml(widget.htmlContent, _script!));
+  }
+
+  String _buildHtml(String htmlContent, String script) {
+    final isDark = widget.brightness == Brightness.dark;
+    final background = _toHex(
+      isDark ? widget.tokens.codeBackground : Colors.white,
+    );
+    final textColor = _toHex(widget.tokens.codeText);
+    final gridColor = _toHex(
+      isDark
+          ? Colors.white.withValues(alpha: 0.1)
+          : Colors.black.withValues(alpha: 0.1),
+    );
+
+    // Process the HTML content to inject Chart.js and configure theme
+    // The htmlContent contains the full HTML with chart creation code
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  html, body {
+    width: 100%;
+    height: 100%;
+    background-color: $background;
+    color: $textColor;
+    overflow: hidden;
+  }
+  #chart-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+  }
+  canvas {
+    max-width: 100%;
+    max-height: 100%;
+  }
+</style>
+</head>
+<body>
+<div id="chart-container">
+  <canvas id="chart-canvas"></canvas>
+</div>
+<script>$script</script>
+<script>
+(function() {
+  // Configure Chart.js defaults for the theme
+  Chart.defaults.color = '$textColor';
+  Chart.defaults.borderColor = '$gridColor';
+  Chart.defaults.backgroundColor = '$background';
+  
+  // Extract chart configuration from the HTML content and create the chart
+  try {
+    const htmlContent = ${jsonEncode(htmlContent)};
+    
+    // Look for chart configuration in the HTML
+    // Pattern 1: new Chart(ctx, config) - extract the config
+    const chartMatch = htmlContent.match(/new\\s+Chart\\s*\\([^,]+,\\s*([\\s\\S]*?)\\)\\s*;?\\s*(?:<\\/script>|\$)/);
+    
+    if (chartMatch) {
+      // Try to extract and evaluate the config
+      let configStr = chartMatch[1].trim();
+      
+      // Only apply brace-counting extraction if config starts with '{' (object literal)
+      // For variable references (myConfig) or function calls (getConfig()), use the full string
+      if (configStr.startsWith('{')) {
+        // Clean up the config string - remove trailing content after the config object
+        // This parser properly tracks string literals to avoid matching braces inside strings
+        let braceCount = 0;
+        let endIndex = 0;
+        let inString = null; // null, "'", '"', or '`'
+        let escaped = false;
+        
+        for (let i = 0; i < configStr.length; i++) {
+          const char = configStr[i];
+          
+          if (escaped) {
+            escaped = false;
+            continue;
+          }
+          
+          if (char === '\\\\' && inString) {
+            escaped = true;
+            continue;
+          }
+          
+          // Handle string delimiters
+          if (!inString && (char === "'" || char === '"' || char === '`')) {
+            inString = char;
+            continue;
+          }
+          
+          if (inString && char === inString) {
+            inString = null;
+            continue;
+          }
+          
+          // Only count braces when not inside a string
+          if (!inString) {
+            if (char === '{') braceCount++;
+            else if (char === '}') braceCount--;
+            
+            if (braceCount === 0 && i > 0) {
+              endIndex = i + 1;
+              break;
+            }
+          }
+        }
+        
+        if (endIndex > 0) {
+          configStr = configStr.substring(0, endIndex);
+        }
+      }
+      
+      // Evaluate the config
+      const config = eval('(' + configStr + ')');
+      
+      // Create the chart
+      const ctx = document.getElementById('chart-canvas').getContext('2d');
+      new Chart(ctx, config);
+    } else {
+      // Fallback: try to find any canvas element and chart script
+      console.log('Could not find Chart constructor pattern');
+    }
+  } catch (e) {
+    console.error('Error creating chart:', e);
+    document.getElementById('chart-container').innerHTML = 
+      '<p style="color: red; padding: 16px;">Error rendering chart: ' + e.message + '</p>';
+  }
+})();
+</script>
+</body>
+</html>
+''';
+  }
+
+  String _toHex(Color color) {
+    int channel(double value) {
+      final scaled = (value * 255).round();
+      if (scaled < 0) {
+        return 0;
+      }
+      if (scaled > 255) {
+        return 255;
+      }
+      return scaled;
+    }
+
+    // CSS 8-digit hex uses RGBA format (#RRGGBBAA), not ARGB
+    final rgba =
+        (channel(color.r) << 24) |
+        (channel(color.g) << 16) |
+        (channel(color.b) << 8) |
+        channel(color.a);
+    return '#${rgba.toRadixString(16).padLeft(8, '0')}';
   }
 }
 

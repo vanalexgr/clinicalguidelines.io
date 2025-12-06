@@ -7,6 +7,9 @@ import 'markdown_preprocessor.dart';
 // Pre-compiled regex for mermaid diagram detection (performance optimization)
 final _mermaidRegex = RegExp(r'```mermaid\s*([\s\S]*?)```', multiLine: true);
 
+// Pre-compiled regex for HTML code blocks that may contain ChartJS
+final _htmlBlockRegex = RegExp(r'```html\s*([\s\S]*?)```', multiLine: true);
+
 class StreamingMarkdownWidget extends StatelessWidget {
   const StreamingMarkdownWidget({
     super.key,
@@ -29,7 +32,42 @@ class StreamingMarkdownWidget extends StatelessWidget {
     }
 
     final normalized = ConduitMarkdownPreprocessor.normalize(content);
-    final matches = _mermaidRegex.allMatches(normalized).toList();
+
+    // Collect all special blocks (Mermaid and ChartJS)
+    final specialBlocks = <_SpecialBlock>[];
+
+    // Find mermaid blocks
+    for (final match in _mermaidRegex.allMatches(normalized)) {
+      final code = match.group(1)?.trim() ?? '';
+      if (code.isNotEmpty) {
+        specialBlocks.add(
+          _SpecialBlock(
+            start: match.start,
+            end: match.end,
+            type: _BlockType.mermaid,
+            content: code,
+          ),
+        );
+      }
+    }
+
+    // Find HTML blocks that contain ChartJS
+    for (final match in _htmlBlockRegex.allMatches(normalized)) {
+      final html = match.group(1)?.trim() ?? '';
+      if (html.isNotEmpty && ConduitMarkdown.containsChartJs(html)) {
+        specialBlocks.add(
+          _SpecialBlock(
+            start: match.start,
+            end: match.end,
+            type: _BlockType.chartJs,
+            content: html,
+          ),
+        );
+      }
+    }
+
+    // Sort by position
+    specialBlocks.sort((a, b) => a.start.compareTo(b.start));
 
     Widget buildMarkdown(String data) {
       return ConduitMarkdown.buildBlock(
@@ -41,7 +79,7 @@ class StreamingMarkdownWidget extends StatelessWidget {
       );
     }
 
-    if (matches.isEmpty) {
+    if (specialBlocks.isEmpty) {
       return SelectionArea(
         child: Theme(
           data: Theme.of(context).copyWith(
@@ -56,18 +94,27 @@ class StreamingMarkdownWidget extends StatelessWidget {
 
     final children = <Widget>[];
     var currentIndex = 0;
-    for (final match in matches) {
-      final before = normalized.substring(currentIndex, match.start);
+    for (final block in specialBlocks) {
+      // Skip overlapping blocks
+      if (block.start < currentIndex) continue;
+
+      final before = normalized.substring(currentIndex, block.start);
       if (before.trim().isNotEmpty) {
         children.add(buildMarkdown(before));
       }
 
-      final code = match.group(1)?.trim() ?? '';
-      if (code.isNotEmpty) {
-        children.add(ConduitMarkdown.buildMermaidBlock(context, code));
+      switch (block.type) {
+        case _BlockType.mermaid:
+          children.add(
+            ConduitMarkdown.buildMermaidBlock(context, block.content),
+          );
+        case _BlockType.chartJs:
+          children.add(
+            ConduitMarkdown.buildChartJsBlock(context, block.content),
+          );
       }
 
-      currentIndex = match.end;
+      currentIndex = block.end;
     }
 
     final tail = normalized.substring(currentIndex);
@@ -89,6 +136,24 @@ class StreamingMarkdownWidget extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Types of special blocks that need custom rendering
+enum _BlockType { mermaid, chartJs }
+
+/// Represents a special block in the content
+class _SpecialBlock {
+  final int start;
+  final int end;
+  final _BlockType type;
+  final String content;
+
+  const _SpecialBlock({
+    required this.start,
+    required this.end,
+    required this.type,
+    required this.content,
+  });
 }
 
 extension StreamingMarkdownExtension on String {
