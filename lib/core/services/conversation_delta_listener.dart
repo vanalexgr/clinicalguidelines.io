@@ -69,6 +69,14 @@ class ConversationDeltaListener {
       );
       return;
     }
+    if (ref is WidgetRef) {
+      _subscription = ref.listenManual(
+        conversationDeltaStreamProvider(_request),
+        handleNext,
+        fireImmediately: false,
+      );
+      return;
+    }
     if (ref is ProviderContainer) {
       _subscription = ref.listen(
         conversationDeltaStreamProvider(_request),
@@ -102,6 +110,9 @@ class ConversationDeltaListener {
     if (ref is Ref) {
       return ref.mounted;
     }
+    // For WidgetRef and ProviderContainer, rely on explicit disposal.
+    // Callers using WidgetRef must ensure dispose() is called when the
+    // widget unmounts.
     return !_disposed;
   }
 }
