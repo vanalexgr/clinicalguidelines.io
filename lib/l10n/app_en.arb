@@ -1786,5 +1786,13 @@
         "example": "500"
       }
     }
+  },
+  "mermaidPreviewUnavailable": "Mermaid preview is not available on this platform.",
+  "@mermaidPreviewUnavailable": {
+    "description": "Shown when Mermaid diagrams cannot be rendered on the current platform."
+  },
+  "chartPreviewUnavailable": "Chart preview is not available on this platform.",
+  "@chartPreviewUnavailable": {
+    "description": "Shown when Chart.js charts cannot be rendered on the current platform."
   }
 }
