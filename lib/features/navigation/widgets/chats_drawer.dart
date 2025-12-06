@@ -445,7 +445,8 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                     ],
                   ),
             ],
-            const SliverToBoxAdapter(child: SizedBox(height: Spacing.md)),
+            if (foldersEnabled)
+              const SliverToBoxAdapter(child: SizedBox(height: Spacing.md)),
 
             if (regular.isNotEmpty) ...[
               SliverPadding(
@@ -693,9 +694,11 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           slivers.addAll(folderSlivers);
         }
 
-        slivers.add(
-          const SliverToBoxAdapter(child: SizedBox(height: Spacing.md)),
-        );
+        if (foldersEnabled) {
+          slivers.add(
+            const SliverToBoxAdapter(child: SizedBox(height: Spacing.md)),
+          );
+        }
 
         if (regular.isNotEmpty) {
           slivers.add(
