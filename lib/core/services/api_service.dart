@@ -1123,7 +1123,9 @@ class ApiService {
   }
 
   // Folders
-  Future<List<Map<String, dynamic>>> getFolders() async {
+  /// Returns a record with (folders data, feature enabled flag).
+  /// When the folders feature is disabled server-side (403), returns ([], false).
+  Future<(List<Map<String, dynamic>>, bool)> getFolders() async {
     try {
       final response = await _dio.get('/api/v1/folders/');
       DebugLogger.log(
@@ -1136,15 +1138,27 @@ class ApiService {
       final data = response.data;
       if (data is List) {
         _traceApi('Found ${data.length} folders');
-        return data.cast<Map<String, dynamic>>();
+        return (data.cast<Map<String, dynamic>>(), true);
       } else {
         DebugLogger.warning(
           'unexpected-type',
           scope: 'api/folders',
           data: {'type': data.runtimeType},
         );
-        return [];
+        return (const <Map<String, dynamic>>[], true);
       }
+    } on DioException catch (e) {
+      // 403 indicates folders feature is disabled server-side
+      if (e.response?.statusCode == 403) {
+        DebugLogger.log(
+          'feature-disabled',
+          scope: 'api/folders',
+          data: {'status': 403},
+        );
+        return (const <Map<String, dynamic>>[], false);
+      }
+      DebugLogger.error('fetch-failed', scope: 'api/folders', error: e);
+      rethrow;
     } catch (e) {
       DebugLogger.error('fetch-failed', scope: 'api/folders', error: e);
       rethrow;
