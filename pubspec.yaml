@@ -13,10 +13,10 @@ dependencies:
     sdk: flutter
   
   # State Management
-  flutter_riverpod: ^3.0.0
+  flutter_riverpod: ^3.0.3
   
   # Navigation
-  go_router: ^14.2.0
+  go_router: ^17.0.0
   
   # Network & API
   dio: ^5.9.0
@@ -24,7 +24,7 @@ dependencies:
   
   
   # Storage
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^9.2.4
   hive_ce: ^2.14.0
   hive_ce_flutter: ^2.3.2
   shared_preferences: ^2.3.2
@@ -68,7 +68,7 @@ dependencies:
   wakelock_plus: ^1.4.0
   share_plus: ^12.0.0
   share_handler: ^0.0.19
-  riverpod_annotation: ^3.0.0
+  riverpod_annotation: ^3.0.3
   flutter_local_notifications: ^19.4.2
   connectivity_plus: ^7.0.0
   flutter_cache_manager: ^3.4.1
@@ -88,8 +88,8 @@ dev_dependencies:
   freezed: ^3.2.0
   json_serializable: ^6.11.1
   flutter_native_splash: ^2.4.6
-  riverpod_generator: ^3.0.0
-  riverpod_lint: ^3.0.0
+  riverpod_generator: ^3.0.3
+  riverpod_lint: ^3.0.3
   custom_lint: ^0.8.0
 
 dependency_overrides:

@@ -6,7 +6,7 @@ import 'package:conduit/core/providers/app_providers.dart';
 part 'notes_providers.g.dart';
 
 /// Provider for the list of all notes with user information.
-@riverpod
+@Riverpod(keepAlive: true)
 class NotesList extends _$NotesList {
   @override
   Future<List<Note>> build() async {
