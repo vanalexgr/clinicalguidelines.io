@@ -16,6 +16,8 @@ import '../../features/auth/views/connection_issue_page.dart';
 import '../../features/auth/views/server_connection_page.dart';
 import '../../features/chat/views/chat_page.dart';
 import '../../features/navigation/views/splash_launcher_page.dart';
+import '../../features/notes/views/notes_list_page.dart';
+import '../../features/notes/views/note_editor_page.dart';
 import '../../features/profile/views/app_customization_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../l10n/app_localizations.dart';
@@ -241,6 +243,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       path: Routes.appCustomization,
       name: RouteNames.appCustomization,
       builder: (context, state) => const AppCustomizationPage(),
+    ),
+    GoRoute(
+      path: Routes.notes,
+      name: RouteNames.notes,
+      builder: (context, state) => const NotesListPage(),
+    ),
+    GoRoute(
+      path: Routes.noteEditor,
+      name: RouteNames.noteEditor,
+      builder: (context, state) {
+        final noteId = state.pathParameters['id'];
+        if (noteId == null || noteId.isEmpty) {
+          return const NotesListPage();
+        }
+        return NoteEditorPage(noteId: noteId);
+      },
     ),
   ];
 

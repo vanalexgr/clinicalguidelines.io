@@ -2392,55 +2392,6 @@ class ApiService {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<List<Map<String, dynamic>>> getNotes() async {
-    _traceApi('Fetching notes');
-    final response = await _dio.get('/api/v1/notes/');
-    final data = response.data;
-    if (data is List) {
-      return data.cast<Map<String, dynamic>>();
-    }
-    return [];
-  }
-
-  Future<Map<String, dynamic>> createNote({
-    required String title,
-    required String content,
-    List<String>? tags,
-  }) async {
-    _traceApi('Creating note: $title');
-    final response = await _dio.post(
-      '/api/v1/notes/',
-      data: {
-        'title': title,
-        'content': content,
-        if (tags != null) 'tags': tags,
-      },
-    );
-    return response.data as Map<String, dynamic>;
-  }
-
-  Future<void> updateNote(
-    String id, {
-    String? title,
-    String? content,
-    List<String>? tags,
-  }) async {
-    _traceApi('Updating note: $id');
-    await _dio.put(
-      '/api/v1/notes/$id',
-      data: {
-        if (title != null) 'title': title,
-        if (content != null) 'content': content,
-        if (tags != null) 'tags': tags,
-      },
-    );
-  }
-
-  Future<void> deleteNote(String id) async {
-    _traceApi('Deleting note: $id');
-    await _dio.delete('/api/v1/notes/$id');
-  }
-
   // Team Collaboration
   Future<List<Map<String, dynamic>>> getChannels() async {
     _traceApi('Fetching channels');
@@ -3584,6 +3535,226 @@ class ApiService {
   }
 
   // ==================== END ADVANCED CHAT FEATURES ====================
+
+  // ==================== NOTES ====================
+
+  /// Get all notes with user information.
+  /// Returns a record with (notes data, feature enabled flag).
+  /// When the notes feature is disabled server-side (403), returns ([], false).
+  Future<(List<Map<String, dynamic>>, bool)> getNotes() async {
+    try {
+      _traceApi('Fetching notes');
+      final response = await _dio.get('/api/v1/notes/');
+      DebugLogger.log(
+        'fetch-status',
+        scope: 'api/notes',
+        data: {'code': response.statusCode},
+      );
+      DebugLogger.log('fetch-ok', scope: 'api/notes');
+
+      final data = response.data;
+      if (data is List) {
+        _traceApi('Found ${data.length} notes');
+        return (data.cast<Map<String, dynamic>>(), true);
+      } else {
+        DebugLogger.warning(
+          'unexpected-type',
+          scope: 'api/notes',
+          data: {'type': data.runtimeType},
+        );
+        return (const <Map<String, dynamic>>[], true);
+      }
+    } on DioException catch (e) {
+      // 403 indicates notes feature is disabled server-side
+      if (e.response?.statusCode == 403) {
+        DebugLogger.log(
+          'feature-disabled',
+          scope: 'api/notes',
+          data: {'status': 403},
+        );
+        return (const <Map<String, dynamic>>[], false);
+      }
+      DebugLogger.error('fetch-failed', scope: 'api/notes', error: e);
+      rethrow;
+    } catch (e) {
+      DebugLogger.error('fetch-failed', scope: 'api/notes', error: e);
+      rethrow;
+    }
+  }
+
+  /// Get paginated note list (title, id, timestamps only)
+  Future<List<Map<String, dynamic>>> getNoteList({int? page}) async {
+    _traceApi('Fetching note list, page: $page');
+    final queryParams = <String, dynamic>{};
+    if (page != null) queryParams['page'] = page;
+
+    final response = await _dio.get(
+      '/api/v1/notes/list',
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
+    );
+    final data = response.data;
+    if (data is List) {
+      return data.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
+  /// Get a single note by ID
+  Future<Map<String, dynamic>> getNoteById(String id) async {
+    _traceApi('Fetching note: $id');
+    final response = await _dio.get('/api/v1/notes/$id');
+    return response.data as Map<String, dynamic>;
+  }
+
+  /// Create a new note
+  Future<Map<String, dynamic>> createNote({
+    required String title,
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? meta,
+    Map<String, dynamic>? accessControl,
+  }) async {
+    _traceApi('Creating note: $title');
+    final response = await _dio.post(
+      '/api/v1/notes/create',
+      data: {
+        'title': title,
+        if (data != null) 'data': data,
+        if (meta != null) 'meta': meta,
+        if (accessControl != null) 'access_control': accessControl,
+      },
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  /// Update an existing note
+  Future<Map<String, dynamic>> updateNote(
+    String id, {
+    String? title,
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? meta,
+    Map<String, dynamic>? accessControl,
+  }) async {
+    _traceApi('Updating note: $id');
+    final response = await _dio.post(
+      '/api/v1/notes/$id/update',
+      data: {
+        if (title != null) 'title': title,
+        if (data != null) 'data': data,
+        if (meta != null) 'meta': meta,
+        if (accessControl != null) 'access_control': accessControl,
+      },
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  /// Delete a note by ID
+  Future<bool> deleteNote(String id) async {
+    _traceApi('Deleting note: $id');
+    final response = await _dio.delete('/api/v1/notes/$id/delete');
+    return response.data == true;
+  }
+
+  /// Generate a title for note content using AI
+  Future<String?> generateNoteTitle(
+    String content, {
+    required String modelId,
+  }) async {
+    _traceApi('Generating title for note content with model: $modelId');
+
+    final prompt =
+        '''### Task:
+Generate a concise, 3-5 word title with an emoji summarizing the content in the content's primary language.
+### Guidelines:
+- The title should clearly represent the main theme or subject of the content.
+- Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
+- Write the title in the content's primary language.
+- Prioritize accuracy over excessive creativity; keep it clear and simple.
+- Your entire response must consist solely of the JSON object, without any introductory or concluding text.
+- The output must be a single, raw JSON object, without any markdown code fences or other encapsulating text.
+- Ensure no conversational text, affirmations, or explanations precede or follow the raw JSON output, as this will cause direct parsing failure.
+### Output:
+JSON format: { "title": "your concise title here" }
+### Examples:
+- { "title": "📉 Stock Market Trends" },
+- { "title": "🍪 Perfect Chocolate Chip Recipe" },
+- { "title": "Evolution of Music Streaming" },
+- { "title": "Remote Work Productivity Tips" },
+- { "title": "Artificial Intelligence in Healthcare" },
+- { "title": "🎮 Video Game Development Insights" }
+### Content:
+<content>
+$content
+</content>''';
+
+    try {
+      final response = await _dio.post(
+        '/api/chat/completions',
+        data: {
+          'model': modelId,
+          'stream': false,
+          'messages': [
+            {'role': 'user', 'content': prompt},
+          ],
+        },
+      );
+
+      final responseText =
+          response.data?['choices']?[0]?['message']?['content'] as String? ??
+          '';
+
+      _traceApi('Title generation response: $responseText');
+
+      // Parse JSON from response
+      final jsonStart = responseText.indexOf('{');
+      final jsonEnd = responseText.lastIndexOf('}');
+
+      if (jsonStart != -1 && jsonEnd != -1) {
+        final jsonStr = responseText.substring(jsonStart, jsonEnd + 1);
+        final parsed = jsonDecode(jsonStr) as Map<String, dynamic>;
+        return (parsed['title'] as String?)?.trim();
+      }
+    } catch (e) {
+      _traceApi('Failed to generate note title: $e');
+      rethrow;
+    }
+    return null;
+  }
+
+  /// Enhance note content using AI
+  Future<String?> enhanceNoteContent(
+    String content, {
+    required String modelId,
+  }) async {
+    _traceApi('Enhancing note content with AI, model: $modelId');
+
+    const systemPrompt =
+        '''Enhance existing notes using the content's primary language. Your task is to make the notes more useful and comprehensive.
+
+# Output Format
+
+Provide the enhanced notes in markdown format. Use markdown syntax for headings, lists, task lists ([ ]) where tasks or checklists are strongly implied, and emphasis to improve clarity and presentation. Ensure that all integrated content is accurately reflected. Return only the markdown formatted note.''';
+
+    try {
+      final response = await _dio.post(
+        '/api/chat/completions',
+        data: {
+          'model': modelId,
+          'stream': false,
+          'messages': [
+            {'role': 'system', 'content': systemPrompt},
+            {'role': 'user', 'content': '<notes>$content</notes>'},
+          ],
+        },
+      );
+
+      return response.data?['choices']?[0]?['message']?['content'] as String?;
+    } catch (e) {
+      _traceApi('Failed to enhance note content: $e');
+      rethrow;
+    }
+  }
+
+  // ==================== END NOTES ====================
 
   // Legacy streaming wrapper methods removed
 }

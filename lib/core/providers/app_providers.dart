@@ -2156,6 +2156,22 @@ class FoldersFeatureEnabledNotifier extends Notifier<bool> {
   }
 }
 
+/// Tracks whether the notes feature is enabled on the server.
+/// When the server returns 403 for notes endpoint, this becomes false.
+final notesFeatureEnabledProvider =
+    NotifierProvider<NotesFeatureEnabledNotifier, bool>(
+      NotesFeatureEnabledNotifier.new,
+    );
+
+class NotesFeatureEnabledNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void setEnabled(bool enabled) {
+    state = enabled;
+  }
+}
+
 // Folders provider
 @Riverpod(keepAlive: true)
 class Folders extends _$Folders {
