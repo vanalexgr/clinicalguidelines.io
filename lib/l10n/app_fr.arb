@@ -776,6 +776,13 @@
   "failedToLoadNotes": "Échec du chargement des notes",
   "deleteNoteTitle": "Supprimer la note",
   "deleteNoteMessage": "Supprimer \"{title}\" ? Cette action est irréversible.",
+  "@deleteNoteMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "noteTitle": "Titre de la note",
   "writeNote": "Écrivez quelque chose...",
   "noteSaved": "Note enregistrée",
@@ -806,10 +813,50 @@
   "older": "Plus ancien",
   "tapToExpand": "Appuyez pour développer",
   "byAuthor": "Par {name}",
+  "@byAuthor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "wordCount": "{count} mots",
+  "@wordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "charCount": "{count} caractères",
+  "@charCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "promptVariablesTitle": "Remplir les détails",
   "promptVariablesDescription": "Complétez les champs ci-dessous pour personnaliser ce prompt.",
   "promptVariableNumberMin": "La valeur minimale est {min}",
-  "promptVariableNumberMax": "La valeur maximale est {max}"
+  "@promptVariableNumberMin": {
+    "placeholders": {
+      "min": {
+        "type": "double"
+      }
+    }
+  },
+  "promptVariableNumberMax": "La valeur maximale est {max}",
+  "@promptVariableNumberMax": {
+    "placeholders": {
+      "max": {
+        "type": "double"
+      }
+    }
+  },
+  "widgetAskConduit": "Demander à Conduit",
+  "widgetCamera": "Appareil photo",
+  "widgetPhotos": "Photos",
+  "widgetClipboard": "Presse-papiers",
+  "widgetDescription": "Accès rapide au chat Conduit avec appareil photo, photos et raccourcis du presse-papiers"
 }

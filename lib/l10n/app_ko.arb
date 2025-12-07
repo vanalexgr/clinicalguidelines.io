@@ -554,6 +554,13 @@
   "failedToLoadNotes": "노트를 불러올 수 없습니다",
   "deleteNoteTitle": "노트 삭제",
   "deleteNoteMessage": "\"{title}\"을(를) 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+  "@deleteNoteMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "noteTitle": "노트 제목",
   "writeNote": "무언가 작성하세요...",
   "noteSaved": "노트 저장됨",
@@ -584,10 +591,50 @@
   "older": "이전",
   "tapToExpand": "탭하여 확장",
   "byAuthor": "{name} 작성",
+  "@byAuthor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "wordCount": "{count}단어",
+  "@wordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "charCount": "{count}자",
+  "@charCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "promptVariablesTitle": "세부 정보 입력",
   "promptVariablesDescription": "아래 필드를 작성하여 이 프롬프트를 사용자 정의하세요.",
   "promptVariableNumberMin": "최소값은 {min}입니다",
-  "promptVariableNumberMax": "최대값은 {max}입니다"
+  "@promptVariableNumberMin": {
+    "placeholders": {
+      "min": {
+        "type": "double"
+      }
+    }
+  },
+  "promptVariableNumberMax": "최대값은 {max}입니다",
+  "@promptVariableNumberMax": {
+    "placeholders": {
+      "max": {
+        "type": "double"
+      }
+    }
+  },
+  "widgetAskConduit": "Conduit에게 묻기",
+  "widgetCamera": "카메라",
+  "widgetPhotos": "사진",
+  "widgetClipboard": "클립보드",
+  "widgetDescription": "카메라, 사진 및 클립보드 바로가기로 Conduit 채팅에 빠르게 액세스"
 }
