@@ -776,9 +776,13 @@ class _LatexBuilder extends MarkdownElementBuilder {
       return mathWidget;
     }
 
+    // Wrap block math in horizontal scroll for long expressions
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
-      child: Center(child: mathWidget),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: mathWidget,
+      ),
     );
   }
 }
