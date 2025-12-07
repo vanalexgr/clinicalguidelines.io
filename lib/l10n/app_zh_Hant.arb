@@ -807,5 +807,9 @@
   "tapToExpand": "點擊展開",
   "byAuthor": "作者：{name}",
   "wordCount": "{count} 字",
-  "charCount": "{count} 字元"
+  "charCount": "{count} 字元",
+  "promptVariablesTitle": "填寫詳情",
+  "promptVariablesDescription": "填寫以下欄位以自訂此提示詞。",
+  "promptVariableNumberMin": "最小值為 {min}",
+  "promptVariableNumberMax": "最大值為 {max}"
 }

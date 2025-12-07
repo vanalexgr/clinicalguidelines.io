@@ -807,5 +807,9 @@
   "tapToExpand": "Appuyez pour développer",
   "byAuthor": "Par {name}",
   "wordCount": "{count} mots",
-  "charCount": "{count} caractères"
+  "charCount": "{count} caractères",
+  "promptVariablesTitle": "Remplir les détails",
+  "promptVariablesDescription": "Complétez les champs ci-dessous pour personnaliser ce prompt.",
+  "promptVariableNumberMin": "La valeur minimale est {min}",
+  "promptVariableNumberMax": "La valeur maximale est {max}"
 }

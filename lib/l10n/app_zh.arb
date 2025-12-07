@@ -807,5 +807,9 @@
   "tapToExpand": "点击展开",
   "byAuthor": "作者：{name}",
   "wordCount": "{count} 字",
-  "charCount": "{count} 字符"
+  "charCount": "{count} 字符",
+  "promptVariablesTitle": "填写详情",
+  "promptVariablesDescription": "填写以下字段以自定义此提示词。",
+  "promptVariableNumberMin": "最小值为 {min}",
+  "promptVariableNumberMax": "最大值为 {max}"
 }

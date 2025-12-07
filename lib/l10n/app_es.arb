@@ -807,5 +807,9 @@
   "tapToExpand": "Toca para expandir",
   "byAuthor": "Por {name}",
   "wordCount": "{count} palabras",
-  "charCount": "{count} caracteres"
+  "charCount": "{count} caracteres",
+  "promptVariablesTitle": "Completar detalles",
+  "promptVariablesDescription": "Complete los campos a continuación para personalizar este prompt.",
+  "promptVariableNumberMin": "El valor mínimo es {min}",
+  "promptVariableNumberMax": "El valor máximo es {max}"
 }

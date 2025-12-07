@@ -807,5 +807,9 @@
   "tapToExpand": "Tippen zum Erweitern",
   "byAuthor": "Von {name}",
   "wordCount": "{count} Wörter",
-  "charCount": "{count} Zeichen"
+  "charCount": "{count} Zeichen",
+  "promptVariablesTitle": "Details ausfüllen",
+  "promptVariablesDescription": "Füllen Sie die folgenden Felder aus, um diese Vorlage anzupassen.",
+  "promptVariableNumberMin": "Mindestwert ist {min}",
+  "promptVariableNumberMax": "Höchstwert ist {max}"
 }
