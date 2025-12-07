@@ -1787,6 +1787,26 @@
       }
     }
   },
+  "widgetAskConduit": "Ask Conduit",
+  "@widgetAskConduit": {
+    "description": "Main button text on the home screen widget."
+  },
+  "widgetCamera": "Camera",
+  "@widgetCamera": {
+    "description": "Camera button label on the home screen widget."
+  },
+  "widgetPhotos": "Photos",
+  "@widgetPhotos": {
+    "description": "Photos button label on the home screen widget."
+  },
+  "widgetClipboard": "Clipboard",
+  "@widgetClipboard": {
+    "description": "Clipboard button label on the home screen widget."
+  },
+  "widgetDescription": "Quick access to Conduit chat with camera, photos, and clipboard shortcuts",
+  "@widgetDescription": {
+    "description": "Description shown in the widget picker when adding the widget."
+  },
   "mermaidPreviewUnavailable": "Mermaid preview is not available on this platform.",
   "@mermaidPreviewUnavailable": {
     "description": "Shown when Mermaid diagrams cannot be rendered on the current platform."
