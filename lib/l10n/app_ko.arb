@@ -585,5 +585,9 @@
   "tapToExpand": "탭하여 확장",
   "byAuthor": "{name} 작성",
   "wordCount": "{count}단어",
-  "charCount": "{count}자"
+  "charCount": "{count}자",
+  "promptVariablesTitle": "세부 정보 입력",
+  "promptVariablesDescription": "아래 필드를 작성하여 이 프롬프트를 사용자 정의하세요.",
+  "promptVariableNumberMin": "최소값은 {min}입니다",
+  "promptVariableNumberMax": "최대값은 {max}입니다"
 }

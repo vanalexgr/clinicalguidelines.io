@@ -807,5 +807,9 @@
   "tapToExpand": "Tik om uit te vouwen",
   "byAuthor": "Door {name}",
   "wordCount": "{count} woorden",
-  "charCount": "{count} tekens"
+  "charCount": "{count} tekens",
+  "promptVariablesTitle": "Details invullen",
+  "promptVariablesDescription": "Vul de onderstaande velden in om deze prompt aan te passen.",
+  "promptVariableNumberMin": "Minimale waarde is {min}",
+  "promptVariableNumberMax": "Maximale waarde is {max}"
 }

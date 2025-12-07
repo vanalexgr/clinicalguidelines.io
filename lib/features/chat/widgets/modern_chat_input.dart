@@ -29,6 +29,9 @@ import '../../../core/models/knowledge_base.dart';
 import '../../../shared/utils/platform_utils.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 import '../../../shared/widgets/modal_safe_area.dart';
+import '../../../core/utils/prompt_variable_parser.dart';
+import '../../prompts/widgets/prompt_variable_dialog.dart';
+import '../../auth/providers/unified_auth_providers.dart';
 
 class _SendMessageIntent extends Intent {
   const _SendMessageIntent();
@@ -468,10 +471,80 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final TextRange? range = _currentPromptRange;
     if (range == null) return;
 
+    // Check if the prompt has variables that need processing
+    const parser = PromptVariableParser();
+    if (parser.hasVariables(prompt.content)) {
+      _processPromptWithVariables(prompt, range);
+    } else {
+      _insertPromptContent(prompt.content, range);
+    }
+  }
+
+  Future<void> _processPromptWithVariables(
+    Prompt prompt,
+    TextRange range,
+  ) async {
+    // Hide overlay first
+    setState(() {
+      _showPromptOverlay = false;
+      _currentPromptCommand = '';
+      _currentPromptRange = null;
+      _promptSelectionIndex = 0;
+    });
+
+    // Get user info for system variables
+    final authUser = ref.read(currentUserProvider2);
+    final userAsync = ref.read(currentUserProvider);
+    final user = userAsync.maybeWhen(
+      data: (value) => value ?? authUser,
+      orElse: () => authUser,
+    );
+    final locale = Localizations.localeOf(context);
+
+    // Create the processor with system variable context
+    const parser = PromptVariableParser();
+    final systemResolver = SystemVariableResolver(
+      userName: user?.name ?? user?.email,
+      userLanguage: locale.languageCode,
+      // userLocation requires permission - left empty for now
+    );
+    final processor = PromptProcessor(
+      parser: parser,
+      systemResolver: systemResolver,
+    );
+
+    // Process system variables first
+    final processed = await processor.process(prompt.content);
+    if (!mounted) return;
+
+    String finalContent = processed.content;
+
+    // If there are user input variables, show the dialog
+    if (processed.needsUserInput) {
+      final values = await PromptVariableDialog.show(
+        context,
+        variables: processed.userInputVariables,
+        promptTitle: prompt.title,
+      );
+
+      if (values == null || !mounted) {
+        // User cancelled - restore focus
+        _ensureFocusedIfEnabled();
+        return;
+      }
+
+      // Apply user-provided values
+      finalContent = processor.applyUserValues(finalContent, values);
+    }
+
+    // Insert the fully processed content
+    _insertPromptContent(finalContent, range);
+  }
+
+  void _insertPromptContent(String content, TextRange range) {
     final String text = _controller.text;
     final String before = text.substring(0, range.start);
     final String after = text.substring(range.end);
-    final String content = prompt.content;
     final int caret = before.length + content.length;
 
     _controller.value = TextEditingValue(

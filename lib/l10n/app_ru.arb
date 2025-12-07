@@ -807,5 +807,9 @@
   "tapToExpand": "Нажмите для раскрытия",
   "byAuthor": "Автор: {name}",
   "wordCount": "{count} слов",
-  "charCount": "{count} символов"
+  "charCount": "{count} символов",
+  "promptVariablesTitle": "Заполните данные",
+  "promptVariablesDescription": "Заполните поля ниже, чтобы настроить этот промпт.",
+  "promptVariableNumberMin": "Минимальное значение: {min}",
+  "promptVariableNumberMax": "Максимальное значение: {max}"
 }

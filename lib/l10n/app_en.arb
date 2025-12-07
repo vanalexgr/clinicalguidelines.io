@@ -1794,5 +1794,33 @@
   "chartPreviewUnavailable": "Chart preview is not available on this platform.",
   "@chartPreviewUnavailable": {
     "description": "Shown when Chart.js charts cannot be rendered on the current platform."
+  },
+  "promptVariablesTitle": "Fill in Details",
+  "@promptVariablesTitle": {
+    "description": "Default title for the prompt variables dialog."
+  },
+  "promptVariablesDescription": "Complete the fields below to customize this prompt.",
+  "@promptVariablesDescription": {
+    "description": "Description shown in the prompt variables dialog."
+  },
+  "promptVariableNumberMin": "Minimum value is {min}",
+  "@promptVariableNumberMin": {
+    "description": "Validation message when a number is below the minimum.",
+    "placeholders": {
+      "min": {
+        "type": "double",
+        "example": "0"
+      }
+    }
+  },
+  "promptVariableNumberMax": "Maximum value is {max}",
+  "@promptVariableNumberMax": {
+    "description": "Validation message when a number is above the maximum.",
+    "placeholders": {
+      "max": {
+        "type": "double",
+        "example": "100"
+      }
+    }
   }
 }
