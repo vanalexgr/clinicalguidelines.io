@@ -109,10 +109,6 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
   bool _taskStatusCheckInFlight = false;
   bool _observedRemoteTask = false;
 
-  /// Counts consecutive polls where no tasks were observed.
-  /// Used to trigger fallback server check if task registration was missed.
-  int _noTaskPollCount = 0;
-
   MarkdownStreamFormatter? _markdownFormatter;
   String? _activeStreamingMessageId;
 
@@ -301,7 +297,6 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
     _taskStatusTimer = null;
     _taskStatusCheckInFlight = false;
     _observedRemoteTask = false;
-    _noTaskPollCount = 0;
   }
 
   Future<void> _syncRemoteTaskStatus() async {
@@ -328,26 +323,20 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
 
       if (hasActiveTasks) {
         _observedRemoteTask = true;
-        _noTaskPollCount = 0;
-      } else {
-        _noTaskPollCount++;
       }
 
       // When no active tasks and we previously observed tasks, streaming should be done.
       final tasksDone = _observedRemoteTask && !hasActiveTasks;
 
-      // Fallback: If we've polled exactly 3 times without ever seeing tasks,
-      // something may be wrong - check server state directly. This catches cases
-      // where task registration was completely missed due to socket issues.
-      // Using == 3 instead of >= 3 ensures this only triggers once, not every poll.
-      final fallbackCheck = !_observedRemoteTask && _noTaskPollCount == 3;
-
-      // Secondary check: fetch conversation from server and compare message state
-      // This catches cases where the done signal was missed AND syncs any missed content.
-      // Runs when:
-      // 1. Tasks completed (were observed and are now gone), OR
-      // 2. Fallback: No tasks ever observed after exactly 3 polls (one-time check)
-      if (_hasStreamingAssistant && (tasksDone || fallbackCheck)) {
+      // Secondary check: fetch conversation from server and compare message state.
+      // This catches cases where the done signal was missed AND syncs any missed
+      // content. Only runs when tasks have genuinely completed (were observed and
+      // are now gone). We intentionally avoid any timed fallback checks here
+      // because they conflict with legitimate slow task registration scenarios
+      // like web search, which can take a long time to start on the server.
+      // Note: If a socket connection silently fails before tasks complete, the
+      // user can cancel via the stop button or navigate away to recover.
+      if (_hasStreamingAssistant && tasksDone) {
         try {
           final serverConversation = await api.getConversation(
             activeConversation.id,
