@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/theme_extensions.dart';
 import 'markdown_config.dart';
 import 'markdown_preprocessor.dart';
 
@@ -70,71 +69,62 @@ class StreamingMarkdownWidget extends StatelessWidget {
     specialBlocks.sort((a, b) => a.start.compareTo(b.start));
 
     Widget buildMarkdown(String data) {
-      return ConduitMarkdown.buildBlock(
+      return ConduitMarkdown.build(
         context: context,
         data: data,
         onTapLink: onTapLink,
-        selectable: false,
         imageBuilderOverride: imageBuilderOverride,
       );
     }
 
+    Widget result;
+
     if (specialBlocks.isEmpty) {
-      return SelectionArea(
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            textSelectionTheme: TextSelectionThemeData(
-              cursorColor: context.conduitTheme.buttonPrimary,
-            ),
-          ),
-          child: buildMarkdown(normalized),
-        ),
+      result = buildMarkdown(normalized);
+    } else {
+      final children = <Widget>[];
+      var currentIndex = 0;
+      for (final block in specialBlocks) {
+        // Skip overlapping blocks
+        if (block.start < currentIndex) continue;
+
+        final before = normalized.substring(currentIndex, block.start);
+        if (before.trim().isNotEmpty) {
+          children.add(buildMarkdown(before));
+        }
+
+        switch (block.type) {
+          case _BlockType.mermaid:
+            children.add(
+              ConduitMarkdown.buildMermaidBlock(context, block.content),
+            );
+          case _BlockType.chartJs:
+            children.add(
+              ConduitMarkdown.buildChartJsBlock(context, block.content),
+            );
+        }
+
+        currentIndex = block.end;
+      }
+
+      final tail = normalized.substring(currentIndex);
+      if (tail.trim().isNotEmpty) {
+        children.add(buildMarkdown(tail));
+      }
+
+      result = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       );
     }
 
-    final children = <Widget>[];
-    var currentIndex = 0;
-    for (final block in specialBlocks) {
-      // Skip overlapping blocks
-      if (block.start < currentIndex) continue;
-
-      final before = normalized.substring(currentIndex, block.start);
-      if (before.trim().isNotEmpty) {
-        children.add(buildMarkdown(before));
-      }
-
-      switch (block.type) {
-        case _BlockType.mermaid:
-          children.add(
-            ConduitMarkdown.buildMermaidBlock(context, block.content),
-          );
-        case _BlockType.chartJs:
-          children.add(
-            ConduitMarkdown.buildChartJsBlock(context, block.content),
-          );
-      }
-
-      currentIndex = block.end;
+    // Only wrap in SelectionArea when not streaming to avoid concurrent
+    // modification errors in Flutter's selection system during rapid updates
+    if (isStreaming) {
+      return result;
     }
 
-    final tail = normalized.substring(currentIndex);
-    if (tail.trim().isNotEmpty) {
-      children.add(buildMarkdown(tail));
-    }
-
-    return SelectionArea(
-      child: Theme(
-        data: Theme.of(context).copyWith(
-          textSelectionTheme: TextSelectionThemeData(
-            cursorColor: context.conduitTheme.buttonPrimary,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
-      ),
-    );
+    return SelectionArea(child: result);
   }
 }
 
