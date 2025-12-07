@@ -10,6 +10,7 @@ import '../providers/app_providers.dart';
 import '../../features/auth/providers/unified_auth_providers.dart';
 import '../services/navigation_service.dart';
 import '../services/app_intents_service.dart';
+import '../services/home_widget_service.dart';
 import '../services/quick_actions_service.dart';
 import '../models/conversation.dart';
 import '../services/background_streaming_handler.dart';
@@ -172,6 +173,7 @@ class AppStartupFlow extends _$AppStartupFlow {
     keepAlive(silentLoginCoordinatorProvider);
     keepAlive(appIntentCoordinatorProvider);
     keepAlive(quickActionsCoordinatorProvider);
+    keepAlive(homeWidgetCoordinatorProvider);
 
     // Kick background model loading flow (non-blocking)
     Future<void>.delayed(const Duration(milliseconds: 120), () {
