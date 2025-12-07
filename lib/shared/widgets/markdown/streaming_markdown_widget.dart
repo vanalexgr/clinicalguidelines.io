@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/models/chat_message.dart';
+import '../../../core/utils/citation_parser.dart';
+import 'citation_badge.dart';
 import 'markdown_config.dart';
 import 'markdown_preprocessor.dart';
 
@@ -16,6 +19,8 @@ class StreamingMarkdownWidget extends StatelessWidget {
     required this.isStreaming,
     this.onTapLink,
     this.imageBuilderOverride,
+    this.sources,
+    this.onSourceTap,
   });
 
   final String content;
@@ -23,6 +28,13 @@ class StreamingMarkdownWidget extends StatelessWidget {
   final MarkdownLinkTapCallback? onTapLink;
   final Widget Function(Uri uri, String? title, String? alt)?
   imageBuilderOverride;
+
+  /// Sources for inline citation badge rendering.
+  /// When provided, [1] patterns will be rendered as clickable badges.
+  final List<ChatSourceReference>? sources;
+
+  /// Callback when a source badge is tapped.
+  final void Function(int sourceIndex)? onSourceTap;
 
   @override
   Widget build(BuildContext context) {
@@ -69,12 +81,7 @@ class StreamingMarkdownWidget extends StatelessWidget {
     specialBlocks.sort((a, b) => a.start.compareTo(b.start));
 
     Widget buildMarkdown(String data) {
-      return ConduitMarkdown.build(
-        context: context,
-        data: data,
-        onTapLink: onTapLink,
-        imageBuilderOverride: imageBuilderOverride,
-      );
+      return _buildMarkdownWithCitations(context, data);
     }
 
     Widget result;
@@ -126,6 +133,105 @@ class StreamingMarkdownWidget extends StatelessWidget {
 
     return SelectionArea(child: result);
   }
+
+  /// Builds markdown content with citation source references.
+  ///
+  /// Citations like [1], [2] are kept as text in the markdown to preserve
+  /// inline formatting. A source reference footer is added when citations
+  /// are detected, providing clickable access to sources.
+  Widget _buildMarkdownWithCitations(BuildContext context, String data) {
+    // If no sources provided, render plain markdown
+    if (sources == null || sources!.isEmpty) {
+      return ConduitMarkdown.build(
+        context: context,
+        data: data,
+        onTapLink: onTapLink,
+        imageBuilderOverride: imageBuilderOverride,
+      );
+    }
+
+    // Check if content has citations
+    if (!CitationParser.hasCitations(data)) {
+      return ConduitMarkdown.build(
+        context: context,
+        data: data,
+        onTapLink: onTapLink,
+        imageBuilderOverride: imageBuilderOverride,
+      );
+    }
+
+    // Extract unique source IDs referenced in the content
+    final referencedIds = CitationParser.extractSourceIds(data);
+    if (referencedIds.isEmpty) {
+      return ConduitMarkdown.build(
+        context: context,
+        data: data,
+        onTapLink: onTapLink,
+        imageBuilderOverride: imageBuilderOverride,
+      );
+    }
+
+    // Render markdown content as-is (preserving all formatting)
+    // and add a source references footer
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ConduitMarkdown.build(
+          context: context,
+          data: data,
+          onTapLink: onTapLink,
+          imageBuilderOverride: imageBuilderOverride,
+        ),
+        _SourceReferencesFooter(
+          referencedIds: referencedIds,
+          sources: sources!,
+          onSourceTap: onSourceTap,
+        ),
+      ],
+    );
+  }
+}
+
+/// Footer widget showing source references with clickable badges.
+class _SourceReferencesFooter extends StatelessWidget {
+  const _SourceReferencesFooter({
+    required this.referencedIds,
+    required this.sources,
+    this.onSourceTap,
+  });
+
+  /// 1-based source IDs that are referenced in the content.
+  final List<int> referencedIds;
+
+  /// All available sources.
+  final List<ChatSourceReference> sources;
+
+  /// Callback when a source is tapped.
+  final void Function(int sourceIndex)? onSourceTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (referencedIds.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: [
+          for (final id in referencedIds)
+            CitationBadge(
+              sourceIndex: id - 1, // Convert to 0-based
+              sources: sources,
+              onTap: onSourceTap != null ? () => onSourceTap!(id - 1) : null,
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Types of special blocks that need custom rendering
@@ -151,11 +257,15 @@ extension StreamingMarkdownExtension on String {
     required BuildContext context,
     bool isStreaming = false,
     MarkdownLinkTapCallback? onTapLink,
+    List<ChatSourceReference>? sources,
+    void Function(int sourceIndex)? onSourceTap,
   }) {
     return StreamingMarkdownWidget(
       content: this,
       isStreaming: isStreaming,
       onTapLink: onTapLink,
+      sources: sources,
+      onSourceTap: onSourceTap,
     );
   }
 }

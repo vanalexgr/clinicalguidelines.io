@@ -124,10 +124,18 @@ class ReasoningContent {
 
 /// Utility class for parsing and extracting reasoning/thinking content.
 class ReasoningParser {
+  /// Patterns that indicate a details block is reasoning content.
+  /// Used when the `type` attribute is missing.
+  static final _reasoningSummaryPattern = RegExp(
+    r'Thought|Thinking|Reasoning',
+    caseSensitive: false,
+  );
+
   /// Splits content into ordered segments of plain text and reasoning entries.
   ///
   /// Handles:
   /// - `<details type="reasoning">` blocks with optional summary/duration/done
+  /// - `<details>` blocks without type but with reasoning-like summary
   /// - Raw tag pairs like `<think>`, `<thinking>`, `<reasoning>`, etc.
   /// - Incomplete/streaming cases by emitting a partial reasoning entry
   static List<ReasoningSegment>? segments(
@@ -150,14 +158,14 @@ class ReasoningParser {
     int index = 0;
 
     while (index < content.length) {
-      // Find the earliest match: either <details type="reasoning" or a raw tag
+      // Find the earliest match: either <details (any type) or a raw tag
       int nextDetailsIdx = -1;
       int nextRawIdx = -1;
       (String, String)? matchedRawPair;
 
-      // Check for <details type="reasoning"
+      // Check for any <details tag (we'll determine if it's reasoning later)
       final detailsMatch = RegExp(
-        r'<details\s+[^>]*type="reasoning"',
+        r'<details(?:\s|>)',
       ).firstMatch(content.substring(index));
       if (detailsMatch != null) {
         nextDetailsIdx = index + detailsMatch.start;
@@ -203,9 +211,19 @@ class ReasoningParser {
       }
 
       if (kind == 'details') {
-        // Parse <details type="reasoning"> block and extract ReasoningEntry
-        final result = _parseDetailsReasoning(content, nextIdx);
-        segments.add(ReasoningSegment.entry(result.entry));
+        // Parse <details> block and check if it's reasoning content
+        final result = _parseDetailsBlock(content, nextIdx);
+
+        // Only add as reasoning if it's a reasoning type or looks like reasoning
+        if (result.isReasoning) {
+          segments.add(ReasoningSegment.entry(result.entry));
+        } else {
+          // Not a reasoning block, treat as text
+          final detailsText = content.substring(nextIdx, result.endIndex);
+          if (detailsText.trim().isNotEmpty) {
+            segments.add(ReasoningSegment.text(detailsText));
+          }
+        }
 
         if (!result.isComplete) {
           // Incomplete block, stop here
@@ -233,13 +251,14 @@ class ReasoningParser {
     return segments.isEmpty ? null : segments;
   }
 
-  /// Parse a `<details type="reasoning">` block starting at the given index.
-  static _ReasoningResult _parseDetailsReasoning(String content, int startIdx) {
+  /// Parse a `<details>` block starting at the given index.
+  /// Returns whether the block is reasoning content based on type or summary.
+  static _DetailsResult _parseDetailsBlock(String content, int startIdx) {
     // Find the opening tag end
     final openTagEnd = content.indexOf('>', startIdx);
     if (openTagEnd == -1) {
-      // Incomplete opening tag
-      return _ReasoningResult(
+      // Incomplete opening tag - assume reasoning for streaming
+      return _DetailsResult(
         entry: ReasoningEntry(
           reasoning: '',
           summary: '',
@@ -248,6 +267,7 @@ class ReasoningParser {
         ),
         endIndex: content.length,
         isComplete: false,
+        isReasoning: true,
       );
     }
 
@@ -260,6 +280,7 @@ class ReasoningParser {
       attrs[m.group(1)!] = m.group(2) ?? '';
     }
 
+    final type = attrs['type'] ?? '';
     final isDone = (attrs['done'] ?? 'true') == 'true';
     final duration = int.tryParse(attrs['duration'] ?? '0') ?? 0;
 
@@ -284,15 +305,27 @@ class ReasoningParser {
       final innerContent = content.substring(openTagEnd + 1);
       final summaryResult = _extractSummary(innerContent);
 
-      return _ReasoningResult(
+      // Determine if this is reasoning based on type or summary
+      final isReasoning =
+          type == 'reasoning' ||
+          (type.isEmpty &&
+              _reasoningSummaryPattern.hasMatch(summaryResult.summary));
+
+      // Extract duration from summary if not in attributes
+      final effectiveDuration = duration > 0
+          ? duration
+          : _extractDurationFromSummary(summaryResult.summary);
+
+      return _DetailsResult(
         entry: ReasoningEntry(
           reasoning: HtmlUtils.unescapeHtml(summaryResult.remaining),
           summary: HtmlUtils.unescapeHtml(summaryResult.summary),
-          duration: duration,
+          duration: effectiveDuration,
           isDone: false,
         ),
         endIndex: content.length,
         isComplete: false,
+        isReasoning: isReasoning,
       );
     }
 
@@ -301,15 +334,27 @@ class ReasoningParser {
     final innerContent = content.substring(openTagEnd + 1, closeIdx);
     final summaryResult = _extractSummary(innerContent);
 
-    return _ReasoningResult(
+    // Determine if this is reasoning based on type or summary
+    final isReasoning =
+        type == 'reasoning' ||
+        (type.isEmpty &&
+            _reasoningSummaryPattern.hasMatch(summaryResult.summary));
+
+    // Extract duration from summary if not in attributes
+    final effectiveDuration = duration > 0
+        ? duration
+        : _extractDurationFromSummary(summaryResult.summary);
+
+    return _DetailsResult(
       entry: ReasoningEntry(
         reasoning: HtmlUtils.unescapeHtml(summaryResult.remaining),
         summary: HtmlUtils.unescapeHtml(summaryResult.summary),
-        duration: duration,
+        duration: effectiveDuration,
         isDone: isDone,
       ),
       endIndex: i,
       isComplete: true,
+      isReasoning: isReasoning,
     );
   }
 
@@ -369,6 +414,30 @@ class ReasoningParser {
     return _SummaryResult(summary: '', remaining: content.trim());
   }
 
+  /// Extract duration from summary text like "Thought (1s)" or "Thinking (2m 30s)".
+  static int _extractDurationFromSummary(String summary) {
+    // Match patterns like "(1s)", "(30s)", "(1m)", "(2m 30s)", "(1m30s)"
+    // Supports minutes-only "(1m)", seconds-only "(30s)", or both "(2m 30s)"
+    final durationRegex = RegExp(
+      r'\((\d+)m(?:\s*(\d+)s)?\)|\((\d+)s\)',
+      caseSensitive: false,
+    );
+    final match = durationRegex.firstMatch(summary);
+    if (match != null) {
+      // Check if it's a minutes pattern (groups 1 and 2) or seconds-only (group 3)
+      if (match.group(1) != null) {
+        // Minutes pattern: "(Xm)" or "(Xm Ys)"
+        final minutes = int.tryParse(match.group(1) ?? '0') ?? 0;
+        final seconds = int.tryParse(match.group(2) ?? '0') ?? 0;
+        return minutes * 60 + seconds;
+      } else if (match.group(3) != null) {
+        // Seconds-only pattern: "(Xs)"
+        return int.tryParse(match.group(3) ?? '0') ?? 0;
+      }
+    }
+    return 0;
+  }
+
   /// Parses a message and extracts the first reasoning content block.
   /// Returns null if no reasoning content is found.
   static ReasoningContent? parseReasoningContent(
@@ -412,6 +481,17 @@ class ReasoningParser {
     // Check for <details type="reasoning"
     if (content.contains('type="reasoning"')) return true;
 
+    // Check for <details> with reasoning-like summary
+    if (content.contains('<details')) {
+      final summaryMatch = RegExp(
+        r'<summary>([^<]*)</summary>',
+      ).firstMatch(content);
+      if (summaryMatch != null) {
+        final summary = summaryMatch.group(1) ?? '';
+        if (_reasoningSummaryPattern.hasMatch(summary)) return true;
+      }
+    }
+
     // Check for raw tag pairs
     for (final pair in defaultReasoningTagPairs) {
       if (content.contains(pair.$1)) return true;
@@ -445,6 +525,20 @@ class _ReasoningResult {
     required this.entry,
     required this.endIndex,
     required this.isComplete,
+  });
+}
+
+class _DetailsResult {
+  final ReasoningEntry entry;
+  final int endIndex;
+  final bool isComplete;
+  final bool isReasoning;
+
+  const _DetailsResult({
+    required this.entry,
+    required this.endIndex,
+    required this.isComplete,
+    required this.isReasoning,
   });
 }
 

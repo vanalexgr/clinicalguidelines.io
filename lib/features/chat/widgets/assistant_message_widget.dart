@@ -876,6 +876,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       content: processedContent,
       isStreaming: widget.isStreaming,
       onTapLink: (url, _) => _launchUri(url),
+      sources: widget.message.sources,
       imageBuilderOverride: (uri, title, alt) {
         // Route markdown images through the enhanced image widget so they
         // get caching, auth headers, fullscreen viewer, and sharing.
