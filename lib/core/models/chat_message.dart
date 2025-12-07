@@ -69,9 +69,9 @@ abstract class ChatStatusUpdate with _$ChatStatusUpdate {
   const factory ChatStatusUpdate({
     String? action,
     String? description,
-    bool? done,
-    bool? hidden,
-    int? count,
+    @JsonKey(fromJson: _safeBool) bool? done,
+    @JsonKey(fromJson: _safeBool) bool? hidden,
+    @JsonKey(fromJson: _safeInt) int? count,
     String? query,
     @JsonKey(fromJson: _safeStringList, toJson: _stringListToJson)
     @Default(<String>[])
@@ -176,6 +176,29 @@ List<String> _safeStringList(dynamic value) {
     return [value];
   }
   return const [];
+}
+
+/// Safely parse a boolean from various formats (bool, String, int).
+bool? _safeBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is String) {
+    final lower = value.toLowerCase();
+    if (lower == 'true' || lower == '1') return true;
+    if (lower == 'false' || lower == '0') return false;
+    return null;
+  }
+  if (value is num) return value != 0;
+  return null;
+}
+
+/// Safely parse an integer from various formats (int, double, String).
+int? _safeInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
 }
 
 List<String> _stringListToJson(List<String> value) =>

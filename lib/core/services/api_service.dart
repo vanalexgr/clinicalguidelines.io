@@ -913,6 +913,15 @@ class ApiService {
         if (msg.attachmentIds != null && msg.attachmentIds!.isNotEmpty)
           'attachment_ids': List<String>.from(msg.attachmentIds!),
         if (sanitizedFiles != null) 'files': sanitizedFiles,
+        // Mirror status updates, follow-ups, code executions, and sources
+        if (msg.statusHistory.isNotEmpty)
+          'statusHistory': msg.statusHistory.map((s) => s.toJson()).toList(),
+        if (msg.followUps.isNotEmpty)
+          'followUps': List<String>.from(msg.followUps),
+        if (msg.codeExecutions.isNotEmpty)
+          'codeExecutions': msg.codeExecutions.map((e) => e.toJson()).toList(),
+        if (msg.sources.isNotEmpty)
+          'sources': msg.sources.map((s) => s.toJson()).toList(),
       };
 
       // Update parent's childrenIds
@@ -939,6 +948,15 @@ class ApiService {
         if (msg.attachmentIds != null && msg.attachmentIds!.isNotEmpty)
           'attachment_ids': List<String>.from(msg.attachmentIds!),
         if (sanitizedArrayFiles != null) 'files': sanitizedArrayFiles,
+        // Mirror status updates, follow-ups, code executions, and sources
+        if (msg.statusHistory.isNotEmpty)
+          'statusHistory': msg.statusHistory.map((s) => s.toJson()).toList(),
+        if (msg.followUps.isNotEmpty)
+          'followUps': List<String>.from(msg.followUps),
+        if (msg.codeExecutions.isNotEmpty)
+          'codeExecutions': msg.codeExecutions.map((e) => e.toJson()).toList(),
+        if (msg.sources.isNotEmpty)
+          'sources': msg.sources.map((s) => s.toJson()).toList(),
       });
 
       previousId = messageId;
@@ -965,6 +983,15 @@ class ApiService {
               'modelIdx': 0,
               'done': true,
               if (ver.files != null) 'files': _sanitizeFilesForWebUI(ver.files),
+              // Mirror follow-ups, code executions, and sources for versions
+              if (ver.followUps.isNotEmpty)
+                'followUps': List<String>.from(ver.followUps),
+              if (ver.codeExecutions.isNotEmpty)
+                'codeExecutions': ver.codeExecutions
+                    .map((e) => e.toJson())
+                    .toList(),
+              if (ver.sources.isNotEmpty)
+                'sources': ver.sources.map((s) => s.toJson()).toList(),
             };
             // Link into parent (parentForVersions is always non-null here)
             if (messagesMap.containsKey(parentForVersions)) {

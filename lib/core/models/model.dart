@@ -3,6 +3,18 @@ import 'toggle_filter.dart';
 
 part 'model.freezed.dart';
 
+bool? _safeBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is String) {
+    final lower = value.toLowerCase();
+    if (lower == 'true' || lower == '1') return true;
+    if (lower == 'false' || lower == '0') return false;
+  }
+  if (value is num) return value != 0;
+  return null;
+}
+
 @freezed
 sealed class Model with _$Model {
   const Model._();
@@ -180,7 +192,7 @@ sealed class Model with _$Model {
       description: json['description'] as String?,
       isMultimodal: isMultimodal,
       supportsStreaming: supportsStreaming,
-      supportsRAG: json['supportsRAG'] as bool? ?? false,
+      supportsRAG: _safeBool(json['supportsRAG']) ?? false,
       supportedParameters: supportedParamsList,
       capabilities: {
         'architecture': architecture,
