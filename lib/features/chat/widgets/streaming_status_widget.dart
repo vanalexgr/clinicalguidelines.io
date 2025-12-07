@@ -137,7 +137,7 @@ class _MinimalStatusRow extends StatelessWidget {
                     ? Icons.keyboard_arrow_up_rounded
                     : Icons.keyboard_arrow_down_rounded,
                 size: 14,
-                color: theme.textSecondary,
+                color: theme.textPrimary.withValues(alpha: 0.8),
               ),
               const SizedBox(width: 2),
             ],
@@ -166,9 +166,10 @@ class _MinimalStatusRow extends StatelessWidget {
     bool isPending,
   ) {
     final theme = context.conduitTheme;
+    final baseColor = theme.textPrimary.withValues(alpha: 0.8);
     final baseStyle = TextStyle(
       fontSize: AppTypography.bodySmall,
-      color: theme.textSecondary,
+      color: baseColor,
       height: 1.3,
     );
 
@@ -184,7 +185,7 @@ class _MinimalStatusRow extends StatelessWidget {
         return Text(
           description,
           style: baseStyle.copyWith(
-            color: theme.textSecondary.withValues(alpha: opacity),
+            color: baseColor.withValues(alpha: opacity),
           ),
           maxLines: 1,
         );
@@ -288,9 +289,10 @@ class _MinimalHistoryTimeline extends StatelessWidget {
     bool isPending,
   ) {
     final theme = context.conduitTheme;
+    final baseColor = theme.textPrimary.withValues(alpha: 0.8);
     final baseStyle = TextStyle(
       fontSize: AppTypography.bodySmall,
-      color: theme.textSecondary,
+      color: baseColor,
       height: 1.3,
     );
 
@@ -305,7 +307,7 @@ class _MinimalHistoryTimeline extends StatelessWidget {
         return Text(
           description,
           style: baseStyle.copyWith(
-            color: theme.textSecondary.withValues(alpha: opacity),
+            color: baseColor.withValues(alpha: opacity),
           ),
         );
       },

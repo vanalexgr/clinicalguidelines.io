@@ -68,8 +68,8 @@ class _OpenWebUISourcesWidgetState extends State<OpenWebUISourcesWidget> {
                 splashColor: theme.surfaceContainer.withValues(alpha: 0.2),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
+                    horizontal: 10,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),

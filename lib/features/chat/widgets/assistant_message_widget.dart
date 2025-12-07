@@ -420,7 +420,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                       ? Icons.keyboard_arrow_up_rounded
                       : Icons.keyboard_arrow_down_rounded,
                   size: 14,
-                  color: theme.textSecondary,
+                  color: theme.textPrimary.withValues(alpha: 0.8),
                 ),
                 const SizedBox(width: 2),
                 Flexible(
@@ -429,7 +429,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: AppTypography.bodySmall,
-                      color: theme.textSecondary,
+                      color: theme.textPrimary.withValues(alpha: 0.8),
                       height: 1.3,
                     ),
                   ),
@@ -518,6 +518,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   Widget _buildSegmentedContent() {
     final children = <Widget>[];
     bool firstToolSpacerAdded = false;
+    bool hasNonTextSegment = false;
     int idx = 0;
     for (final seg in _segments) {
       if (seg.isTool && seg.toolCall != null) {
@@ -527,9 +528,16 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           firstToolSpacerAdded = true;
         }
         children.add(_buildToolCallTile(seg.toolCall!));
+        hasNonTextSegment = true;
       } else if (seg.isReasoning && seg.reasoning != null) {
         children.add(_buildReasoningTile(seg.reasoning!, idx));
+        hasNonTextSegment = true;
       } else if ((seg.text ?? '').trim().isNotEmpty) {
+        // Add spacing before text content if it follows non-text segments
+        if (hasNonTextSegment) {
+          children.add(const SizedBox(height: Spacing.sm));
+          hasNonTextSegment = false;
+        }
         children.add(_buildEnhancedMarkdownContent(seg.text!));
       }
       idx++;
@@ -1342,7 +1350,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                       ? Icons.keyboard_arrow_up_rounded
                       : Icons.keyboard_arrow_down_rounded,
                   size: 14,
-                  color: theme.textSecondary,
+                  color: theme.textPrimary.withValues(alpha: 0.8),
                 ),
                 const SizedBox(width: 2),
                 Flexible(
@@ -1351,7 +1359,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: AppTypography.bodySmall,
-                      color: theme.textSecondary,
+                      color: theme.textPrimary.withValues(alpha: 0.8),
                       height: 1.3,
                     ),
                   ),
