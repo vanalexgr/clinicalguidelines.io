@@ -376,6 +376,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
   // No streaming-specific markdown fixes needed here; handled by Markdown widget
 
+  // Tool call tile - minimal design inspired by OpenWebUI
   Widget _buildToolCallTile(ToolCallEntry tc) {
     final isExpanded = _expandedToolIds.contains(tc.id);
     final theme = context.conduitTheme;
@@ -394,7 +395,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.xs),
-      child: InkWell(
+      child: GestureDetector(
         onTap: () {
           setState(() {
             if (isExpanded) {
@@ -404,127 +405,111 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             }
           });
         },
-        borderRadius: BorderRadius.circular(AppBorderRadius.small),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.sm,
-            vertical: Spacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(AppBorderRadius.small),
-            border: Border.all(
-              color: theme.dividerColor.withValues(alpha: 0.5),
-              width: BorderWidth.thin,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isExpanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    size: 16,
-                    color: theme.textSecondary,
-                  ),
-                  const SizedBox(width: Spacing.xs),
-                  Icon(
-                    tc.done
-                        ? Icons.build_circle_outlined
-                        : Icons.play_circle_outline,
-                    size: 14,
-                    color: theme.buttonPrimary,
-                  ),
-                  const SizedBox(width: Spacing.xs),
-                  Flexible(
-                    child: Text(
-                      tc.done
-                          ? 'Tool Executed: ${tc.name}'
-                          : 'Running tool: ${tc.name}…',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: AppTypography.bodySmall,
-                        color: theme.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Minimal header - just text with chevron
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 14,
+                  color: theme.textSecondary,
+                ),
+                const SizedBox(width: 2),
+                Flexible(
+                  child: Text(
+                    tc.done ? 'Used ${tc.name}' : 'Running ${tc.name}…',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: AppTypography.bodySmall,
+                      color: theme.textSecondary,
+                      height: 1.3,
                     ),
-                  ),
-                ],
-              ),
-
-              AnimatedCrossFade(
-                firstChild: const SizedBox.shrink(),
-                secondChild: Container(
-                  margin: const EdgeInsets.only(top: Spacing.sm),
-                  padding: const EdgeInsets.all(Spacing.sm),
-                  decoration: BoxDecoration(
-                    color: theme.surfaceContainer.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppBorderRadius.small),
-                    border: Border.all(
-                      color: theme.dividerColor.withValues(alpha: 0.5),
-                      width: BorderWidth.thin,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (tc.arguments != null) ...[
-                        Text(
-                          'Arguments',
-                          style: TextStyle(
-                            fontSize: AppTypography.bodySmall,
-                            color: theme.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: Spacing.xxs),
-                        SelectableText(
-                          pretty(tc.arguments),
-                          style: TextStyle(
-                            fontSize: AppTypography.bodySmall,
-                            color: theme.textSecondary,
-                            fontFamily: AppTypography.monospaceFontFamily,
-                            height: 1.35,
-                          ),
-                        ),
-                        const SizedBox(height: Spacing.sm),
-                      ],
-
-                      if (tc.result != null) ...[
-                        Text(
-                          'Result',
-                          style: TextStyle(
-                            fontSize: AppTypography.bodySmall,
-                            color: theme.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: Spacing.xxs),
-                        SelectableText(
-                          pretty(tc.result),
-                          style: TextStyle(
-                            fontSize: AppTypography.bodySmall,
-                            color: theme.textSecondary,
-                            fontFamily: AppTypography.monospaceFontFamily,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ],
                   ),
                 ),
-                crossFadeState: isExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 200),
+              ],
+            ),
+
+            // Expanded content with left border accent
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Container(
+                margin: const EdgeInsets.only(top: Spacing.xs, left: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.sm,
+                  vertical: Spacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.surfaceContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border(
+                    left: BorderSide(
+                      color: theme.dividerColor.withValues(alpha: 0.4),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (tc.arguments != null) ...[
+                      Text(
+                        'Arguments',
+                        style: TextStyle(
+                          fontSize: AppTypography.labelSmall,
+                          color: theme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      SelectableText(
+                        pretty(tc.arguments),
+                        style: TextStyle(
+                          fontSize: AppTypography.bodySmall,
+                          color: theme.textSecondary,
+                          fontFamily: AppTypography.monospaceFontFamily,
+                          height: 1.35,
+                        ),
+                      ),
+                      if (tc.result != null) const SizedBox(height: Spacing.xs),
+                    ],
+
+                    if (tc.result != null) ...[
+                      Text(
+                        'Result',
+                        style: TextStyle(
+                          fontSize: AppTypography.labelSmall,
+                          color: theme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      SelectableText(
+                        pretty(tc.result),
+                        style: TextStyle(
+                          fontSize: AppTypography.bodySmall,
+                          color: theme.textSecondary,
+                          fontFamily: AppTypography.monospaceFontFamily,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
-          ),
+              crossFadeState: isExpanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 200),
+            ),
+          ],
         ),
       ),
     );
@@ -1307,7 +1292,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     return ChatActionButton(icon: icon, label: label, onTap: onTap);
   }
 
-  // Reasoning tile rendered inline at the position it appears
+  // Reasoning tile rendered inline - minimal design inspired by OpenWebUI
   Widget _buildReasoningTile(ReasoningEntry rc, int index) {
     final isExpanded = _expandedReasoning.contains(index);
     final theme = context.conduitTheme;
@@ -1332,7 +1317,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.xs),
-      child: InkWell(
+      child: GestureDetector(
         onTap: () {
           setState(() {
             if (isExpanded) {
@@ -1342,85 +1327,73 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             }
           });
         },
-        borderRadius: BorderRadius.circular(AppBorderRadius.small),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.sm,
-            vertical: Spacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(AppBorderRadius.small),
-            border: Border.all(
-              color: theme.dividerColor.withValues(alpha: 0.5),
-              width: BorderWidth.thin,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isExpanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    size: 16,
-                    color: theme.textSecondary,
-                  ),
-                  const SizedBox(width: Spacing.xs),
-                  Icon(
-                    Icons.psychology_outlined,
-                    size: 14,
-                    color: theme.buttonPrimary,
-                  ),
-                  const SizedBox(width: Spacing.xs),
-                  Flexible(
-                    child: Text(
-                      headerText(),
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: AppTypography.bodySmall,
-                        color: theme.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              AnimatedCrossFade(
-                firstChild: const SizedBox.shrink(),
-                secondChild: Container(
-                  margin: const EdgeInsets.only(top: Spacing.sm),
-                  padding: const EdgeInsets.all(Spacing.sm),
-                  decoration: BoxDecoration(
-                    color: theme.surfaceContainer.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppBorderRadius.small),
-                    border: Border.all(
-                      color: theme.dividerColor.withValues(alpha: 0.5),
-                      width: BorderWidth.thin,
-                    ),
-                  ),
-                  child: SelectableText(
-                    rc.cleanedReasoning,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Minimal header - just text with chevron
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 14,
+                  color: theme.textSecondary,
+                ),
+                const SizedBox(width: 2),
+                Flexible(
+                  child: Text(
+                    headerText(),
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: AppTypography.bodySmall,
                       color: theme.textSecondary,
-                      fontFamily: AppTypography.monospaceFontFamily,
-                      height: 1.4,
+                      height: 1.3,
                     ),
                   ),
                 ),
-                crossFadeState: isExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 200),
+              ],
+            ),
+
+            // Expanded content - subtle background only when shown
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Container(
+                margin: const EdgeInsets.only(top: Spacing.xs, left: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.sm,
+                  vertical: Spacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.surfaceContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border(
+                    left: BorderSide(
+                      color: theme.dividerColor.withValues(alpha: 0.4),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                child: SelectableText(
+                  rc.cleanedReasoning,
+                  style: TextStyle(
+                    fontSize: AppTypography.bodySmall,
+                    color: theme.textSecondary,
+                    fontFamily: AppTypography.monospaceFontFamily,
+                    height: 1.4,
+                  ),
+                ),
               ),
-            ],
-          ),
+              crossFadeState: isExpanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 200),
+            ),
+          ],
         ),
       ),
     );
