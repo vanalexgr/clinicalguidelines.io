@@ -2,6 +2,18 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'folder.freezed.dart';
 
+bool? _safeBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is String) {
+    final lower = value.toLowerCase();
+    if (lower == 'true' || lower == '1') return true;
+    if (lower == 'false' || lower == '0') return false;
+  }
+  if (value is num) return value != 0;
+  return null;
+}
+
 @freezed
 sealed class Folder with _$Folder {
   const factory Folder({
@@ -72,7 +84,7 @@ sealed class Folder with _$Folder {
       userId: json['user_id'] as String?,
       createdAt: parseTimestamp(json['created_at']),
       updatedAt: parseTimestamp(json['updated_at']),
-      isExpanded: json['is_expanded'] as bool? ?? false,
+      isExpanded: _safeBool(json['is_expanded']) ?? false,
       conversationIds: conversationIds,
       meta: json['meta'] as Map<String, dynamic>?,
       data: json['data'] as Map<String, dynamic>?,

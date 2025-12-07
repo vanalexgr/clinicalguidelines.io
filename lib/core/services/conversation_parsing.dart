@@ -18,8 +18,8 @@ Map<String, dynamic> parseConversationSummary(Map<String, dynamic> chatData) {
   final updatedAtRaw = chatData['updated_at'] ?? chatData['updatedAt'];
   final createdAtRaw = chatData['created_at'] ?? chatData['createdAt'];
 
-  final pinned = chatData['pinned'] as bool? ?? false;
-  final archived = chatData['archived'] as bool? ?? false;
+  final pinned = _safeBool(chatData['pinned']) ?? false;
+  final archived = _safeBool(chatData['archived']) ?? false;
   final shareId = chatData['share_id']?.toString();
   final folderId = chatData['folder_id']?.toString();
 
@@ -62,8 +62,8 @@ Map<String, dynamic> parseFullConversation(Map<String, dynamic> chatData) {
   final createdAt = _parseTimestamp(
     chatData['created_at'] ?? chatData['createdAt'],
   );
-  final pinned = chatData['pinned'] as bool? ?? false;
-  final archived = chatData['archived'] as bool? ?? false;
+  final pinned = _safeBool(chatData['pinned']) ?? false;
+  final archived = _safeBool(chatData['archived']) ?? false;
   final shareId = chatData['share_id']?.toString();
   final folderId = chatData['folder_id']?.toString();
 
@@ -289,20 +289,17 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
     files = allFiles.isNotEmpty ? allFiles : null;
   }
 
-  final statusHistoryRaw =
-      historyMsg != null && historyMsg.containsKey('statusHistory')
-      ? historyMsg['statusHistory']
-      : msgData['statusHistory'];
-  final followUpsRaw = historyMsg != null && historyMsg.containsKey('followUps')
-      ? historyMsg['followUps']
+  final statusHistoryRaw = historyMsg != null
+      ? historyMsg['statusHistory'] ?? historyMsg['status_history']
+      : msgData['statusHistory'] ?? msgData['status_history'];
+  final followUpsRaw = historyMsg != null
+      ? historyMsg['followUps'] ?? historyMsg['follow_ups']
       : msgData['followUps'] ?? msgData['follow_ups'];
   final codeExecRaw = historyMsg != null
-      ? historyMsg['code_executions'] ?? historyMsg['codeExecutions']
-      : msgData['code_executions'] ?? msgData['codeExecutions'];
+      ? historyMsg['codeExecutions'] ?? historyMsg['code_executions']
+      : msgData['codeExecutions'] ?? msgData['code_executions'];
   final sourcesRaw = historyMsg != null
-      ? historyMsg.containsKey('sources')
-            ? historyMsg['sources']
-            : historyMsg['citations']
+      ? historyMsg['sources'] ?? historyMsg['citations']
       : msgData['sources'] ?? msgData['citations'];
 
   return <String, dynamic>{
@@ -311,7 +308,7 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
     'content': contentString,
     'timestamp': _parseTimestamp(msgData['timestamp']).toIso8601String(),
     'model': msgData['model']?.toString(),
-    'isStreaming': msgData['isStreaming'] as bool? ?? false,
+    'isStreaming': _safeBool(msgData['isStreaming']) ?? false,
     if (attachmentIds != null) 'attachmentIds': attachmentIds,
     if (files != null) 'files': files,
     'metadata': _coerceJsonMap(msgData['metadata']),
@@ -384,10 +381,16 @@ DateTime _parseTimestamp(dynamic timestamp) {
 
 List<Map<String, dynamic>> _parseStatusHistoryField(dynamic raw) {
   if (raw is List) {
-    return raw
-        .whereType<Map>()
-        .map((entry) => _coerceJsonMap(entry))
-        .toList(growable: false);
+    final results = <Map<String, dynamic>>[];
+    for (final entry in raw) {
+      if (entry is! Map) continue;
+      try {
+        results.add(_coerceJsonMap(entry));
+      } catch (_) {
+        // Skip malformed status entries to prevent error boundary
+      }
+    }
+    return results;
   }
   return const <Map<String, dynamic>>[];
 }
@@ -506,6 +509,20 @@ String _stringOr(dynamic value, String fallback) {
     return value;
   }
   return fallback;
+}
+
+/// Safely parse a boolean from various formats (bool, String, int).
+bool? _safeBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is String) {
+    final lower = value.toLowerCase();
+    if (lower == 'true' || lower == '1') return true;
+    if (lower == 'false' || lower == '0') return false;
+    return null;
+  }
+  if (value is num) return value != 0;
+  return null;
 }
 
 String _synthesizeToolDetailsFromToolCalls(List<Map> calls) {

@@ -2,6 +2,18 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'user.freezed.dart';
 
+bool? _safeBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is String) {
+    final lower = value.toLowerCase();
+    if (lower == 'true' || lower == '1') return true;
+    if (lower == 'false' || lower == '0') return false;
+  }
+  if (value is num) return value != 0;
+  return null;
+}
+
 @freezed
 sealed class User with _$User {
   const User._();
@@ -27,7 +39,8 @@ sealed class User with _$User {
           json['profile_image_url'] as String? ??
           json['profileImage'] as String?,
       role: json['role'] as String? ?? 'user',
-      isActive: json['is_active'] as bool? ?? json['isActive'] as bool? ?? true,
+      isActive:
+          _safeBool(json['is_active']) ?? _safeBool(json['isActive']) ?? true,
     );
   }
 

@@ -2,6 +2,18 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'toggle_filter.freezed.dart';
 
+bool? _safeBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is String) {
+    final lower = value.toLowerCase();
+    if (lower == 'true' || lower == '1') return true;
+    if (lower == 'false' || lower == '0') return false;
+  }
+  if (value is num) return value != 0;
+  return null;
+}
+
 /// Represents a toggleable filter that can be enabled/disabled per chat.
 ///
 /// These filters are created by OpenWebUI when a filter function has
@@ -34,7 +46,7 @@ sealed class ToggleFilter with _$ToggleFilter {
       name: json['name'] as String,
       description: json['description'] as String?,
       icon: json['icon'] as String?,
-      hasUserValves: json['has_user_valves'] as bool? ?? false,
+      hasUserValves: _safeBool(json['has_user_valves']) ?? false,
     );
   }
 
