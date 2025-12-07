@@ -78,6 +78,7 @@ dependencies:
   flutter_svg: ^2.2.3
   html_unescape: ^2.0.0
   home_widget: ^0.8.1
+  flutter_highlight: ^0.7.0
   
   # Clipboard functionality is available through flutter/services (part of Flutter SDK)
 

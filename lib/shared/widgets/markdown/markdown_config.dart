@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_highlight/flutter_highlight.dart';
+import 'package:flutter_highlight/themes/atom-one-dark.dart';
+import 'package:flutter_highlight/themes/github.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
@@ -98,7 +101,13 @@ class ConduitMarkdown {
         ? 'plaintext'
         : language.trim();
 
-    // Match GitHub/Atom theme colors for code block container
+    // Map common language aliases to highlight.js recognized names
+    final highlightLanguage = _mapLanguage(normalizedLanguage);
+
+    // Use Atom One Dark for dark mode, GitHub for light mode
+    final highlightTheme = isDark ? atomOneDarkTheme : githubTheme;
+
+    // Match theme colors for code block container
     final codeBackground = isDark
         ? const Color(0xFF282c34) // Atom One Dark background
         : const Color(0xFFfafbfc); // GitHub light background
@@ -135,10 +144,12 @@ class ConduitMarkdown {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.all(Spacing.md),
-            child: SelectableText(
+            child: HighlightView(
               code,
-              style: AppTypography.codeStyle.copyWith(
-                color: theme.codeText,
+              language: highlightLanguage,
+              theme: highlightTheme,
+              padding: EdgeInsets.zero,
+              textStyle: AppTypography.codeStyle.copyWith(
                 fontFamily: AppTypography.monospaceFontFamily,
               ),
             ),
@@ -146,6 +157,34 @@ class ConduitMarkdown {
         ],
       ),
     );
+  }
+
+  /// Maps common language names/aliases to highlight.js recognized names.
+  static String _mapLanguage(String language) {
+    final lower = language.toLowerCase();
+
+    // Common language aliases mapping
+    const languageMap = <String, String>{
+      'js': 'javascript',
+      'ts': 'typescript',
+      'py': 'python',
+      'rb': 'ruby',
+      'sh': 'bash',
+      'shell': 'bash',
+      'zsh': 'bash',
+      'yml': 'yaml',
+      'dockerfile': 'docker',
+      'kt': 'kotlin',
+      'cs': 'csharp',
+      'c++': 'cpp',
+      'objc': 'objectivec',
+      'objective-c': 'objectivec',
+      'txt': 'plaintext',
+      'text': 'plaintext',
+      'md': 'markdown',
+    };
+
+    return languageMap[lower] ?? lower;
   }
 
   static Widget _buildImage(
