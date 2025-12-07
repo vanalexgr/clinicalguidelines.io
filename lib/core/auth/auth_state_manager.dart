@@ -775,7 +775,10 @@ class AuthStateManager extends _$AuthStateManager {
     }
   }
 
-  /// Logout user and clear all data including server configs and custom headers
+  /// Logout user and clear auth data while preserving server configuration.
+  /// Server settings (URL, custom headers, self-signed cert) are kept so users
+  /// can quickly re-login. Users can navigate to server connection page to
+  /// change server settings if needed.
   Future<void> logout() async {
     _update(
       (current) =>
@@ -797,17 +800,16 @@ class AuthStateManager extends _$AuthStateManager {
         }
       }
 
-      // Clear all local auth data (including server configs with custom headers)
+      // Clear auth data but preserve server configs (URL, headers, cert settings)
       final storage = ref.read(optimizedStorageServiceProvider);
       await storage.clearAuthData();
       _updateApiServiceToken(null);
 
-      // Clear active server to force return to server connection page
-      await storage.setActiveServerId(null);
+      // Keep active server ID so router redirects to sign-in page, not server
+      // connection page. Users can navigate to server settings if they need to
+      // change server configuration.
 
-      // Invalidate all auth-related providers to clear cached data
-      ref.invalidate(activeServerProvider);
-      ref.invalidate(serverConfigsProvider);
+      // Invalidate tools provider to clear cached data
       ref.invalidate(toolsListProvider);
 
       // Clear auth cache manager
@@ -825,7 +827,7 @@ class AuthStateManager extends _$AuthStateManager {
       );
 
       DebugLogger.auth(
-        'Logout complete - all data cleared including server configs and custom headers',
+        'Logout complete - auth data cleared, server config preserved for quick re-login',
       );
     } catch (e, stack) {
       DebugLogger.error(
@@ -845,9 +847,7 @@ class AuthStateManager extends _$AuthStateManager {
           error: clearError,
         );
       }
-      await storage.setActiveServerId(null);
-      ref.invalidate(activeServerProvider);
-      ref.invalidate(serverConfigsProvider);
+      // Keep active server ID for redirect to sign-in page
       _cacheManager.clearAuthCache();
 
       _update(

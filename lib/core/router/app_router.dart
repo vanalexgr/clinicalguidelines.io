@@ -145,7 +145,10 @@ class RouterNotifier extends ChangeNotifier {
         return location == Routes.splash ? null : Routes.splash;
       case AuthNavigationState.needsLogin:
         if (location == Routes.connectionIssue) return null;
-        return null;
+        // Redirect to authentication page if not already on an auth route
+        // This handles the post-logout case where we want sign-in, not server setup
+        if (_isAuthLocation(location)) return null;
+        return Routes.authentication;
       case AuthNavigationState.error:
         final authSnapshot = ref
             .read(authStateManagerProvider)

@@ -762,13 +762,13 @@ class OptimizedStorageService {
   // ---------------------------------------------------------------------------
   // Batch operations
   // ---------------------------------------------------------------------------
-  /// Clear all authentication-related data including credentials, tokens,
-  /// server configurations, and custom headers
+  /// Clear authentication-related data (tokens, credentials, user data).
+  /// Server configurations (URL, custom headers, self-signed cert settings)
+  /// are preserved to allow quick re-login.
   Future<void> clearAuthData() async {
     await Future.wait([
       deleteAuthToken(),
       deleteSavedCredentials(),
-      _preferencesBox.delete(_activeServerIdKey),
       _cachesBox.delete(_localUserKey),
       _cachesBox.delete(_localUserAvatarKey),
       _cachesBox.delete(_localBackendConfigKey),
@@ -776,19 +776,16 @@ class OptimizedStorageService {
       _cachesBox.delete(_localToolsKey),
       _cachesBox.delete(_localDefaultModelKey),
       _cachesBox.delete(_localModelsKey),
-      // Clear server configurations (which include custom headers)
-      _secureCredentialStorage.clearAll(),
+      // Note: Server configs are NOT cleared - they persist across logouts
+      // so users can quickly re-login without re-entering server details
     ]);
 
     _cacheManager.invalidateMatching(
-      (key) =>
-          key.contains('auth') ||
-          key.contains('credentials') ||
-          key.contains('server'),
+      (key) => key.contains('auth') || key.contains('credentials'),
     );
 
     DebugLogger.log(
-      'Auth data cleared in batch operation (including server configs and custom headers)',
+      'Auth data cleared (server configs preserved for quick re-login)',
       scope: 'storage/optimized',
     );
   }
