@@ -196,19 +196,12 @@ class _OpenWebUISourcesWidgetState extends State<OpenWebUISourcesWidget> {
 
     // Debug: debugPrint('Building source item $index: $displayText');
 
-    // Determine display text
+    // Determine display text - for URL sources, show just the URL
     String displayText;
-    String? title = source.title;
-
-    // If no direct title, check metadata
-    if ((title == null || title.isEmpty) && source.metadata != null) {
-      title = source.metadata!['title']?.toString();
-    }
-
-    if (title != null && title.isNotEmpty) {
-      displayText = title;
-    } else if (isUrl) {
-      displayText = _extractDomain(url);
+    if (isUrl) {
+      displayText = url;
+    } else if (source.title != null && source.title!.isNotEmpty) {
+      displayText = source.title!;
     } else if (source.id != null && source.id!.isNotEmpty) {
       displayText = source.id!;
     } else {
