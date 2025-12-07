@@ -776,6 +776,13 @@
   "failedToLoadNotes": "Notities laden mislukt",
   "deleteNoteTitle": "Notitie verwijderen",
   "deleteNoteMessage": "\"{title}\" verwijderen? Dit kan niet ongedaan worden gemaakt.",
+  "@deleteNoteMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "noteTitle": "Notitietitel",
   "writeNote": "Schrijf iets...",
   "noteSaved": "Notitie opgeslagen",
@@ -806,10 +813,50 @@
   "older": "Ouder",
   "tapToExpand": "Tik om uit te vouwen",
   "byAuthor": "Door {name}",
+  "@byAuthor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "wordCount": "{count} woorden",
+  "@wordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "charCount": "{count} tekens",
+  "@charCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "promptVariablesTitle": "Details invullen",
   "promptVariablesDescription": "Vul de onderstaande velden in om deze prompt aan te passen.",
   "promptVariableNumberMin": "Minimale waarde is {min}",
-  "promptVariableNumberMax": "Maximale waarde is {max}"
+  "@promptVariableNumberMin": {
+    "placeholders": {
+      "min": {
+        "type": "double"
+      }
+    }
+  },
+  "promptVariableNumberMax": "Maximale waarde is {max}",
+  "@promptVariableNumberMax": {
+    "placeholders": {
+      "max": {
+        "type": "double"
+      }
+    }
+  },
+  "widgetAskConduit": "Vraag Conduit",
+  "widgetCamera": "Camera",
+  "widgetPhotos": "Foto's",
+  "widgetClipboard": "Klembord",
+  "widgetDescription": "Snelle toegang tot Conduit-chat met camera, foto's en klembordsnelkoppelingen"
 }

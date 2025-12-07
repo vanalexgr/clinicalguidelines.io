@@ -776,6 +776,13 @@
   "failedToLoadNotes": "Error al cargar las notas",
   "deleteNoteTitle": "Eliminar nota",
   "deleteNoteMessage": "¿Eliminar \"{title}\"? Esta acción no se puede deshacer.",
+  "@deleteNoteMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "noteTitle": "Título de la nota",
   "writeNote": "Escribe algo...",
   "noteSaved": "Nota guardada",
@@ -806,10 +813,50 @@
   "older": "Más antiguo",
   "tapToExpand": "Toca para expandir",
   "byAuthor": "Por {name}",
+  "@byAuthor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "wordCount": "{count} palabras",
+  "@wordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "charCount": "{count} caracteres",
+  "@charCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "promptVariablesTitle": "Completar detalles",
   "promptVariablesDescription": "Complete los campos a continuación para personalizar este prompt.",
   "promptVariableNumberMin": "El valor mínimo es {min}",
-  "promptVariableNumberMax": "El valor máximo es {max}"
+  "@promptVariableNumberMin": {
+    "placeholders": {
+      "min": {
+        "type": "double"
+      }
+    }
+  },
+  "promptVariableNumberMax": "El valor máximo es {max}",
+  "@promptVariableNumberMax": {
+    "placeholders": {
+      "max": {
+        "type": "double"
+      }
+    }
+  },
+  "widgetAskConduit": "Preguntar a Conduit",
+  "widgetCamera": "Cámara",
+  "widgetPhotos": "Fotos",
+  "widgetClipboard": "Portapapeles",
+  "widgetDescription": "Acceso rápido al chat de Conduit con cámara, fotos y atajos del portapapeles"
 }

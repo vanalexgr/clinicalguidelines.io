@@ -776,6 +776,13 @@
   "failedToLoadNotes": "載入筆記失敗",
   "deleteNoteTitle": "刪除筆記",
   "deleteNoteMessage": "刪除「{title}」？此操作無法復原。",
+  "@deleteNoteMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "noteTitle": "筆記標題",
   "writeNote": "寫點什麼...",
   "noteSaved": "筆記已儲存",
@@ -806,10 +813,50 @@
   "older": "更早",
   "tapToExpand": "點擊展開",
   "byAuthor": "作者：{name}",
+  "@byAuthor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "wordCount": "{count} 字",
+  "@wordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "charCount": "{count} 字元",
+  "@charCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "promptVariablesTitle": "填寫詳情",
   "promptVariablesDescription": "填寫以下欄位以自訂此提示詞。",
   "promptVariableNumberMin": "最小值為 {min}",
-  "promptVariableNumberMax": "最大值為 {max}"
+  "@promptVariableNumberMin": {
+    "placeholders": {
+      "min": {
+        "type": "double"
+      }
+    }
+  },
+  "promptVariableNumberMax": "最大值為 {max}",
+  "@promptVariableNumberMax": {
+    "placeholders": {
+      "max": {
+        "type": "double"
+      }
+    }
+  },
+  "widgetAskConduit": "詢問 Conduit",
+  "widgetCamera": "相機",
+  "widgetPhotos": "照片",
+  "widgetClipboard": "剪貼簿",
+  "widgetDescription": "快速存取 Conduit 聊天，支援相機、照片和剪貼簿捷徑"
 }

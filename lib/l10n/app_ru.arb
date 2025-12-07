@@ -776,6 +776,13 @@
   "failedToLoadNotes": "Не удалось загрузить заметки",
   "deleteNoteTitle": "Удалить заметку",
   "deleteNoteMessage": "Удалить \"{title}\"? Это действие нельзя отменить.",
+  "@deleteNoteMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "noteTitle": "Название заметки",
   "writeNote": "Напишите что-нибудь...",
   "noteSaved": "Заметка сохранена",
@@ -806,10 +813,50 @@
   "older": "Старше",
   "tapToExpand": "Нажмите для раскрытия",
   "byAuthor": "Автор: {name}",
+  "@byAuthor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "wordCount": "{count} слов",
+  "@wordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "charCount": "{count} символов",
+  "@charCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "promptVariablesTitle": "Заполните данные",
   "promptVariablesDescription": "Заполните поля ниже, чтобы настроить этот промпт.",
   "promptVariableNumberMin": "Минимальное значение: {min}",
-  "promptVariableNumberMax": "Максимальное значение: {max}"
+  "@promptVariableNumberMin": {
+    "placeholders": {
+      "min": {
+        "type": "double"
+      }
+    }
+  },
+  "promptVariableNumberMax": "Максимальное значение: {max}",
+  "@promptVariableNumberMax": {
+    "placeholders": {
+      "max": {
+        "type": "double"
+      }
+    }
+  },
+  "widgetAskConduit": "Спросить Conduit",
+  "widgetCamera": "Камера",
+  "widgetPhotos": "Фотографии",
+  "widgetClipboard": "Буфер обмена",
+  "widgetDescription": "Быстрый доступ к чату Conduit с камерой, фотографиями и буфером обмена"
 }

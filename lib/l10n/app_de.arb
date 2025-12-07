@@ -776,6 +776,13 @@
   "failedToLoadNotes": "Notizen konnten nicht geladen werden",
   "deleteNoteTitle": "Notiz löschen",
   "deleteNoteMessage": "\"{title}\" löschen? Dies kann nicht rückgängig gemacht werden.",
+  "@deleteNoteMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "noteTitle": "Notiz-Titel",
   "writeNote": "Schreibe etwas...",
   "noteSaved": "Notiz gespeichert",
@@ -806,10 +813,50 @@
   "older": "Älter",
   "tapToExpand": "Tippen zum Erweitern",
   "byAuthor": "Von {name}",
+  "@byAuthor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "wordCount": "{count} Wörter",
+  "@wordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "charCount": "{count} Zeichen",
+  "@charCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "promptVariablesTitle": "Details ausfüllen",
   "promptVariablesDescription": "Füllen Sie die folgenden Felder aus, um diese Vorlage anzupassen.",
   "promptVariableNumberMin": "Mindestwert ist {min}",
-  "promptVariableNumberMax": "Höchstwert ist {max}"
+  "@promptVariableNumberMin": {
+    "placeholders": {
+      "min": {
+        "type": "double"
+      }
+    }
+  },
+  "promptVariableNumberMax": "Höchstwert ist {max}",
+  "@promptVariableNumberMax": {
+    "placeholders": {
+      "max": {
+        "type": "double"
+      }
+    }
+  },
+  "widgetAskConduit": "Conduit fragen",
+  "widgetCamera": "Kamera",
+  "widgetPhotos": "Fotos",
+  "widgetClipboard": "Zwischenablage",
+  "widgetDescription": "Schnellzugriff auf den Conduit-Chat mit Kamera, Fotos und Zwischenablage-Verknüpfungen"
 }
