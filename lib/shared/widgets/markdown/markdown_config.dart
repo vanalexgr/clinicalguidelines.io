@@ -17,7 +17,6 @@ import 'package:conduit/l10n/app_localizations.dart';
 
 import '../../theme/color_tokens.dart';
 import '../../theme/theme_extensions.dart';
-import 'code_block_header.dart';
 import 'package:conduit/core/network/self_signed_image_cache_manager.dart';
 import 'package:conduit/core/network/image_header_utils.dart';
 
@@ -105,31 +104,46 @@ class ConduitMarkdown {
     final highlightLanguage = _mapLanguage(normalizedLanguage);
 
     // Use Atom One Dark for dark mode, GitHub for light mode
+    // These colors must match the highlight themes for visual consistency
     final highlightTheme = isDark ? atomOneDarkTheme : githubTheme;
-
-    // Match theme colors for code block container
     final codeBackground = isDark
-        ? const Color(0xFF282c34) // Atom One Dark background
-        : const Color(0xFFfafbfc); // GitHub light background
+        ? const Color(0xFF282c34) // Atom One Dark
+        : const Color(0xFFF6F8FA); // GitHub light
+
+    // Derive border color from background for consistency
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.1);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: Spacing.sm),
       decoration: BoxDecoration(
         color: codeBackground,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+        border: Border.all(color: borderColor, width: BorderWidth.thin),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          CodeBlockHeader(
+          _CodeBlockHeader(
             language: normalizedLanguage,
+            backgroundColor: codeBackground,
+            borderColor: borderColor,
+            isDark: isDark,
             onCopy: () async {
               await Clipboard.setData(ClipboardData(text: code));
-              if (!context.mounted) {
-                return;
-              }
+              if (!context.mounted) return;
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
               final l10n = AppLocalizations.of(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -143,7 +157,10 @@ class ConduitMarkdown {
           ),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(Spacing.md),
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.md,
+              vertical: Spacing.sm + 4,
+            ),
             child: HighlightView(
               code,
               language: highlightLanguage,
@@ -151,6 +168,8 @@ class ConduitMarkdown {
               padding: EdgeInsets.zero,
               textStyle: AppTypography.codeStyle.copyWith(
                 fontFamily: AppTypography.monospaceFontFamily,
+                fontSize: 13,
+                height: 1.55,
               ),
             ),
           ),
@@ -483,6 +502,166 @@ class ConduitMarkdown {
         style: textStyle,
       ),
     );
+  }
+}
+
+/// Internal code block header with consistent styling.
+class _CodeBlockHeader extends StatefulWidget {
+  const _CodeBlockHeader({
+    required this.language,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.isDark,
+    required this.onCopy,
+  });
+
+  final String language;
+  final Color backgroundColor;
+  final Color borderColor;
+  final bool isDark;
+  final VoidCallback onCopy;
+
+  @override
+  State<_CodeBlockHeader> createState() => _CodeBlockHeaderState();
+}
+
+class _CodeBlockHeaderState extends State<_CodeBlockHeader> {
+  bool _isHovering = false;
+  bool _isCopied = false;
+
+  void _handleCopy() {
+    widget.onCopy();
+    setState(() => _isCopied = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _isCopied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = widget.language.isEmpty ? 'plaintext' : widget.language;
+
+    // Colors derived from the code block theme for consistency
+    final labelColor = widget.isDark
+        ? const Color(0xFF9DA5B4) // Atom One Dark muted
+        : const Color(0xFF57606A); // GitHub muted
+
+    final iconColor = _isHovering
+        ? (widget.isDark ? const Color(0xFFABB2BF) : const Color(0xFF24292F))
+        : labelColor;
+
+    final successColor = widget.isDark
+        ? const Color(0xFF98C379)
+        : const Color(0xFF1A7F37);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Spacing.md,
+        vertical: Spacing.xs + 2,
+      ),
+      decoration: BoxDecoration(
+        color: widget.backgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color: widget.borderColor,
+            width: BorderWidth.thin,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Language icon
+          Icon(
+            _getLanguageIcon(label),
+            size: 14,
+            color: labelColor.withValues(alpha: 0.7),
+          ),
+          const SizedBox(width: Spacing.xs),
+          // Language label
+          Text(
+            label,
+            style: AppTypography.codeStyle.copyWith(
+              color: labelColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const Spacer(),
+          // Copy button with hover effect
+          MouseRegion(
+            onEnter: (_) => setState(() => _isHovering = true),
+            onExit: (_) => setState(() => _isHovering = false),
+            child: GestureDetector(
+              onTap: _handleCopy,
+              child: AnimatedContainer(
+                duration: AnimationDuration.fast,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.sm,
+                  vertical: Spacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: _isHovering
+                      ? widget.borderColor.withValues(alpha: 0.5)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppBorderRadius.xs),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedSwitcher(
+                      duration: AnimationDuration.fast,
+                      child: Icon(
+                        _isCopied
+                            ? Icons.check_rounded
+                            : Icons.content_copy_rounded,
+                        key: ValueKey(_isCopied),
+                        size: 14,
+                        color: _isCopied ? successColor : iconColor,
+                      ),
+                    ),
+                    if (_isHovering || _isCopied) ...[
+                      const SizedBox(width: Spacing.xs),
+                      AnimatedOpacity(
+                        duration: AnimationDuration.fast,
+                        opacity: 1.0,
+                        child: Text(
+                          _isCopied ? 'Copied!' : 'Copy',
+                          style: AppTypography.codeStyle.copyWith(
+                            color: _isCopied ? successColor : iconColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Returns an appropriate icon for the language.
+  IconData _getLanguageIcon(String language) {
+    final lower = language.toLowerCase();
+    return switch (lower) {
+      'dart' || 'flutter' => Icons.flutter_dash_rounded,
+      'python' || 'py' => Icons.code_rounded,
+      'javascript' || 'js' || 'typescript' || 'ts' => Icons.javascript_rounded,
+      'html' || 'css' || 'scss' => Icons.html_rounded,
+      'json' || 'yaml' || 'yml' => Icons.data_object_rounded,
+      'sql' || 'mysql' || 'postgresql' => Icons.storage_rounded,
+      'bash' || 'shell' || 'sh' || 'zsh' => Icons.terminal_rounded,
+      'markdown' || 'md' => Icons.article_rounded,
+      'swift' || 'kotlin' || 'java' => Icons.phone_iphone_rounded,
+      'rust' || 'go' || 'c' || 'cpp' || 'c++' => Icons.memory_rounded,
+      'docker' || 'dockerfile' => Icons.cloud_rounded,
+      _ => Icons.code_rounded,
+    };
   }
 }
 
