@@ -5,8 +5,8 @@ import '../../../core/models/chat_message.dart';
 import '../../theme/theme_extensions.dart';
 
 /// Helper utilities for working with source references.
-class _SourceHelper {
-  const _SourceHelper._();
+class SourceHelper {
+  const SourceHelper._();
 
   /// Extracts a URL from a source reference, checking multiple fields.
   static String? getSourceUrl(ChatSourceReference source) {
@@ -27,22 +27,39 @@ class _SourceHelper {
   }
 
   /// Gets a display title for a source.
+  ///
+  /// For web sources (with URLs), shows the domain name like "wikipedia.org".
+  /// This matches OpenWebUI's behavior where web search results show domains.
   static String getSourceTitle(ChatSourceReference source, int index) {
-    if (source.title != null && source.title!.isNotEmpty) {
-      return source.title!;
-    }
+    // For web sources, prefer showing the URL domain
     final url = getSourceUrl(source);
     if (url != null) {
-      return _extractDomain(url);
+      return extractDomain(url);
     }
+
+    // If title is a URL, extract domain
+    if (source.title != null && source.title!.isNotEmpty) {
+      final title = source.title!;
+      if (title.startsWith('http')) {
+        return extractDomain(title);
+      }
+      return title;
+    }
+
+    // Check if ID is a URL
     if (source.id != null && source.id!.isNotEmpty) {
-      return source.id!;
+      final id = source.id!;
+      if (id.startsWith('http')) {
+        return extractDomain(id);
+      }
+      return id;
     }
+
     return 'Source ${index + 1}';
   }
 
   /// Extracts the domain from a URL for display.
-  static String _extractDomain(String url) {
+  static String extractDomain(String url) {
     try {
       final uri = Uri.parse(url);
       String domain = uri.host;
@@ -53,6 +70,16 @@ class _SourceHelper {
     } catch (e) {
       return url;
     }
+  }
+
+  /// Formats a title for display, truncating if needed.
+  /// Matches OpenWebUI's getDisplayTitle behavior.
+  static String formatDisplayTitle(String title) {
+    if (title.isEmpty) return 'N/A';
+    if (title.length > 25) {
+      return '${title.substring(0, 12)}…${title.substring(title.length - 8)}';
+    }
+    return title;
   }
 
   /// Launches a URL in an external browser.
@@ -68,9 +95,9 @@ class _SourceHelper {
   }
 }
 
-/// A compact badge showing a citation reference that links to a source.
+/// A compact inline citation badge showing source domain/title.
 ///
-/// Mirrors OpenWebUI's Source.svelte and SourceToken.svelte behavior.
+/// Uses the app's design system for consistency with other chips and badges.
 class CitationBadge extends StatelessWidget {
   const CitationBadge({
     super.key,
@@ -94,65 +121,63 @@ class CitationBadge extends StatelessWidget {
 
     // Check if index is valid
     if (sourceIndex < 0 || sourceIndex >= sources.length) {
-      // Invalid source index - show placeholder
-      return _buildBadge(
-        theme: theme,
-        displayNumber: sourceIndex + 1,
-        isValid: false,
-      );
+      return const SizedBox.shrink();
     }
 
     final source = sources[sourceIndex];
-    final url = _SourceHelper.getSourceUrl(source);
-    final title = _SourceHelper.getSourceTitle(source, sourceIndex);
+    final url = SourceHelper.getSourceUrl(source);
+    final title = SourceHelper.getSourceTitle(source, sourceIndex);
+    final displayTitle = SourceHelper.formatDisplayTitle(title);
 
     return Tooltip(
       message: title,
       preferBelow: false,
-      child: _buildBadge(
-        theme: theme,
-        displayNumber: sourceIndex + 1,
-        isValid: true,
-        onTap: () {
-          if (onTap != null) {
-            onTap!();
-          } else if (url != null) {
-            _SourceHelper.launchSourceUrl(url);
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildBadge({
-    required ConduitThemeExtension theme,
-    required int displayNumber,
-    required bool isValid,
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        margin: const EdgeInsets.symmetric(horizontal: 1),
-        decoration: BoxDecoration(
-          color: isValid
-              ? theme.surfaceContainer.withValues(alpha: 0.6)
-              : theme.surfaceContainer.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: theme.dividerColor.withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-        ),
-        child: Text(
-          displayNumber.toString(),
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            color: isValid
-                ? theme.textPrimary.withValues(alpha: 0.8)
-                : theme.textSecondary.withValues(alpha: 0.5),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (onTap != null) {
+              onTap!();
+            } else if (url != null) {
+              SourceHelper.launchSourceUrl(url);
+            }
+          },
+          borderRadius: BorderRadius.circular(AppBorderRadius.chip),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.sm,
+              vertical: Spacing.xxs,
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            decoration: BoxDecoration(
+              color: theme.surfaceContainer.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(AppBorderRadius.chip),
+              border: Border.all(
+                color: theme.cardBorder.withValues(alpha: 0.5),
+                width: BorderWidth.thin,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.link_rounded,
+                  size: 10,
+                  color: theme.textSecondary.withValues(alpha: 0.7),
+                ),
+                const SizedBox(width: Spacing.xxs),
+                Text(
+                  displayTitle,
+                  style: TextStyle(
+                    fontSize: AppTypography.labelSmall,
+                    fontWeight: FontWeight.w500,
+                    color: theme.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -161,6 +186,8 @@ class CitationBadge extends StatelessWidget {
 }
 
 /// A grouped citation badge for multiple sources like [1,2,3].
+///
+/// Shows first source with +N indicator for additional sources.
 class CitationBadgeGroup extends StatelessWidget {
   const CitationBadgeGroup({
     super.key,
@@ -195,105 +222,131 @@ class CitationBadgeGroup extends StatelessWidget {
       );
     }
 
-    // For multiple citations, show grouped badge
     final theme = context.conduitTheme;
-    final validCount = sourceIndices
-        .where((i) => i >= 0 && i < sources.length)
-        .length;
+
+    // Get first valid source for display
+    final firstIndex = sourceIndices.first;
+    final isFirstValid = firstIndex >= 0 && firstIndex < sources.length;
+
+    if (!isFirstValid) {
+      return const SizedBox.shrink();
+    }
+
+    final firstSource = sources[firstIndex];
+    final firstTitle = SourceHelper.getSourceTitle(firstSource, firstIndex);
+    final displayTitle = SourceHelper.formatDisplayTitle(firstTitle);
+    final additionalCount = sourceIndices.length - 1;
 
     return PopupMenuButton<int>(
       tooltip: 'View sources',
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(),
       position: PopupMenuPosition.under,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppBorderRadius.md),
+      ),
       color: theme.surfaceBackground,
+      surfaceTintColor: Colors.transparent,
+      elevation: Elevation.medium,
       itemBuilder: (context) {
-        return sourceIndices.map((index) {
-          final isValid = index >= 0 && index < sources.length;
-          final title = isValid
-              ? _SourceHelper.getSourceTitle(sources[index], index)
-              : 'Invalid source';
+        return sourceIndices
+            .map((index) {
+              final isValid = index >= 0 && index < sources.length;
+              if (!isValid) return null;
 
-          return PopupMenuItem<int>(
-            value: index,
-            height: 36,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: theme.surfaceContainer,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Center(
-                    child: Text(
-                      (index + 1).toString(),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: theme.textPrimary,
+              final source = sources[index];
+              final title = SourceHelper.getSourceTitle(source, index);
+
+              return PopupMenuItem<int>(
+                value: index,
+                height: 40,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.link_rounded,
+                      size: 14,
+                      color: theme.textSecondary.withValues(alpha: 0.7),
+                    ),
+                    const SizedBox(width: Spacing.sm),
+                    Flexible(
+                      child: Text(
+                        SourceHelper.formatDisplayTitle(title),
+                        style: TextStyle(
+                          fontSize: AppTypography.bodySmall,
+                          fontWeight: FontWeight.w500,
+                          color: theme.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    title,
-                    style: TextStyle(fontSize: 13, color: theme.textSecondary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList();
+              );
+            })
+            .whereType<PopupMenuItem<int>>()
+            .toList();
       },
       onSelected: (index) {
         if (onSourceTap != null) {
           onSourceTap!(index);
         } else if (index >= 0 && index < sources.length) {
-          final url = _SourceHelper.getSourceUrl(sources[index]);
+          final url = SourceHelper.getSourceUrl(sources[index]);
           if (url != null) {
-            _SourceHelper.launchSourceUrl(url);
+            SourceHelper.launchSourceUrl(url);
           }
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        margin: const EdgeInsets.symmetric(horizontal: 1),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.sm,
+          vertical: Spacing.xxs,
+        ),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           color: theme.surfaceContainer.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppBorderRadius.chip),
           border: Border.all(
-            color: theme.dividerColor.withValues(alpha: 0.3),
-            width: 0.5,
+            color: theme.cardBorder.withValues(alpha: 0.5),
+            width: BorderWidth.thin,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              (sourceIndices.first + 1).toString(),
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: theme.textPrimary.withValues(alpha: 0.8),
-              ),
+            Icon(
+              Icons.link_rounded,
+              size: 10,
+              color: theme.textSecondary.withValues(alpha: 0.7),
             ),
-            if (validCount > 1) ...[
-              Text(
-                '+${validCount - 1}',
+            const SizedBox(width: Spacing.xxs),
+            Text(
+              displayTitle,
+              style: TextStyle(
+                fontSize: AppTypography.labelSmall,
+                fontWeight: FontWeight.w500,
+                color: theme.textSecondary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(width: Spacing.xxs),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: theme.buttonPrimary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppBorderRadius.small),
+              ),
+              child: Text(
+                '+$additionalCount',
                 style: TextStyle(
                   fontSize: 9,
-                  color: theme.textSecondary.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w600,
+                  color: theme.buttonPrimary,
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),
