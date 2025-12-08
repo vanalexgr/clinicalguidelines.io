@@ -239,7 +239,10 @@ class ResponsiveDrawerLayoutState extends State<ResponsiveDrawerLayout>
           child: ClipRect(
             child: IgnorePointer(
               ignoring: widget.tabletDismissible && !_isTabletDocked,
-              child: widget.drawer,
+              child: Material(
+                color: theme.surfaceBackground,
+                child: widget.drawer,
+              ),
             ),
           ),
         ),
