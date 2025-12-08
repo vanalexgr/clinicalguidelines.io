@@ -19,6 +19,7 @@ import 'enhanced_attachment.dart';
 import 'package:conduit/shared/widgets/chat_action_button.dart';
 import '../../../shared/widgets/model_avatar.dart';
 import '../../../shared/widgets/conduit_components.dart';
+import '../../../shared/widgets/middle_ellipsis_text.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import '../providers/chat_providers.dart' show sendMessageWithContainer;
 import '../../../core/utils/debug_logger.dart';
@@ -698,13 +699,15 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         children: [
           leading,
           const SizedBox(width: Spacing.xs),
-          Text(
-            widget.modelName ?? 'Assistant',
-            style: TextStyle(
-              color: theme.textSecondary,
-              fontSize: AppTypography.bodySmall,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.1,
+          Flexible(
+            child: MiddleEllipsisText(
+              widget.modelName ?? 'Assistant',
+              style: TextStyle(
+                color: theme.textSecondary,
+                fontSize: AppTypography.bodySmall,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.1,
+              ),
             ),
           ),
         ],
