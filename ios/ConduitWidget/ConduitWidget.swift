@@ -127,3 +127,4 @@ struct ConduitWidget: Widget {
 } timeline: {
     ConduitEntry(date: .now)
 }
+

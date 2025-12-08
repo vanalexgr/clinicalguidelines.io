@@ -407,3 +407,4 @@ final homeWidgetInitializerProvider = Provider<void>((ref) {
   // Initialize the coordinator which sets up widget click handling
   ref.watch(homeWidgetCoordinatorProvider);
 });
+

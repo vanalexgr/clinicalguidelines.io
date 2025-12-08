@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dart:io' show Platform;
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:ui';
 import 'dart:math' as math;
 import '../providers/chat_providers.dart';
