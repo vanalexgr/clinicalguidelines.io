@@ -25,6 +25,7 @@ import '../../../core/utils/debug_logger.dart';
 import 'sources/openwebui_sources.dart';
 import '../providers/assistant_response_builder_provider.dart';
 import '../../../core/services/worker_manager.dart';
+import 'streaming_status_widget.dart';
 
 // Pre-compiled regex patterns for image processing (performance optimization)
 final _base64ImagePattern = RegExp(r'data:image/[^;]+;base64,[A-Za-z0-9+/]+=*');
@@ -375,9 +376,12 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
   // No streaming-specific markdown fixes needed here; handled by Markdown widget
 
+  // Tool call tile - minimal design inspired by OpenWebUI
   Widget _buildToolCallTile(ToolCallEntry tc) {
     final isExpanded = _expandedToolIds.contains(tc.id);
     final theme = context.conduitTheme;
+    // Show shimmer when streaming and tool call is not done
+    final showShimmer = widget.isStreaming && !tc.done;
 
     String pretty(dynamic v, {int max = 1200}) {
       try {
@@ -391,9 +395,47 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       }
     }
 
+    Widget buildHeader() {
+      final headerWidget = Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            isExpanded
+                ? Icons.keyboard_arrow_up_rounded
+                : Icons.keyboard_arrow_down_rounded,
+            size: 14,
+            color: theme.textPrimary.withValues(alpha: 0.8),
+          ),
+          const SizedBox(width: 2),
+          Flexible(
+            child: Text(
+              tc.done ? 'Used ${tc.name}' : 'Running ${tc.name}…',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: AppTypography.bodySmall,
+                color: theme.textPrimary.withValues(alpha: 0.8),
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      if (showShimmer) {
+        return headerWidget
+            .animate(onPlay: (controller) => controller.repeat())
+            .shimmer(
+              duration: 1500.ms,
+              color: theme.shimmerHighlight.withValues(alpha: 0.6),
+            );
+      }
+      return headerWidget;
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.xs),
-      child: InkWell(
+      child: GestureDetector(
         onTap: () {
           setState(() {
             if (isExpanded) {
@@ -403,127 +445,87 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             }
           });
         },
-        borderRadius: BorderRadius.circular(AppBorderRadius.small),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.sm,
-            vertical: Spacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(AppBorderRadius.small),
-            border: Border.all(
-              color: theme.dividerColor.withValues(alpha: 0.5),
-              width: BorderWidth.thin,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isExpanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    size: 16,
-                    color: theme.textSecondary,
-                  ),
-                  const SizedBox(width: Spacing.xs),
-                  Icon(
-                    tc.done
-                        ? Icons.build_circle_outlined
-                        : Icons.play_circle_outline,
-                    size: 14,
-                    color: theme.buttonPrimary,
-                  ),
-                  const SizedBox(width: Spacing.xs),
-                  Flexible(
-                    child: Text(
-                      tc.done
-                          ? 'Tool Executed: ${tc.name}'
-                          : 'Running tool: ${tc.name}…',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: AppTypography.bodySmall,
-                        color: theme.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Minimal header - just text with chevron
+            buildHeader(),
 
-              AnimatedCrossFade(
-                firstChild: const SizedBox.shrink(),
-                secondChild: Container(
-                  margin: const EdgeInsets.only(top: Spacing.sm),
-                  padding: const EdgeInsets.all(Spacing.sm),
-                  decoration: BoxDecoration(
-                    color: theme.surfaceContainer.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppBorderRadius.small),
-                    border: Border.all(
-                      color: theme.dividerColor.withValues(alpha: 0.5),
-                      width: BorderWidth.thin,
+            // Expanded content with left border accent
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Container(
+                margin: const EdgeInsets.only(top: Spacing.xs, left: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.sm,
+                  vertical: Spacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.surfaceContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border(
+                    left: BorderSide(
+                      color: theme.dividerColor.withValues(alpha: 0.4),
+                      width: 2,
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (tc.arguments != null) ...[
-                        Text(
-                          'Arguments',
-                          style: TextStyle(
-                            fontSize: AppTypography.bodySmall,
-                            color: theme.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: Spacing.xxs),
-                        SelectableText(
-                          pretty(tc.arguments),
-                          style: TextStyle(
-                            fontSize: AppTypography.bodySmall,
-                            color: theme.textSecondary,
-                            fontFamily: AppTypography.monospaceFontFamily,
-                            height: 1.35,
-                          ),
-                        ),
-                        const SizedBox(height: Spacing.sm),
-                      ],
-
-                      if (tc.result != null) ...[
-                        Text(
-                          'Result',
-                          style: TextStyle(
-                            fontSize: AppTypography.bodySmall,
-                            color: theme.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: Spacing.xxs),
-                        SelectableText(
-                          pretty(tc.result),
-                          style: TextStyle(
-                            fontSize: AppTypography.bodySmall,
-                            color: theme.textSecondary,
-                            fontFamily: AppTypography.monospaceFontFamily,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ],
                   ),
                 ),
-                crossFadeState: isExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 200),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (tc.arguments != null) ...[
+                      Text(
+                        'Arguments',
+                        style: TextStyle(
+                          fontSize: AppTypography.labelSmall,
+                          color: theme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      SelectableText(
+                        pretty(tc.arguments),
+                        style: TextStyle(
+                          fontSize: AppTypography.bodySmall,
+                          color: theme.textSecondary,
+                          fontFamily: AppTypography.monospaceFontFamily,
+                          height: 1.35,
+                        ),
+                      ),
+                      if (tc.result != null) const SizedBox(height: Spacing.xs),
+                    ],
+
+                    if (tc.result != null) ...[
+                      Text(
+                        'Result',
+                        style: TextStyle(
+                          fontSize: AppTypography.labelSmall,
+                          color: theme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      SelectableText(
+                        pretty(tc.result),
+                        style: TextStyle(
+                          fontSize: AppTypography.bodySmall,
+                          color: theme.textSecondary,
+                          fontFamily: AppTypography.monospaceFontFamily,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
-          ),
+              crossFadeState: isExpanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 200),
+            ),
+          ],
         ),
       ),
     );
@@ -532,6 +534,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   Widget _buildSegmentedContent() {
     final children = <Widget>[];
     bool firstToolSpacerAdded = false;
+    bool hasNonTextSegment = false;
     int idx = 0;
     for (final seg in _segments) {
       if (seg.isTool && seg.toolCall != null) {
@@ -541,9 +544,16 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           firstToolSpacerAdded = true;
         }
         children.add(_buildToolCallTile(seg.toolCall!));
+        hasNonTextSegment = true;
       } else if (seg.isReasoning && seg.reasoning != null) {
         children.add(_buildReasoningTile(seg.reasoning!, idx));
+        hasNonTextSegment = true;
       } else if ((seg.text ?? '').trim().isNotEmpty) {
+        // Add spacing before text content if it follows non-text segments
+        if (hasNonTextSegment) {
+          children.add(const SizedBox(height: Spacing.sm));
+          hasNonTextSegment = false;
+        }
         children.add(_buildEnhancedMarkdownContent(seg.text!));
       }
       idx++;
@@ -766,11 +776,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                     ],
 
                     if (hasStatusTimeline) ...[
-                      StatusHistoryTimeline(
+                      StreamingStatusWidget(
                         updates: visibleStatusHistory,
-                        initiallyExpanded: widget.message.content
-                            .trim()
-                            .isEmpty,
+                        isStreaming: widget.isStreaming,
                       ),
                       const SizedBox(height: Spacing.xs),
                     ],
@@ -876,6 +884,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       content: processedContent,
       isStreaming: widget.isStreaming,
       onTapLink: (url, _) => _launchUri(url),
+      sources: widget.message.sources,
       imageBuilderOverride: (uri, title, alt) {
         // Route markdown images through the enhanced image widget so they
         // get caching, auth headers, fullscreen viewer, and sharing.
@@ -1307,10 +1316,12 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     return ChatActionButton(icon: icon, label: label, onTap: onTap);
   }
 
-  // Reasoning tile rendered inline at the position it appears
+  // Reasoning tile rendered inline - minimal design inspired by OpenWebUI
   Widget _buildReasoningTile(ReasoningEntry rc, int index) {
     final isExpanded = _expandedReasoning.contains(index);
     final theme = context.conduitTheme;
+    // Show shimmer when streaming and this is an active/incomplete reasoning
+    final showShimmer = widget.isStreaming && rc.duration == 0;
 
     String headerText() {
       final l10n = AppLocalizations.of(context)!;
@@ -1330,9 +1341,47 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       return rc.summary;
     }
 
+    Widget buildHeader() {
+      final headerWidget = Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            isExpanded
+                ? Icons.keyboard_arrow_up_rounded
+                : Icons.keyboard_arrow_down_rounded,
+            size: 14,
+            color: theme.textPrimary.withValues(alpha: 0.8),
+          ),
+          const SizedBox(width: 2),
+          Flexible(
+            child: Text(
+              headerText(),
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: AppTypography.bodySmall,
+                color: theme.textPrimary.withValues(alpha: 0.8),
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      if (showShimmer) {
+        return headerWidget
+            .animate(onPlay: (controller) => controller.repeat())
+            .shimmer(
+              duration: 1500.ms,
+              color: theme.shimmerHighlight.withValues(alpha: 0.6),
+            );
+      }
+      return headerWidget;
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.xs),
-      child: InkWell(
+      child: GestureDetector(
         onTap: () {
           setState(() {
             if (isExpanded) {
@@ -1342,85 +1391,49 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
             }
           });
         },
-        borderRadius: BorderRadius.circular(AppBorderRadius.small),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.sm,
-            vertical: Spacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(AppBorderRadius.small),
-            border: Border.all(
-              color: theme.dividerColor.withValues(alpha: 0.5),
-              width: BorderWidth.thin,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isExpanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    size: 16,
-                    color: theme.textSecondary,
-                  ),
-                  const SizedBox(width: Spacing.xs),
-                  Icon(
-                    Icons.psychology_outlined,
-                    size: 14,
-                    color: theme.buttonPrimary,
-                  ),
-                  const SizedBox(width: Spacing.xs),
-                  Flexible(
-                    child: Text(
-                      headerText(),
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: AppTypography.bodySmall,
-                        color: theme.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Minimal header - just text with chevron
+            buildHeader(),
 
-              AnimatedCrossFade(
-                firstChild: const SizedBox.shrink(),
-                secondChild: Container(
-                  margin: const EdgeInsets.only(top: Spacing.sm),
-                  padding: const EdgeInsets.all(Spacing.sm),
-                  decoration: BoxDecoration(
-                    color: theme.surfaceContainer.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppBorderRadius.small),
-                    border: Border.all(
-                      color: theme.dividerColor.withValues(alpha: 0.5),
-                      width: BorderWidth.thin,
-                    ),
-                  ),
-                  child: SelectableText(
-                    rc.cleanedReasoning,
-                    style: TextStyle(
-                      fontSize: AppTypography.bodySmall,
-                      color: theme.textSecondary,
-                      fontFamily: AppTypography.monospaceFontFamily,
-                      height: 1.4,
+            // Expanded content - subtle background only when shown
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Container(
+                margin: const EdgeInsets.only(top: Spacing.xs, left: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.sm,
+                  vertical: Spacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.surfaceContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border(
+                    left: BorderSide(
+                      color: theme.dividerColor.withValues(alpha: 0.4),
+                      width: 2,
                     ),
                   ),
                 ),
-                crossFadeState: isExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 200),
+                child: SelectableText(
+                  rc.cleanedReasoning,
+                  style: TextStyle(
+                    fontSize: AppTypography.bodySmall,
+                    color: theme.textSecondary,
+                    fontFamily: AppTypography.monospaceFontFamily,
+                    height: 1.4,
+                  ),
+                ),
               ),
-            ],
-          ),
+              crossFadeState: isExpanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 200),
+            ),
+          ],
         ),
       ),
     );
@@ -1453,649 +1466,6 @@ String _buildTtsPlainTextWorker(Map<String, dynamic> payload) {
     return MarkdownToText.convert(fallback);
   }
   return result;
-}
-
-class StatusHistoryTimeline extends StatefulWidget {
-  const StatusHistoryTimeline({
-    super.key,
-    required this.updates,
-    this.initiallyExpanded = false,
-  });
-
-  final List<ChatStatusUpdate> updates;
-  final bool initiallyExpanded;
-
-  @override
-  State<StatusHistoryTimeline> createState() => _StatusHistoryTimelineState();
-}
-
-class _StatusHistoryTimelineState extends State<StatusHistoryTimeline> {
-  late bool _expanded;
-
-  @override
-  void initState() {
-    super.initState();
-    _expanded = widget.initiallyExpanded;
-  }
-
-  @override
-  void didUpdateWidget(covariant StatusHistoryTimeline oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initiallyExpanded != oldWidget.initiallyExpanded) {
-      _expanded = widget.initiallyExpanded;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.conduitTheme;
-    final visible = widget.updates
-        .where((update) => update.hidden != true)
-        .toList();
-    if (visible.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final previous = visible.length > 1
-        ? visible.sublist(0, visible.length - 1)
-        : const [];
-    final current = visible.last;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          child: !_expanded || previous.isEmpty
-              ? const SizedBox.shrink()
-              : Column(
-                  children: previous
-                      .map(
-                        (update) => _TimelineRow(
-                          update: update,
-                          theme: theme,
-                          showTail: true,
-                          forceDone: true,
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
-        ),
-        _TimelineRow(
-          update: current,
-          theme: theme,
-          showTail: false,
-          forceDone: current.done == true ? true : null,
-          onTap: previous.isNotEmpty
-              ? () => setState(() => _expanded = !_expanded)
-              : null,
-          showChevron: previous.isNotEmpty,
-          expanded: _expanded,
-        ),
-      ],
-    );
-  }
-}
-
-class _TimelineRow extends StatelessWidget {
-  const _TimelineRow({
-    required this.update,
-    required this.theme,
-    required this.showTail,
-    this.forceDone,
-    this.onTap,
-    this.showChevron = false,
-    this.expanded = false,
-  });
-
-  final ChatStatusUpdate update;
-  final ConduitThemeExtension theme;
-  final bool showTail;
-  final bool? forceDone;
-  final VoidCallback? onTap;
-  final bool showChevron;
-  final bool expanded;
-
-  bool get _isPending {
-    final resolved = forceDone ?? update.done;
-    return resolved != true;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final resolved = forceDone ?? update.done;
-    final dotColor = _indicatorColor(theme, resolved);
-    final content = _StatusHistoryContent(
-      update: update,
-      theme: theme,
-      isPending: _isPending,
-    );
-
-    final row = IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _TimelineIndicator(
-            color: dotColor,
-            showTail: showTail,
-            animatePulse: _isPending,
-            theme: theme,
-          ),
-          const SizedBox(width: Spacing.xs),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: content),
-                if (showChevron)
-                  Padding(
-                    padding: const EdgeInsets.only(left: Spacing.xs, top: 4),
-                    child: AnimatedRotation(
-                      turns: expanded ? 0.5 : 0.0,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOutCubic,
-                      child: Icon(
-                        Icons.expand_more,
-                        size: 16,
-                        color: theme.textSecondary.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-
-    final wrapped = Padding(
-      padding: const EdgeInsets.symmetric(vertical: Spacing.xxs),
-      child: row,
-    );
-
-    if (onTap == null) {
-      return wrapped;
-    }
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppBorderRadius.small),
-      child: wrapped,
-    );
-  }
-
-  Color _indicatorColor(ConduitThemeExtension theme, bool? done) {
-    if (done == false) {
-      return theme.iconPrimary;
-    }
-    if (done == true) {
-      return theme.success;
-    }
-    return theme.iconSecondary.withValues(alpha: 0.7);
-  }
-}
-
-class _TimelineIndicator extends StatefulWidget {
-  const _TimelineIndicator({
-    required this.color,
-    required this.showTail,
-    required this.animatePulse,
-    required this.theme,
-  });
-
-  final Color color;
-  final bool showTail;
-  final bool animatePulse;
-  final ConduitThemeExtension theme;
-
-  @override
-  State<_TimelineIndicator> createState() => _TimelineIndicatorState();
-}
-
-class _TimelineIndicatorState extends State<_TimelineIndicator>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    if (widget.animatePulse) {
-      _controller.repeat();
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _TimelineIndicator oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.animatePulse && !_controller.isAnimating) {
-      _controller.repeat();
-    } else if (!widget.animatePulse && _controller.isAnimating) {
-      _controller.stop();
-      _controller.reset();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final lineColor = widget.theme.dividerColor.withValues(alpha: 0.5);
-
-    return SizedBox(
-      width: 18,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 16,
-            width: 16,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (widget.animatePulse)
-                  FadeTransition(
-                    opacity: _controller.drive(
-                      Tween<double>(begin: 0.45, end: 0.0),
-                    ),
-                    child: ScaleTransition(
-                      scale: _controller.drive(
-                        Tween<double>(
-                          begin: 1.0,
-                          end: 2.2,
-                        ).chain(CurveTween(curve: Curves.easeOutCubic)),
-                      ),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: widget.color.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: widget.color,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const SizedBox.square(dimension: 8),
-                ),
-              ],
-            ),
-          ),
-          if (widget.showTail)
-            Expanded(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: Container(
-                  margin: const EdgeInsets.only(top: Spacing.xxs),
-                  width: 1,
-                  color: lineColor,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusHistoryContent extends StatelessWidget {
-  const _StatusHistoryContent({
-    required this.update,
-    required this.theme,
-    required this.isPending,
-  });
-
-  final ChatStatusUpdate update;
-  final ConduitThemeExtension theme;
-  final bool isPending;
-
-  @override
-  Widget build(BuildContext context) {
-    final description = _resolveStatusDescription(update);
-    final queries = _collectQueries(update);
-    final linkChips = _buildLinkChips(update);
-
-    final headlineStyle = TextStyle(
-      fontSize: AppTypography.bodySmall,
-      fontWeight: FontWeight.w600,
-      height: 1.3,
-      color: isPending ? theme.textPrimary : theme.textSecondary,
-    );
-
-    final content = <Widget>[Text(description, style: headlineStyle)];
-
-    if (update.count != null && update.action != 'sources_retrieved') {
-      content.add(
-        Text(
-          update.count == 1
-              ? 'Retrieved 1 source'
-              : 'Retrieved ${update.count} sources',
-          style: TextStyle(
-            fontSize: AppTypography.labelSmall,
-            color: theme.textSecondary.withValues(alpha: 0.75),
-          ),
-        ),
-      );
-    }
-
-    if (queries.isNotEmpty) {
-      content.add(_QueryPills(queries: queries, theme: theme));
-    }
-
-    if (linkChips.isNotEmpty) {
-      content.add(_LinkPills(items: linkChips, theme: theme));
-    }
-
-    final timestamp = update.occurredAt;
-    if (timestamp != null) {
-      content.add(
-        Text(
-          _relativeTime(timestamp),
-          style: TextStyle(
-            fontSize: AppTypography.labelSmall,
-            color: theme.textSecondary.withValues(alpha: 0.55),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < content.length; i++)
-          Padding(
-            padding: EdgeInsets.only(top: i == 0 ? 0 : Spacing.xxs),
-            child: content[i],
-          ),
-      ],
-    );
-  }
-}
-
-class _QueryPills extends StatelessWidget {
-  const _QueryPills({required this.queries, required this.theme});
-
-  final List<String> queries;
-  final ConduitThemeExtension theme;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconColor = theme.iconSecondary;
-    final textStyle = TextStyle(
-      fontSize: AppTypography.labelSmall,
-      color: theme.textSecondary,
-    );
-
-    return Wrap(
-      spacing: Spacing.xs,
-      runSpacing: Spacing.xs,
-      children: queries
-          .map(
-            (query) => InkWell(
-              onTap: () => _launchUri(
-                'https://www.google.com/search?q=${Uri.encodeComponent(query)}',
-              ),
-              borderRadius: BorderRadius.circular(AppBorderRadius.small),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.sm,
-                  vertical: Spacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.surfaceContainer.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
-                  border: Border.all(
-                    color: theme.dividerColor.withValues(alpha: 0.3),
-                    width: BorderWidth.thin,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.search,
-                      size: AppTypography.labelSmall + 2,
-                      color: iconColor,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        query,
-                        style: textStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          )
-          .toList(growable: false),
-    );
-  }
-}
-
-class _LinkPills extends StatelessWidget {
-  const _LinkPills({required this.items, required this.theme});
-
-  final List<_LinkChipData> items;
-  final ConduitThemeExtension theme;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconColor = theme.iconPrimary;
-    final textStyle = TextStyle(
-      fontSize: AppTypography.labelSmall,
-      color: theme.buttonPrimary,
-      fontWeight: FontWeight.w600,
-    );
-
-    return Wrap(
-      spacing: Spacing.xs,
-      runSpacing: Spacing.xs,
-      children: items
-          .map(
-            (item) => InkWell(
-              onTap: item.url != null ? () => _launchUri(item.url!) : null,
-              borderRadius: BorderRadius.circular(AppBorderRadius.small),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.sm,
-                  vertical: Spacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.surfaceContainer.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
-                  border: Border.all(
-                    color: theme.dividerColor.withValues(alpha: 0.3),
-                    width: BorderWidth.thin,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(
-                      item.icon,
-                      size: AppTypography.labelSmall + 2,
-                      color: iconColor,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        item.label,
-                        style: textStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (item.url != null) ...[
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.open_in_new,
-                        size: 11,
-                        color: iconColor.withValues(alpha: 0.7),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          )
-          .toList(growable: false),
-    );
-  }
-}
-
-class _LinkChipData {
-  const _LinkChipData({required this.label, required this.icon, this.url});
-
-  final String label;
-  final IconData icon;
-  final String? url;
-}
-
-List<String> _collectQueries(ChatStatusUpdate update) {
-  final merged = <String>[];
-  for (final query in update.queries) {
-    final trimmed = query.trim();
-    if (trimmed.isNotEmpty) {
-      merged.add(trimmed);
-    }
-  }
-  final single = update.query?.trim();
-  if (single != null && single.isNotEmpty && !merged.contains(single)) {
-    merged.add(single);
-  }
-  return merged;
-}
-
-List<_LinkChipData> _buildLinkChips(ChatStatusUpdate update) {
-  final chips = <_LinkChipData>[];
-  if (update.items.isNotEmpty) {
-    for (final item in update.items) {
-      final title = item.title?.trim();
-      final label = (title != null && title.isNotEmpty)
-          ? title
-          : (item.link != null ? _extractHost(item.link!) : 'Result');
-      chips.add(
-        _LinkChipData(label: label, icon: Icons.public, url: item.link),
-      );
-    }
-  } else if (update.urls.isNotEmpty) {
-    for (final url in update.urls) {
-      chips.add(
-        _LinkChipData(label: _extractHost(url), icon: Icons.public, url: url),
-      );
-    }
-  }
-  return chips;
-}
-
-String _resolveStatusDescription(ChatStatusUpdate update) {
-  final description = update.description?.trim();
-  final action = update.action?.trim();
-
-  if (action == 'knowledge_search' && update.query?.isNotEmpty == true) {
-    return 'Searching knowledge for "${update.query}"';
-  }
-
-  if (action == 'web_search_queries_generated' ||
-      action == 'queries_generated') {
-    return 'Searching';
-  }
-
-  if (action == 'sources_retrieved') {
-    final count = update.count;
-    if (count == null) {
-      return 'Retrieved sources';
-    }
-    if (count == 0) {
-      return 'No sources found';
-    }
-    if (count == 1) {
-      return 'Retrieved 1 source';
-    }
-    return 'Retrieved $count sources';
-  }
-
-  if (description != null && description.isNotEmpty) {
-    return _replaceStatusPlaceholders(description, update);
-  }
-
-  if (action != null && action.isNotEmpty) {
-    return action.replaceAll('_', ' ');
-  }
-
-  return 'Processing';
-}
-
-String _replaceStatusPlaceholders(String template, ChatStatusUpdate update) {
-  var result = template;
-
-  if (result.contains('{{count}}')) {
-    final fallback = update.count ?? _inferCount(update);
-    result = result.replaceAll(
-      '{{count}}',
-      fallback != null ? fallback.toString() : 'multiple',
-    );
-  }
-
-  if (result.contains('{{searchQuery}}')) {
-    final query = update.query?.trim();
-    if (query != null && query.isNotEmpty) {
-      result = result.replaceAll('{{searchQuery}}', query);
-    }
-  }
-
-  return result;
-}
-
-int? _inferCount(ChatStatusUpdate update) {
-  if (update.urls.isNotEmpty) {
-    return update.urls.length;
-  }
-  if (update.items.isNotEmpty) {
-    return update.items.length;
-  }
-  if (update.queries.isNotEmpty) {
-    return update.queries.length;
-  }
-  return null;
-}
-
-String _relativeTime(DateTime timestamp) {
-  final local = timestamp.toLocal();
-  final now = DateTime.now();
-  final difference = now.difference(local);
-  if (difference.inMinutes < 1) {
-    return 'Just now';
-  }
-  if (difference.inHours < 1) {
-    final minutes = difference.inMinutes;
-    return minutes == 1 ? '1 minute ago' : '$minutes minutes ago';
-  }
-  return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-}
-
-String _extractHost(String url) {
-  final uri = Uri.tryParse(url);
-  if (uri == null || uri.host.isEmpty) {
-    return url;
-  }
-  return uri.host;
 }
 
 class CodeExecutionListView extends StatelessWidget {

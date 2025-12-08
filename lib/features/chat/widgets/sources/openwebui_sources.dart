@@ -68,8 +68,8 @@ class _OpenWebUISourcesWidgetState extends State<OpenWebUISourcesWidget> {
                 splashColor: theme.surfaceContainer.withValues(alpha: 0.2),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
+                    horizontal: 10,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
@@ -196,19 +196,12 @@ class _OpenWebUISourcesWidgetState extends State<OpenWebUISourcesWidget> {
 
     // Debug: debugPrint('Building source item $index: $displayText');
 
-    // Determine display text
+    // Determine display text - for URL sources, show just the URL
     String displayText;
-    String? title = source.title;
-
-    // If no direct title, check metadata
-    if ((title == null || title.isEmpty) && source.metadata != null) {
-      title = source.metadata!['title']?.toString();
-    }
-
-    if (title != null && title.isNotEmpty) {
-      displayText = title;
-    } else if (isUrl) {
-      displayText = _extractDomain(url);
+    if (isUrl) {
+      displayText = url;
+    } else if (source.title != null && source.title!.isNotEmpty) {
+      displayText = source.title!;
     } else if (source.id != null && source.id!.isNotEmpty) {
       displayText = source.id!;
     } else {

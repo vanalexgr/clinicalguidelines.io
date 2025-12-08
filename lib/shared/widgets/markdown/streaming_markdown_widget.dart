@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/models/chat_message.dart';
+import '../../../core/utils/citation_parser.dart';
 import '../../theme/theme_extensions.dart';
+import 'citation_badge.dart';
 import 'markdown_config.dart';
 import 'markdown_preprocessor.dart';
 
@@ -17,6 +20,8 @@ class StreamingMarkdownWidget extends StatelessWidget {
     required this.isStreaming,
     this.onTapLink,
     this.imageBuilderOverride,
+    this.sources,
+    this.onSourceTap,
   });
 
   final String content;
@@ -24,6 +29,13 @@ class StreamingMarkdownWidget extends StatelessWidget {
   final MarkdownLinkTapCallback? onTapLink;
   final Widget Function(Uri uri, String? title, String? alt)?
   imageBuilderOverride;
+
+  /// Sources for inline citation badge rendering.
+  /// When provided, [1] patterns will be rendered as clickable badges.
+  final List<ChatSourceReference>? sources;
+
+  /// Callback when a source badge is tapped.
+  final void Function(int sourceIndex)? onSourceTap;
 
   @override
   Widget build(BuildContext context) {
@@ -70,72 +82,342 @@ class StreamingMarkdownWidget extends StatelessWidget {
     specialBlocks.sort((a, b) => a.start.compareTo(b.start));
 
     Widget buildMarkdown(String data) {
-      return ConduitMarkdown.buildBlock(
+      return _buildMarkdownWithCitations(context, data);
+    }
+
+    Widget result;
+
+    if (specialBlocks.isEmpty) {
+      result = buildMarkdown(normalized);
+    } else {
+      final children = <Widget>[];
+      var currentIndex = 0;
+      for (final block in specialBlocks) {
+        // Skip overlapping blocks
+        if (block.start < currentIndex) continue;
+
+        final before = normalized.substring(currentIndex, block.start);
+        if (before.trim().isNotEmpty) {
+          children.add(buildMarkdown(before));
+        }
+
+        switch (block.type) {
+          case _BlockType.mermaid:
+            children.add(
+              ConduitMarkdown.buildMermaidBlock(context, block.content),
+            );
+          case _BlockType.chartJs:
+            children.add(
+              ConduitMarkdown.buildChartJsBlock(context, block.content),
+            );
+        }
+
+        currentIndex = block.end;
+      }
+
+      final tail = normalized.substring(currentIndex);
+      if (tail.trim().isNotEmpty) {
+        children.add(buildMarkdown(tail));
+      }
+
+      result = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      );
+    }
+
+    // Only wrap in SelectionArea when not streaming to avoid concurrent
+    // modification errors in Flutter's selection system during rapid updates
+    if (isStreaming) {
+      return result;
+    }
+
+    return SelectionArea(child: result);
+  }
+
+  /// Builds markdown content with inline citation badges.
+  ///
+  /// Citations like [1], [2] are rendered as clickable badges inline
+  /// within the text, matching OpenWebUI's behavior.
+  Widget _buildMarkdownWithCitations(BuildContext context, String data) {
+    // If no sources provided, render plain markdown
+    if (sources == null || sources!.isEmpty) {
+      return ConduitMarkdown.build(
         context: context,
         data: data,
         onTapLink: onTapLink,
-        selectable: false,
         imageBuilderOverride: imageBuilderOverride,
       );
     }
 
-    if (specialBlocks.isEmpty) {
-      return SelectionArea(
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            textSelectionTheme: TextSelectionThemeData(
-              cursorColor: context.conduitTheme.buttonPrimary,
+    // Check if content has citations
+    if (!CitationParser.hasCitations(data)) {
+      return ConduitMarkdown.build(
+        context: context,
+        data: data,
+        onTapLink: onTapLink,
+        imageBuilderOverride: imageBuilderOverride,
+      );
+    }
+
+    // Render content with inline citation badges
+    return _InlineCitationMarkdown(
+      data: data,
+      sources: sources!,
+      onTapLink: onTapLink,
+      onSourceTap: onSourceTap,
+      imageBuilderOverride: imageBuilderOverride,
+    );
+  }
+}
+
+/// Widget that renders markdown with inline citation badges.
+///
+/// Parses the markdown content, identifies citation patterns, and renders
+/// them as clickable badges inline with the text.
+class _InlineCitationMarkdown extends StatelessWidget {
+  const _InlineCitationMarkdown({
+    required this.data,
+    required this.sources,
+    this.onTapLink,
+    this.onSourceTap,
+    this.imageBuilderOverride,
+  });
+
+  final String data;
+  final List<ChatSourceReference> sources;
+  final MarkdownLinkTapCallback? onTapLink;
+  final void Function(int sourceIndex)? onSourceTap;
+  final Widget Function(Uri uri, String? title, String? alt)?
+  imageBuilderOverride;
+
+  @override
+  Widget build(BuildContext context) {
+    // Split content into lines/paragraphs for processing
+    final segments = _parseContentWithCitations(data);
+
+    if (segments.isEmpty) {
+      return ConduitMarkdown.build(
+        context: context,
+        data: data,
+        onTapLink: onTapLink,
+        imageBuilderOverride: imageBuilderOverride,
+      );
+    }
+
+    // Build widgets for each segment
+    final children = <Widget>[];
+    final buffer = StringBuffer();
+
+    for (final segment in segments) {
+      if (segment.hasCitations) {
+        // Flush any accumulated non-citation content
+        if (buffer.isNotEmpty) {
+          children.add(
+            ConduitMarkdown.build(
+              context: context,
+              data: buffer.toString(),
+              onTapLink: onTapLink,
+              imageBuilderOverride: imageBuilderOverride,
             ),
-          ),
-          child: buildMarkdown(normalized),
+          );
+          buffer.clear();
+        }
+
+        // Render this segment with inline citations
+        children.add(_buildParagraphWithCitations(context, segment.text));
+      } else {
+        // Accumulate non-citation content
+        if (buffer.isNotEmpty) {
+          buffer.writeln();
+        }
+        buffer.write(segment.text);
+      }
+    }
+
+    // Flush remaining content
+    if (buffer.isNotEmpty) {
+      children.add(
+        ConduitMarkdown.build(
+          context: context,
+          data: buffer.toString(),
+          onTapLink: onTapLink,
+          imageBuilderOverride: imageBuilderOverride,
         ),
       );
     }
 
-    final children = <Widget>[];
-    var currentIndex = 0;
-    for (final block in specialBlocks) {
-      // Skip overlapping blocks
-      if (block.start < currentIndex) continue;
-
-      final before = normalized.substring(currentIndex, block.start);
-      if (before.trim().isNotEmpty) {
-        children.add(buildMarkdown(before));
-      }
-
-      switch (block.type) {
-        case _BlockType.mermaid:
-          children.add(
-            ConduitMarkdown.buildMermaidBlock(context, block.content),
-          );
-        case _BlockType.chartJs:
-          children.add(
-            ConduitMarkdown.buildChartJsBlock(context, block.content),
-          );
-      }
-
-      currentIndex = block.end;
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
     }
 
-    final tail = normalized.substring(currentIndex);
-    if (tail.trim().isNotEmpty) {
-      children.add(buildMarkdown(tail));
+    if (children.length == 1) {
+      return children.first;
     }
 
-    return SelectionArea(
-      child: Theme(
-        data: Theme.of(context).copyWith(
-          textSelectionTheme: TextSelectionThemeData(
-            cursorColor: context.conduitTheme.buttonPrimary,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: children,
     );
   }
+
+  /// Parses content into segments, identifying which have citations.
+  List<_ContentSegment> _parseContentWithCitations(String content) {
+    final segments = <_ContentSegment>[];
+
+    // Split by double newlines (paragraphs) while preserving structure
+    final paragraphs = content.split(RegExp(r'\n\n+'));
+
+    for (final paragraph in paragraphs) {
+      if (paragraph.trim().isEmpty) continue;
+
+      final hasCitations = CitationParser.hasCitations(paragraph);
+      segments.add(
+        _ContentSegment(text: paragraph, hasCitations: hasCitations),
+      );
+    }
+
+    return segments;
+  }
+
+  /// Builds a paragraph widget with inline citation badges.
+  Widget _buildParagraphWithCitations(BuildContext context, String text) {
+    final theme = context.conduitTheme;
+    final segments = CitationParser.parse(text);
+
+    if (segments == null || segments.isEmpty) {
+      return Text(text);
+    }
+
+    final baseStyle = AppTypography.bodyMediumStyle.copyWith(
+      color: theme.textPrimary,
+      height: 1.45,
+    );
+
+    final spans = <InlineSpan>[];
+
+    for (final segment in segments) {
+      if (segment.isText && segment.text != null) {
+        // Process text for basic markdown formatting
+        spans.add(_buildTextSpan(segment.text!, baseStyle, theme));
+      } else if (segment.isCitation && segment.citation != null) {
+        final citation = segment.citation!;
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: _buildCitationBadge(context, citation.sourceIds),
+          ),
+        );
+      }
+    }
+
+    return Text.rich(TextSpan(children: spans), style: baseStyle);
+  }
+
+  /// Builds a text span with basic markdown formatting support.
+  InlineSpan _buildTextSpan(
+    String text,
+    TextStyle baseStyle,
+    ConduitThemeExtension theme,
+  ) {
+    // Handle basic inline markdown: **bold**, *italic*, `code`
+    final spans = <InlineSpan>[];
+
+    // Pattern for bold, italic, and code
+    final pattern = RegExp(r'(\*\*(.+?)\*\*)|(\*(.+?)\*)|(`(.+?)`)');
+
+    var lastEnd = 0;
+    for (final match in pattern.allMatches(text)) {
+      // Add text before match
+      if (match.start > lastEnd) {
+        spans.add(
+          TextSpan(
+            text: text.substring(lastEnd, match.start),
+            style: baseStyle,
+          ),
+        );
+      }
+
+      if (match.group(1) != null) {
+        // Bold **text**
+        spans.add(
+          TextSpan(
+            text: match.group(2),
+            style: baseStyle.copyWith(fontWeight: FontWeight.bold),
+          ),
+        );
+      } else if (match.group(3) != null) {
+        // Italic *text*
+        spans.add(
+          TextSpan(
+            text: match.group(4),
+            style: baseStyle.copyWith(fontStyle: FontStyle.italic),
+          ),
+        );
+      } else if (match.group(5) != null) {
+        // Code `text`
+        spans.add(
+          TextSpan(
+            text: match.group(6),
+            style: baseStyle.copyWith(
+              fontFamily: AppTypography.monospaceFontFamily,
+              backgroundColor: theme.surfaceContainer.withValues(alpha: 0.3),
+            ),
+          ),
+        );
+      }
+
+      lastEnd = match.end;
+    }
+
+    // Add remaining text
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(lastEnd), style: baseStyle));
+    }
+
+    if (spans.isEmpty) {
+      return TextSpan(text: text, style: baseStyle);
+    }
+
+    if (spans.length == 1) {
+      return spans.first;
+    }
+
+    return TextSpan(children: spans);
+  }
+
+  /// Builds a citation badge widget.
+  Widget _buildCitationBadge(BuildContext context, List<int> sourceIds) {
+    if (sourceIds.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Convert to 0-based indices
+    final indices = sourceIds.map((id) => id - 1).toList();
+
+    if (indices.length == 1) {
+      return CitationBadge(
+        sourceIndex: indices.first,
+        sources: sources,
+        onTap: onSourceTap != null ? () => onSourceTap!(indices.first) : null,
+      );
+    }
+
+    return CitationBadgeGroup(
+      sourceIndices: indices,
+      sources: sources,
+      onSourceTap: onSourceTap,
+    );
+  }
+}
+
+/// A segment of content that may or may not contain citations.
+class _ContentSegment {
+  final String text;
+  final bool hasCitations;
+
+  const _ContentSegment({required this.text, required this.hasCitations});
 }
 
 /// Types of special blocks that need custom rendering
@@ -161,11 +443,15 @@ extension StreamingMarkdownExtension on String {
     required BuildContext context,
     bool isStreaming = false,
     MarkdownLinkTapCallback? onTapLink,
+    List<ChatSourceReference>? sources,
+    void Function(int sourceIndex)? onSourceTap,
   }) {
     return StreamingMarkdownWidget(
       content: this,
       isStreaming: isStreaming,
       onTapLink: onTapLink,
+      sources: sources,
+      onSourceTap: onSourceTap,
     );
   }
 }
