@@ -380,6 +380,8 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   Widget _buildToolCallTile(ToolCallEntry tc) {
     final isExpanded = _expandedToolIds.contains(tc.id);
     final theme = context.conduitTheme;
+    // Show shimmer when streaming and tool call is not done
+    final showShimmer = widget.isStreaming && !tc.done;
 
     String pretty(dynamic v, {int max = 1200}) {
       try {
@@ -391,6 +393,44 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         final s = v?.toString() ?? '';
         return s.length > max ? '${s.substring(0, max)}…' : s;
       }
+    }
+
+    Widget buildHeader() {
+      final headerWidget = Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            isExpanded
+                ? Icons.keyboard_arrow_up_rounded
+                : Icons.keyboard_arrow_down_rounded,
+            size: 14,
+            color: theme.textPrimary.withValues(alpha: 0.8),
+          ),
+          const SizedBox(width: 2),
+          Flexible(
+            child: Text(
+              tc.done ? 'Used ${tc.name}' : 'Running ${tc.name}…',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: AppTypography.bodySmall,
+                color: theme.textPrimary.withValues(alpha: 0.8),
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      if (showShimmer) {
+        return headerWidget
+            .animate(onPlay: (controller) => controller.repeat())
+            .shimmer(
+              duration: 1500.ms,
+              color: theme.shimmerHighlight.withValues(alpha: 0.6),
+            );
+      }
+      return headerWidget;
     }
 
     return Padding(
@@ -411,31 +451,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           mainAxisSize: MainAxisSize.min,
           children: [
             // Minimal header - just text with chevron
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  isExpanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  size: 14,
-                  color: theme.textPrimary.withValues(alpha: 0.8),
-                ),
-                const SizedBox(width: 2),
-                Flexible(
-                  child: Text(
-                    tc.done ? 'Used ${tc.name}' : 'Running ${tc.name}…',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: AppTypography.bodySmall,
-                      color: theme.textPrimary.withValues(alpha: 0.8),
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            buildHeader(),
 
             // Expanded content with left border accent
             AnimatedCrossFade(
@@ -1304,6 +1320,8 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   Widget _buildReasoningTile(ReasoningEntry rc, int index) {
     final isExpanded = _expandedReasoning.contains(index);
     final theme = context.conduitTheme;
+    // Show shimmer when streaming and this is an active/incomplete reasoning
+    final showShimmer = widget.isStreaming && rc.duration == 0;
 
     String headerText() {
       final l10n = AppLocalizations.of(context)!;
@@ -1321,6 +1339,44 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         return l10n.thoughts;
       }
       return rc.summary;
+    }
+
+    Widget buildHeader() {
+      final headerWidget = Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            isExpanded
+                ? Icons.keyboard_arrow_up_rounded
+                : Icons.keyboard_arrow_down_rounded,
+            size: 14,
+            color: theme.textPrimary.withValues(alpha: 0.8),
+          ),
+          const SizedBox(width: 2),
+          Flexible(
+            child: Text(
+              headerText(),
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: AppTypography.bodySmall,
+                color: theme.textPrimary.withValues(alpha: 0.8),
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      if (showShimmer) {
+        return headerWidget
+            .animate(onPlay: (controller) => controller.repeat())
+            .shimmer(
+              duration: 1500.ms,
+              color: theme.shimmerHighlight.withValues(alpha: 0.6),
+            );
+      }
+      return headerWidget;
     }
 
     return Padding(
@@ -1341,31 +1397,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           mainAxisSize: MainAxisSize.min,
           children: [
             // Minimal header - just text with chevron
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  isExpanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  size: 14,
-                  color: theme.textPrimary.withValues(alpha: 0.8),
-                ),
-                const SizedBox(width: 2),
-                Flexible(
-                  child: Text(
-                    headerText(),
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: AppTypography.bodySmall,
-                      color: theme.textPrimary.withValues(alpha: 0.8),
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            buildHeader(),
 
             // Expanded content - subtle background only when shown
             AnimatedCrossFade(

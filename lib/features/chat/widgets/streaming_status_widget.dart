@@ -23,38 +23,8 @@ class StreamingStatusWidget extends StatefulWidget {
   State<StreamingStatusWidget> createState() => _StreamingStatusWidgetState();
 }
 
-class _StreamingStatusWidgetState extends State<StreamingStatusWidget>
-    with SingleTickerProviderStateMixin {
+class _StreamingStatusWidgetState extends State<StreamingStatusWidget> {
   bool _expanded = false;
-  late AnimationController _shimmerController;
-
-  @override
-  void initState() {
-    super.initState();
-    _shimmerController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-    if (widget.isStreaming) {
-      _shimmerController.repeat();
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant StreamingStatusWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isStreaming && !_shimmerController.isAnimating) {
-      _shimmerController.repeat();
-    } else if (!widget.isStreaming && _shimmerController.isAnimating) {
-      _shimmerController.stop();
-    }
-  }
-
-  @override
-  void dispose() {
-    _shimmerController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +50,6 @@ class _StreamingStatusWidgetState extends State<StreamingStatusWidget>
             _MinimalStatusRow(
               update: current,
               isPending: isPending,
-              shimmerController: _shimmerController,
               hasPrevious: hasPrevious,
               isExpanded: _expanded,
             ),
@@ -89,7 +58,6 @@ class _StreamingStatusWidgetState extends State<StreamingStatusWidget>
             if (_expanded && hasPrevious)
               _MinimalHistoryTimeline(
                 updates: visible,
-                shimmerController: _shimmerController,
                 isStreaming: widget.isStreaming,
               ),
           ],
@@ -104,14 +72,12 @@ class _MinimalStatusRow extends StatelessWidget {
   const _MinimalStatusRow({
     required this.update,
     required this.isPending,
-    required this.shimmerController,
     required this.hasPrevious,
     required this.isExpanded,
   });
 
   final ChatStatusUpdate update;
   final bool isPending;
-  final AnimationController shimmerController;
   final bool hasPrevious;
   final bool isExpanded;
 
@@ -177,20 +143,13 @@ class _MinimalStatusRow extends StatelessWidget {
       return Text(description, style: baseStyle, maxLines: 1);
     }
 
-    // Subtle shimmer for pending state
-    return AnimatedBuilder(
-      animation: shimmerController,
-      builder: (context, child) {
-        final opacity = 0.6 + (0.4 * (1.0 - shimmerController.value));
-        return Text(
-          description,
-          style: baseStyle.copyWith(
-            color: baseColor.withValues(alpha: opacity),
-          ),
-          maxLines: 1,
+    // Shimmer effect for pending state
+    return Text(description, style: baseStyle, maxLines: 1)
+        .animate(onPlay: (controller) => controller.repeat())
+        .shimmer(
+          duration: 1500.ms,
+          color: theme.shimmerHighlight.withValues(alpha: 0.6),
         );
-      },
-    );
   }
 }
 
@@ -198,12 +157,10 @@ class _MinimalStatusRow extends StatelessWidget {
 class _MinimalHistoryTimeline extends StatelessWidget {
   const _MinimalHistoryTimeline({
     required this.updates,
-    required this.shimmerController,
     required this.isStreaming,
   });
 
   final List<ChatStatusUpdate> updates;
-  final AnimationController shimmerController;
   final bool isStreaming;
 
   @override
@@ -300,18 +257,13 @@ class _MinimalHistoryTimeline extends StatelessWidget {
       return Text(description, style: baseStyle);
     }
 
-    return AnimatedBuilder(
-      animation: shimmerController,
-      builder: (context, child) {
-        final opacity = 0.6 + (0.4 * (1.0 - shimmerController.value));
-        return Text(
-          description,
-          style: baseStyle.copyWith(
-            color: baseColor.withValues(alpha: opacity),
-          ),
+    // Shimmer effect for pending state
+    return Text(description, style: baseStyle)
+        .animate(onPlay: (controller) => controller.repeat())
+        .shimmer(
+          duration: 1500.ms,
+          color: theme.shimmerHighlight.withValues(alpha: 0.6),
         );
-      },
-    );
   }
 }
 
