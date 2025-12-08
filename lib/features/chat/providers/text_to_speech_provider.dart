@@ -391,23 +391,12 @@ class TextToSpeechController extends Notifier<TextToSpeechState> {
 
   void _handleDeviceWordProgress(int start, int end) {
     if (!ref.mounted) return;
-    // Map global offsets to sentence index
-    final offsets = state.sentenceOffsets;
-    if (offsets.isEmpty) return;
-    int idx = 0;
-    for (var i = 0; i < offsets.length; i++) {
-      final sStart = offsets[i];
-      final sEnd = i + 1 < offsets.length ? offsets[i + 1] : 1 << 30;
-      if (start >= sStart && start < sEnd) {
-        idx = i;
-        break;
-      }
-    }
-    final sentenceStart = offsets[idx];
+    // Word progress offsets are relative to the current chunk/sentence being
+    // spoken, NOT the full original text. TtsChunkStarted already sets the
+    // correct activeSentenceIndex, so we only update word highlighting here.
     state = state.copyWith(
-      activeSentenceIndex: idx,
-      wordStartInSentence: (start - sentenceStart).clamp(0, 1 << 20),
-      wordEndInSentence: (end - sentenceStart).clamp(0, 1 << 20),
+      wordStartInSentence: start.clamp(0, 1 << 20),
+      wordEndInSentence: end.clamp(0, 1 << 20),
     );
   }
 }
