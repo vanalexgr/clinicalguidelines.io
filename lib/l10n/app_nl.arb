@@ -128,6 +128,8 @@
   "file": "Bestand",
   "photo": "Foto",
   "camera": "Camera",
+  "pasteFromClipboard": "Plakken",
+  "pasteImage": "Afbeelding plakken",
   "apiUnavailable": "API-service niet beschikbaar",
   "unableToLoadImage": "Kan afbeelding niet laden",
   "notAnImageFile": "Geen afbeeldingsbestand: {fileName}",

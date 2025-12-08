@@ -128,6 +128,8 @@
   "file": "File",
   "photo": "Foto",
   "camera": "Fotocamera",
+  "pasteFromClipboard": "Incolla",
+  "pasteImage": "Incolla immagine",
   "apiUnavailable": "Servizio API non disponibile",
   "unableToLoadImage": "Impossibile caricare l'immagine",
   "notAnImageFile": "Non è un file immagine: {fileName}",

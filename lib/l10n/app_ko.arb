@@ -192,6 +192,8 @@
   "chooseDifferentFile": "다른 파일 선택",
   "photo": "사진",
   "camera": "카메라",
+  "pasteFromClipboard": "붙여넣기",
+  "pasteImage": "이미지 붙여넣기",
   "apiUnavailable": "API 서비스를 사용할 수 없습니다",
   "unableToLoadImage": "이미지를 불러올 수 없습니다",
   "notAnImageFile": "이미지 파일이 아닙니다: {fileName}",

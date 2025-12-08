@@ -128,6 +128,8 @@
   "file": "文件",
   "photo": "照片",
   "camera": "相機",
+  "pasteFromClipboard": "貼上",
+  "pasteImage": "貼上圖片",
   "apiUnavailable": "API 服務不可用",
   "unableToLoadImage": "無法加載圖像",
   "notAnImageFile": "不是圖像文件：{fileName}",
