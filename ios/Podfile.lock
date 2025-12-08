@@ -65,6 +65,8 @@ PODS:
     - onnxruntime-c (= 1.22.0)
   - package_info_plus (0.4.5):
     - Flutter
+  - pasteboard (0.0.1):
+    - Flutter
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -120,6 +122,7 @@ DEPENDENCIES:
   - home_widget (from `.symlinks/plugins/home_widget/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
+  - pasteboard (from `.symlinks/plugins/pasteboard/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - quick_actions_ios (from `.symlinks/plugins/quick_actions_ios/ios`)
   - record_ios (from `.symlinks/plugins/record_ios/ios`)
@@ -171,6 +174,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/image_picker_ios/ios"
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
+  pasteboard:
+    :path: ".symlinks/plugins/pasteboard/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   quick_actions_ios:
@@ -218,6 +223,7 @@ SPEC CHECKSUMS:
   onnxruntime-c: 7f778680e96145956c0a31945f260321eed2611a
   onnxruntime-objc: 83d28b87525bd971259a66e153ea32b5d023de19
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
+  pasteboard: 49088aeb6119d51f976a421db60d8e1ab079b63c
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   quick_actions_ios: 500fcc11711d9f646739093395c4ae8eec25f779
   record_ios: f75fa1d57f840012775c0e93a38a7f3ceea1a374

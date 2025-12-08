@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:pasteboard/pasteboard.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'file_attachment_service.dart';
@@ -9,6 +10,11 @@ import 'file_attachment_service.dart';
 ///
 /// This service converts pasted image data into [LocalAttachment] objects
 /// that integrate with the existing file attachment flow.
+///
+/// Uses the pasteboard package to read images from the system clipboard,
+/// which works across iOS, Android, and desktop platforms. On iOS 16+,
+/// this properly handles privacy restrictions that prevent standard paste
+/// operations from accessing image content.
 class ClipboardAttachmentService {
   /// Supported MIME types for image paste operations.
   static const Set<String> supportedImageMimeTypes = {
@@ -19,6 +25,95 @@ class ClipboardAttachmentService {
     'image/webp',
     'image/bmp',
   };
+
+  /// Reads an image from the system clipboard.
+  ///
+  /// Returns the image data as bytes if an image is present, null otherwise.
+  /// This uses the pasteboard package which properly interfaces with iOS's
+  /// UIPasteboard and works on other platforms as well.
+  Future<Uint8List?> getClipboardImage() async {
+    try {
+      final imageBytes = await Pasteboard.image;
+      return imageBytes;
+    } catch (e) {
+      debugPrint('ClipboardAttachmentService: Failed to read clipboard: $e');
+      return null;
+    }
+  }
+
+  /// Gets files from the clipboard (supported on desktop platforms).
+  ///
+  /// Returns a list of file paths if files are present, empty list otherwise.
+  Future<List<String>> getClipboardFiles() async {
+    try {
+      final files = await Pasteboard.files();
+      return files;
+    } catch (e) {
+      debugPrint(
+        'ClipboardAttachmentService: Failed to read clipboard files: $e',
+      );
+      return [];
+    }
+  }
+
+  /// Checks if the clipboard currently contains image data.
+  ///
+  /// Note: This reads the full image data from the clipboard because the
+  /// pasteboard package doesn't provide a lightweight check method. On iOS,
+  /// this also triggers the paste confirmation dialog.
+  Future<bool> hasClipboardImage() async {
+    try {
+      // The pasteboard package doesn't have a dedicated hasImage method,
+      // so we need to attempt to read the image. On iOS this is required
+      // for the user to see the paste confirmation.
+      final imageBytes = await Pasteboard.image;
+      return imageBytes != null && imageBytes.isNotEmpty;
+    } catch (e) {
+      debugPrint('ClipboardAttachmentService: Failed to check clipboard: $e');
+      return false;
+    }
+  }
+
+  /// Creates a [LocalAttachment] from the current clipboard image.
+  ///
+  /// Works on iOS, Android, and desktop platforms via the pasteboard package.
+  /// Returns null if no image is in the clipboard or if the operation fails.
+  Future<LocalAttachment?> createAttachmentFromClipboard() async {
+    final imageData = await getClipboardImage();
+    if (imageData == null || imageData.isEmpty) {
+      return null;
+    }
+
+    // Pasteboard returns PNG data by default
+    return createAttachmentFromImageData(
+      imageData: imageData,
+      mimeType: 'image/png',
+    );
+  }
+
+  /// Creates [LocalAttachment]s from clipboard files.
+  ///
+  /// Useful on desktop platforms where files can be copied directly.
+  Future<List<LocalAttachment>> createAttachmentsFromClipboardFiles() async {
+    final filePaths = await getClipboardFiles();
+    final attachments = <LocalAttachment>[];
+
+    for (final filePath in filePaths) {
+      try {
+        final file = File(filePath);
+        if (await file.exists()) {
+          final fileName = path.basename(file.path);
+          attachments.add(LocalAttachment(file: file, displayName: fileName));
+        }
+      } catch (e) {
+        debugPrint(
+          'ClipboardAttachmentService: Failed to process file $filePath: $e',
+        );
+      }
+    }
+
+    return attachments;
+  }
 
   /// Creates a [LocalAttachment] from pasted image data.
   ///

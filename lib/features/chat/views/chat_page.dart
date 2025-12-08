@@ -76,10 +76,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return name.trim();
   }
 
-  bool validateFileCount(int currentCount, int newCount, int maxCount) {
-    return (currentCount + newCount) <= maxCount;
-  }
-
   bool validateFileSize(int fileSize, int maxSizeMB) {
     return fileSize <= (maxSizeMB * 1024 * 1024);
   }
@@ -479,13 +475,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       final attachments = await fileService.pickFiles();
       if (attachments.isEmpty) return;
 
-      // Validate file count
-      final currentFiles = ref.read(attachedFilesProvider);
-      if (!validateFileCount(currentFiles.length, attachments.length, 10)) {
-        if (!mounted) return;
-        return;
-      }
-
       // Validate file sizes
       for (final attachment in attachments) {
         final fileSize = await attachment.file.length();
@@ -570,13 +559,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         return;
       }
 
-      // Validate file count (default 10 files limit like OpenWebUI)
-      final currentFiles = ref.read(attachedFilesProvider);
-      if (!validateFileCount(currentFiles.length, 1, 10)) {
-        if (!mounted) return;
-        return;
-      }
-
       // Add image to the attachment list
       ref.read(attachedFilesProvider.notifier).addFiles([attachment]);
       DebugLogger.log('Image added to attachment list', scope: 'chat/page');
@@ -613,15 +595,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       scope: 'chat/page',
     );
 
-    // Validate file count (default 10 files limit like OpenWebUI)
-    final currentFiles = ref.read(attachedFilesProvider);
-    if (!validateFileCount(currentFiles.length, attachments.length, 10)) {
-      if (!mounted) return;
-      return;
-    }
+    // Add attachments to the list
+    ref.read(attachedFilesProvider.notifier).addFiles(attachments);
 
-    // Validate file sizes and process each attachment
-    final validAttachments = <LocalAttachment>[];
+    // Enqueue uploads via task queue for unified retry/progress
+    final activeConv = ref.read(activeConversationProvider);
     for (final attachment in attachments) {
       try {
         final fileSize = await attachment.file.length();
@@ -629,35 +607,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           'Pasted file: ${attachment.displayName}, size: $fileSize bytes',
           scope: 'chat/page',
         );
-
-        // Validate file size (default 20MB limit like OpenWebUI)
-        if (!validateFileSize(fileSize, 20)) {
-          DebugLogger.log(
-            'Skipping oversized pasted file: ${attachment.displayName}',
-            scope: 'chat/page',
-          );
-          continue;
-        }
-
-        validAttachments.add(attachment);
-      } catch (e) {
-        DebugLogger.log(
-          'Error processing pasted attachment: $e',
-          scope: 'chat/page',
-        );
-      }
-    }
-
-    if (validAttachments.isEmpty) return;
-
-    // Add attachments to the list
-    ref.read(attachedFilesProvider.notifier).addFiles(validAttachments);
-
-    // Enqueue uploads via task queue for unified retry/progress
-    final activeConv = ref.read(activeConversationProvider);
-    for (final attachment in validAttachments) {
-      try {
-        final fileSize = await attachment.file.length();
         await ref
             .read(taskQueueProvider.notifier)
             .enqueueUploadMedia(
@@ -672,7 +621,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     DebugLogger.log(
-      'Added ${validAttachments.length} pasted attachment(s)',
+      'Added ${attachments.length} pasted attachment(s)',
       scope: 'chat/page',
     );
   }

@@ -128,6 +128,8 @@
   "file": "Datei",
   "photo": "Foto",
   "camera": "Kamera",
+  "pasteFromClipboard": "Einfügen",
+  "pasteImage": "Bild einfügen",
   "apiUnavailable": "API-Dienst nicht verfügbar",
   "unableToLoadImage": "Bild kann nicht geladen werden",
   "notAnImageFile": "Keine Bilddatei: {fileName}",

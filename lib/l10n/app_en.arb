@@ -606,6 +606,14 @@
   "@camera": {
     "description": "Camera source label."
   },
+  "pasteFromClipboard": "Paste",
+  "@pasteFromClipboard": {
+    "description": "Action label to paste images or files from the clipboard."
+  },
+  "pasteImage": "Paste Image",
+  "@pasteImage": {
+    "description": "Context menu action to paste an image from the clipboard."
+  },
   "apiUnavailable": "API service not available",
   "@apiUnavailable": {
     "description": "Shown when backend API service is unavailable."

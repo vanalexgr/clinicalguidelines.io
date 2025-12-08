@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dart:io' show Platform;
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui';
 import 'dart:math' as math;
 import '../providers/chat_providers.dart';
@@ -283,6 +284,90 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     if (attachment != null) {
       await onPasted([attachment]);
     }
+  }
+
+  /// Handles pasting images/files from clipboard with pre-loaded image data.
+  ///
+  /// This avoids a second clipboard read by using data already fetched when
+  /// building the context menu.
+  Future<void> _handleClipboardPasteWithData(Uint8List imageData) async {
+    if (!widget.enabled) return;
+
+    final onPasted = widget.onPastedAttachments;
+    if (onPasted == null) return;
+
+    PlatformUtils.lightHaptic();
+
+    final attachment = await _clipboardService.createAttachmentFromImageData(
+      imageData: imageData,
+      mimeType: 'image/png',
+    );
+    if (attachment != null) {
+      await onPasted([attachment]);
+    }
+  }
+
+  /// Builds a custom context menu with standard options plus "Paste Image".
+  ///
+  /// The standard paste only works for text. This adds a "Paste Image"
+  /// option that uses the pasteboard package to read images from clipboard
+  /// on both iOS and Android. The option only appears when there's actually
+  /// an image in the clipboard.
+  Widget _buildContextMenu(
+    BuildContext context,
+    EditableTextState editableTextState,
+  ) {
+    final List<ContextMenuButtonItem> buttonItems = List.from(
+      editableTextState.contextMenuButtonItems,
+    );
+
+    // Only add "Paste Image" if we have a callback for pasted attachments
+    if (widget.onPastedAttachments == null) {
+      return AdaptiveTextSelectionToolbar.buttonItems(
+        anchors: editableTextState.contextMenuAnchors,
+        buttonItems: buttonItems,
+      );
+    }
+
+    // Check clipboard for images - the data is captured in the closure to
+    // avoid double-read and stale cache issues
+    return FutureBuilder<Uint8List?>(
+      future: _clipboardService.getClipboardImage(),
+      builder: (context, snapshot) {
+        final imageData = snapshot.data;
+        final hasImage = imageData != null && imageData.isNotEmpty;
+
+        if (hasImage) {
+          // Find the index of the standard Paste button to insert after it
+          final pasteIndex = buttonItems.indexWhere(
+            (item) => item.type == ContextMenuButtonType.paste,
+          );
+
+          // Capture imageData in closure to avoid re-reading clipboard
+          final pasteImageItem = ContextMenuButtonItem(
+            label: AppLocalizations.of(context)?.pasteImage ?? 'Paste Image',
+            onPressed: () {
+              // Close the context menu first
+              ContextMenuController.removeAny();
+              // Use the captured imageData directly
+              _handleClipboardPasteWithData(imageData);
+            },
+          );
+
+          // Insert after Paste if found, otherwise add at the end
+          if (pasteIndex >= 0) {
+            buttonItems.insert(pasteIndex + 1, pasteImageItem);
+          } else {
+            buttonItems.add(pasteImageItem);
+          }
+        }
+
+        return AdaptiveTextSelectionToolbar.buttonItems(
+          anchors: editableTextState.contextMenuAnchors,
+          buttonItems: buttonItems,
+        );
+      },
+    );
   }
 
   void _insertNewline() {
@@ -1545,6 +1630,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                         .toList(),
                     onContentInserted: _handleContentInserted,
                   ),
+                  // Custom context menu with "Paste Image" option for iOS
+                  contextMenuBuilder: (context, editableTextState) {
+                    return _buildContextMenu(context, editableTextState);
+                  },
                   onSubmitted: (_) {
                     if (sendOnEnter) {
                       _sendMessage();

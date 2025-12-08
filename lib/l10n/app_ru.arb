@@ -128,6 +128,8 @@
   "file": "Файл",
   "photo": "Фото",
   "camera": "Камера",
+  "pasteFromClipboard": "Вставить",
+  "pasteImage": "Вставить изображение",
   "apiUnavailable": "Служба API недоступна",
   "unableToLoadImage": "Не удалось загрузить изображение",
   "notAnImageFile": "Не является файлом изображения: {fileName}",
