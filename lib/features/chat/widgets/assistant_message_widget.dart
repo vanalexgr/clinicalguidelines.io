@@ -693,7 +693,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           );
 
     _cachedAvatar = Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: Spacing.md),
       child: Row(
         children: [
           leading,

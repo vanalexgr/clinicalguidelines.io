@@ -105,3 +105,4 @@ class ConduitWidgetProvider : AppWidgetProvider() {
         }
     }
 }
+
