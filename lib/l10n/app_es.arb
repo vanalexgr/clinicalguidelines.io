@@ -314,6 +314,8 @@
       }
     }
   },
+  "analyzing": "Analizando…",
+  "analyzed": "Analizado",
   "appCustomization": "Personalización",
   "appCustomizationSubtitle": "Tema, idioma, voz y quickpills",
   "quickActionsDescription": "Accesos directos en chat",

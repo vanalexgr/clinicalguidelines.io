@@ -526,8 +526,61 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                   : CrossFadeState.showFirst,
               duration: const Duration(milliseconds: 200),
             ),
+
+            // Render file images when tool call is done
+            // Mirrors Open WebUI's Collapsible.svelte file rendering
+            if (tc.done && tc.files != null) ...[
+              _buildToolCallFiles(tc.files!),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  /// Builds image widgets from tool call files array.
+  /// Mirrors Open WebUI's Collapsible.svelte file rendering logic:
+  /// - String starting with 'data:image/' -> base64 image
+  /// - Object with type='image' and url -> network image
+  Widget _buildToolCallFiles(List<dynamic> files) {
+    final imageUrls = <String>[];
+
+    for (final file in files) {
+      if (file is String) {
+        // Base64 image data URL
+        if (file.startsWith('data:image/')) {
+          imageUrls.add(file);
+        }
+      } else if (file is Map) {
+        // Object with type and url
+        final type = file['type']?.toString();
+        final url = file['url']?.toString();
+        if (type == 'image' && url != null && url.isNotEmpty) {
+          imageUrls.add(url);
+        }
+      }
+    }
+
+    if (imageUrls.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Spacing.sm),
+      child: Wrap(
+        spacing: Spacing.sm,
+        runSpacing: Spacing.sm,
+        children: imageUrls.map((url) {
+          return EnhancedImageAttachment(
+            attachmentId: url,
+            isMarkdownFormat: true,
+            constraints: BoxConstraints(
+              maxWidth: imageUrls.length == 1 ? 400 : 200,
+              maxHeight: imageUrls.length == 1 ? 300 : 150,
+            ),
+            disableAnimation: false,
+          );
+        }).toList(),
       ),
     );
   }
@@ -1323,21 +1376,43 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   Widget _buildReasoningTile(ReasoningEntry rc, int index) {
     final isExpanded = _expandedReasoning.contains(index);
     final theme = context.conduitTheme;
-    // Show shimmer when streaming and this is an active/incomplete reasoning
-    final showShimmer = widget.isStreaming && rc.duration == 0;
+    // Show shimmer when reasoning is not done (mirrors OpenWebUI's done !== 'true')
+    final showShimmer = !rc.isDone;
 
     String headerText() {
       final l10n = AppLocalizations.of(context)!;
       final hasSummary = rc.summary.isNotEmpty;
-      final isThinkingSummary =
-          rc.summary.trim().toLowerCase() == 'thinking…' ||
-          rc.summary.trim().toLowerCase() == 'thinking...';
-      if (widget.isStreaming) {
-        return hasSummary ? rc.summary : l10n.thinking;
+      final summaryLower = rc.summary.trim().toLowerCase();
+
+      // Mirror Open WebUI's Collapsible.svelte logic for different block types
+      if (rc.isCodeInterpreter) {
+        // Code interpreter: "Analyzing..." -> "Analyzed"
+        if (!rc.isDone) {
+          return l10n.analyzing;
+        }
+        return l10n.analyzed;
       }
+
+      // Reasoning block
+      final isThinkingSummary =
+          summaryLower == 'thinking…' ||
+          summaryLower == 'thinking...' ||
+          summaryLower.startsWith('thinking');
+
+      // - If not done (streaming): show "Thinking..."
+      // - If done with duration: show "Thought for X seconds"
+      // - If done without duration: show "Thoughts" or custom summary
+      if (!rc.isDone) {
+        // Still thinking - use summary if available, else default
+        return hasSummary && !isThinkingSummary ? rc.summary : l10n.thinking;
+      }
+
+      // Done thinking - check duration
       if (rc.duration > 0) {
         return l10n.thoughtForDuration(rc.formattedDuration);
       }
+
+      // No duration - use custom summary if meaningful, else default
       if (!hasSummary || isThinkingSummary) {
         return l10n.thoughts;
       }
