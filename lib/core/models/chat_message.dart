@@ -114,8 +114,9 @@ abstract class ChatCodeExecution with _$ChatCodeExecution {
     @JsonKey(fromJson: _nullableString) String? name,
     @JsonKey(fromJson: _nullableString) String? language,
     @JsonKey(fromJson: _nullableString) String? code,
+    @JsonKey(fromJson: _safeCodeExecutionResult)
     ChatCodeExecutionResult? result,
-    Map<String, dynamic>? metadata,
+    @JsonKey(fromJson: _safeJsonMap) Map<String, dynamic>? metadata,
   }) = _ChatCodeExecution;
 
   factory ChatCodeExecution.fromJson(Map<String, dynamic> json) =>
@@ -125,12 +126,12 @@ abstract class ChatCodeExecution with _$ChatCodeExecution {
 @freezed
 abstract class ChatCodeExecutionResult with _$ChatCodeExecutionResult {
   const factory ChatCodeExecutionResult({
-    String? output,
-    String? error,
+    @JsonKey(fromJson: _nullableString) String? output,
+    @JsonKey(fromJson: _nullableString) String? error,
     @JsonKey(fromJson: _executionFilesFromJson, toJson: _executionFilesToJson)
     @Default(<ChatExecutionFile>[])
     List<ChatExecutionFile> files,
-    Map<String, dynamic>? metadata,
+    @JsonKey(fromJson: _safeJsonMap) Map<String, dynamic>? metadata,
   }) = _ChatCodeExecutionResult;
 
   factory ChatCodeExecutionResult.fromJson(Map<String, dynamic> json) =>
@@ -142,7 +143,7 @@ abstract class ChatExecutionFile with _$ChatExecutionFile {
   const factory ChatExecutionFile({
     @JsonKey(fromJson: _nullableString) String? name,
     @JsonKey(fromJson: _nullableString) String? url,
-    Map<String, dynamic>? metadata,
+    @JsonKey(fromJson: _safeJsonMap) Map<String, dynamic>? metadata,
   }) = _ChatExecutionFile;
 
   factory ChatExecutionFile.fromJson(Map<String, dynamic> json) =>
@@ -157,7 +158,7 @@ abstract class ChatSourceReference with _$ChatSourceReference {
     @JsonKey(fromJson: _nullableString) String? url,
     @JsonKey(fromJson: _nullableString) String? snippet,
     @JsonKey(fromJson: _nullableString) String? type,
-    Map<String, dynamic>? metadata,
+    @JsonKey(fromJson: _safeJsonMap) Map<String, dynamic>? metadata,
   }) = _ChatSourceReference;
 
   factory ChatSourceReference.fromJson(Map<String, dynamic> json) =>
@@ -323,4 +324,46 @@ String? _nullableString(dynamic value) {
   if (value == null) return null;
   final str = value.toString();
   return str.isEmpty ? null : str;
+}
+
+/// Safely parse a `Map<String, dynamic>` from various formats.
+/// Returns null if the value cannot be converted to a valid map or is empty.
+Map<String, dynamic>? _safeJsonMap(dynamic value) {
+  if (value == null) return null;
+  if (value is Map<String, dynamic>) {
+    return value.isEmpty ? null : value;
+  }
+  if (value is Map) {
+    final result = <String, dynamic>{};
+    value.forEach((key, v) {
+      result[key.toString()] = v;
+    });
+    return result.isEmpty ? null : result;
+  }
+  return null;
+}
+
+/// Safely parse a ChatCodeExecutionResult from various formats.
+/// Returns null if the value cannot be converted to a valid result.
+ChatCodeExecutionResult? _safeCodeExecutionResult(dynamic value) {
+  if (value == null) return null;
+  if (value is Map<String, dynamic>) {
+    try {
+      return ChatCodeExecutionResult.fromJson(value);
+    } catch (_) {
+      return null;
+    }
+  }
+  if (value is Map) {
+    try {
+      final map = <String, dynamic>{};
+      value.forEach((key, v) {
+        map[key.toString()] = v;
+      });
+      return ChatCodeExecutionResult.fromJson(map);
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
 }
