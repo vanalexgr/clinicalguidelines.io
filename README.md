@@ -73,7 +73,7 @@ flutter run -d ios   # or: -d android
 ### Authentication
 Conduit supports multiple authentication flows when connecting to your Open‑WebUI:
 - **Username + Password**: Sign in directly against servers that expose a login endpoint. Credentials are stored securely using platform keychains.
-- **API Key**: Paste a server‑issued API token for stateless auth.
+- **JWT Token** (for OIDC): Paste a server‑issued JWT token for stateless auth.
 - **Custom Headers**: Add headers during login (e.g., `X-API-Key`, `Authorization`, `X-Org`, or self‑hosted SSO headers) that Conduit will include on all HTTP/WebSocket requests (see [Endpoint Allowlist](#endpoint-allowlist-custom-auth) for reverse proxy whitelisting).
 
 ## Screenshots
