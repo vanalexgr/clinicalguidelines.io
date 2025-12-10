@@ -22,19 +22,28 @@ const List<(String, String)> defaultReasoningTagPairs = [
   ('◁think▷', '◁/think▷'),
 ];
 
+/// Type of collapsible block (reasoning vs code_interpreter).
+enum CollapsibleBlockType { reasoning, codeInterpreter }
+
 /// Lightweight reasoning block for segmented rendering.
 class ReasoningEntry {
   final String reasoning;
   final String summary;
   final int duration;
   final bool isDone;
+  final CollapsibleBlockType blockType;
 
   const ReasoningEntry({
     required this.reasoning,
     required this.summary,
     required this.duration,
     required this.isDone,
+    this.blockType = CollapsibleBlockType.reasoning,
   });
+
+  /// Whether this is a code interpreter block.
+  bool get isCodeInterpreter =>
+      blockType == CollapsibleBlockType.codeInterpreter;
 
   String get formattedDuration => ReasoningParser.formatDuration(duration);
 
@@ -273,15 +282,17 @@ class ReasoningParser {
 
     final openTag = content.substring(startIdx, openTagEnd + 1);
 
-    // Parse attributes
+    // Parse attributes - use non-greedy match to handle attributes correctly
+    // Mirrors Open WebUI's parseAttributes: /(\w+)="(.*?)"/g
     final attrs = <String, String>{};
-    final attrRegex = RegExp(r'(\w+)="([^"]*)"');
+    final attrRegex = RegExp(r'(\w+)="(.*?)"');
     for (final m in attrRegex.allMatches(openTag)) {
       attrs[m.group(1)!] = m.group(2) ?? '';
     }
 
-    final type = attrs['type'] ?? '';
-    final isDone = (attrs['done'] ?? 'true') == 'true';
+    final type = attrs['type']?.toLowerCase() ?? '';
+    // Open WebUI treats done as string comparison: done === 'true'
+    final isDone = attrs['done'] == 'true';
     final duration = int.tryParse(attrs['duration'] ?? '0') ?? 0;
 
     // Find matching closing tag with nesting support
@@ -300,14 +311,21 @@ class ReasoningParser {
       }
     }
 
+    // Determine block type based on type attribute
+    final blockType = type == 'code_interpreter'
+        ? CollapsibleBlockType.codeInterpreter
+        : CollapsibleBlockType.reasoning;
+
     if (depth != 0) {
       // Incomplete block (streaming)
       final innerContent = content.substring(openTagEnd + 1);
       final summaryResult = _extractSummary(innerContent);
 
       // Determine if this is reasoning based on type or summary
+      // Also treat code_interpreter as reasoning-like (collapsible thinking)
       final isReasoning =
           type == 'reasoning' ||
+          type == 'code_interpreter' ||
           (type.isEmpty &&
               _reasoningSummaryPattern.hasMatch(summaryResult.summary));
 
@@ -322,6 +340,7 @@ class ReasoningParser {
           summary: HtmlUtils.unescapeHtml(summaryResult.summary),
           duration: effectiveDuration,
           isDone: false,
+          blockType: blockType,
         ),
         endIndex: content.length,
         isComplete: false,
@@ -335,8 +354,10 @@ class ReasoningParser {
     final summaryResult = _extractSummary(innerContent);
 
     // Determine if this is reasoning based on type or summary
+    // Also treat code_interpreter as reasoning-like (collapsible thinking)
     final isReasoning =
         type == 'reasoning' ||
+        type == 'code_interpreter' ||
         (type.isEmpty &&
             _reasoningSummaryPattern.hasMatch(summaryResult.summary));
 
@@ -351,6 +372,7 @@ class ReasoningParser {
         summary: HtmlUtils.unescapeHtml(summaryResult.summary),
         duration: effectiveDuration,
         isDone: isDone,
+        blockType: blockType,
       ),
       endIndex: i,
       isComplete: true,
@@ -478,8 +500,18 @@ class ReasoningParser {
 
   /// Checks if a message contains reasoning content.
   static bool hasReasoningContent(String content) {
-    // Check for <details type="reasoning"
-    if (content.contains('type="reasoning"')) return true;
+    // Check for <details type="reasoning" (case-insensitive)
+    if (RegExp(r'type="reasoning"', caseSensitive: false).hasMatch(content)) {
+      return true;
+    }
+
+    // Check for <details type="code_interpreter" (case-insensitive)
+    if (RegExp(
+      r'type="code_interpreter"',
+      caseSensitive: false,
+    ).hasMatch(content)) {
+      return true;
+    }
 
     // Check for <details> with reasoning-like summary
     if (content.contains('<details')) {
@@ -501,8 +533,12 @@ class ReasoningParser {
   }
 
   /// Formats the duration for display.
+  /// Mirrors Open WebUI's formatting:
+  /// - < 1: "less than a second"
+  /// - < 60: "X seconds"
+  /// - >= 60: humanized (e.g., "2 minutes")
   static String formatDuration(int seconds) {
-    if (seconds <= 0) return 'instant';
+    if (seconds < 1) return 'less than a second';
     if (seconds < 60) return '$seconds second${seconds == 1 ? '' : 's'}';
 
     final minutes = seconds ~/ 60;
@@ -512,6 +548,7 @@ class ReasoningParser {
       return '$minutes minute${minutes == 1 ? '' : 's'}';
     }
 
+    // For mixed minutes and seconds, use abbreviated format
     return '$minutes min ${remainingSeconds}s';
   }
 }

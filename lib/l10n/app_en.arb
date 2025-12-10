@@ -1233,6 +1233,14 @@
       }
     }
   },
+  "analyzing": "Analyzing…",
+  "@analyzing": {
+    "description": "Label shown while code interpreter is processing."
+  },
+  "analyzed": "Analyzed",
+  "@analyzed": {
+    "description": "Label shown after code interpreter has finished."
+  },
   "appCustomization": "Customization",
   "@appCustomization": {
     "description": "Title of the customization settings page."

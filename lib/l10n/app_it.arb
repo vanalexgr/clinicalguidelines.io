@@ -314,6 +314,8 @@
       }
     }
   },
+  "analyzing": "Analisi…",
+  "analyzed": "Analizzato",
   "appCustomization": "Personalizzazione",
   "appCustomizationSubtitle": "Tema, lingua, voce e quickpills",
   "quickActionsDescription": "Scorciatoie nella chat",

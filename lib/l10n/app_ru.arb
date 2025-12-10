@@ -314,6 +314,8 @@
       }
     }
   },
+  "analyzing": "Анализирую…",
+  "analyzed": "Проанализировано",
   "appCustomization": "Настройка",
   "appCustomizationSubtitle": "Тема, язык, голос и quickpills",
   "quickActionsDescription": "Быстрые клавиши в чате",

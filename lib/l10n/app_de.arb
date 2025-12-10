@@ -314,6 +314,8 @@
       }
     }
   },
+  "analyzing": "Analysiere…",
+  "analyzed": "Analysiert",
   "appCustomization": "Anpassung",
   "appCustomizationSubtitle": "Design, Sprache, Stimme und Quick Pills",
   "quickActionsDescription": "Schnellzugriffe im Chat",

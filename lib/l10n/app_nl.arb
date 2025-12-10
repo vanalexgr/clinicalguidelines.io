@@ -314,6 +314,8 @@
       }
     }
   },
+  "analyzing": "Analyseren…",
+  "analyzed": "Geanalyseerd",
   "appCustomization": "Aanpassing",
   "appCustomizationSubtitle": "Thema, taal, stem en quickpills",
   "quickActionsDescription": "Snelkoppelingen in chat",
