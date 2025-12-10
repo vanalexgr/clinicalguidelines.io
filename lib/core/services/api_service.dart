@@ -2709,15 +2709,20 @@ class ApiService {
     final processedMessages = messages.map((message) {
       final role = message['role'] as String;
       final content = message['content'];
-      final files = message['files'] as List<Map<String, dynamic>>?;
+      // Safely cast files list - may be List<dynamic> from spread operations
+      final rawFiles = message['files'];
+      final files = rawFiles is List
+          ? rawFiles.whereType<Map<String, dynamic>>().toList()
+          : <Map<String, dynamic>>[];
 
       final isContentArray = content is List;
-      final hasImages = files?.any((file) => file['type'] == 'image') ?? false;
+      final hasImages =
+          files.isNotEmpty && files.any((file) => file['type'] == 'image');
 
       if (isContentArray) {
         return {'role': role, 'content': content};
       } else if (hasImages && role == 'user') {
-        final imageFiles = files!
+        final imageFiles = files
             .where((file) => file['type'] == 'image')
             .toList();
         final contentText = content is String ? content : '';
@@ -2741,8 +2746,10 @@ class ApiService {
     // Separate files from messages
     final allFiles = <Map<String, dynamic>>[];
     for (final message in messages) {
-      final files = message['files'] as List<Map<String, dynamic>>?;
-      if (files != null) {
+      // Safely cast files list - may be List<dynamic> from spread operations
+      final rawFiles = message['files'];
+      if (rawFiles is List) {
+        final files = rawFiles.whereType<Map<String, dynamic>>().toList();
         final nonImageFiles = files
             .where((file) => file['type'] != 'image')
             .toList();
