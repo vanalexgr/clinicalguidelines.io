@@ -279,7 +279,10 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
         allFiles.add(fileMap);
 
         final url = entry['url'].toString();
-        final match = RegExp(r'/api/v1/files/([^/]+)/content').firstMatch(url);
+        // Handle both URL formats: /api/v1/files/{id} and /api/v1/files/{id}/content
+        final match = RegExp(
+          r'/api/v1/files/([^/]+)(?:/content)?$',
+        ).firstMatch(url);
         if (match != null) {
           attachments.add(match.group(1)!);
         }

@@ -30,7 +30,8 @@ import 'streaming_status_widget.dart';
 
 // Pre-compiled regex patterns for image processing (performance optimization)
 final _base64ImagePattern = RegExp(r'data:image/[^;]+;base64,[A-Za-z0-9+/]+=*');
-final _fileIdPattern = RegExp(r'/api/v1/files/([^/]+)/content');
+// Handle both URL formats: /api/v1/files/{id} and /api/v1/files/{id}/content
+final _fileIdPattern = RegExp(r'/api/v1/files/([^/]+)(?:/content)?$');
 
 class AssistantMessageWidget extends ConsumerStatefulWidget {
   final dynamic message;
@@ -1169,10 +1170,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
         if (fileUrl == null) return const SizedBox.shrink();
 
-        // Extract file ID from URL if it's in the format /api/v1/files/{id}/content
+        // Extract file ID from URL - handle both formats:
+        // /api/v1/files/{id} and /api/v1/files/{id}/content
         String attachmentId = fileUrl;
-        if (fileUrl.contains('/api/v1/files/') &&
-            fileUrl.contains('/content')) {
+        if (fileUrl.contains('/api/v1/files/')) {
           final fileIdMatch = _fileIdPattern.firstMatch(fileUrl);
           if (fileIdMatch != null) {
             attachmentId = fileIdMatch.group(1)!;

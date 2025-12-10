@@ -1116,7 +1116,7 @@ Future<String?> _getFileAsBase64(dynamic api, String fileId) async {
 // Small internal helper to convert a message with attachments into the
 // OpenWebUI content payload format (text + image_url + files).
 // - Adds text first (if non-empty)
-// - Converts image attachments to image_url with data URLs (resolving MIME type when needed)
+// - Handles images as inline base64 data URLs (matching web client behavior)
 // - Includes non-image attachments in a 'files' array for server-side resolution
 Future<Map<String, dynamic>> _buildMessagePayloadWithAttachments({
   required dynamic api,
@@ -1135,13 +1135,25 @@ Future<Map<String, dynamic>> _buildMessagePayloadWithAttachments({
 
   for (final attachmentId in attachmentIds) {
     try {
+      // Check if this is an image data URL (stored locally, matching web client)
+      // Web client stores images as base64 data URLs, not server file IDs
+      if (attachmentId.startsWith('data:image/')) {
+        // This is an inline image data URL - add directly to content array
+        contentArray.add({
+          'type': 'image_url',
+          'image_url': {'url': attachmentId},
+        });
+        continue;
+      }
+
+      // For server-stored files, fetch info
       final fileInfo = await api.getFileInfo(attachmentId);
       final fileName = fileInfo['filename'] ?? fileInfo['name'] ?? 'Unknown';
       final fileSize = fileInfo['size'];
 
       final base64Data = await _getFileAsBase64(api, attachmentId);
       if (base64Data != null) {
-        // This is an image file - add to content array only
+        // This is an image file from server - add to content array only
         if (base64Data.startsWith('data:')) {
           contentArray.add({
             'type': 'image_url',
@@ -1170,11 +1182,11 @@ Future<Map<String, dynamic>> _buildMessagePayloadWithAttachments({
         // Note: Images are handled in content array above, no need to duplicate in files array
         // This prevents duplicate display in the WebUI
       } else {
-        // This is a non-image file
+        // This is a non-image file - match web client format
         allFiles.add({
           'type': 'file',
           'id': attachmentId, // Required for RAG system to lookup file content
-          'url': '/api/v1/files/$attachmentId/content',
+          'url': '/api/v1/files/$attachmentId',
           'name': fileName,
           if (fileSize != null) 'size': fileSize,
         });
@@ -1799,14 +1811,67 @@ Future<void> _sendMessageInternal(
   var activeConversation = ref.read(activeConversationProvider);
 
   // Create user message first
-  // Note: We only store context attachments (web/youtube/knowledge) in msg.files.
-  // Uploaded files are tracked via attachmentIds and will be rebuilt by
-  // _buildMessagePayloadWithAttachments when constructing the API payload.
-  // This prevents uploaded files from being duplicated in the final message.
+  // Build the files array to match web client format for persistence:
+  // - Images stored as {type: 'image', url: 'data:...'} (matching web client)
+  // - Server files stored as {type: 'file', id: '...', name: '...', url: '...'}
+  // - Context attachments (web/youtube/knowledge)
   final contextAttachments = ref.read(contextAttachmentsProvider);
   final contextFiles = _contextAttachmentsToFiles(contextAttachments);
-  final List<Map<String, dynamic>>? userFiles = contextFiles.isNotEmpty
-      ? contextFiles
+
+  // Convert attachments to files format for web client compatibility
+  final attachmentFiles = <Map<String, dynamic>>[];
+  if (attachments != null && !reviewerMode && api != null) {
+    for (final attachment in attachments) {
+      // Data URLs are images - store inline
+      if (attachment.startsWith('data:image/')) {
+        attachmentFiles.add({'type': 'image', 'url': attachment});
+      } else {
+        // Server file ID - fetch info and create file entry
+        // Match web client format: {type, id, name, url, size, collection_name}
+        try {
+          final fileInfo = await api.getFileInfo(attachment);
+          final fileName = fileInfo['filename'] ?? fileInfo['name'] ?? 'file';
+          final fileSize = fileInfo['size'] ?? fileInfo['meta']?['size'];
+          final collectionName =
+              fileInfo['meta']?['collection_name'] ??
+              fileInfo['collection_name'];
+          attachmentFiles.add({
+            'type': 'file',
+            'id': attachment,
+            'name': fileName,
+            'url': '/api/v1/files/$attachment',
+            if (fileSize != null) 'size': fileSize,
+            if (collectionName != null) 'collection_name': collectionName,
+          });
+        } catch (_) {
+          // If we can't fetch info, store minimal file entry with placeholder name
+          attachmentFiles.add({
+            'type': 'file',
+            'id': attachment,
+            'name': 'file',
+            'url': '/api/v1/files/$attachment',
+          });
+        }
+      }
+    }
+  } else if (attachments != null) {
+    // Reviewer mode or no API - only handle images (server files need API)
+    for (final attachment in attachments) {
+      if (attachment.startsWith('data:image/')) {
+        attachmentFiles.add({'type': 'image', 'url': attachment});
+      } else {
+        DebugLogger.log(
+          'Ignoring non-image attachment in reviewer mode: $attachment',
+          scope: 'chat/providers',
+        );
+      }
+    }
+  }
+
+  // Combine attachment files and context files
+  final List<Map<String, dynamic>>? userFiles =
+      (attachmentFiles.isNotEmpty || contextFiles.isNotEmpty)
+      ? [...attachmentFiles, ...contextFiles]
       : null;
 
   final userMessage = ChatMessage(
@@ -1969,8 +2034,13 @@ Future<void> _sendMessageInternal(
           attachmentIds: ids,
         );
         if (msg.files != null && msg.files!.isNotEmpty) {
-          messageMap['files'] = [
-            ...?messageMap['files'] as List<dynamic>?,
+          // Safe cast - messageMap['files'] may be List<dynamic> after storage
+          final rawFiles = messageMap['files'];
+          final existingFiles = rawFiles is List
+              ? rawFiles.whereType<Map<String, dynamic>>().toList()
+              : <Map<String, dynamic>>[];
+          messageMap['files'] = <Map<String, dynamic>>[
+            ...existingFiles,
             ...msg.files!,
           ];
         }

@@ -14,6 +14,10 @@ import '../../../shared/services/tasks/task_queue.dart';
 import '../../../shared/utils/conversation_context_menu.dart';
 import '../../tools/providers/tools_providers.dart';
 
+// Pre-compiled regex for extracting file IDs from URLs (performance optimization)
+// Handles both /api/v1/files/{id} and /api/v1/files/{id}/content formats
+final _fileIdPattern = RegExp(r'/api/v1/files/([^/]+)(?:/content)?$');
+
 class UserMessageBubble extends ConsumerStatefulWidget {
   final dynamic message;
   final bool isUser;
@@ -377,13 +381,11 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
 
               if (fileUrl == null) return const SizedBox.shrink();
 
-              // Extract file ID from URL if it's in the format /api/v1/files/{id}/content
+              // Extract file ID from URL - handle both formats:
+              // /api/v1/files/{id} and /api/v1/files/{id}/content
               String attachmentId = fileUrl;
-              if (fileUrl.contains('/api/v1/files/') &&
-                  fileUrl.contains('/content')) {
-                final fileIdMatch = RegExp(
-                  r'/api/v1/files/([^/]+)/content',
-                ).firstMatch(fileUrl);
+              if (fileUrl.contains('/api/v1/files/')) {
+                final fileIdMatch = _fileIdPattern.firstMatch(fileUrl);
                 if (fileIdMatch != null) {
                   attachmentId = fileIdMatch.group(1)!;
                 }

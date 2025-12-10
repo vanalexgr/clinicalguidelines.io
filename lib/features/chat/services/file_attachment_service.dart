@@ -6,9 +6,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
-import '../../../core/services/api_service.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/debug_logger.dart';
+
+/// Converts an image file to a base64 data URL.
+/// This is a standalone utility used by both FileAttachmentService and TaskWorker.
+/// Returns null if conversion fails.
+Future<String?> convertImageFileToDataUrl(File imageFile) async {
+  try {
+    final bytes = await imageFile.readAsBytes();
+    final ext = path.extension(imageFile.path).toLowerCase();
+
+    String mimeType = 'image/png';
+    if (ext == '.jpg' || ext == '.jpeg') {
+      mimeType = 'image/jpeg';
+    } else if (ext == '.gif') {
+      mimeType = 'image/gif';
+    } else if (ext == '.webp') {
+      mimeType = 'image/webp';
+    }
+
+    return 'data:$mimeType;base64,${base64Encode(bytes)}';
+  } catch (e) {
+    DebugLogger.error('convert-image-failed', scope: 'attachments', error: e);
+    return null;
+  }
+}
 
 String _deriveDisplayName({
   required String? preferredName,
@@ -73,10 +96,9 @@ class LocalAttachment {
 }
 
 class FileAttachmentService {
-  final ApiService _apiService;
   final ImagePicker _imagePicker = ImagePicker();
 
-  FileAttachmentService(this._apiService);
+  FileAttachmentService();
 
   // Pick files from device
   Future<List<LocalAttachment>> pickFiles({
@@ -269,139 +291,23 @@ class FileAttachmentService {
     }
   }
 
-  // Convert image file to base64 data URL with compression
+  // Convert image file to base64 data URL with optional compression
   Future<String?> convertImageToDataUrl(
     File imageFile, {
     bool enableCompression = false,
     int? maxWidth,
     int? maxHeight,
   }) async {
-    try {
-      DebugLogger.log(
-        'convert-start',
-        scope: 'attachments/image',
-        data: {'path': imageFile.path},
-      );
+    // Use the shared utility for basic conversion
+    String? dataUrl = await convertImageFileToDataUrl(imageFile);
+    if (dataUrl == null) return null;
 
-      // Read the file as bytes
-      final bytes = await imageFile.readAsBytes();
-
-      // Determine MIME type based on file extension
-      final ext = path.extension(imageFile.path).toLowerCase();
-      String mimeType = 'image/png'; // default
-
-      if (ext == '.jpg' || ext == '.jpeg') {
-        mimeType = 'image/jpeg';
-      } else if (ext == '.gif') {
-        mimeType = 'image/gif';
-      } else if (ext == '.webp') {
-        mimeType = 'image/webp';
-      }
-
-      // Convert to base64
-      final base64String = base64Encode(bytes);
-      String dataUrl = 'data:$mimeType;base64,$base64String';
-
-      // Apply compression if enabled
-      if (enableCompression && (maxWidth != null || maxHeight != null)) {
-        dataUrl = await compressImage(dataUrl, maxWidth, maxHeight);
-      }
-
-      DebugLogger.log(
-        'convert-done',
-        scope: 'attachments/image',
-        data: {'mime': mimeType},
-      );
-      return dataUrl;
-    } catch (e) {
-      DebugLogger.error('convert-failed', scope: 'attachments/image', error: e);
-      return null;
+    // Apply compression if enabled
+    if (enableCompression && (maxWidth != null || maxHeight != null)) {
+      dataUrl = await compressImage(dataUrl, maxWidth, maxHeight);
     }
-  }
 
-  // Upload file with progress tracking
-  Stream<FileUploadState> uploadFile(LocalAttachment attachment) async* {
-    DebugLogger.log(
-      'upload-start',
-      scope: 'attachments/file',
-      data: {
-        'path': attachment.file.path,
-        'displayName': attachment.displayName,
-      },
-    );
-    try {
-      final file = attachment.file;
-      final fileName = attachment.displayName;
-      final fileSize = await file.length();
-      final ext = path.extension(fileName).toLowerCase();
-      final isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].contains(ext);
-
-      DebugLogger.log(
-        'file-details',
-        scope: 'attachments/file',
-        data: {'name': fileName, 'bytes': fileSize},
-      );
-
-      yield FileUploadState(
-        file: file,
-        fileName: fileName,
-        fileSize: fileSize,
-        progress: 0.0,
-        status: FileUploadStatus.uploading,
-        isImage: isImage,
-      );
-
-      // Upload ALL files (including images) to server for consistency with web client
-      DebugLogger.log('upload-progress', scope: 'attachments/file');
-      final fileId = await _apiService.uploadFile(file.path, fileName);
-      DebugLogger.log(
-        'upload-complete',
-        scope: 'attachments/file',
-        data: {'fileId': fileId},
-      );
-
-      yield FileUploadState(
-        file: file,
-        fileName: fileName,
-        fileSize: fileSize,
-        progress: 1.0,
-        status: FileUploadStatus.completed,
-        fileId: fileId,
-        isImage: isImage,
-      );
-    } catch (e) {
-      DebugLogger.error('upload-failed', scope: 'attachments/file', error: e);
-      final file = attachment.file;
-      final fileName = attachment.displayName;
-      final fileSize = await file.length();
-      final ext = path.extension(fileName).toLowerCase();
-      final isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].contains(ext);
-
-      yield FileUploadState(
-        file: file,
-        fileName: fileName,
-        fileSize: fileSize,
-        progress: 0.0,
-        status: FileUploadStatus.failed,
-        error: e.toString(),
-        isImage: isImage,
-      );
-    }
-  }
-
-  // Upload multiple files
-  Stream<List<FileUploadState>> uploadMultipleFiles(
-    List<LocalAttachment> attachments,
-  ) async* {
-    final states = <String, FileUploadState>{};
-
-    for (final attachment in attachments) {
-      final uploadStream = uploadFile(attachment);
-      await for (final state in uploadStream) {
-        states[attachment.file.path] = state;
-        yield states.values.toList();
-      }
-    }
+    return dataUrl;
   }
 
   // Format file size for display
@@ -452,7 +358,11 @@ class FileUploadState {
   final FileUploadStatus status;
   final String? fileId;
   final String? error;
-  final bool? isImage; // Added for image files
+  final bool? isImage;
+
+  /// For images: stores the base64 data URL (e.g., "data:image/png;base64,...")
+  /// This matches web client behavior where images are not uploaded to server.
+  final String? base64DataUrl;
 
   FileUploadState({
     required this.file,
@@ -462,7 +372,8 @@ class FileUploadState {
     required this.status,
     this.fileId,
     this.error,
-    this.isImage, // Added for image files
+    this.isImage,
+    this.base64DataUrl,
   });
 
   String get formattedSize {
@@ -578,78 +489,6 @@ class MockFileAttachmentService {
       throw Exception('Failed to take photo: $e');
     }
   }
-
-  // Mock upload file with progress tracking
-  Stream<FileUploadState> uploadFile(LocalAttachment attachment) async* {
-    DebugLogger.log(
-      'mock-upload',
-      scope: 'attachments/mock',
-      data: {
-        'path': attachment.file.path,
-        'displayName': attachment.displayName,
-      },
-    );
-
-    final file = attachment.file;
-    final fileName = attachment.displayName;
-    final fileSize = await file.length();
-
-    // Yield initial state
-    yield FileUploadState(
-      file: file,
-      fileName: fileName,
-      fileSize: fileSize,
-      progress: 0.0,
-      status: FileUploadStatus.uploading,
-      isImage: attachment.isImage,
-    );
-
-    // Simulate upload progress
-    for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      yield FileUploadState(
-        file: file,
-        fileName: fileName,
-        fileSize: fileSize,
-        progress: i / 10,
-        status: FileUploadStatus.uploading,
-        isImage: attachment.isImage,
-      );
-    }
-
-    // Yield completed state with mock file ID
-    yield FileUploadState(
-      file: file,
-      fileName: fileName,
-      fileSize: fileSize,
-      progress: 1.0,
-      status: FileUploadStatus.completed,
-      fileId: 'mock_file_${DateTime.now().millisecondsSinceEpoch}',
-      isImage: attachment.isImage,
-    );
-
-    DebugLogger.log('mock-complete', scope: 'attachments/mock');
-  }
-
-  Future<List<String>> uploadFiles(
-    List<LocalAttachment> attachments, {
-    Function(int, int)? onProgress,
-    required String conversationId,
-  }) async {
-    final uploadIds = <String>[];
-
-    for (int i = 0; i < attachments.length; i++) {
-      if (onProgress != null) {
-        for (int j = 0; j <= 100; j += 10) {
-          await Future.delayed(const Duration(milliseconds: 50));
-          onProgress(i, j);
-        }
-      }
-      uploadIds.add('mock_upload_${DateTime.now().millisecondsSinceEpoch}_$i');
-    }
-
-    return uploadIds;
-  }
 }
 
 // Providers
@@ -660,9 +499,11 @@ final fileAttachmentServiceProvider = Provider<dynamic>((ref) {
     return MockFileAttachmentService();
   }
 
+  // Guard: only provide service when user is logged in
   final apiService = ref.watch(apiServiceProvider);
   if (apiService == null) return null;
-  return FileAttachmentService(apiService);
+
+  return FileAttachmentService();
 });
 
 // State notifier for managing attached files

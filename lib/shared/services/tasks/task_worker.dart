@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/app_providers.dart';
@@ -74,8 +74,19 @@ class TaskWorker {
   }
 
   Future<void> _performUploadMedia(UploadMediaTask task) async {
+    const imageExts = <String>{'.jpg', '.jpeg', '.png', '.gif', '.webp'};
+    final lowerName = task.fileName.toLowerCase();
+    final bool isImage = imageExts.any(lowerName.endsWith);
+
+    // For images: read as base64 locally (matching web client behavior)
+    // Web client never uploads images to /api/v1/files/
+    if (isImage) {
+      await _handleImageAsBase64(task);
+      return;
+    }
+
+    // For non-images: upload to server
     final uploader = AttachmentUploadQueue();
-    // Ensure queue initialized with API upload callback
     try {
       final api = _ref.read(apiServiceProvider);
       if (api != null) {
@@ -83,7 +94,6 @@ class TaskWorker {
       }
     } catch (_) {}
 
-    // Enqueue and then wait until the item reaches a terminal state for basic parity
     final id = await uploader.enqueue(
       filePath: task.filePath,
       fileName: task.fileName,
@@ -103,7 +113,6 @@ class TaskWorker {
       }
       if (entry == null) return;
 
-      // Reflect progress into UI attachment state if that file is present
       try {
         final current = _ref.read(attachedFilesProvider);
         final idx = current.indexWhere((f) => f.file.path == task.filePath);
@@ -116,10 +125,6 @@ class TaskWorker {
             QueuedAttachmentStatus.failed => FileUploadStatus.failed,
             QueuedAttachmentStatus.cancelled => FileUploadStatus.failed,
           };
-          const imageExts = <String>{'.jpg', '.jpeg', '.png', '.gif', '.webp'};
-          final lowerName = task.fileName.toLowerCase();
-          final bool isImage =
-              existing.isImage ?? imageExts.any(lowerName.endsWith);
           final newState = FileUploadState(
             file: File(task.filePath),
             fileName: task.fileName,
@@ -130,7 +135,7 @@ class TaskWorker {
             status: status,
             fileId: entry.fileId ?? existing.fileId,
             error: entry.lastError,
-            isImage: isImage,
+            isImage: false,
           );
           _ref
               .read(attachedFilesProvider.notifier)
@@ -149,7 +154,6 @@ class TaskWorker {
       }
     });
 
-    // Fire a process tick
     unawaited(uploader.processQueue());
     await completer.future.timeout(
       const Duration(minutes: 2),
@@ -161,6 +165,69 @@ class TaskWorker {
         return;
       },
     );
+  }
+
+  /// Handles image files by reading as base64 locally (matching web client)
+  Future<void> _handleImageAsBase64(UploadMediaTask task) async {
+    try {
+      final file = File(task.filePath);
+      final base64DataUrl = await convertImageFileToDataUrl(file);
+
+      if (base64DataUrl == null) {
+        throw Exception('Failed to convert image to base64');
+      }
+
+      // Update attachment state with base64 data URL
+      final current = _ref.read(attachedFilesProvider);
+      final idx = current.indexWhere((f) => f.file.path == task.filePath);
+      if (idx != -1) {
+        final existing = current[idx];
+        final newState = FileUploadState(
+          file: file,
+          fileName: task.fileName,
+          fileSize: task.fileSize ?? existing.fileSize,
+          progress: 1.0,
+          status: FileUploadStatus.completed,
+          fileId: base64DataUrl,
+          isImage: true,
+          base64DataUrl: base64DataUrl,
+        );
+        _ref
+            .read(attachedFilesProvider.notifier)
+            .updateFileState(task.filePath, newState);
+      }
+
+      DebugLogger.log(
+        'image-base64-complete',
+        scope: 'tasks/upload',
+        data: {
+          'fileName': task.fileName,
+          'dataUrlLength': base64DataUrl.length,
+        },
+      );
+    } catch (e) {
+      DebugLogger.error('image-base64-failed', scope: 'tasks/upload', error: e);
+      // Update state to failed
+      try {
+        final current = _ref.read(attachedFilesProvider);
+        final idx = current.indexWhere((f) => f.file.path == task.filePath);
+        if (idx != -1) {
+          final existing = current[idx];
+          final newState = FileUploadState(
+            file: File(task.filePath),
+            fileName: task.fileName,
+            fileSize: task.fileSize ?? existing.fileSize,
+            progress: 0.0,
+            status: FileUploadStatus.failed,
+            error: e.toString(),
+            isImage: true,
+          );
+          _ref
+              .read(attachedFilesProvider.notifier)
+              .updateFileState(task.filePath, newState);
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> _performExecuteToolCall(ExecuteToolCallTask task) async {
@@ -253,102 +320,69 @@ class TaskWorker {
   }
 
   Future<void> _performImageToDataUrl(ImageToDataUrlTask task) async {
-    // Upload images to server instead of converting to data URLs
-    final uploader = AttachmentUploadQueue();
+    // Convert image to base64 data URL locally (matching web client behavior)
     try {
-      final api = _ref.read(apiServiceProvider);
-      if (api != null) {
-        await uploader.initialize(onUpload: (p, n) => api.uploadFile(p, n));
-      }
-    } catch (_) {}
+      final file = File(task.filePath);
+      final base64DataUrl = await convertImageFileToDataUrl(file);
 
-    try {
+      if (base64DataUrl == null) {
+        throw Exception('Failed to convert image to base64');
+      }
+
+      // Update attachment state with base64 data URL
       final current = _ref.read(attachedFilesProvider);
       final idx = current.indexWhere((f) => f.file.path == task.filePath);
       if (idx != -1) {
         final existing = current[idx];
-        final uploading = FileUploadState(
-          file: existing.file,
+        final newState = FileUploadState(
+          file: file,
           fileName: task.fileName,
           fileSize: existing.fileSize,
-          progress: 0.0,
-          status: FileUploadStatus.uploading,
-          fileId: existing.fileId,
-          isImage: existing.isImage ?? true,
+          progress: 1.0,
+          status: FileUploadStatus.completed,
+          fileId: base64DataUrl,
+          isImage: true,
+          base64DataUrl: base64DataUrl,
         );
         _ref
             .read(attachedFilesProvider.notifier)
-            .updateFileState(task.filePath, uploading);
+            .updateFileState(task.filePath, newState);
       }
-    } catch (_) {}
 
-    final id = await uploader.enqueue(
-      filePath: task.filePath,
-      fileName: task.fileName,
-      fileSize: File(task.filePath).lengthSync(),
-    );
-
-    final completer = Completer<void>();
-    late final StreamSubscription<List<QueuedAttachment>> sub;
-    sub = uploader.queueStream.listen((items) {
-      QueuedAttachment? entry;
-      try {
-        entry = items.firstWhere((e) => e.id == id);
-      } catch (_) {
-        entry = null;
-      }
-      if (entry == null) return;
+      DebugLogger.log(
+        'image-to-dataurl-complete',
+        scope: 'tasks/image',
+        data: {
+          'fileName': task.fileName,
+          'dataUrlLength': base64DataUrl.length,
+        },
+      );
+    } catch (e) {
+      DebugLogger.error(
+        'image-to-dataurl-failed',
+        scope: 'tasks/image',
+        error: e,
+      );
+      // Update state to failed
       try {
         final current = _ref.read(attachedFilesProvider);
         final idx = current.indexWhere((f) => f.file.path == task.filePath);
         if (idx != -1) {
           final existing = current[idx];
-          final status = switch (entry.status) {
-            QueuedAttachmentStatus.pending => FileUploadStatus.uploading,
-            QueuedAttachmentStatus.uploading => FileUploadStatus.uploading,
-            QueuedAttachmentStatus.completed => FileUploadStatus.completed,
-            QueuedAttachmentStatus.failed => FileUploadStatus.failed,
-            QueuedAttachmentStatus.cancelled => FileUploadStatus.failed,
-          };
           final newState = FileUploadState(
             file: File(task.filePath),
             fileName: task.fileName,
             fileSize: existing.fileSize,
-            progress: status == FileUploadStatus.completed
-                ? 1.0
-                : existing.progress,
-            status: status,
-            fileId: entry.fileId ?? existing.fileId,
+            progress: 0.0,
+            status: FileUploadStatus.failed,
+            error: e.toString(),
             isImage: true,
-            error: entry.lastError,
           );
           _ref
               .read(attachedFilesProvider.notifier)
               .updateFileState(task.filePath, newState);
         }
       } catch (_) {}
-      switch (entry.status) {
-        case QueuedAttachmentStatus.completed:
-        case QueuedAttachmentStatus.failed:
-        case QueuedAttachmentStatus.cancelled:
-          sub.cancel();
-          completer.complete();
-          break;
-        default:
-          break;
-      }
-    });
-
-    unawaited(uploader.processQueue());
-    await completer.future.timeout(
-      const Duration(minutes: 2),
-      onTimeout: () {
-        try {
-          sub.cancel();
-        } catch (_) {}
-        DebugLogger.warning('Image upload timed out: ${task.fileName}');
-        return;
-      },
-    );
+    }
   }
 }
