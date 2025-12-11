@@ -8,6 +8,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:io' show Platform;
+import 'dart:ui' show ImageFilter;
 import '../../../shared/widgets/responsive_drawer_layout.dart';
 import '../../navigation/widgets/chats_drawer.dart';
 import 'dart:async';
@@ -968,6 +969,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // Use slivers to align with the actual messages view.
     // Do not attach the primary scroll controller here to avoid
     // AnimatedSwitcher attaching the same controller twice.
+    // Add bottom padding to account for floating input overlay.
+    final bottomPadding = Spacing.lg + _inputHeight;
     return CustomScrollView(
       key: const ValueKey('loading_messages'),
       controller: null,
@@ -976,11 +979,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       cacheExtent: 300,
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             Spacing.lg,
             Spacing.md,
             Spacing.lg,
-            Spacing.lg,
+            bottomPadding,
           ),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
@@ -1097,6 +1100,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       });
     }
 
+    // Add bottom padding to account for floating input overlay.
+    final bottomPadding = Spacing.lg + _inputHeight;
     return CustomScrollView(
       key: const ValueKey('actual_messages'),
       controller: _scrollController,
@@ -1105,11 +1110,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       cacheExtent: 600,
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             Spacing.lg,
             Spacing.md,
             Spacing.lg,
-            Spacing.lg,
+            bottomPadding,
           ),
           sliver: OptimizedSliverList<ChatMessage>(
             items: messages,
@@ -1349,6 +1354,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final greetingText = resolvedGreetingName != null
         ? l10n.onboardStartTitle(resolvedGreetingName)
         : null;
+    // Add bottom padding to account for floating input overlay.
+    final bottomPadding = _inputHeight;
     return LayoutBuilder(
       builder: (context, constraints) {
         final greetingDisplay = greetingText ?? '';
@@ -1360,7 +1367,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             width: double.infinity,
             height: constraints.maxHeight,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+              padding: EdgeInsets.fromLTRB(
+                Spacing.lg,
+                0,
+                Spacing.lg,
+                bottomPadding,
+              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -1964,94 +1976,120 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   },
                   child: Stack(
                     children: [
-                      Column(
-                        children: [
-                          // Messages Area with pull-to-refresh
-                          Expanded(
-                            child: ConduitRefreshIndicator(
-                              onRefresh: () async {
-                                // Reload active conversation messages from server
-                                final api = ref.read(apiServiceProvider);
-                                final active = ref.read(
-                                  activeConversationProvider,
+                      // Messages Area fills entire space with pull-to-refresh
+                      Positioned.fill(
+                        child: ConduitRefreshIndicator(
+                          onRefresh: () async {
+                            // Reload active conversation messages from server
+                            final api = ref.read(apiServiceProvider);
+                            final active = ref.read(activeConversationProvider);
+                            if (api != null && active != null) {
+                              try {
+                                final full = await api.getConversation(
+                                  active.id,
                                 );
-                                if (api != null && active != null) {
-                                  try {
-                                    final full = await api.getConversation(
-                                      active.id,
-                                    );
-                                    ref
-                                        .read(
-                                          activeConversationProvider.notifier,
-                                        )
-                                        .set(full);
-                                  } catch (e) {
-                                    DebugLogger.log(
-                                      'Failed to refresh conversation: $e',
-                                      scope: 'chat/page',
-                                    );
-                                  }
-                                }
-
-                                // Also refresh the conversations list to reconcile missed events
-                                // and keep timestamps/order in sync with the server.
-                                try {
-                                  refreshConversationsCache(ref);
-                                  // Best-effort await to stabilize UI; ignore errors.
-                                  await ref.read(conversationsProvider.future);
-                                } catch (_) {}
-
-                                // Add small delay for better UX feedback
-                                await Future.delayed(
-                                  const Duration(milliseconds: 300),
+                                ref
+                                    .read(activeConversationProvider.notifier)
+                                    .set(full);
+                              } catch (e) {
+                                DebugLogger.log(
+                                  'Failed to refresh conversation: $e',
+                                  scope: 'chat/page',
                                 );
-                              },
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () {
-                                  FocusManager.instance.primaryFocus?.unfocus();
-                                  try {
-                                    SystemChannels.textInput.invokeMethod(
-                                      'TextInput.hide',
-                                    );
-                                  } catch (_) {}
-                                },
-                                child: RepaintBoundary(
-                                  child: _buildMessagesList(theme),
+                              }
+                            }
+
+                            // Also refresh the conversations list to reconcile missed events
+                            // and keep timestamps/order in sync with the server.
+                            try {
+                              refreshConversationsCache(ref);
+                              // Best-effort await to stabilize UI; ignore errors.
+                              await ref.read(conversationsProvider.future);
+                            } catch (_) {}
+
+                            // Add small delay for better UX feedback
+                            await Future.delayed(
+                              const Duration(milliseconds: 300),
+                            );
+                          },
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              try {
+                                SystemChannels.textInput.invokeMethod(
+                                  'TextInput.hide',
+                                );
+                              } catch (_) {}
+                            },
+                            child: RepaintBoundary(
+                              child: _buildMessagesList(theme),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Floating input area with attachments and blur background
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: RepaintBoundary(
+                          child: MeasureSize(
+                            onChange: (size) {
+                              if (mounted) {
+                                setState(() {
+                                  _inputHeight = size.height;
+                                });
+                              }
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                // Gradient fade from transparent to solid background
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: const [0.0, 0.4, 1.0],
+                                  colors: [
+                                    theme.scaffoldBackgroundColor.withValues(
+                                      alpha: 0.0,
+                                    ),
+                                    theme.scaffoldBackgroundColor.withValues(
+                                      alpha: 0.85,
+                                    ),
+                                    theme.scaffoldBackgroundColor,
+                                  ],
                                 ),
                               ),
-                            ),
-                          ),
-
-                          // File attachments
-                          const FileAttachmentWidget(),
-                          const ContextAttachmentWidget(),
-
-                          // Modern Input (root matches input background including safe area)
-                          RepaintBoundary(
-                            child: MeasureSize(
-                              onChange: (size) {
-                                if (mounted) {
-                                  setState(() {
-                                    _inputHeight = size.height;
-                                  });
-                                }
-                              },
-                              child: ModernChatInput(
-                                onSendMessage: (text) =>
-                                    _handleMessageSend(text, selectedModel),
-                                onVoiceInput: null,
-                                onVoiceCall: _handleVoiceCall,
-                                onFileAttachment: _handleFileAttachment,
-                                onImageAttachment: _handleImageAttachment,
-                                onCameraCapture: () =>
-                                    _handleImageAttachment(fromCamera: true),
-                                onWebAttachment: _promptAttachWebpage,
-                                onPastedAttachments: _handlePastedAttachments,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Top padding for gradient fade area
+                                  const SizedBox(height: Spacing.xl),
+                                  // File attachments
+                                  const FileAttachmentWidget(),
+                                  const ContextAttachmentWidget(),
+                                  // Modern Input
+                                  ModernChatInput(
+                                    onSendMessage: (text) =>
+                                        _handleMessageSend(text, selectedModel),
+                                    onVoiceInput: null,
+                                    onVoiceCall: _handleVoiceCall,
+                                    onFileAttachment: _handleFileAttachment,
+                                    onImageAttachment: _handleImageAttachment,
+                                    onCameraCapture: () =>
+                                        _handleImageAttachment(
+                                          fromCamera: true,
+                                        ),
+                                    onWebAttachment: _promptAttachWebpage,
+                                    onPastedAttachments:
+                                        _handlePastedAttachments,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
 
                       // Floating Scroll to Bottom Button with smooth appear/disappear
@@ -2093,39 +2131,61 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                     borderRadius: BorderRadius.circular(
                                       AppBorderRadius.floatingButton,
                                     ),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: context
-                                            .conduitTheme
-                                            .surfaceContainerHighest
-                                            .withValues(alpha: 0.75),
-                                        border: Border.all(
-                                          color: context.conduitTheme.cardBorder
-                                              .withValues(alpha: 0.3),
-                                          width: BorderWidth.regular,
-                                        ),
-                                        borderRadius: BorderRadius.circular(
-                                          AppBorderRadius.floatingButton,
-                                        ),
-                                        boxShadow: ConduitShadows.button(
-                                          context,
-                                        ),
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                        sigmaX: 16,
+                                        sigmaY: 16,
                                       ),
-                                      child: SizedBox(
-                                        width: TouchTarget.button,
-                                        height: TouchTarget.button,
-                                        child: IconButton(
-                                          onPressed: _scrollToBottom,
-                                          splashRadius: 24,
-                                          icon: Icon(
-                                            Platform.isIOS
-                                                ? CupertinoIcons.arrow_down
-                                                : Icons.keyboard_arrow_down,
-                                            size: IconSize.lg,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          // Use same high-contrast colors as floating input
+                                          color:
+                                              theme.brightness ==
+                                                  Brightness.dark
+                                              ? Color.lerp(
+                                                  context
+                                                      .conduitTheme
+                                                      .cardBackground,
+                                                  Colors.white,
+                                                  0.08,
+                                                )!.withValues(alpha: 0.85)
+                                              : Color.lerp(
+                                                  context
+                                                      .conduitTheme
+                                                      .inputBackground,
+                                                  Colors.black,
+                                                  0.06,
+                                                )!.withValues(alpha: 0.85),
+                                          border: Border.all(
                                             color: context
                                                 .conduitTheme
-                                                .iconPrimary
-                                                .withValues(alpha: 0.9),
+                                                .cardBorder
+                                                .withValues(alpha: 0.55),
+                                            width: BorderWidth.thin,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            AppBorderRadius.floatingButton,
+                                          ),
+                                          boxShadow: ConduitShadows.button(
+                                            context,
+                                          ),
+                                        ),
+                                        child: SizedBox(
+                                          width: TouchTarget.button,
+                                          height: TouchTarget.button,
+                                          child: IconButton(
+                                            onPressed: _scrollToBottom,
+                                            splashRadius: 24,
+                                            icon: Icon(
+                                              Platform.isIOS
+                                                  ? CupertinoIcons.arrow_down
+                                                  : Icons.keyboard_arrow_down,
+                                              size: IconSize.lg,
+                                              color: context
+                                                  .conduitTheme
+                                                  .iconPrimary
+                                                  .withValues(alpha: 0.9),
+                                            ),
                                           ),
                                         ),
                                       ),
