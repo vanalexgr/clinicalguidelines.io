@@ -11,7 +11,6 @@ import 'auth_cache_manager.dart';
 import 'webview_cookie_helper.dart';
 import '../utils/debug_logger.dart';
 import '../utils/user_avatar_utils.dart';
-import '../../features/tools/providers/tools_providers.dart';
 
 part 'auth_state_manager.g.dart';
 
@@ -955,8 +954,10 @@ class AuthStateManager extends _$AuthStateManager {
       // connection page. Users can navigate to server settings if they need to
       // change server configuration.
 
-      // Invalidate tools provider to clear cached data
-      ref.invalidate(toolsListProvider);
+      // Note: toolsListProvider is NOT invalidated here because:
+      // 1. clearAuthData() already deletes the tools cache from storage
+      // 2. The provider has auth checks that prevent API calls when logged out
+      // 3. When user logs back in, the provider will rebuild with fresh data
 
       // Clear auth cache manager
       _cacheManager.clearAuthCache();
