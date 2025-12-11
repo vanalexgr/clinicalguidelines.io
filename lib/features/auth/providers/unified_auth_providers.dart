@@ -29,9 +29,23 @@ class AuthActions {
   Future<bool> loginWithApiKey(
     String apiKey, {
     bool rememberCredentials = false,
+    String authType = 'token',
   }) {
     return _auth.loginWithApiKey(
       apiKey,
+      rememberCredentials: rememberCredentials,
+      authType: authType,
+    );
+  }
+
+  Future<bool> ldapLogin(
+    String username,
+    String password, {
+    bool rememberCredentials = false,
+  }) {
+    return _auth.ldapLogin(
+      username,
+      password,
       rememberCredentials: rememberCredentials,
     );
   }

@@ -862,5 +862,20 @@
   "widgetCamera": "Cámara",
   "widgetPhotos": "Fotos",
   "widgetClipboard": "Portapapeles",
-  "widgetDescription": "Acceso rápido al chat de Conduit con cámara, fotos y atajos del portapapeles"
+  "widgetDescription": "Acceso rápido al chat de Conduit con cámara, fotos y atajos del portapapeles",
+  "sso": "SSO",
+  "ssoDescription": "Iniciar sesión con el proveedor de identidad de su organización",
+  "signInWithSso": "Iniciar sesión con SSO",
+  "ssoAuthenticating": "Autenticando...",
+  "ssoAuthFailed": "Error de autenticación SSO",
+  "ssoTokenNotFound": "No se pudo obtener el token de autenticación del proveedor SSO",
+  "ssoLoadingLogin": "Cargando página de inicio de sesión...",
+  "ldap": "LDAP",
+  "ldapDescription": "Iniciar sesión con sus credenciales de directorio LDAP",
+  "signInWithLdap": "Iniciar sesión con LDAP",
+  "ldapUsername": "Nombre de usuario",
+  "ldapUsernameHint": "Ingrese su nombre de usuario LDAP",
+  "moreSignInOptions": "Más opciones de inicio de sesión",
+  "ldapNotEnabled": "La autenticación LDAP no está habilitada en este servidor",
+  "ssoPlatformNotSupported": "La autenticación SSO no es compatible con esta plataforma. Por favor, use credenciales o autenticación LDAP en su lugar."
 }

@@ -17,6 +17,15 @@ import '../../../core/auth/auth_state_manager.dart';
 import '../../../core/utils/debug_logger.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 import '../providers/unified_auth_providers.dart';
+import '../../../core/auth/webview_cookie_helper.dart' show isWebViewSupported;
+
+/// Authentication mode options
+enum AuthMode {
+  credentials, // Email/password
+  token, // JWT token
+  sso, // OAuth/OIDC via WebView
+  ldap, // LDAP username/password
+}
 
 class AuthenticationPage extends ConsumerStatefulWidget {
   final ServerConfig? serverConfig;
@@ -32,9 +41,11 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _apiKeyController = TextEditingController();
+  final TextEditingController _ldapUsernameController = TextEditingController();
+  final TextEditingController _ldapPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _useApiKey = false;
+  AuthMode _authMode = AuthMode.credentials;
   String? _loginError;
   bool _isSigningIn = false;
   bool _serverConfigSaved = false;
@@ -56,7 +67,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         _loginError = _formatLoginError(authState.error!);
         // Switch to token tab if the error is about API keys
         if (authState.error!.contains('apiKey')) {
-          _useApiKey = true;
+          _authMode = AuthMode.token;
         }
       });
     }
@@ -77,6 +88,8 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
     _usernameController.dispose();
     _passwordController.dispose();
     _apiKeyController.dispose();
+    _ldapUsernameController.dispose();
+    _ldapPasswordController.dispose();
     super.dispose();
   }
 
@@ -100,17 +113,27 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
       final actions = ref.read(authActionsProvider);
       bool success;
 
-      if (_useApiKey) {
-        success = await actions.loginWithApiKey(
-          _apiKeyController.text.trim(),
-          rememberCredentials: true,
-        );
-      } else {
-        success = await actions.login(
-          _usernameController.text.trim(),
-          _passwordController.text,
-          rememberCredentials: true,
-        );
+      switch (_authMode) {
+        case AuthMode.credentials:
+          success = await actions.login(
+            _usernameController.text.trim(),
+            _passwordController.text,
+            rememberCredentials: true,
+          );
+        case AuthMode.token:
+          success = await actions.loginWithApiKey(
+            _apiKeyController.text.trim(),
+            rememberCredentials: true,
+          );
+        case AuthMode.ldap:
+          success = await actions.ldapLogin(
+            _ldapUsernameController.text.trim(),
+            _ldapPasswordController.text,
+            rememberCredentials: true,
+          );
+        case AuthMode.sso:
+          // SSO is handled by navigating to SsoAuthPage
+          return;
       }
 
       if (!success) {
@@ -149,6 +172,8 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
       return l10n.apiKeyNotSupported;
     } else if (error.contains('apiKeyNoLongerSupported')) {
       return l10n.apiKeyNoLongerSupported;
+    } else if (error.contains('LDAP authentication is not enabled')) {
+      return l10n.ldapNotEnabled;
     } else if (error.contains('401') || error.contains('Unauthorized')) {
       return l10n.invalidCredentials;
     } else if (error.contains('redirect')) {
@@ -374,10 +399,12 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   }
 
   Widget _buildAuthForm() {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Authentication mode toggle
+        // Primary authentication mode toggle (Credentials/Token)
         _buildAuthModeToggle(),
 
         const SizedBox(height: Spacing.lg),
@@ -389,11 +416,19 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
           const SizedBox(height: Spacing.md),
           _buildErrorMessage(_loginError!),
         ],
+
+        // More options section (SSO/LDAP)
+        const SizedBox(height: Spacing.lg),
+        _buildMoreOptionsSection(l10n),
       ],
     );
   }
 
   Widget _buildAuthModeToggle() {
+    final l10n = AppLocalizations.of(context)!;
+    final isPrimaryMode =
+        _authMode == AuthMode.credentials || _authMode == AuthMode.token;
+
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
@@ -411,9 +446,13 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
               icon: Platform.isIOS
                   ? CupertinoIcons.person_circle
                   : Icons.account_circle_outlined,
-              label: AppLocalizations.of(context)!.credentials,
-              isSelected: !_useApiKey,
-              onTap: () => setState(() => _useApiKey = false),
+              label: l10n.credentials,
+              isSelected: _authMode == AuthMode.credentials && isPrimaryMode,
+              onTap: () => setState(() {
+                _authMode = AuthMode.credentials;
+                _loginError = null;
+                _obscurePassword = true; // Reset visibility on mode change
+              }),
             ),
           ),
           Expanded(
@@ -421,9 +460,13 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
               icon: Platform.isIOS
                   ? CupertinoIcons.lock_shield
                   : Icons.vpn_key_outlined,
-              label: AppLocalizations.of(context)!.token,
-              isSelected: _useApiKey,
-              onTap: () => setState(() => _useApiKey = true),
+              label: l10n.token,
+              isSelected: _authMode == AuthMode.token && isPrimaryMode,
+              onTap: () => setState(() {
+                _authMode = AuthMode.token;
+                _loginError = null;
+                _obscurePassword = true; // Reset visibility on mode change
+              }),
             ),
           ),
         ],
@@ -498,8 +541,21 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
           ),
         );
       },
-      child: _useApiKey ? _buildApiKeyForm() : _buildCredentialsForm(),
+      child: _buildCurrentAuthForm(),
     );
+  }
+
+  Widget _buildCurrentAuthForm() {
+    switch (_authMode) {
+      case AuthMode.credentials:
+        return _buildCredentialsForm();
+      case AuthMode.token:
+        return _buildApiKeyForm();
+      case AuthMode.ldap:
+        return _buildLdapForm();
+      case AuthMode.sso:
+        return _buildSsoPrompt();
+    }
   }
 
   /// Validates that a token is a JWT and not an API key.
@@ -632,15 +688,287 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
     );
   }
 
+  Widget _buildLdapForm() {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Column(
+      key: const ValueKey('ldap_form'),
+      children: [
+        AccessibleFormField(
+          label: l10n.ldapUsername,
+          hint: l10n.ldapUsernameHint,
+          controller: _ldapUsernameController,
+          validator: InputValidationService.validateRequired,
+          keyboardType: TextInputType.text,
+          semanticLabel: l10n.ldapUsernameHint,
+          prefixIcon: Icon(
+            Platform.isIOS ? CupertinoIcons.person : Icons.person_outline,
+            color: context.conduitTheme.iconSecondary,
+          ),
+          autofillHints: const [AutofillHints.username],
+          isRequired: true,
+        ),
+        const SizedBox(height: Spacing.lg),
+        AccessibleFormField(
+          label: l10n.password,
+          hint: l10n.passwordHint,
+          controller: _ldapPasswordController,
+          validator: InputValidationService.combine([
+            InputValidationService.validateRequired,
+            (value) => InputValidationService.validateMinLength(
+              value,
+              1,
+              fieldName: l10n.password,
+            ),
+          ]),
+          obscureText: _obscurePassword,
+          semanticLabel: l10n.passwordHint,
+          prefixIcon: Icon(
+            Platform.isIOS ? CupertinoIcons.lock : Icons.lock_outline,
+            color: context.conduitTheme.iconSecondary,
+          ),
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword
+                  ? (Platform.isIOS
+                        ? CupertinoIcons.eye_slash
+                        : Icons.visibility_off)
+                  : (Platform.isIOS ? CupertinoIcons.eye : Icons.visibility),
+              color: context.conduitTheme.iconSecondary,
+            ),
+            onPressed: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
+          ),
+          onSubmitted: (_) => _signIn(),
+          autofillHints: const [AutofillHints.password],
+          isRequired: true,
+        ),
+        const SizedBox(height: Spacing.sm),
+        Text(
+          l10n.ldapDescription,
+          style: context.conduitTheme.bodySmall?.copyWith(
+            color: context.conduitTheme.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSsoPrompt() {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Column(
+      key: const ValueKey('sso_form'),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(Spacing.lg),
+          decoration: BoxDecoration(
+            color: context.conduitTheme.surfaceContainer.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(AppBorderRadius.medium),
+            border: Border.all(
+              color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
+              width: BorderWidth.standard,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Platform.isIOS ? CupertinoIcons.lock_shield : Icons.security,
+                size: IconSize.xxl,
+                color: context.conduitTheme.buttonPrimary,
+              ),
+              const SizedBox(height: Spacing.md),
+              Text(l10n.sso, style: context.conduitTheme.headingMedium),
+              const SizedBox(height: Spacing.sm),
+              Text(
+                l10n.ssoDescription,
+                style: context.conduitTheme.bodyMedium?.copyWith(
+                  color: context.conduitTheme.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: Spacing.lg),
+              ConduitButton(
+                text: l10n.signInWithSso,
+                icon: Platform.isIOS
+                    ? CupertinoIcons.arrow_right
+                    : Icons.arrow_forward,
+                onPressed: _navigateToSso,
+                isFullWidth: true,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _navigateToSso() async {
+    if (!mounted) return;
+
+    // Save server config first if needed
+    if (widget.serverConfig != null && !_serverConfigSaved) {
+      await _saveServerConfig(widget.serverConfig!);
+      _serverConfigSaved = true;
+      if (!mounted) return;
+    }
+
+    context.pushNamed(RouteNames.ssoAuth, extra: widget.serverConfig);
+  }
+
+  Widget _buildMoreOptionsSection(AppLocalizations l10n) {
+    return Column(
+      children: [
+        // Divider with "or" text
+        Row(
+          children: [
+            Expanded(
+              child: Divider(
+                color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+              child: Text(
+                l10n.moreSignInOptions,
+                style: context.conduitTheme.bodySmall?.copyWith(
+                  color: context.conduitTheme.textSecondary,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Divider(
+                color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: Spacing.md),
+
+        // SSO and LDAP buttons
+        // SSO is only available on platforms that support WebView (iOS/Android)
+        Row(
+          children: [
+            if (isWebViewSupported) ...[
+              Expanded(
+                child: _buildOptionButton(
+                  icon: Platform.isIOS
+                      ? CupertinoIcons.lock_shield
+                      : Icons.security,
+                  label: l10n.sso,
+                  isSelected: _authMode == AuthMode.sso,
+                  onTap: () => setState(() {
+                    _authMode = AuthMode.sso;
+                    _loginError = null;
+                    _obscurePassword = true; // Reset visibility on mode change
+                  }),
+                ),
+              ),
+              const SizedBox(width: Spacing.sm),
+            ],
+            Expanded(
+              child: _buildOptionButton(
+                icon: Platform.isIOS
+                    ? CupertinoIcons.building_2_fill
+                    : Icons.domain,
+                label: l10n.ldap,
+                isSelected: _authMode == AuthMode.ldap,
+                onTap: () => setState(() {
+                  _authMode = AuthMode.ldap;
+                  _loginError = null;
+                  _obscurePassword = true; // Reset visibility on mode change
+                }),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOptionButton({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: isSelected
+          ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.1)
+          : context.conduitTheme.surfaceContainer.withValues(alpha: 0.3),
+      borderRadius: BorderRadius.circular(AppBorderRadius.small),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppBorderRadius.small),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            vertical: Spacing.md,
+            horizontal: Spacing.sm,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppBorderRadius.small),
+            border: Border.all(
+              color: isSelected
+                  ? context.conduitTheme.buttonPrimary
+                  : context.conduitTheme.dividerColor.withValues(alpha: 0.5),
+              width: BorderWidth.standard,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: IconSize.small,
+                color: isSelected
+                    ? context.conduitTheme.buttonPrimary
+                    : context.conduitTheme.iconSecondary,
+              ),
+              const SizedBox(width: Spacing.xs),
+              Text(
+                label,
+                style: context.conduitTheme.bodySmall?.copyWith(
+                  color: isSelected
+                      ? context.conduitTheme.buttonPrimary
+                      : context.conduitTheme.textSecondary,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSignInButton() {
+    final l10n = AppLocalizations.of(context)!;
+
+    // Don't show sign-in button for SSO mode (it has its own button)
+    if (_authMode == AuthMode.sso) {
+      return const SizedBox.shrink();
+    }
+
+    String buttonText;
+    if (_isSigningIn) {
+      buttonText = l10n.signingIn;
+    } else {
+      switch (_authMode) {
+        case AuthMode.credentials:
+          buttonText = l10n.signIn;
+        case AuthMode.token:
+          buttonText = l10n.signInWithToken;
+        case AuthMode.ldap:
+          buttonText = l10n.signInWithLdap;
+        case AuthMode.sso:
+          buttonText = l10n.signInWithSso;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.only(top: Spacing.lg),
       child: ConduitButton(
-        text: _isSigningIn
-            ? AppLocalizations.of(context)!.signingIn
-            : _useApiKey
-            ? AppLocalizations.of(context)!.signInWithToken
-            : AppLocalizations.of(context)!.signIn,
+        text: buttonText,
         icon: _isSigningIn
             ? null
             : (Platform.isIOS

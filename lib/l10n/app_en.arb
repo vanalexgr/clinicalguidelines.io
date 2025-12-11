@@ -1858,5 +1858,65 @@
         "example": "100"
       }
     }
+  },
+  "sso": "SSO",
+  "@sso": {
+    "description": "Label for Single Sign-On authentication option."
+  },
+  "ssoDescription": "Sign in with your organization's identity provider",
+  "@ssoDescription": {
+    "description": "Description text explaining SSO authentication."
+  },
+  "signInWithSso": "Sign in with SSO",
+  "@signInWithSso": {
+    "description": "Button text for SSO sign-in."
+  },
+  "ssoAuthenticating": "Authenticating...",
+  "@ssoAuthenticating": {
+    "description": "Loading message during SSO authentication."
+  },
+  "ssoAuthFailed": "SSO authentication failed",
+  "@ssoAuthFailed": {
+    "description": "Error message when SSO authentication fails."
+  },
+  "ssoTokenNotFound": "Could not retrieve authentication token from SSO provider",
+  "@ssoTokenNotFound": {
+    "description": "Error message when SSO token cannot be captured."
+  },
+  "ssoLoadingLogin": "Loading login page...",
+  "@ssoLoadingLogin": {
+    "description": "Loading message while SSO login page loads."
+  },
+  "ldap": "LDAP",
+  "@ldap": {
+    "description": "Label for LDAP authentication option."
+  },
+  "ldapDescription": "Sign in with your LDAP directory credentials",
+  "@ldapDescription": {
+    "description": "Description text explaining LDAP authentication."
+  },
+  "signInWithLdap": "Sign in with LDAP",
+  "@signInWithLdap": {
+    "description": "Button text for LDAP sign-in."
+  },
+  "ldapUsername": "Username",
+  "@ldapUsername": {
+    "description": "Label for LDAP username field."
+  },
+  "ldapUsernameHint": "Enter your LDAP username",
+  "@ldapUsernameHint": {
+    "description": "Hint text for LDAP username field."
+  },
+  "moreSignInOptions": "More sign-in options",
+  "@moreSignInOptions": {
+    "description": "Section header for additional authentication methods."
+  },
+  "ldapNotEnabled": "LDAP authentication is not enabled on this server",
+  "@ldapNotEnabled": {
+    "description": "Error message when LDAP is not configured on the server."
+  },
+  "ssoPlatformNotSupported": "SSO authentication is not supported on this platform. Please use credentials or LDAP authentication instead.",
+  "@ssoPlatformNotSupported": {
+    "description": "Error message when SSO is attempted on an unsupported platform (desktop/web)."
   }
 }

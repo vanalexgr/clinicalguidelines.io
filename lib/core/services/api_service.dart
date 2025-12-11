@@ -355,6 +355,46 @@ class ApiService {
     await _dio.get('/api/v1/auths/signout');
   }
 
+  /// LDAP authentication - uses username instead of email.
+  ///
+  /// Returns the same response format as regular login:
+  /// `{"token": "...", "token_type": "Bearer", "id": "...", ...}`
+  ///
+  /// Throws an exception if LDAP is not enabled on the server (400 response).
+  Future<Map<String, dynamic>> ldapLogin(
+    String username,
+    String password,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/auths/ldap',
+        data: {'user': username, 'password': password},
+      );
+
+      return response.data;
+    } catch (e) {
+      if (e is DioException) {
+        // Handle LDAP not enabled
+        if (e.response?.statusCode == 400) {
+          final data = e.response?.data;
+          if (data is Map && data['detail'] != null) {
+            throw Exception(data['detail']);
+          }
+        }
+        // Handle specific redirect cases
+        if (e.response?.statusCode == 307 || e.response?.statusCode == 308) {
+          final location = e.response?.headers.value('location');
+          if (location != null) {
+            throw Exception(
+              'Server redirect detected. Please check your server URL configuration. Redirect to: $location',
+            );
+          }
+        }
+      }
+      rethrow;
+    }
+  }
+
   // User info
   Future<User> getCurrentUser() async {
     final response = await _dio.get('/api/v1/auths/');

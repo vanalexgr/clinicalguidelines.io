@@ -862,5 +862,20 @@
   "widgetCamera": "Камера",
   "widgetPhotos": "Фотографии",
   "widgetClipboard": "Буфер обмена",
-  "widgetDescription": "Быстрый доступ к чату Conduit с камерой, фотографиями и буфером обмена"
+  "widgetDescription": "Быстрый доступ к чату Conduit с камерой, фотографиями и буфером обмена",
+  "sso": "SSO",
+  "ssoDescription": "Войдите через провайдера идентификации вашей организации",
+  "signInWithSso": "Войти через SSO",
+  "ssoAuthenticating": "Аутентификация...",
+  "ssoAuthFailed": "Ошибка SSO-аутентификации",
+  "ssoTokenNotFound": "Не удалось получить токен аутентификации от провайдера SSO",
+  "ssoLoadingLogin": "Загрузка страницы входа...",
+  "ldap": "LDAP",
+  "ldapDescription": "Войдите с учётными данными каталога LDAP",
+  "signInWithLdap": "Войти через LDAP",
+  "ldapUsername": "Имя пользователя",
+  "ldapUsernameHint": "Введите имя пользователя LDAP",
+  "moreSignInOptions": "Дополнительные способы входа",
+  "ldapNotEnabled": "LDAP-аутентификация не включена на этом сервере",
+  "ssoPlatformNotSupported": "SSO-аутентификация не поддерживается на этой платформе. Пожалуйста, используйте учётные данные или LDAP-аутентификацию."
 }

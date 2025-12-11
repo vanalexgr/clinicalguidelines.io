@@ -14,6 +14,7 @@ import '../../features/auth/views/authentication_page.dart';
 import '../../features/auth/views/connect_signin_page.dart';
 import '../../features/auth/views/connection_issue_page.dart';
 import '../../features/auth/views/server_connection_page.dart';
+import '../../features/auth/views/sso_auth_page.dart';
 import '../../features/chat/views/chat_page.dart';
 import '../../features/navigation/views/splash_launcher_page.dart';
 import '../../features/notes/views/notes_list_page.dart';
@@ -233,6 +234,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       builder: (context, state) {
         final config = state.extra;
         return AuthenticationPage(
+          serverConfig: config is ServerConfig ? config : null,
+        );
+      },
+    ),
+    GoRoute(
+      path: Routes.ssoAuth,
+      name: RouteNames.ssoAuth,
+      builder: (context, state) {
+        final config = state.extra;
+        return SsoAuthPage(
           serverConfig: config is ServerConfig ? config : null,
         );
       },
