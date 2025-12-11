@@ -180,7 +180,8 @@ class RouterNotifier extends ChangeNotifier {
     return location == Routes.serverConnection ||
         location == Routes.login ||
         location == Routes.authentication ||
-        location == Routes.connectionIssue;
+        location == Routes.connectionIssue ||
+        location == Routes.ssoAuth;
   }
 
   @override
@@ -232,9 +233,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       path: Routes.authentication,
       name: RouteNames.authentication,
       builder: (context, state) {
-        final config = state.extra;
+        final extra = state.extra;
+        // Support both AuthFlowConfig (new) and ServerConfig (legacy)
+        if (extra is AuthFlowConfig) {
+          return AuthenticationPage(
+            serverConfig: extra.serverConfig,
+            backendConfig: extra.backendConfig,
+          );
+        }
         return AuthenticationPage(
-          serverConfig: config is ServerConfig ? config : null,
+          serverConfig: extra is ServerConfig ? extra : null,
         );
       },
     ),

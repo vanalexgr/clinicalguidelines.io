@@ -1918,5 +1918,19 @@
   "ssoPlatformNotSupported": "SSO authentication is not supported on this platform. Please use credentials or LDAP authentication instead.",
   "@ssoPlatformNotSupported": {
     "description": "Error message when SSO is attempted on an unsupported platform (desktop/web)."
+  },
+  "continueWithProvider": "Continue with {provider}",
+  "@continueWithProvider": {
+    "description": "Button text for OAuth provider sign-in.",
+    "placeholders": {
+      "provider": {
+        "type": "String",
+        "example": "Google"
+      }
+    }
+  },
+  "or": "or",
+  "@or": {
+    "description": "Separator text between authentication options."
   }
 }

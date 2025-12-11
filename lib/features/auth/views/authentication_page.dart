@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/models/backend_config.dart';
 import '../../../core/models/server_config.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/input_validation_service.dart';
@@ -29,8 +30,9 @@ enum AuthMode {
 
 class AuthenticationPage extends ConsumerStatefulWidget {
   final ServerConfig? serverConfig;
+  final BackendConfig? backendConfig;
 
-  const AuthenticationPage({super.key, this.serverConfig});
+  const AuthenticationPage({super.key, this.serverConfig, this.backendConfig});
 
   @override
   ConsumerState<AuthenticationPage> createState() => _AuthenticationPageState();
@@ -49,15 +51,48 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   String? _loginError;
   bool _isSigningIn = false;
   bool _serverConfigSaved = false;
+  bool _showMoreOptions = false;
+
+  /// Whether the server has OAuth/SSO providers configured.
+  bool get _hasSsoEnabled =>
+      widget.backendConfig?.hasSsoEnabled == true && isWebViewSupported;
+
+  /// Whether LDAP authentication is enabled on the server.
+  bool get _hasLdapEnabled => widget.backendConfig?.enableLdap == true;
+
+  /// Whether the login form (email/password) is enabled on the server.
+  bool get _hasLoginFormEnabled =>
+      widget.backendConfig?.enableLoginForm ?? true;
+
+  /// OAuth providers available on the server.
+  OAuthProviders get _oauthProviders =>
+      widget.backendConfig?.oauthProviders ?? const OAuthProviders();
 
   @override
   void initState() {
     super.initState();
+    _setDefaultAuthMode();
     _loadSavedCredentials();
     // Check for auth errors (e.g., forced logout due to API key)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthStateError();
     });
+  }
+
+  /// Set the default auth mode based on what the server supports.
+  void _setDefaultAuthMode() {
+    // Priority: SSO > Credentials > LDAP > Token
+    if (_hasSsoEnabled && _oauthProviders.enabledProviders.length == 1) {
+      // If only one SSO provider, that's probably the intended method
+      _authMode = AuthMode.sso;
+    } else if (_hasLoginFormEnabled) {
+      _authMode = AuthMode.credentials;
+    } else if (_hasLdapEnabled) {
+      _authMode = AuthMode.ldap;
+    } else {
+      // Fallback to token if nothing else is enabled
+      _authMode = AuthMode.token;
+    }
   }
 
   void _checkAuthStateError() {
@@ -404,158 +439,108 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Primary authentication mode toggle (Credentials/Token)
-        _buildAuthModeToggle(),
+        // Show SSO buttons prominently if OAuth providers are configured
+        if (_hasSsoEnabled) ...[
+          _buildSsoButtons(l10n),
+          if (_hasLoginFormEnabled || _hasLdapEnabled) ...[
+            const SizedBox(height: Spacing.lg),
+            _buildDividerWithText(l10n.or),
+            const SizedBox(height: Spacing.lg),
+          ],
+        ],
 
-        const SizedBox(height: Spacing.lg),
-
-        // Authentication form fields
-        _buildAuthFields(),
+        // Show the appropriate form based on auth mode
+        // Credentials form is shown directly when login form is enabled
+        // Other modes (LDAP, Token) are shown when selected from "More options"
+        if (_hasLoginFormEnabled && _authMode == AuthMode.credentials) ...[
+          _buildCredentialsForm(),
+        ] else if (_authMode == AuthMode.ldap && _hasLdapEnabled) ...[
+          _buildLdapForm(),
+        ] else if (_authMode == AuthMode.token) ...[
+          _buildApiKeyForm(),
+        ] else if (_authMode == AuthMode.sso && !_hasSsoEnabled) ...[
+          _buildSsoPrompt(),
+        ],
 
         if (_loginError != null) ...[
           const SizedBox(height: Spacing.md),
           _buildErrorMessage(_loginError!),
         ],
 
-        // More options section (SSO/LDAP)
+        // More options section - always show for additional auth methods
         const SizedBox(height: Spacing.lg),
         _buildMoreOptionsSection(l10n),
       ],
     );
   }
 
-  Widget _buildAuthModeToggle() {
-    final l10n = AppLocalizations.of(context)!;
-    final isPrimaryMode =
-        _authMode == AuthMode.credentials || _authMode == AuthMode.token;
-
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: context.conduitTheme.surfaceContainer.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppBorderRadius.small),
-        border: Border.all(
-          color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
-          width: BorderWidth.standard,
+  Widget _buildDividerWithText(String text) {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+            color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildAuthToggleOption(
-              icon: Platform.isIOS
-                  ? CupertinoIcons.person_circle
-                  : Icons.account_circle_outlined,
-              label: l10n.credentials,
-              isSelected: _authMode == AuthMode.credentials && isPrimaryMode,
-              onTap: () => setState(() {
-                _authMode = AuthMode.credentials;
-                _loginError = null;
-                _obscurePassword = true; // Reset visibility on mode change
-              }),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+          child: Text(
+            text,
+            style: context.conduitTheme.bodySmall?.copyWith(
+              color: context.conduitTheme.textSecondary,
             ),
           ),
-          Expanded(
-            child: _buildAuthToggleOption(
-              icon: Platform.isIOS
-                  ? CupertinoIcons.lock_shield
-                  : Icons.vpn_key_outlined,
-              label: l10n.token,
-              isSelected: _authMode == AuthMode.token && isPrimaryMode,
-              onTap: () => setState(() {
-                _authMode = AuthMode.token;
-                _loginError = null;
-                _obscurePassword = true; // Reset visibility on mode change
-              }),
-            ),
+        ),
+        Expanded(
+          child: Divider(
+            color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSsoButtons(AppLocalizations l10n) {
+    final providers = _oauthProviders.enabledProviders;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (int i = 0; i < providers.length; i++) ...[
+          if (i > 0) const SizedBox(height: Spacing.sm),
+          _buildOAuthButton(providers[i], l10n),
         ],
-      ),
+      ],
     );
   }
 
-  Widget _buildAuthToggleOption({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return AnimatedContainer(
-      duration: AnimationDuration.microInteraction,
-      curve: Curves.easeInOutCubic,
-      child: Material(
-        color: isSelected
-            ? context.conduitTheme.buttonPrimary
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppBorderRadius.small - 1),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppBorderRadius.small - 1),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              vertical: Spacing.sm,
-              horizontal: Spacing.sm,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: IconSize.small,
-                  color: isSelected
-                      ? context.conduitTheme.buttonPrimaryText
-                      : context.conduitTheme.iconSecondary,
-                ),
-                const SizedBox(width: Spacing.xs),
-                Text(
-                  label,
-                  style: context.conduitTheme.bodySmall?.copyWith(
-                    color: isSelected
-                        ? context.conduitTheme.buttonPrimaryText
-                        : context.conduitTheme.textSecondary,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildOAuthButton(String provider, AppLocalizations l10n) {
+    final displayName = _oauthProviders.getProviderDisplayName(provider);
 
-  Widget _buildAuthFields() {
-    return AnimatedSwitcher(
-      duration: AnimationDuration.pageTransition,
-      switchInCurve: Curves.easeInOutCubic,
-      switchOutCurve: Curves.easeInOutCubic,
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.1),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          ),
-        );
-      },
-      child: _buildCurrentAuthForm(),
-    );
-  }
+    IconData icon;
 
-  Widget _buildCurrentAuthForm() {
-    switch (_authMode) {
-      case AuthMode.credentials:
-        return _buildCredentialsForm();
-      case AuthMode.token:
-        return _buildApiKeyForm();
-      case AuthMode.ldap:
-        return _buildLdapForm();
-      case AuthMode.sso:
-        return _buildSsoPrompt();
+    switch (provider) {
+      case 'google':
+        icon = Icons.g_mobiledata;
+      case 'microsoft':
+        icon = Icons.window;
+      case 'github':
+        icon = Icons.code;
+      case 'oidc':
+        icon = Platform.isIOS ? CupertinoIcons.lock_shield : Icons.security;
+      case 'feishu':
+        icon = Icons.chat_bubble_outline;
+      default:
+        icon = Icons.login;
     }
+
+    return ConduitButton(
+      text: l10n.continueWithProvider(displayName),
+      icon: icon,
+      onPressed: _navigateToSso,
+      isSecondary: true,
+      isFullWidth: true,
+    );
   }
 
   /// Validates that a token is a JWT and not an API key.
@@ -817,70 +802,136 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   }
 
   Widget _buildMoreOptionsSection(AppLocalizations l10n) {
+    // Build list of available options - always show all available options
+    // with the current one highlighted for consistency
+    final options = <Widget>[];
+
+    // Credentials option (if login form is enabled)
+    if (_hasLoginFormEnabled) {
+      options.add(
+        _buildOptionButton(
+          icon: Platform.isIOS
+              ? CupertinoIcons.person_circle
+              : Icons.account_circle_outlined,
+          label: l10n.credentials,
+          isSelected: _authMode == AuthMode.credentials,
+          onTap: () => setState(() {
+            _authMode = AuthMode.credentials;
+            _loginError = null;
+            _obscurePassword = true;
+          }),
+        ),
+      );
+    }
+
+    // SSO option (only if WebView supported and no OAuth buttons shown above)
+    if (isWebViewSupported && !_hasSsoEnabled) {
+      options.add(
+        _buildOptionButton(
+          icon: Platform.isIOS ? CupertinoIcons.lock_shield : Icons.security,
+          label: l10n.sso,
+          isSelected: _authMode == AuthMode.sso,
+          onTap: () => setState(() {
+            _authMode = AuthMode.sso;
+            _loginError = null;
+            _obscurePassword = true;
+          }),
+        ),
+      );
+    }
+
+    // LDAP option (if enabled on server)
+    if (_hasLdapEnabled) {
+      options.add(
+        _buildOptionButton(
+          icon: Platform.isIOS ? CupertinoIcons.building_2_fill : Icons.domain,
+          label: l10n.ldap,
+          isSelected: _authMode == AuthMode.ldap,
+          onTap: () => setState(() {
+            _authMode = AuthMode.ldap;
+            _loginError = null;
+            _obscurePassword = true;
+          }),
+        ),
+      );
+    }
+
+    // Token option (always available as fallback)
+    options.add(
+      _buildOptionButton(
+        icon: Platform.isIOS ? CupertinoIcons.lock_shield : Icons.vpn_key,
+        label: l10n.token,
+        isSelected: _authMode == AuthMode.token,
+        onTap: () => setState(() {
+          _authMode = AuthMode.token;
+          _loginError = null;
+          _obscurePassword = true;
+        }),
+      ),
+    );
+
+    if (options.isEmpty) return const SizedBox.shrink();
+
     return Column(
       children: [
-        // Divider with "or" text
-        Row(
-          children: [
-            Expanded(
-              child: Divider(
-                color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
-              ),
+        // Expandable header
+        InkWell(
+          onTap: () => setState(() => _showMoreOptions = !_showMoreOptions),
+          borderRadius: BorderRadius.circular(AppBorderRadius.button),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.md,
+              vertical: Spacing.sm,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
-              child: Text(
-                l10n.moreSignInOptions,
-                style: context.conduitTheme.bodySmall?.copyWith(
-                  color: context.conduitTheme.textSecondary,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  l10n.moreSignInOptions,
+                  style: context.conduitTheme.bodySmall?.copyWith(
+                    color: context.conduitTheme.textSecondary,
+                  ),
                 ),
-              ),
+                const SizedBox(width: Spacing.xs),
+                AnimatedRotation(
+                  duration: AnimationDuration.microInteraction,
+                  turns: _showMoreOptions ? 0.5 : 0,
+                  child: Icon(
+                    Platform.isIOS
+                        ? CupertinoIcons.chevron_down
+                        : Icons.expand_more,
+                    color: context.conduitTheme.iconSecondary,
+                    size: IconSize.small,
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: Divider(
-                color: context.conduitTheme.dividerColor.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: Spacing.md),
 
-        // SSO and LDAP buttons
-        // SSO is only available on platforms that support WebView (iOS/Android)
-        Row(
-          children: [
-            if (isWebViewSupported) ...[
-              Expanded(
-                child: _buildOptionButton(
-                  icon: Platform.isIOS
-                      ? CupertinoIcons.lock_shield
-                      : Icons.security,
-                  label: l10n.sso,
-                  isSelected: _authMode == AuthMode.sso,
-                  onTap: () => setState(() {
-                    _authMode = AuthMode.sso;
-                    _loginError = null;
-                    _obscurePassword = true; // Reset visibility on mode change
-                  }),
-                ),
-              ),
-              const SizedBox(width: Spacing.sm),
-            ],
-            Expanded(
-              child: _buildOptionButton(
-                icon: Platform.isIOS
-                    ? CupertinoIcons.building_2_fill
-                    : Icons.domain,
-                label: l10n.ldap,
-                isSelected: _authMode == AuthMode.ldap,
-                onTap: () => setState(() {
-                  _authMode = AuthMode.ldap;
-                  _loginError = null;
-                  _obscurePassword = true; // Reset visibility on mode change
-                }),
-              ),
+        // Options (collapsed by default unless a secondary option is selected)
+        AnimatedCrossFade(
+          duration: AnimationDuration.microInteraction,
+          sizeCurve: Curves.easeInOutCubic,
+          crossFadeState:
+              _showMoreOptions ||
+                  _authMode == AuthMode.ldap ||
+                  _authMode == AuthMode.token ||
+                  (_authMode == AuthMode.sso && !_hasSsoEnabled)
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(top: Spacing.md),
+            child: Row(
+              children: [
+                for (int i = 0; i < options.length; i++) ...[
+                  if (i > 0) const SizedBox(width: Spacing.sm),
+                  Expanded(child: options[i]),
+                ],
+              ],
             ),
-          ],
+          ),
         ),
       ],
     );

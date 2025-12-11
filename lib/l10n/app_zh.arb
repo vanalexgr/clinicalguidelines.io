@@ -877,5 +877,7 @@
   "ldapUsernameHint": "输入您的 LDAP 用户名",
   "moreSignInOptions": "更多登录选项",
   "ldapNotEnabled": "此服务器未启用 LDAP 验证",
-  "ssoPlatformNotSupported": "此平台不支持 SSO 验证。请改用凭据或 LDAP 验证。"
+  "ssoPlatformNotSupported": "此平台不支持 SSO 验证。请改用凭据或 LDAP 验证。",
+  "continueWithProvider": "使用 {provider} 继续",
+  "or": "或"
 }

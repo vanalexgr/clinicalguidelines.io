@@ -1,5 +1,80 @@
 import 'package:flutter/foundation.dart';
 
+/// Represents the available OAuth providers configured on the server.
+@immutable
+class OAuthProviders {
+  const OAuthProviders({
+    this.google,
+    this.microsoft,
+    this.github,
+    this.oidc,
+    this.feishu,
+  });
+
+  /// Google OAuth provider name (if enabled).
+  final String? google;
+
+  /// Microsoft OAuth provider name (if enabled).
+  final String? microsoft;
+
+  /// GitHub OAuth provider name (if enabled).
+  final String? github;
+
+  /// Generic OIDC provider name (if enabled).
+  final String? oidc;
+
+  /// Feishu OAuth provider name (if enabled).
+  final String? feishu;
+
+  /// Whether any OAuth provider is enabled.
+  bool get hasAnyProvider =>
+      google != null ||
+      microsoft != null ||
+      github != null ||
+      oidc != null ||
+      feishu != null;
+
+  /// Returns the list of enabled provider keys.
+  List<String> get enabledProviders => [
+    if (google != null) 'google',
+    if (microsoft != null) 'microsoft',
+    if (github != null) 'github',
+    if (oidc != null) 'oidc',
+    if (feishu != null) 'feishu',
+  ];
+
+  /// Returns the display name for a provider.
+  String getProviderDisplayName(String key) {
+    return switch (key) {
+      'google' => google ?? 'Google',
+      'microsoft' => microsoft ?? 'Microsoft',
+      'github' => github ?? 'GitHub',
+      'oidc' => oidc ?? 'SSO',
+      'feishu' => feishu ?? 'Feishu',
+      _ => key,
+    };
+  }
+
+  factory OAuthProviders.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const OAuthProviders();
+    return OAuthProviders(
+      google: json['google'] as String?,
+      microsoft: json['microsoft'] as String?,
+      github: json['github'] as String?,
+      oidc: json['oidc'] as String?,
+      feishu: json['feishu'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    if (google != null) 'google': google,
+    if (microsoft != null) 'microsoft': microsoft,
+    if (github != null) 'github': github,
+    if (oidc != null) 'oidc': oidc,
+    if (feishu != null) 'feishu': feishu,
+  };
+}
+
 /// Subset of the backend `/api/config` response the app cares about.
 @immutable
 class BackendConfig {
@@ -14,6 +89,9 @@ class BackendConfig {
     this.audioSampleRate,
     this.audioFrameSize,
     this.vadEnabled,
+    this.oauthProviders = const OAuthProviders(),
+    this.enableLdap = false,
+    this.enableLoginForm = true,
   });
 
   /// Mirrors `features.enable_websocket` from OpenWebUI.
@@ -28,6 +106,18 @@ class BackendConfig {
   final int? audioFrameSize;
   final bool? vadEnabled;
 
+  /// OAuth providers configured on the server.
+  final OAuthProviders oauthProviders;
+
+  /// Whether LDAP authentication is enabled on the server.
+  final bool enableLdap;
+
+  /// Whether the standard login form (email/password) is enabled.
+  final bool enableLoginForm;
+
+  /// Whether SSO (OAuth) login is available.
+  bool get hasSsoEnabled => oauthProviders.hasAnyProvider;
+
   /// Returns a copy with updated fields.
   BackendConfig copyWith({
     bool? enableWebsocket,
@@ -40,6 +130,9 @@ class BackendConfig {
     int? audioSampleRate,
     int? audioFrameSize,
     bool? vadEnabled,
+    OAuthProviders? oauthProviders,
+    bool? enableLdap,
+    bool? enableLoginForm,
   }) {
     return BackendConfig(
       enableWebsocket: enableWebsocket ?? this.enableWebsocket,
@@ -52,6 +145,9 @@ class BackendConfig {
       audioSampleRate: audioSampleRate ?? this.audioSampleRate,
       audioFrameSize: audioFrameSize ?? this.audioFrameSize,
       vadEnabled: vadEnabled ?? this.vadEnabled,
+      oauthProviders: oauthProviders ?? this.oauthProviders,
+      enableLdap: enableLdap ?? this.enableLdap,
+      enableLoginForm: enableLoginForm ?? this.enableLoginForm,
     );
   }
 
@@ -86,6 +182,9 @@ class BackendConfig {
       'audio_sample_rate': audioSampleRate,
       'audio_frame_size': audioFrameSize,
       'vad_enabled': vadEnabled,
+      'oauth': {'providers': oauthProviders.toJson()},
+      'enable_ldap': enableLdap,
+      'enable_login_form': enableLoginForm,
     };
   }
 
@@ -100,6 +199,10 @@ class BackendConfig {
     int? audioSampleRate;
     int? audioFrameSize;
     bool? vadEnabled;
+    OAuthProviders oauthProviders = const OAuthProviders();
+    bool enableLdap = false;
+    bool enableLoginForm = true;
+
     // Try canonical format first
     final value = json['enable_websocket'];
     if (value is bool) {
@@ -128,6 +231,21 @@ class BackendConfig {
 
     final vad = json['vad_enabled'];
     if (vad is bool) vadEnabled = vad;
+
+    // Parse OAuth providers from top-level oauth.providers
+    final oauth = json['oauth'];
+    if (oauth is Map<String, dynamic>) {
+      final providers = oauth['providers'];
+      if (providers is Map<String, dynamic>) {
+        oauthProviders = OAuthProviders.fromJson(providers);
+      }
+    }
+
+    // Parse auth features from top-level
+    final ldapValue = json['enable_ldap'];
+    if (ldapValue is bool) enableLdap = ldapValue;
+    final loginFormValue = json['enable_login_form'];
+    if (loginFormValue is bool) enableLoginForm = loginFormValue;
 
     // Fallback to nested format for backwards compatibility
     final features = json['features'];
@@ -172,6 +290,11 @@ class BackendConfig {
       if (nestedVad is bool && vadEnabled == null) {
         vadEnabled = nestedVad;
       }
+      // Auth features in nested format
+      final nestedLdap = features['enable_ldap'];
+      if (nestedLdap is bool) enableLdap = nestedLdap;
+      final nestedLoginForm = features['enable_login_form'];
+      if (nestedLoginForm is bool) enableLoginForm = nestedLoginForm;
     }
 
     return BackendConfig(
@@ -185,6 +308,9 @@ class BackendConfig {
       audioSampleRate: audioSampleRate,
       audioFrameSize: audioFrameSize,
       vadEnabled: vadEnabled,
+      oauthProviders: oauthProviders,
+      enableLdap: enableLdap,
+      enableLoginForm: enableLoginForm,
     );
   }
 }

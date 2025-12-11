@@ -939,15 +939,13 @@ class AuthStateManager extends _$AuthStateManager {
       await storage.clearAuthData();
       _updateApiServiceToken(null);
 
-      // Clear WebView cookies to ensure fresh SSO sessions on next login
+      // Clear all WebView data (cookies, localStorage, cache) to ensure
+      // fresh SSO sessions on next login
       try {
-        final cleared = await WebViewCookieHelper.clearCookies();
-        if (cleared) {
-          DebugLogger.auth('WebView cookies cleared');
-        }
+        await WebViewCookieHelper.clearAllWebViewData();
       } catch (e) {
         DebugLogger.warning(
-          'webview-cookie-clear-failed',
+          'webview-data-clear-failed',
           scope: 'auth/state',
           data: {'error': e.toString()},
         );

@@ -117,17 +117,17 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         );
       }
 
-      // Then verify it's actually an OpenWebUI server
+      // Then verify it's actually an OpenWebUI server and get its config
       DebugLogger.log(
         'Verifying OpenWebUI server...',
         scope: 'auth/connection',
       );
-      final isOpenWebUI = await api.verifyIsOpenWebUIServer();
+      final backendConfig = await api.verifyAndGetConfig();
       DebugLogger.log(
-        'OpenWebUI verification result: $isOpenWebUI',
+        'OpenWebUI verification result: ${backendConfig != null}',
         scope: 'auth/connection',
       );
-      if (!isOpenWebUI) {
+      if (backendConfig == null) {
         throw Exception('This does not appear to be an Open-WebUI server.');
       }
 
@@ -137,9 +137,13 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
       );
 
       // Don't save server config yet - wait until authentication succeeds
-      // The config is passed to the authentication page
+      // The config is passed to the authentication page along with backend config
       if (mounted) {
-        context.pushNamed(RouteNames.authentication, extra: tempConfig);
+        final authFlowConfig = AuthFlowConfig(
+          serverConfig: tempConfig,
+          backendConfig: backendConfig,
+        );
+        context.pushNamed(RouteNames.authentication, extra: authFlowConfig);
       }
     } catch (e, stack) {
       DebugLogger.error(

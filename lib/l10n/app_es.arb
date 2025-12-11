@@ -877,5 +877,7 @@
   "ldapUsernameHint": "Ingrese su nombre de usuario LDAP",
   "moreSignInOptions": "Más opciones de inicio de sesión",
   "ldapNotEnabled": "La autenticación LDAP no está habilitada en este servidor",
-  "ssoPlatformNotSupported": "La autenticación SSO no es compatible con esta plataforma. Por favor, use credenciales o autenticación LDAP en su lugar."
+  "ssoPlatformNotSupported": "La autenticación SSO no es compatible con esta plataforma. Por favor, use credenciales o autenticación LDAP en su lugar.",
+  "continueWithProvider": "Continuar con {provider}",
+  "or": "o"
 }

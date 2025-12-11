@@ -232,15 +232,24 @@ class ApiService {
   ///
   /// Returns `true` if the server appears to be a valid OpenWebUI instance.
   Future<bool> verifyIsOpenWebUIServer() async {
+    final config = await verifyAndGetConfig();
+    return config != null;
+  }
+
+  /// Verifies this is an OpenWebUI server and returns the backend config.
+  ///
+  /// Returns `BackendConfig` if the server is valid, `null` otherwise.
+  /// This combines server verification and config fetching in a single call.
+  Future<BackendConfig?> verifyAndGetConfig() async {
     try {
       final response = await _dio.get('/api/config');
       if (response.statusCode != 200) {
-        return false;
+        return null;
       }
 
       final data = response.data;
       if (data is! Map<String, dynamic>) {
-        return false;
+        return null;
       }
 
       // Check for OpenWebUI-specific fields
@@ -250,9 +259,13 @@ class ApiService {
           data['version'] is String && (data['version'] as String).isNotEmpty;
       final hasFeatures = data['features'] is Map;
 
-      return hasStatus && hasVersion && hasFeatures;
+      if (!hasStatus || !hasVersion || !hasFeatures) {
+        return null;
+      }
+
+      return BackendConfig.fromJson(data);
     } catch (e) {
-      return false;
+      return null;
     }
   }
 

@@ -3,13 +3,15 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../utils/debug_logger.dart';
+
 /// Check if WebView is supported on the current platform.
 ///
 /// webview_flutter only supports iOS and Android.
 bool get isWebViewSupported =>
     !kIsWeb && (Platform.isIOS || Platform.isAndroid);
 
-/// Helper for clearing WebView cookies on supported platforms.
+/// Helper for clearing WebView data on supported platforms.
 ///
 /// This is isolated in its own file to prevent platform coupling issues
 /// when the webview_flutter package isn't available.
@@ -29,5 +31,44 @@ class WebViewCookieHelper {
       return false;
     }
   }
-}
 
+  /// Clears all WebView data including cookies, localStorage, and cache.
+  ///
+  /// This should be called on logout to ensure SSO sessions are fully cleared.
+  /// Returns true if all data was cleared successfully.
+  static Future<bool> clearAllWebViewData() async {
+    if (!isWebViewSupported) return false;
+
+    var success = true;
+
+    // Clear cookies
+    try {
+      await WebViewCookieManager().clearCookies();
+      DebugLogger.auth('WebView cookies cleared');
+    } catch (e) {
+      DebugLogger.warning(
+        'webview-cookie-clear-failed',
+        scope: 'auth/webview',
+        data: {'error': e.toString()},
+      );
+      success = false;
+    }
+
+    // Clear localStorage and cache using a temporary controller
+    try {
+      final controller = WebViewController();
+      await controller.clearLocalStorage();
+      await controller.clearCache();
+      DebugLogger.auth('WebView localStorage and cache cleared');
+    } catch (e) {
+      DebugLogger.warning(
+        'webview-storage-clear-failed',
+        scope: 'auth/webview',
+        data: {'error': e.toString()},
+      );
+      success = false;
+    }
+
+    return success;
+  }
+}

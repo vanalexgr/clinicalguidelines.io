@@ -877,5 +877,7 @@
   "ldapUsernameHint": "Voer uw LDAP-gebruikersnaam in",
   "moreSignInOptions": "Meer aanmeldopties",
   "ldapNotEnabled": "LDAP-authenticatie is niet ingeschakeld op deze server",
-  "ssoPlatformNotSupported": "SSO-authenticatie wordt niet ondersteund op dit platform. Gebruik in plaats daarvan inloggegevens of LDAP-authenticatie."
+  "ssoPlatformNotSupported": "SSO-authenticatie wordt niet ondersteund op dit platform. Gebruik in plaats daarvan inloggegevens of LDAP-authenticatie.",
+  "continueWithProvider": "Doorgaan met {provider}",
+  "or": "of"
 }

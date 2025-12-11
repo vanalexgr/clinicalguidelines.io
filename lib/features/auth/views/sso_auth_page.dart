@@ -10,7 +10,6 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../../core/auth/webview_cookie_helper.dart';
 import '../../../core/models/server_config.dart';
 import '../../../core/providers/app_providers.dart';
-import '../../../core/services/navigation_service.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/widgets/error_boundary.dart';
 import '../../../shared/theme/theme_extensions.dart';
@@ -104,6 +103,7 @@ class _SsoAuthPageState extends ConsumerState<SsoAuthPage> {
           onPageFinished: _onPageFinished,
           onWebResourceError: _onWebResourceError,
           onNavigationRequest: _onNavigationRequest,
+          onUrlChange: _onUrlChange,
         ),
       )
       ..setUserAgent(_buildUserAgent());
@@ -148,6 +148,28 @@ class _SsoAuthPageState extends ConsumerState<SsoAuthPage> {
     });
   }
 
+  /// Called when URL changes (may catch changes that onPageFinished misses)
+  Future<void> _onUrlChange(UrlChange change) async {
+    final url = change.url;
+    if (url == null) return;
+    DebugLogger.auth('SSO URL changed: $url');
+
+    // Try to capture token on URL change as well
+    if (_tokenCaptured) return;
+
+    final uri = Uri.parse(url);
+    final serverUrl = _serverUrl;
+    if (serverUrl == null) return;
+
+    final serverUri = Uri.parse(serverUrl);
+    if (uri.host != serverUri.host) return;
+
+    // Attempt single token capture (no retry) - onPageFinished will handle retries
+    // This provides fast capture when URL changes, while onPageFinished
+    // provides the retry mechanism as a fallback
+    await _attemptTokenCapture(uri, attemptId: _captureAttemptId);
+  }
+
   Future<void> _onPageFinished(String url) async {
     DebugLogger.auth('SSO page finished: $url');
 
@@ -169,12 +191,35 @@ class _SsoAuthPageState extends ConsumerState<SsoAuthPage> {
       return;
     }
 
-    // Only check for token on /auth page (after OAuth callback redirect)
-    // or on the root page (some configurations)
-    if (!uri.path.endsWith('/auth') && uri.path != '/') return;
+    // Check if this is a page on our server where a token might be present
+    // After OAuth, Open-WebUI may redirect to:
+    // - /auth (login page with token in cookie)
+    // - / (root/chat page after successful auth)
+    // - /api/v1/auths/callback/* (OAuth callback that sets the token)
+    // We should check for tokens on any page on our server after OAuth completes
+    final serverUrl = _serverUrl;
+    if (serverUrl == null) return;
+
+    final serverUri = Uri.parse(serverUrl);
+    final isOurServer = uri.host == serverUri.host;
+    if (!isOurServer) return;
+
+    // Skip external OAuth provider pages (they won't have our token)
+    // Only check pages that could have the token set
+    final isAuthRelatedPath =
+        uri.path == '/' ||
+        uri.path.endsWith('/auth') ||
+        uri.path.contains('/callback') ||
+        uri.path.contains('/oauth');
+
+    if (!isAuthRelatedPath) {
+      // For other pages on our server (like /chat), still try to capture
+      // the token since the user might have been redirected there after auth
+      DebugLogger.auth('Checking for token on ${uri.path}');
+    }
 
     // Wait a moment for the frontend to persist the token
-    // The OAuth callback sets the cookie, then redirects to /auth,
+    // The OAuth callback sets the cookie, then redirects to /auth or /,
     // where the frontend reads the cookie and stores it in localStorage
     final attemptId = _captureAttemptId;
     await _attemptTokenCaptureWithRetry(uri, attemptId: attemptId);
@@ -248,16 +293,16 @@ class _SsoAuthPageState extends ConsumerState<SsoAuthPage> {
       if (!mounted || attemptId != _captureAttemptId) return false;
 
       String tokenValue = _cleanJsString(cookieResult.toString());
-      if (tokenValue.isNotEmpty) {
-        DebugLogger.auth('Found token in cookie');
+      if (_isValidJwtFormat(tokenValue)) {
+        DebugLogger.auth('Found valid token in cookie');
         await _handleToken(tokenValue);
         return true;
       }
     } catch (e) {
-      DebugLogger.warning(
-        'sso-cookie-read-failed',
+      // Expected during page load - token may not be accessible yet
+      DebugLogger.log(
+        'Cookie read failed (expected during auth flow): ${e.toString().split('\n').first}',
         scope: 'auth/sso',
-        data: {'error': e.toString()},
       );
     }
 
@@ -274,16 +319,16 @@ class _SsoAuthPageState extends ConsumerState<SsoAuthPage> {
       if (!mounted || attemptId != _captureAttemptId) return false;
 
       String tokenValue = _cleanJsString(result.toString());
-      if (tokenValue.isNotEmpty && tokenValue != 'null') {
-        DebugLogger.auth('Found token in localStorage');
+      if (_isValidJwtFormat(tokenValue)) {
+        DebugLogger.auth('Found valid token in localStorage');
         await _handleToken(tokenValue);
         return true;
       }
     } catch (e) {
-      DebugLogger.warning(
-        'sso-localstorage-read-failed',
+      // Expected during page load - token may not be accessible yet
+      DebugLogger.log(
+        'localStorage read failed (expected during auth flow): ${e.toString().split('\n').first}',
         scope: 'auth/sso',
-        data: {'error': e.toString()},
       );
     }
 
@@ -298,26 +343,30 @@ class _SsoAuthPageState extends ConsumerState<SsoAuthPage> {
     return value;
   }
 
+  /// Check if a string looks like a valid JWT token.
+  ///
+  /// JWT tokens have 3 dot-separated segments and are typically 100+ chars.
+  /// This filters out invalid values like 'null', 'undefined', empty strings,
+  /// or placeholder values that might be in localStorage before OAuth completes.
+  bool _isValidJwtFormat(String value) {
+    if (value.isEmpty) return false;
+    final trimmed = value.trim();
+    // Filter out common invalid values
+    if (trimmed == 'null' ||
+        trimmed == 'undefined' ||
+        trimmed == 'false' ||
+        trimmed == 'true') {
+      return false;
+    }
+    // JWT must have 3 segments and be reasonably long
+    final segments = trimmed.split('.');
+    return segments.length == 3 && trimmed.length >= 50;
+  }
+
   Future<void> _handleToken(String token) async {
     if (_tokenCaptured || !mounted) return;
 
-    // Basic validation before attempting login
     final trimmedToken = token.trim();
-    // JWT tokens have 3 dot-separated segments and are typically 100+ chars
-    final isValidFormat =
-        trimmedToken.length >= 50 && trimmedToken.split('.').length == 3;
-    if (trimmedToken.isEmpty || !isValidFormat) {
-      DebugLogger.warning(
-        'sso-token-invalid',
-        scope: 'auth/sso',
-        data: {
-          'length': trimmedToken.length,
-          'segments': trimmedToken.split('.').length,
-        },
-      );
-      return; // Invalid token, don't mark as captured - allow retry
-    }
-
     DebugLogger.auth('Handling captured SSO token');
     _tokenCaptured = true;
 
@@ -341,8 +390,10 @@ class _SsoAuthPageState extends ConsumerState<SsoAuthPage> {
       if (!mounted) return;
 
       if (success) {
-        DebugLogger.auth('SSO login successful, navigating to chat');
-        context.go(Routes.chat);
+        DebugLogger.auth('SSO login successful');
+        // Navigation is handled automatically by the router when auth state
+        // changes to authenticated. The router redirect will navigate to chat.
+        // We don't need to call context.go() here - it can cause race conditions.
       } else {
         setState(() {
           _error = ssoFailedMessage;
@@ -562,4 +613,3 @@ class _SsoAuthPageState extends ConsumerState<SsoAuthPage> {
     );
   }
 }
-
