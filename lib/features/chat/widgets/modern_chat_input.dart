@@ -1279,7 +1279,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             Spacing.inputPadding,
             0,
             Spacing.inputPadding,
-            0,
+            Spacing.sm,
           ),
           child: Row(
             children: [
@@ -1421,9 +1421,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        Spacing.sm,
+        Spacing.screenPadding,
         0,
-        Spacing.sm,
+        Spacing.screenPadding,
         bottomPadding + Spacing.md,
       ),
       child: shell,

@@ -2111,7 +2111,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                stops: const [0.0, 0.6, 1.0],
+                                stops: const [0.0, 0.4, 1.0],
                                 colors: [
                                   theme.scaffoldBackgroundColor,
                                   theme.scaffoldBackgroundColor.withValues(
