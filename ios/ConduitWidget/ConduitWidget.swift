@@ -40,6 +40,18 @@ struct ConduitWidgetEntryView: View {
     @Environment(\.widgetFamily) var family
     @Environment(\.colorScheme) var colorScheme
 
+    /// Adaptive text/icon color based on color scheme
+    private var contentColor: Color {
+        colorScheme == .dark ? .white : .black
+    }
+
+    /// Adaptive button background based on color scheme
+    private var buttonBackground: Color {
+        colorScheme == .dark
+            ? .white.opacity(0.15)
+            : .black.opacity(0.08)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             // Main "Ask Conduit" pill - ChatGPT style
@@ -50,10 +62,10 @@ struct ConduitWidgetEntryView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 28, height: 28)
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(contentColor.opacity(0.85))
                     Text("Ask Conduit")
                         .font(.system(size: 18, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(contentColor.opacity(0.85))
                     Spacer()
                 }
                 .padding(.horizontal, 20)
@@ -61,17 +73,37 @@ struct ConduitWidgetEntryView: View {
                 .frame(height: 56)
                 .background(
                     Capsule()
-                        .fill(.white.opacity(0.15))
+                        .fill(buttonBackground)
                 )
             }
             .buttonStyle(.plain)
 
             // 4 circular icon buttons - ChatGPT style, fill width
             HStack(spacing: 8) {
-                CircularIconButton(symbol: "camera", url: "homewidget://camera")
-                CircularIconButton(symbol: "photo.on.rectangle.angled", url: "homewidget://photos")
-                CircularIconButton(symbol: "waveform", url: "homewidget://mic")
-                CircularIconButton(symbol: "doc.on.clipboard", url: "homewidget://clipboard")
+                CircularIconButton(
+                    symbol: "camera",
+                    url: "homewidget://camera",
+                    contentColor: contentColor,
+                    buttonBackground: buttonBackground
+                )
+                CircularIconButton(
+                    symbol: "photo.on.rectangle.angled",
+                    url: "homewidget://photos",
+                    contentColor: contentColor,
+                    buttonBackground: buttonBackground
+                )
+                CircularIconButton(
+                    symbol: "waveform",
+                    url: "homewidget://mic",
+                    contentColor: contentColor,
+                    buttonBackground: buttonBackground
+                )
+                CircularIconButton(
+                    symbol: "doc.on.clipboard",
+                    url: "homewidget://clipboard",
+                    contentColor: contentColor,
+                    buttonBackground: buttonBackground
+                )
             }
         }
         .padding(16)
@@ -83,16 +115,18 @@ struct ConduitWidgetEntryView: View {
 struct CircularIconButton: View {
     let symbol: String
     let url: String
+    let contentColor: Color
+    let buttonBackground: Color
 
     var body: some View {
         Link(destination: URL(string: url)!) {
             Image(systemName: symbol)
                 .font(.system(size: 24, weight: .medium))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(contentColor.opacity(0.85))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(.white.opacity(0.15))
+                        .fill(buttonBackground)
                 )
         }
         .buttonStyle(.plain)
@@ -108,9 +142,10 @@ struct ConduitWidget: Widget {
         StaticConfiguration(kind: kind, provider: ConduitProvider()) { entry in
             if #available(iOS 17.0, *) {
                 ConduitWidgetEntryView(entry: entry)
-                    .containerBackground(.clear, for: .widget)
+                    .containerBackground(Color("WidgetBackground"), for: .widget)
             } else {
                 ConduitWidgetEntryView(entry: entry)
+                    .background(Color("WidgetBackground"))
             }
         }
         .configurationDisplayName("Conduit")
