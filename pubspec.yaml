@@ -1,6 +1,6 @@
 name: conduit
 description: Open-source mobile client for Open-WebUI
-version: 2.3.4+80
+version: 2.3.5+81
 publish_to: 'none'
 
 environment:
