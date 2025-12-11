@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dart:io' show Platform;
 import 'dart:async';
-import 'dart:ui';
 import 'dart:math' as math;
 import '../providers/chat_providers.dart';
 import '../services/clipboard_attachment_service.dart';
@@ -1073,10 +1072,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
 
     final Brightness brightness = Theme.of(context).brightness;
     final bool isActive = _focusNode.hasFocus || _hasText;
-    final Color composerSurface = context.conduitTheme.inputBackground;
+    // Use high-contrast background for floating input
     final Color composerBackground = brightness == Brightness.dark
-        ? composerSurface.withValues(alpha: 0.78)
-        : context.conduitTheme.surfaceContainerHighest;
+        ? Color.lerp(context.conduitTheme.cardBackground, Colors.white, 0.08)!
+        : Color.lerp(context.conduitTheme.inputBackground, Colors.black, 0.06)!;
     final Color placeholderBase = context.conduitTheme.inputText.withValues(
       alpha: 0.64,
     );
@@ -1087,7 +1086,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       context.conduitTheme.inputBorder,
       context.conduitTheme.inputBorderFocused,
       isActive ? 1.0 : 0.0,
-    )!.withValues(alpha: brightness == Brightness.dark ? 0.55 : 0.45);
+    )!.withValues(alpha: brightness == Brightness.dark ? 0.65 : 0.55);
     final Color shellShadowColor = context.conduitTheme.cardShadow.withValues(
       alpha: brightness == Brightness.dark
           ? 0.22 + (isActive ? 0.08 : 0.0)
@@ -1209,21 +1208,17 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     );
 
     final BoxDecoration shellDecoration = BoxDecoration(
-      color: showCompactComposer ? Colors.transparent : composerBackground,
+      color: composerBackground,
       borderRadius: shellRadius,
-      border: showCompactComposer
-          ? null
-          : Border.all(color: outlineColor, width: BorderWidth.thin),
-      boxShadow: showCompactComposer
-          ? const <BoxShadow>[]
-          : <BoxShadow>[
-              BoxShadow(
-                color: shellShadowColor,
-                blurRadius: 12 + (isActive ? 4 : 0),
-                spreadRadius: -2,
-                offset: const Offset(0, -2),
-              ),
-            ],
+      border: Border.all(color: outlineColor, width: BorderWidth.thin),
+      boxShadow: <BoxShadow>[
+        BoxShadow(
+          color: shellShadowColor,
+          blurRadius: 12 + (isActive ? 4 : 0),
+          spreadRadius: -2,
+          offset: const Offset(0, -2),
+        ),
+      ],
     );
 
     final List<Widget> composerChildren = <Widget>[
@@ -1238,82 +1233,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
           ),
           child: _buildPromptOverlay(context),
         ),
-      if (showCompactComposer)
-        Padding(
-          key: const ValueKey('composer-compact'),
-          padding: const EdgeInsets.fromLTRB(
-            Spacing.screenPadding,
-            Spacing.xs,
-            Spacing.screenPadding,
-            Spacing.sm,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _buildOverflowButton(
-                tooltip: AppLocalizations.of(context)!.more,
-                webSearchActive: webSearchEnabled,
-                imageGenerationActive: imageGenEnabled,
-                toolsActive: selectedToolIds.isNotEmpty,
-                filtersActive: selectedFilterIds.isNotEmpty,
-              ),
-              const SizedBox(width: Spacing.sm),
-              Expanded(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.25,
-                  ),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
-                    constraints: const BoxConstraints(
-                      minHeight: TouchTarget.input,
-                    ),
-                    decoration: BoxDecoration(
-                      color: composerSurface.withValues(
-                        alpha: brightness == Brightness.dark ? 0.9 : 0.2,
-                      ),
-                      borderRadius: BorderRadius.circular(_composerRadius),
-                      border: Border.all(
-                        color: outlineColor.withValues(
-                          alpha: brightness == Brightness.dark ? 0.32 : 0.2,
-                        ),
-                        width: BorderWidth.micro,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _buildComposerTextField(
-                            brightness: brightness,
-                            sendOnEnter: sendOnEnter,
-                            placeholderBase: placeholderBase,
-                            placeholderFocused: placeholderFocused,
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: Spacing.xs,
-                            ),
-                            isActive: isActive,
-                          ),
-                        ),
-                        if (!_hasText && voiceAvailable && !isGenerating)
-                          _buildInlineMicIcon(voiceAvailable),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: Spacing.sm),
-              _buildPrimaryButton(
-                _hasText,
-                isGenerating,
-                stopGeneration,
-                voiceAvailable,
-              ),
-            ],
-          ),
-        )
-      else ...[
+      if (!showCompactComposer) ...[
         Padding(
           key: const ValueKey('composer-expanded-input'),
           padding: const EdgeInsets.fromLTRB(
@@ -1359,7 +1279,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             Spacing.inputPadding,
             0,
             Spacing.inputPadding,
-            0,
+            Spacing.sm,
           ),
           child: Row(
             children: [
@@ -1405,29 +1325,91 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       ],
     ];
 
+    // For compact mode, render text field shell with floating buttons on sides
+    if (showCompactComposer) {
+      // Build the text field shell
+      Widget textFieldShell = AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+        constraints: const BoxConstraints(minHeight: TouchTarget.input),
+        decoration: shellDecoration,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.25,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildComposerTextField(
+                  brightness: brightness,
+                  sendOnEnter: sendOnEnter,
+                  placeholderBase: placeholderBase,
+                  placeholderFocused: placeholderFocused,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: Spacing.xs,
+                  ),
+                  isActive: isActive,
+                ),
+              ),
+              if (!_hasText && voiceAvailable && !isGenerating)
+                _buildInlineMicIcon(voiceAvailable),
+            ],
+          ),
+        ),
+      );
+
+      final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+          Spacing.screenPadding,
+          0,
+          Spacing.screenPadding,
+          bottomPadding + Spacing.md,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _buildOverflowButton(
+              tooltip: AppLocalizations.of(context)!.more,
+              webSearchActive: webSearchEnabled,
+              imageGenerationActive: imageGenEnabled,
+              toolsActive: selectedToolIds.isNotEmpty,
+              filtersActive: selectedFilterIds.isNotEmpty,
+            ),
+            const SizedBox(width: Spacing.sm),
+            Expanded(child: textFieldShell),
+            const SizedBox(width: Spacing.sm),
+            _buildPrimaryButton(
+              _hasText,
+              isGenerating,
+              stopGeneration,
+              voiceAvailable,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // For expanded mode with quick pills, use the full shell
     Widget shell = AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
       decoration: shellDecoration,
-      width: double.infinity,
-      child: SafeArea(
-        top: false,
-        bottom: true,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.4,
-          ),
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 160),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              child: RepaintBoundary(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: composerChildren,
-                ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.4,
+        ),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: RepaintBoundary(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: composerChildren,
               ),
             ),
           ),
@@ -1435,20 +1417,16 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       ),
     );
 
-    if (brightness == Brightness.dark && !showCompactComposer) {
-      shell = ClipRRect(
-        borderRadius: shellRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: shell,
-        ),
-      );
-    }
-
-    return Container(
-      color: Colors.transparent,
-      padding: EdgeInsets.zero,
-      child: Column(mainAxisSize: MainAxisSize.min, children: [shell]),
+    // Wrap with padding for floating effect, accounting for safe area
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        Spacing.screenPadding,
+        0,
+        Spacing.screenPadding,
+        bottomPadding + Spacing.md,
+      ),
+      child: shell,
     );
   }
 
@@ -1688,9 +1666,11 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         : (activeColor ??
               context.conduitTheme.textPrimary.withValues(alpha: Alpha.strong));
 
+    // Use high-contrast background for floating button
     final Brightness brightness = Theme.of(context).brightness;
-    final Color baseBackground = context.conduitTheme.inputBackground
-        .withValues(alpha: brightness == Brightness.dark ? 0.9 : 0.2);
+    final Color baseBackground = brightness == Brightness.dark
+        ? Color.lerp(context.conduitTheme.cardBackground, Colors.white, 0.08)!
+        : Color.lerp(context.conduitTheme.inputBackground, Colors.black, 0.06)!;
     final Color backgroundColor = !enabled
         ? baseBackground.withValues(alpha: Alpha.disabled)
         : isActive
