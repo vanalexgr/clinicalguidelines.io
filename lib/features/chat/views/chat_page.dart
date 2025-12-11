@@ -938,6 +938,67 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return messages.where((m) => _selectedMessageIds.contains(m.id)).toList();
   }
 
+  /// Builds a styled container with high-contrast background for app bar
+  /// widgets, matching the floating chat input styling.
+  Widget _buildAppBarPill({
+    required BuildContext context,
+    required Widget child,
+    bool isCircular = false,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Use same high-contrast colors as the floating chat input
+    final backgroundColor = isDark
+        ? Color.lerp(context.conduitTheme.cardBackground, Colors.white, 0.08)!
+        : Color.lerp(context.conduitTheme.inputBackground, Colors.black, 0.06)!;
+
+    final borderColor = context.conduitTheme.cardBorder.withValues(
+      alpha: isDark ? 0.65 : 0.55,
+    );
+
+    final borderRadius = isCircular
+        ? BorderRadius.circular(100)
+        : BorderRadius.circular(AppBorderRadius.pill);
+
+    // For circular buttons, ensure the entire widget is constrained to a square
+    if (isCircular) {
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: backgroundColor.withValues(alpha: 0.85),
+                borderRadius: borderRadius,
+                border: Border.all(color: borderColor, width: BorderWidth.thin),
+              ),
+              child: Center(child: child),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: backgroundColor.withValues(alpha: 0.85),
+            borderRadius: borderRadius,
+            border: Border.all(color: borderColor, width: BorderWidth.thin),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessagesList(ThemeData theme) {
     // Use select to watch only the messages list to reduce rebuilds
     final messages = ref.watch(
@@ -969,7 +1030,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // Use slivers to align with the actual messages view.
     // Do not attach the primary scroll controller here to avoid
     // AnimatedSwitcher attaching the same controller twice.
-    // Add bottom padding to account for floating input overlay.
+    // Add top padding for floating app bar, bottom padding for floating input.
+    final topPadding =
+        MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
     final bottomPadding = Spacing.lg + _inputHeight;
     return CustomScrollView(
       key: const ValueKey('loading_messages'),
@@ -981,7 +1044,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         SliverPadding(
           padding: EdgeInsets.fromLTRB(
             Spacing.lg,
-            Spacing.md,
+            topPadding,
             Spacing.lg,
             bottomPadding,
           ),
@@ -1100,7 +1163,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       });
     }
 
-    // Add bottom padding to account for floating input overlay.
+    // Add top padding for floating app bar, bottom padding for floating input.
+    final topPadding =
+        MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
     final bottomPadding = Spacing.lg + _inputHeight;
     return CustomScrollView(
       key: const ValueKey('actual_messages'),
@@ -1112,7 +1177,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         SliverPadding(
           padding: EdgeInsets.fromLTRB(
             Spacing.lg,
-            Spacing.md,
+            topPadding,
             Spacing.lg,
             bottomPadding,
           ),
@@ -1354,7 +1419,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final greetingText = resolvedGreetingName != null
         ? l10n.onboardStartTitle(resolvedGreetingName)
         : null;
-    // Add bottom padding to account for floating input overlay.
+    // Add top padding for floating app bar, bottom padding for floating input.
+    final topPadding =
+        MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
     final bottomPadding = _inputHeight;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1369,7 +1436,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             child: Padding(
               padding: EdgeInsets.fromLTRB(
                 Spacing.lg,
-                0,
+                topPadding,
                 Spacing.lg,
                 bottomPadding,
               ),
@@ -1584,84 +1651,160 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 // Replace Scaffold drawer with a tunable slide drawer for gentler snap behavior.
                 drawerEnableOpenDragGesture: false,
                 drawerDragStartBehavior: DragStartBehavior.down,
+                extendBodyBehindAppBar: true,
                 appBar: AppBar(
-                  backgroundColor: context.conduitTheme.surfaceBackground,
+                  backgroundColor: Colors.transparent,
                   elevation: Elevation.none,
                   surfaceTintColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   toolbarHeight: kToolbarHeight + 8,
                   centerTitle: true,
                   titleSpacing: 0.0,
+                  leadingWidth: 44 + Spacing.inputPadding + Spacing.xs,
                   leading: _isSelectionMode
-                      ? IconButton(
-                          icon: Icon(
-                            Platform.isIOS ? CupertinoIcons.xmark : Icons.close,
-                            color: context.conduitTheme.textPrimary,
-                            size: IconSize.appBar,
+                      ? Padding(
+                          padding: const EdgeInsets.only(
+                            left: Spacing.inputPadding,
                           ),
-                          onPressed: _clearSelection,
+                          child: Center(
+                            child: GestureDetector(
+                              onTap: _clearSelection,
+                              child: _buildAppBarPill(
+                                context: context,
+                                isCircular: true,
+                                child: Icon(
+                                  Platform.isIOS
+                                      ? CupertinoIcons.xmark
+                                      : Icons.close,
+                                  color: context.conduitTheme.textPrimary,
+                                  size: IconSize.appBar,
+                                ),
+                              ),
+                            ),
+                          ),
                         )
                       : Builder(
                           builder: (ctx) => Padding(
                             padding: const EdgeInsets.only(
                               left: Spacing.inputPadding,
                             ),
-                            child: IconButton(
-                              onPressed: () {
-                                final layout = ResponsiveDrawerLayout.of(ctx);
-                                if (layout == null) return;
+                            child: Center(
+                              child: GestureDetector(
+                                onTap: () {
+                                  final layout = ResponsiveDrawerLayout.of(ctx);
+                                  if (layout == null) return;
 
-                                final isDrawerOpen = layout.isOpen;
-                                if (!isDrawerOpen) {
-                                  try {
-                                    ref
-                                        .read(
-                                          composerAutofocusEnabledProvider
-                                              .notifier,
-                                        )
-                                        .set(false);
-                                    FocusManager.instance.primaryFocus
-                                        ?.unfocus();
-                                    SystemChannels.textInput.invokeMethod(
-                                      'TextInput.hide',
-                                    );
-                                  } catch (_) {}
-                                }
-                                layout.toggle();
-                              },
-                              icon: Icon(
-                                Platform.isIOS
-                                    ? CupertinoIcons.line_horizontal_3
-                                    : Icons.menu,
-                                color: context.conduitTheme.textPrimary,
-                                size: IconSize.appBar,
+                                  final isDrawerOpen = layout.isOpen;
+                                  if (!isDrawerOpen) {
+                                    try {
+                                      ref
+                                          .read(
+                                            composerAutofocusEnabledProvider
+                                                .notifier,
+                                          )
+                                          .set(false);
+                                      FocusManager.instance.primaryFocus
+                                          ?.unfocus();
+                                      SystemChannels.textInput.invokeMethod(
+                                        'TextInput.hide',
+                                      );
+                                    } catch (_) {}
+                                  }
+                                  layout.toggle();
+                                },
+                                child: _buildAppBarPill(
+                                  context: ctx,
+                                  isCircular: true,
+                                  child: Icon(
+                                    Platform.isIOS
+                                        ? CupertinoIcons.line_horizontal_3
+                                        : Icons.menu,
+                                    color: context.conduitTheme.textPrimary,
+                                    size: IconSize.appBar,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                   title: _isSelectionMode
-                      ? Text(
-                          '${_selectedMessageIds.length} selected',
-                          style: AppTypography.headlineSmallStyle.copyWith(
-                            color: context.conduitTheme.textPrimary,
-                            fontWeight: FontWeight.w500,
+                      ? _buildAppBarPill(
+                          context: context,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: Spacing.md,
+                              vertical: Spacing.sm,
+                            ),
+                            child: Text(
+                              '${_selectedMessageIds.length} selected',
+                              style: AppTypography.headlineSmallStyle.copyWith(
+                                color: context.conduitTheme.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         )
                       : LayoutBuilder(
                           builder: (context, constraints) {
-                            return GestureDetector(
+                            // Build title pill (tappable for context menu)
+                            Widget? titlePill;
+                            if (displayConversationTitle != null) {
+                              titlePill = GestureDetector(
+                                onTap: () {
+                                  final conversation = ref.read(
+                                    activeConversationProvider,
+                                  );
+                                  if (conversation == null) return;
+                                  showConversationContextMenu(
+                                    context: context,
+                                    ref: ref,
+                                    conversation: conversation,
+                                  );
+                                },
+                                child: _buildAppBarPill(
+                                  context: context,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: Spacing.md,
+                                      vertical: Spacing.xs,
+                                    ),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth:
+                                            constraints.maxWidth - Spacing.xxxl,
+                                      ),
+                                      child: StreamingTitleText(
+                                        title: displayConversationTitle,
+                                        style: AppTypography.headlineSmallStyle
+                                            .copyWith(
+                                              color: context
+                                                  .conduitTheme
+                                                  .textPrimary,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 16,
+                                              height: 1.3,
+                                            ),
+                                        cursorColor: context
+                                            .conduitTheme
+                                            .textPrimary
+                                            .withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            // Build model selector pill
+                            final modelPill = GestureDetector(
                               onTap: () async {
                                 final modelsAsync = ref.read(modelsProvider);
 
-                                // Handle all async states properly
                                 if (modelsAsync.isLoading) {
-                                  // If still loading, wait for it to complete
                                   try {
                                     final models = await ref.read(
                                       modelsProvider.future,
                                     );
-                                    // Check mounted and use context immediately
-                                    // together
                                     if (!mounted) return;
                                     // ignore: use_build_context_synchronously
                                     _showModelDropdown(context, ref, models);
@@ -1673,23 +1816,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                     );
                                   }
                                 } else if (modelsAsync.hasValue) {
-                                  // If we have data, show immediately (no async
-                                  // gap)
                                   _showModelDropdown(
                                     context,
                                     ref,
                                     modelsAsync.value!,
                                   );
                                 } else if (modelsAsync.hasError) {
-                                  // If there's an error, try to refresh and
-                                  // load
                                   try {
                                     ref.invalidate(modelsProvider);
                                     final models = await ref.read(
                                       modelsProvider.future,
                                     );
-                                    // Check mounted and use context immediately
-                                    // together
                                     if (!mounted) return;
                                     // ignore: use_build_context_synchronously
                                     _showModelDropdown(context, ref, models);
@@ -1702,237 +1839,87 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                   }
                                 }
                               },
-                              onLongPress: () {
-                                final conversation = ref.read(
-                                  activeConversationProvider,
-                                );
-                                if (conversation == null) return;
-                                showConversationContextMenu(
-                                  context: context,
-                                  ref: ref,
-                                  conversation: conversation,
-                                );
-                              },
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: constraints.maxWidth,
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    AnimatedSwitcher(
-                                      duration: const Duration(
-                                        milliseconds: 250,
-                                      ),
-                                      switchInCurve: Curves.easeOutCubic,
-                                      switchOutCurve: Curves.easeInCubic,
-                                      child: displayConversationTitle != null
-                                          ? Column(
-                                              key: ValueKey<String>(
-                                                displayConversationTitle,
-                                              ),
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                ConstrainedBox(
-                                                  constraints: BoxConstraints(
-                                                    maxWidth:
-                                                        constraints.maxWidth,
-                                                  ),
-                                                  child: StreamingTitleText(
-                                                    title:
-                                                        displayConversationTitle,
-                                                    style: AppTypography
-                                                        .headlineSmallStyle
-                                                        .copyWith(
-                                                          color: context
-                                                              .conduitTheme
-                                                              .textPrimary,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          fontSize: 18,
-                                                          height: 1.3,
-                                                        ),
-                                                    cursorColor: context
-                                                        .conduitTheme
-                                                        .textPrimary
-                                                        .withValues(alpha: 0.8),
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                  height: Spacing.xs,
-                                                ),
-                                              ],
-                                            )
-                                          : const SizedBox.shrink(
-                                              key: ValueKey<String>(
-                                                'empty-title',
-                                              ),
-                                            ),
-                                    ),
-                                    Transform.translate(
-                                      offset: const Offset(0, 0),
-                                      child: () {
-                                        const double iconPaddingX = Spacing.xs;
-                                        const double iconPaddingY = Spacing.xxs;
-                                        const double iconWidth = IconSize.small;
-                                        const double iconBoxWidth =
-                                            (iconPaddingX * 2) +
-                                            (BorderWidth.thin * 2) +
-                                            iconWidth;
-                                        final double maxLabelWidth =
-                                            (constraints.maxWidth -
-                                                    (iconBoxWidth * 2) -
-                                                    (Spacing.xs * 2))
-                                                .clamp(
-                                                  48.0,
-                                                  constraints.maxWidth,
-                                                );
-
-                                        final row = Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Opacity(
-                                              opacity: 0.0,
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: iconPaddingX,
-                                                      vertical: iconPaddingY,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: context
-                                                      .conduitTheme
-                                                      .surfaceBackground
-                                                      .withValues(alpha: 0.3),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        AppBorderRadius.badge,
-                                                      ),
-                                                  border: Border.all(
-                                                    color: context
-                                                        .conduitTheme
-                                                        .dividerColor,
-                                                    width: BorderWidth.thin,
-                                                  ),
-                                                ),
-                                                child: Icon(
-                                                  Platform.isIOS
-                                                      ? CupertinoIcons
-                                                            .chevron_down
-                                                      : Icons
-                                                            .keyboard_arrow_down,
-                                                  color: context
-                                                      .conduitTheme
-                                                      .iconSecondary,
-                                                  size: iconWidth,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: Spacing.xs),
-                                            ConstrainedBox(
-                                              constraints: BoxConstraints(
-                                                maxWidth: maxLabelWidth,
-                                              ),
-                                              child: MiddleEllipsisText(
-                                                modelLabel,
-                                                style: modelTextStyle,
-                                                textAlign: TextAlign.center,
-                                                semanticsLabel: modelLabel,
-                                              ),
-                                            ),
-                                            const SizedBox(width: Spacing.xs),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: iconPaddingX,
-                                                    vertical: iconPaddingY,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: context
-                                                    .conduitTheme
-                                                    .surfaceBackground
-                                                    .withValues(alpha: 0.3),
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                      AppBorderRadius.badge,
-                                                    ),
-                                                border: Border.all(
-                                                  color: context
-                                                      .conduitTheme
-                                                      .dividerColor,
-                                                  width: BorderWidth.thin,
-                                                ),
-                                              ),
-                                              child: Icon(
-                                                Platform.isIOS
-                                                    ? CupertinoIcons
-                                                          .chevron_down
-                                                    : Icons.keyboard_arrow_down,
-                                                color: context
-                                                    .conduitTheme
-                                                    .iconSecondary,
-                                                size: iconWidth,
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                        final constrainedRow = ConstrainedBox(
-                                          constraints: BoxConstraints(
-                                            maxWidth: constraints.maxWidth,
-                                          ),
-                                          child: row,
-                                        );
-                                        return hasConversationTitle
-                                            ? SizedBox(
-                                                height: 24,
-                                                child: constrainedRow,
-                                              )
-                                            : constrainedRow;
-                                      }(),
-                                    ),
-                                    if (isReviewerMode)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          top: 2.0,
+                              child: _buildAppBarPill(
+                                context: context,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: Spacing.sm,
+                                    vertical: Spacing.xs,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth:
+                                              constraints.maxWidth -
+                                              Spacing.xxl,
                                         ),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: Spacing.sm,
-                                            vertical: 1.0,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: context.conduitTheme.success
-                                                .withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              AppBorderRadius.badge,
-                                            ),
-                                            border: Border.all(
-                                              color: context
-                                                  .conduitTheme
-                                                  .success
-                                                  .withValues(alpha: 0.3),
-                                              width: BorderWidth.thin,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'REVIEWER MODE',
-                                            style: AppTypography.captionStyle
-                                                .copyWith(
-                                                  color: context
-                                                      .conduitTheme
-                                                      .success,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 9,
-                                                ),
-                                          ),
+                                        child: MiddleEllipsisText(
+                                          modelLabel,
+                                          style: modelTextStyle,
+                                          textAlign: TextAlign.center,
+                                          semanticsLabel: modelLabel,
                                         ),
                                       ),
-                                  ],
+                                      const SizedBox(width: Spacing.xs),
+                                      Icon(
+                                        Platform.isIOS
+                                            ? CupertinoIcons.chevron_down
+                                            : Icons.keyboard_arrow_down,
+                                        color:
+                                            context.conduitTheme.iconSecondary,
+                                        size: IconSize.small,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
+                            );
+
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (titlePill != null) ...[
+                                  titlePill,
+                                  const SizedBox(height: Spacing.xs),
+                                ],
+                                modelPill,
+                                if (isReviewerMode)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: Spacing.xs,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: Spacing.sm,
+                                        vertical: 1.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: context.conduitTheme.success
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(
+                                          AppBorderRadius.badge,
+                                        ),
+                                        border: Border.all(
+                                          color: context.conduitTheme.success
+                                              .withValues(alpha: 0.3),
+                                          width: BorderWidth.thin,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'REVIEWER MODE',
+                                        style: AppTypography.captionStyle
+                                            .copyWith(
+                                              color:
+                                                  context.conduitTheme.success,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 9,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             );
                           },
                         ),
@@ -1942,26 +1929,43 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         padding: const EdgeInsets.only(
                           right: Spacing.inputPadding,
                         ),
-                        child: IconButton(
-                          icon: Icon(
-                            Platform.isIOS
-                                ? CupertinoIcons.create
-                                : Icons.add_comment,
-                            color: context.conduitTheme.textPrimary,
-                            size: IconSize.appBar,
+                        child: Tooltip(
+                          message: AppLocalizations.of(context)!.newChat,
+                          child: GestureDetector(
+                            onTap: _handleNewChat,
+                            child: _buildAppBarPill(
+                              context: context,
+                              isCircular: true,
+                              child: Icon(
+                                Platform.isIOS
+                                    ? CupertinoIcons.create
+                                    : Icons.add_comment,
+                                color: context.conduitTheme.textPrimary,
+                                size: IconSize.appBar,
+                              ),
+                            ),
                           ),
-                          onPressed: _handleNewChat,
-                          tooltip: AppLocalizations.of(context)!.newChat,
                         ),
                       ),
                     ] else ...[
-                      IconButton(
-                        icon: Icon(
-                          Platform.isIOS ? CupertinoIcons.delete : Icons.delete,
-                          color: context.conduitTheme.error,
-                          size: IconSize.appBar,
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          right: Spacing.inputPadding,
                         ),
-                        onPressed: _deleteSelectedMessages,
+                        child: GestureDetector(
+                          onTap: _deleteSelectedMessages,
+                          child: _buildAppBarPill(
+                            context: context,
+                            isCircular: true,
+                            child: Icon(
+                              Platform.isIOS
+                                  ? CupertinoIcons.delete
+                                  : Icons.delete,
+                              color: context.conduitTheme.error,
+                              size: IconSize.appBar,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ],
@@ -2084,6 +2088,37 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                     onWebAttachment: _promptAttachWebpage,
                                     onPastedAttachments:
                                         _handlePastedAttachments,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Floating app bar gradient overlay
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: IgnorePointer(
+                          child: Container(
+                            height:
+                                MediaQuery.of(context).padding.top +
+                                kToolbarHeight +
+                                Spacing.xl,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                stops: const [0.0, 0.6, 1.0],
+                                colors: [
+                                  theme.scaffoldBackgroundColor,
+                                  theme.scaffoldBackgroundColor.withValues(
+                                    alpha: 0.85,
+                                  ),
+                                  theme.scaffoldBackgroundColor.withValues(
+                                    alpha: 0.0,
                                   ),
                                 ],
                               ),
