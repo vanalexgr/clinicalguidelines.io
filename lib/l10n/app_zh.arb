@@ -862,5 +862,22 @@
   "widgetCamera": "相机",
   "widgetPhotos": "照片",
   "widgetClipboard": "剪贴板",
-  "widgetDescription": "快速访问 Conduit 聊天，支持相机、照片和剪贴板快捷方式"
+  "widgetDescription": "快速访问 Conduit 聊天，支持相机、照片和剪贴板快捷方式",
+  "sso": "SSO",
+  "ssoDescription": "使用组织的身份提供商登录",
+  "signInWithSso": "使用 SSO 登录",
+  "ssoAuthenticating": "正在验证...",
+  "ssoAuthFailed": "SSO 验证失败",
+  "ssoTokenNotFound": "无法从 SSO 提供商获取验证令牌",
+  "ssoLoadingLogin": "正在加载登录页面...",
+  "ldap": "LDAP",
+  "ldapDescription": "使用 LDAP 目录凭据登录",
+  "signInWithLdap": "使用 LDAP 登录",
+  "ldapUsername": "用户名",
+  "ldapUsernameHint": "输入您的 LDAP 用户名",
+  "moreSignInOptions": "更多登录选项",
+  "ldapNotEnabled": "此服务器未启用 LDAP 验证",
+  "ssoPlatformNotSupported": "此平台不支持 SSO 验证。请改用凭据或 LDAP 验证。",
+  "continueWithProvider": "使用 {provider} 继续",
+  "or": "或"
 }

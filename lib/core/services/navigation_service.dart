@@ -101,6 +101,7 @@ class Routes {
   static const String serverConnection = '/server-connection';
   static const String connectionIssue = '/connection-issue';
   static const String authentication = '/authentication';
+  static const String ssoAuth = '/sso-auth';
   static const String profile = '/profile';
   static const String appCustomization = '/profile/customization';
   static const String notes = '/notes';
@@ -115,6 +116,7 @@ class RouteNames {
   static const String serverConnection = 'server-connection';
   static const String connectionIssue = 'connection-issue';
   static const String authentication = 'authentication';
+  static const String ssoAuth = 'sso-auth';
   static const String profile = 'profile';
   static const String appCustomization = 'app-customization';
   static const String notes = 'notes';

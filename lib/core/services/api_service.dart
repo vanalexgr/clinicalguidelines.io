@@ -232,15 +232,24 @@ class ApiService {
   ///
   /// Returns `true` if the server appears to be a valid OpenWebUI instance.
   Future<bool> verifyIsOpenWebUIServer() async {
+    final config = await verifyAndGetConfig();
+    return config != null;
+  }
+
+  /// Verifies this is an OpenWebUI server and returns the backend config.
+  ///
+  /// Returns `BackendConfig` if the server is valid, `null` otherwise.
+  /// This combines server verification and config fetching in a single call.
+  Future<BackendConfig?> verifyAndGetConfig() async {
     try {
       final response = await _dio.get('/api/config');
       if (response.statusCode != 200) {
-        return false;
+        return null;
       }
 
       final data = response.data;
       if (data is! Map<String, dynamic>) {
-        return false;
+        return null;
       }
 
       // Check for OpenWebUI-specific fields
@@ -250,9 +259,13 @@ class ApiService {
           data['version'] is String && (data['version'] as String).isNotEmpty;
       final hasFeatures = data['features'] is Map;
 
-      return hasStatus && hasVersion && hasFeatures;
+      if (!hasStatus || !hasVersion || !hasFeatures) {
+        return null;
+      }
+
+      return BackendConfig.fromJson(data);
     } catch (e) {
-      return false;
+      return null;
     }
   }
 
@@ -353,6 +366,46 @@ class ApiService {
 
   Future<void> logout() async {
     await _dio.get('/api/v1/auths/signout');
+  }
+
+  /// LDAP authentication - uses username instead of email.
+  ///
+  /// Returns the same response format as regular login:
+  /// `{"token": "...", "token_type": "Bearer", "id": "...", ...}`
+  ///
+  /// Throws an exception if LDAP is not enabled on the server (400 response).
+  Future<Map<String, dynamic>> ldapLogin(
+    String username,
+    String password,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/auths/ldap',
+        data: {'user': username, 'password': password},
+      );
+
+      return response.data;
+    } catch (e) {
+      if (e is DioException) {
+        // Handle LDAP not enabled
+        if (e.response?.statusCode == 400) {
+          final data = e.response?.data;
+          if (data is Map && data['detail'] != null) {
+            throw Exception(data['detail']);
+          }
+        }
+        // Handle specific redirect cases
+        if (e.response?.statusCode == 307 || e.response?.statusCode == 308) {
+          final location = e.response?.headers.value('location');
+          if (location != null) {
+            throw Exception(
+              'Server redirect detected. Please check your server URL configuration. Redirect to: $location',
+            );
+          }
+        }
+      }
+      rethrow;
+    }
   }
 
   // User info

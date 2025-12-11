@@ -862,5 +862,22 @@
   "widgetCamera": "Kamera",
   "widgetPhotos": "Fotos",
   "widgetClipboard": "Zwischenablage",
-  "widgetDescription": "Schnellzugriff auf den Conduit-Chat mit Kamera, Fotos und Zwischenablage-Verknüpfungen"
+  "widgetDescription": "Schnellzugriff auf den Conduit-Chat mit Kamera, Fotos und Zwischenablage-Verknüpfungen",
+  "sso": "SSO",
+  "ssoDescription": "Mit dem Identitätsanbieter Ihrer Organisation anmelden",
+  "signInWithSso": "Mit SSO anmelden",
+  "ssoAuthenticating": "Authentifizierung...",
+  "ssoAuthFailed": "SSO-Authentifizierung fehlgeschlagen",
+  "ssoTokenNotFound": "Authentifizierungstoken vom SSO-Anbieter konnte nicht abgerufen werden",
+  "ssoLoadingLogin": "Anmeldeseite wird geladen...",
+  "ldap": "LDAP",
+  "ldapDescription": "Mit Ihren LDAP-Verzeichnis-Anmeldedaten anmelden",
+  "signInWithLdap": "Mit LDAP anmelden",
+  "ldapUsername": "Benutzername",
+  "ldapUsernameHint": "Geben Sie Ihren LDAP-Benutzernamen ein",
+  "moreSignInOptions": "Weitere Anmeldeoptionen",
+  "ldapNotEnabled": "LDAP-Authentifizierung ist auf diesem Server nicht aktiviert",
+  "ssoPlatformNotSupported": "SSO-Authentifizierung wird auf dieser Plattform nicht unterstützt. Bitte verwenden Sie stattdessen Anmeldedaten oder LDAP-Authentifizierung.",
+  "continueWithProvider": "Weiter mit {provider}",
+  "or": "oder"
 }

@@ -862,5 +862,22 @@
   "widgetCamera": "Camera",
   "widgetPhotos": "Foto's",
   "widgetClipboard": "Klembord",
-  "widgetDescription": "Snelle toegang tot Conduit-chat met camera, foto's en klembordsnelkoppelingen"
+  "widgetDescription": "Snelle toegang tot Conduit-chat met camera, foto's en klembordsnelkoppelingen",
+  "sso": "SSO",
+  "ssoDescription": "Aanmelden met de identiteitsprovider van uw organisatie",
+  "signInWithSso": "Aanmelden met SSO",
+  "ssoAuthenticating": "Authenticeren...",
+  "ssoAuthFailed": "SSO-authenticatie mislukt",
+  "ssoTokenNotFound": "Kan authenticatietoken niet ophalen van SSO-provider",
+  "ssoLoadingLogin": "Inlogpagina laden...",
+  "ldap": "LDAP",
+  "ldapDescription": "Aanmelden met uw LDAP-directorygegevens",
+  "signInWithLdap": "Aanmelden met LDAP",
+  "ldapUsername": "Gebruikersnaam",
+  "ldapUsernameHint": "Voer uw LDAP-gebruikersnaam in",
+  "moreSignInOptions": "Meer aanmeldopties",
+  "ldapNotEnabled": "LDAP-authenticatie is niet ingeschakeld op deze server",
+  "ssoPlatformNotSupported": "SSO-authenticatie wordt niet ondersteund op dit platform. Gebruik in plaats daarvan inloggegevens of LDAP-authenticatie.",
+  "continueWithProvider": "Doorgaan met {provider}",
+  "or": "of"
 }

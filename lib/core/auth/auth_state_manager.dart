@@ -8,9 +8,9 @@ import '../models/user.dart';
 import '../services/optimized_storage_service.dart';
 import 'token_validator.dart';
 import 'auth_cache_manager.dart';
+import 'webview_cookie_helper.dart';
 import '../utils/debug_logger.dart';
 import '../utils/user_avatar_utils.dart';
-import '../../features/tools/providers/tools_providers.dart';
 
 part 'auth_state_manager.g.dart';
 
@@ -288,11 +288,17 @@ class AuthStateManager extends _$AuthStateManager {
     }
   }
 
-  /// Perform login with JWT token
+  /// Perform login with JWT token.
+  ///
   /// Note: API keys (sk-...) are not supported for streaming.
+  ///
+  /// [authType] specifies the source of the token for credential storage:
+  /// - 'token': Manual JWT entry (default)
+  /// - 'sso': Token obtained via SSO/OAuth flow
   Future<bool> loginWithApiKey(
     String apiKey, {
     bool rememberCredentials = false,
+    String authType = 'token',
   }) async {
     _update(
       (current) => current.copyWith(
@@ -347,6 +353,7 @@ class AuthStateManager extends _$AuthStateManager {
               serverId: activeServer.id,
               username: 'jwt_user', // Special username to indicate JWT auth
               password: tokenStr, // Store JWT in password field
+              authType: authType, // 'token' for manual entry, 'sso' for OAuth
             );
           }
         }
@@ -486,6 +493,117 @@ class AuthStateManager extends _$AuthStateManager {
     }
   }
 
+  /// Perform login with LDAP credentials.
+  ///
+  /// LDAP uses username (not email) for authentication.
+  /// The server must have LDAP enabled, otherwise this will throw an error.
+  Future<bool> ldapLogin(
+    String username,
+    String password, {
+    bool rememberCredentials = false,
+  }) async {
+    _update(
+      (current) => current.copyWith(
+        status: AuthStatus.loading,
+        isLoading: true,
+        clearError: true,
+      ),
+    );
+
+    try {
+      // Ensure API service is available
+      await _ensureApiServiceAvailable();
+      final api = ref.read(apiServiceProvider);
+      if (api == null) {
+        throw Exception('No server connection available');
+      }
+
+      // Perform LDAP login API call
+      final response = await api.ldapLogin(username, password);
+
+      // Check if notifier is still mounted after async call
+      if (!ref.mounted) return false;
+
+      // Extract and validate token
+      final token = response['token'] ?? response['access_token'];
+      if (token == null || token.toString().trim().isEmpty) {
+        throw Exception('No authentication token received');
+      }
+
+      final tokenStr = token.toString();
+      if (!_isValidTokenFormat(tokenStr)) {
+        throw Exception('Invalid authentication token format');
+      }
+
+      // Save token to storage
+      final storage = ref.read(optimizedStorageServiceProvider);
+      await storage.saveAuthToken(tokenStr);
+
+      if (!ref.mounted) return false;
+
+      // Save JWT token for re-authentication if requested
+      // We store the token (not the raw LDAP password) for security:
+      // - JWT tokens can be revoked server-side
+      // - Avoids storing the user's directory password
+      // - Consistent with SSO token storage approach
+      if (rememberCredentials) {
+        final activeServer = await ref.read(activeServerProvider.future);
+        if (!ref.mounted) return false;
+        if (activeServer != null) {
+          await storage.saveCredentials(
+            serverId: activeServer.id,
+            // Prefix with ldap: to preserve original username for debugging
+            // while indicating this is token-based auth
+            username: 'ldap:$username',
+            password: tokenStr, // Store JWT token, not LDAP password
+            authType: 'ldap', // Track that this originated from LDAP login
+          );
+        }
+      }
+
+      if (!ref.mounted) return false;
+
+      // Update state and API service
+      _update(
+        (current) => current.copyWith(
+          status: AuthStatus.authenticated,
+          token: tokenStr,
+          isLoading: false,
+          clearError: true,
+        ),
+        cache: true,
+      );
+
+      _updateApiServiceToken(tokenStr);
+      _preloadDefaultModel();
+
+      // Load user data in background
+      _loadUserData();
+      _prefetchConversations();
+
+      DebugLogger.auth('LDAP login successful');
+      return true;
+    } catch (e, stack) {
+      DebugLogger.error(
+        'ldap-login-failed',
+        scope: 'auth/state',
+        error: e,
+        stackTrace: stack,
+      );
+      if (ref.mounted) {
+        _update(
+          (current) => current.copyWith(
+            status: AuthStatus.error,
+            error: e.toString(),
+            isLoading: false,
+            clearToken: true,
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
   /// Wait briefly until the API service becomes available
   Future<void> _ensureApiServiceAvailable({
     Duration timeout = const Duration(seconds: 2),
@@ -582,12 +700,27 @@ class AuthStateManager extends _$AuthStateManager {
         return false;
       }
 
-      // Attempt login (detect API key vs normal credentials)
-      if (username == 'api_key_user' || username == 'jwt_user') {
-        // This is a saved JWT token (or legacy API key)
-        return await loginWithApiKey(password, rememberCredentials: false);
+      // Attempt login based on auth type
+      final authType = savedCredentials['authType'] ?? 'credentials';
+
+      // Handle JWT token-based authentication (includes legacy prefixes)
+      // LDAP now also stores JWT tokens for re-auth (not raw passwords)
+      if (username == 'api_key_user' ||
+          username == 'jwt_user' ||
+          username.startsWith('ldap:') ||
+          authType == 'token' ||
+          authType == 'sso' ||
+          authType == 'ldap') {
+        // This is a saved JWT token (manual entry, SSO, or LDAP-obtained)
+        // For LDAP, we store the JWT token returned by the server, not the
+        // original password, for security reasons
+        return await loginWithApiKey(
+          password, // This is the JWT token
+          rememberCredentials: false,
+          authType: authType,
+        );
       } else {
-        // Normal username/password credentials
+        // Standard credentials login (default)
         return await login(username, password, rememberCredentials: false);
       }
     } catch (e, stack) {
@@ -805,12 +938,26 @@ class AuthStateManager extends _$AuthStateManager {
       await storage.clearAuthData();
       _updateApiServiceToken(null);
 
+      // Clear all WebView data (cookies, localStorage, cache) to ensure
+      // fresh SSO sessions on next login
+      try {
+        await WebViewCookieHelper.clearAllWebViewData();
+      } catch (e) {
+        DebugLogger.warning(
+          'webview-data-clear-failed',
+          scope: 'auth/state',
+          data: {'error': e.toString()},
+        );
+      }
+
       // Keep active server ID so router redirects to sign-in page, not server
       // connection page. Users can navigate to server settings if they need to
       // change server configuration.
 
-      // Invalidate tools provider to clear cached data
-      ref.invalidate(toolsListProvider);
+      // Note: toolsListProvider is NOT invalidated here because:
+      // 1. clearAuthData() already deletes the tools cache from storage
+      // 2. The provider has auth checks that prevent API calls when logged out
+      // 3. When user logs back in, the provider will rebuild with fresh data
 
       // Clear auth cache manager
       _cacheManager.clearAuthCache();

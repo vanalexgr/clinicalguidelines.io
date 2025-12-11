@@ -640,5 +640,22 @@
   "widgetCamera": "카메라",
   "widgetPhotos": "사진",
   "widgetClipboard": "클립보드",
-  "widgetDescription": "카메라, 사진 및 클립보드 바로가기로 Conduit 채팅에 빠르게 액세스"
+  "widgetDescription": "카메라, 사진 및 클립보드 바로가기로 Conduit 채팅에 빠르게 액세스",
+  "sso": "SSO",
+  "ssoDescription": "조직의 ID 공급자로 로그인",
+  "signInWithSso": "SSO로 로그인",
+  "ssoAuthenticating": "인증 중...",
+  "ssoAuthFailed": "SSO 인증 실패",
+  "ssoTokenNotFound": "SSO 공급자에서 인증 토큰을 검색할 수 없습니다",
+  "ssoLoadingLogin": "로그인 페이지 로딩 중...",
+  "ldap": "LDAP",
+  "ldapDescription": "LDAP 디렉토리 자격 증명으로 로그인",
+  "signInWithLdap": "LDAP으로 로그인",
+  "ldapUsername": "사용자 이름",
+  "ldapUsernameHint": "LDAP 사용자 이름을 입력하세요",
+  "moreSignInOptions": "추가 로그인 옵션",
+  "ldapNotEnabled": "이 서버에서 LDAP 인증이 활성화되어 있지 않습니다",
+  "ssoPlatformNotSupported": "이 플랫폼에서는 SSO 인증이 지원되지 않습니다. 대신 자격 증명 또는 LDAP 인증을 사용하세요.",
+  "continueWithProvider": "{provider}(으)로 계속",
+  "or": "또는"
 }

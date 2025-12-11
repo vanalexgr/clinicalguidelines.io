@@ -862,5 +862,22 @@
   "widgetCamera": "相機",
   "widgetPhotos": "照片",
   "widgetClipboard": "剪貼簿",
-  "widgetDescription": "快速存取 Conduit 聊天，支援相機、照片和剪貼簿捷徑"
+  "widgetDescription": "快速存取 Conduit 聊天，支援相機、照片和剪貼簿捷徑",
+  "sso": "SSO",
+  "ssoDescription": "使用組織的身份提供商登入",
+  "signInWithSso": "使用 SSO 登入",
+  "ssoAuthenticating": "正在驗證...",
+  "ssoAuthFailed": "SSO 驗證失敗",
+  "ssoTokenNotFound": "無法從 SSO 提供商取得驗證權杖",
+  "ssoLoadingLogin": "正在載入登入頁面...",
+  "ldap": "LDAP",
+  "ldapDescription": "使用 LDAP 目錄憑據登入",
+  "signInWithLdap": "使用 LDAP 登入",
+  "ldapUsername": "使用者名稱",
+  "ldapUsernameHint": "輸入您的 LDAP 使用者名稱",
+  "moreSignInOptions": "更多登入選項",
+  "ldapNotEnabled": "此伺服器未啟用 LDAP 驗證",
+  "ssoPlatformNotSupported": "此平台不支援 SSO 驗證。請改用憑據或 LDAP 驗證。",
+  "continueWithProvider": "使用 {provider} 繼續",
+  "or": "或"
 }

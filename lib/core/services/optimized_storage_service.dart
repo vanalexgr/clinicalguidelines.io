@@ -132,12 +132,14 @@ class OptimizedStorageService {
     required String serverId,
     required String username,
     required String password,
+    String authType = 'credentials',
   }) async {
     try {
       await _secureCredentialStorage.saveCredentials(
         serverId: serverId,
         username: username,
         password: password,
+        authType: authType,
       );
 
       _cacheManager.write('has_credentials', true, ttl: _credentialsFlagTtl);

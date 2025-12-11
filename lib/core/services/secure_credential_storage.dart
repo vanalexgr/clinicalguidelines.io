@@ -40,11 +40,18 @@ class SecureCredentialStorage {
     );
   }
 
-  /// Save user credentials securely
+  /// Save user credentials securely.
+  ///
+  /// [authType] identifies the authentication method:
+  /// - 'credentials': Standard email/password login (default)
+  /// - 'ldap': LDAP directory authentication
+  /// - 'token': Manual JWT token entry
+  /// - 'sso': JWT token obtained via SSO/OAuth flow
   Future<void> saveCredentials({
     required String serverId,
     required String username,
     required String password,
+    String authType = 'credentials',
   }) async {
     try {
       // First check if secure storage is available
@@ -57,9 +64,10 @@ class SecureCredentialStorage {
         'serverId': serverId,
         'username': username,
         'password': password,
+        'authType': authType,
         'savedAt': DateTime.now().toIso8601String(),
         'deviceId': await _getDeviceFingerprint(),
-        'version': '2.0', // Version for migration purposes
+        'version': '2.1', // Version for migration purposes
       };
 
       final encryptedData = await _encryptData(jsonEncode(credentials));
@@ -76,7 +84,7 @@ class SecureCredentialStorage {
       DebugLogger.storage(
         'save-ok',
         scope: 'credentials',
-        data: {'version': '2.0'},
+        data: {'version': '2.1'},
       );
     } catch (e) {
       DebugLogger.error('save-failed', scope: 'credentials', error: e);
@@ -156,6 +164,7 @@ class SecureCredentialStorage {
         'username': decoded['username']?.toString() ?? '',
         'password': decoded['password']?.toString() ?? '',
         'savedAt': decoded['savedAt']?.toString() ?? '',
+        'authType': decoded['authType']?.toString() ?? 'credentials',
       };
     } catch (e) {
       DebugLogger.error('read-failed', scope: 'credentials', error: e);
@@ -355,7 +364,9 @@ class SecureCredentialStorage {
     }
   }
 
-  /// Migrate from old storage format if needed
+  /// Migrate from old storage format if needed.
+  ///
+  /// Preserves the [authType] if present in old credentials.
   Future<void> migrateFromOldStorage(
     Map<String, String>? oldCredentials,
   ) async {
@@ -366,6 +377,7 @@ class SecureCredentialStorage {
         serverId: oldCredentials['serverId'] ?? '',
         username: oldCredentials['username'] ?? '',
         password: oldCredentials['password'] ?? '',
+        authType: oldCredentials['authType'] ?? 'credentials',
       );
       DebugLogger.storage('migrate-ok', scope: 'credentials');
     } catch (e) {
