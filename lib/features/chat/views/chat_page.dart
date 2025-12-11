@@ -2129,11 +2129,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
                       // Floating Scroll to Bottom Button with smooth appear/disappear
                       Positioned(
-                        bottom:
-                            ((_inputHeight > 0)
-                                ? _inputHeight
-                                : (Spacing.xxl + Spacing.xxxl)) +
-                            Spacing.sm,
+                        bottom: (_inputHeight > 0)
+                            ? _inputHeight
+                            : (Spacing.xxl + Spacing.xxxl),
                         left: 0,
                         right: 0,
                         child: AnimatedSwitcher(
