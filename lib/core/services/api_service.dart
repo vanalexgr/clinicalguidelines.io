@@ -2826,25 +2826,32 @@ class ApiService {
       data['chat_id'] = conversationId;
     }
 
-    // Add feature flags if enabled
-    if (enableWebSearch) {
-      data['web_search'] = true;
-      _traceApi('Web search enabled in streaming request');
-    }
-    if (enableImageGeneration) {
-      // Mirror web_search behavior for image generation
-      data['image_generation'] = true;
-      _traceApi('Image generation enabled in streaming request');
-    }
+    // Add feature flags via 'features' object only (not as top-level params).
+    // Top-level 'web_search'/'image_generation' params are not recognized by
+    // OpenAI and cause errors when forwarded. Open WebUI expects these in the
+    // 'features' object which is properly handled by the middleware.
+    // See: https://github.com/cogwheel0/conduit/issues/271
 
-    if (enableWebSearch || enableImageGeneration) {
-      // Include features map for compatibility
+    // Check if memory is enabled in user's OpenWebUI settings
+    // This syncs with the user's preference from the web interface
+    final bool memoryEnabled = userSettings?['memory'] == true;
+
+    if (enableWebSearch || enableImageGeneration || memoryEnabled) {
       data['features'] = {
         'web_search': enableWebSearch,
         'image_generation': enableImageGeneration,
         'code_interpreter': false,
-        'memory': false,
+        'memory': memoryEnabled,
       };
+      if (enableWebSearch) {
+        _traceApi('Web search enabled in streaming request');
+      }
+      if (enableImageGeneration) {
+        _traceApi('Image generation enabled in streaming request');
+      }
+      if (memoryEnabled) {
+        _traceApi('Memory enabled in streaming request (from user settings)');
+      }
     }
 
     data['id'] = messageId;
