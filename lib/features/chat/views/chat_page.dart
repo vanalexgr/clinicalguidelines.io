@@ -70,6 +70,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _autoScrollCallbackScheduled = false;
   bool _pendingConversationScrollReset = false;
   bool _suppressKeepPinnedOnce = false; // skip keep-pinned bottom after reset
+  bool _userPausedAutoScroll = false; // user scrolled away during generation
   String? _cachedGreetingName;
   bool _greetingReady = false;
 
@@ -132,6 +133,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     _shouldAutoScrollToBottom = true;
     _pendingConversationScrollReset = false;
+    _userPausedAutoScroll = false;
     _scheduleAutoScrollToBottom();
   }
 
@@ -443,6 +445,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
       // Clear attachments after successful send
       ref.read(attachedFilesProvider.notifier).clearAll();
+
+      // Reset auto-scroll pause when user sends a new message
+      _userPausedAutoScroll = false;
 
       // Scroll to bottom after enqueuing (only if user was near bottom)
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -890,6 +895,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   void _scrollToBottom({bool smooth = true}) {
     if (!_scrollController.hasClients) return;
+    // Reset user pause when explicitly scrolling to bottom
+    if (_userPausedAutoScroll) {
+      setState(() {
+        _userPausedAutoScroll = false;
+      });
+    }
     final position = _scrollController.position;
     final maxScroll = position.maxScrollExtent;
     final target = maxScroll.isFinite ? maxScroll : 0.0;
@@ -1145,7 +1156,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     if (_shouldAutoScrollToBottom) {
       _scheduleAutoScrollToBottom();
-    } else {
+    } else if (!_userPausedAutoScroll) {
+      // Only keep-pinned to bottom if user hasn't paused auto-scroll
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         if (_suppressKeepPinnedOnce) {
@@ -1154,6 +1166,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           _suppressKeepPinnedOnce = false;
           return;
         }
+        // Skip if user has paused auto-scroll (double-check in callback)
+        if (_userPausedAutoScroll) return;
         const double keepPinnedThreshold = 60.0;
         final distanceFromBottom = _distanceFromBottom();
         if (distanceFromBottom > 0 &&
@@ -1167,135 +1181,163 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final topPadding =
         MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
     final bottomPadding = Spacing.lg + _inputHeight;
-    return CustomScrollView(
-      key: const ValueKey('actual_messages'),
-      controller: _scrollController,
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      physics: const AlwaysScrollableScrollPhysics(),
-      cacheExtent: 600,
-      slivers: [
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            Spacing.lg,
-            topPadding,
-            Spacing.lg,
-            bottomPadding,
-          ),
-          sliver: OptimizedSliverList<ChatMessage>(
-            items: messages,
-            itemBuilder: (context, message, index) {
-              final isUser = message.role == 'user';
-              final isStreaming = message.isStreaming;
 
-              final isSelected = _selectedMessageIds.contains(message.id);
+    // Check if any message is currently streaming
+    final isStreaming = messages.any((msg) => msg.isStreaming);
 
-              // Resolve a friendly model display name for message headers
-              String? displayModelName;
-              Model? matchedModel;
-              final rawModel = message.model;
-              if (rawModel != null && rawModel.isNotEmpty) {
-                final modelsAsync = ref.watch(modelsProvider);
-                if (modelsAsync.hasValue) {
-                  final models = modelsAsync.value!;
-                  try {
-                    // Prefer exact ID match; fall back to exact name match
-                    final match = models.firstWhere(
-                      (m) => m.id == rawModel || m.name == rawModel,
-                    );
-                    matchedModel = match;
-                    displayModelName = _formatModelDisplayName(match.name);
-                  } catch (_) {
-                    // As a fallback, format the raw value to be more readable
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // Detect user-initiated scroll (drag gesture)
+        if (notification is ScrollStartNotification &&
+            notification.dragDetails != null) {
+          // User started dragging - pause auto-scroll during generation
+          if (isStreaming && !_userPausedAutoScroll) {
+            setState(() {
+              _userPausedAutoScroll = true;
+            });
+          }
+        }
+        // Re-enable auto-scroll when user scrolls to bottom
+        if (notification is ScrollEndNotification) {
+          final distanceFromBottom = _distanceFromBottom();
+          if (distanceFromBottom <= 5 && _userPausedAutoScroll) {
+            setState(() {
+              _userPausedAutoScroll = false;
+            });
+          }
+        }
+        return false; // Allow notification to continue bubbling
+      },
+      child: CustomScrollView(
+        key: const ValueKey('actual_messages'),
+        controller: _scrollController,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        physics: const AlwaysScrollableScrollPhysics(),
+        cacheExtent: 600,
+        slivers: [
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              Spacing.lg,
+              topPadding,
+              Spacing.lg,
+              bottomPadding,
+            ),
+            sliver: OptimizedSliverList<ChatMessage>(
+              items: messages,
+              itemBuilder: (context, message, index) {
+                final isUser = message.role == 'user';
+                final isStreaming = message.isStreaming;
+
+                final isSelected = _selectedMessageIds.contains(message.id);
+
+                // Resolve a friendly model display name for message headers
+                String? displayModelName;
+                Model? matchedModel;
+                final rawModel = message.model;
+                if (rawModel != null && rawModel.isNotEmpty) {
+                  final modelsAsync = ref.watch(modelsProvider);
+                  if (modelsAsync.hasValue) {
+                    final models = modelsAsync.value!;
+                    try {
+                      // Prefer exact ID match; fall back to exact name match
+                      final match = models.firstWhere(
+                        (m) => m.id == rawModel || m.name == rawModel,
+                      );
+                      matchedModel = match;
+                      displayModelName = _formatModelDisplayName(match.name);
+                    } catch (_) {
+                      // As a fallback, format the raw value to be more readable
+                      displayModelName = _formatModelDisplayName(rawModel);
+                    }
+                  } else {
+                    // Models not loaded yet; format raw value for readability
                     displayModelName = _formatModelDisplayName(rawModel);
                   }
+                }
+
+                final modelIconUrl = resolveModelIconUrlForModel(
+                  apiService,
+                  matchedModel,
+                );
+
+                var hasUserBubbleBelow = false;
+                var hasAssistantBubbleBelow = false;
+                for (var i = index + 1; i < messages.length; i++) {
+                  final role = messages[i].role;
+                  if (role == 'user') {
+                    hasUserBubbleBelow = true;
+                    break;
+                  }
+                  if (role == 'assistant') {
+                    hasAssistantBubbleBelow = true;
+                    break;
+                  }
+                }
+
+                // Hide archived assistant variants in the linear view
+                final isArchivedVariant =
+                    !isUser && (message.metadata?['archivedVariant'] == true);
+                if (isArchivedVariant) {
+                  return const SizedBox.shrink();
+                }
+
+                final showFollowUps =
+                    !isUser && !hasUserBubbleBelow && !hasAssistantBubbleBelow;
+
+                // Wrap message in selection container if in selection mode
+                Widget messageWidget;
+
+                // Use documentation style for assistant messages, bubble for user messages
+                if (isUser) {
+                  messageWidget = UserMessageBubble(
+                    key: ValueKey('user-${message.id}'),
+                    message: message,
+                    isUser: isUser,
+                    isStreaming: isStreaming,
+                    modelName: displayModelName,
+                    onCopy: () => _copyMessage(message.content),
+                    onRegenerate: () => _regenerateMessage(message),
+                  );
                 } else {
-                  // Models not loaded yet; format raw value for readability
-                  displayModelName = _formatModelDisplayName(rawModel);
+                  messageWidget = assistant.AssistantMessageWidget(
+                    key: ValueKey('assistant-${message.id}'),
+                    message: message,
+                    isStreaming: isStreaming,
+                    showFollowUps: showFollowUps,
+                    modelName: displayModelName,
+                    modelIconUrl: modelIconUrl,
+                    onCopy: () => _copyMessage(message.content),
+                    onRegenerate: () => _regenerateMessage(message),
+                  );
                 }
-              }
 
-              final modelIconUrl = resolveModelIconUrlForModel(
-                apiService,
-                matchedModel,
-              );
-
-              var hasUserBubbleBelow = false;
-              var hasAssistantBubbleBelow = false;
-              for (var i = index + 1; i < messages.length; i++) {
-                final role = messages[i].role;
-                if (role == 'user') {
-                  hasUserBubbleBelow = true;
-                  break;
-                }
-                if (role == 'assistant') {
-                  hasAssistantBubbleBelow = true;
-                  break;
-                }
-              }
-
-              // Hide archived assistant variants in the linear view
-              final isArchivedVariant =
-                  !isUser && (message.metadata?['archivedVariant'] == true);
-              if (isArchivedVariant) {
-                return const SizedBox.shrink();
-              }
-
-              final showFollowUps =
-                  !isUser && !hasUserBubbleBelow && !hasAssistantBubbleBelow;
-
-              // Wrap message in selection container if in selection mode
-              Widget messageWidget;
-
-              // Use documentation style for assistant messages, bubble for user messages
-              if (isUser) {
-                messageWidget = UserMessageBubble(
-                  key: ValueKey('user-${message.id}'),
-                  message: message,
-                  isUser: isUser,
-                  isStreaming: isStreaming,
-                  modelName: displayModelName,
-                  onCopy: () => _copyMessage(message.content),
-                  onRegenerate: () => _regenerateMessage(message),
-                );
-              } else {
-                messageWidget = assistant.AssistantMessageWidget(
-                  key: ValueKey('assistant-${message.id}'),
-                  message: message,
-                  isStreaming: isStreaming,
-                  showFollowUps: showFollowUps,
-                  modelName: displayModelName,
-                  modelIconUrl: modelIconUrl,
-                  onCopy: () => _copyMessage(message.content),
-                  onRegenerate: () => _regenerateMessage(message),
-                );
-              }
-
-              // Add selection functionality if in selection mode
-              if (_isSelectionMode) {
-                return _SelectableMessageWrapper(
-                  isSelected: isSelected,
-                  onTap: () => _toggleMessageSelection(message.id),
-                  onLongPress: () {
-                    if (!_isSelectionMode) {
+                // Add selection functionality if in selection mode
+                if (_isSelectionMode) {
+                  return _SelectableMessageWrapper(
+                    isSelected: isSelected,
+                    onTap: () => _toggleMessageSelection(message.id),
+                    onLongPress: () {
+                      if (!_isSelectionMode) {
+                        _toggleSelectionMode();
+                        _toggleMessageSelection(message.id);
+                      }
+                    },
+                    child: messageWidget,
+                  );
+                } else {
+                  return GestureDetector(
+                    onLongPress: () {
                       _toggleSelectionMode();
                       _toggleMessageSelection(message.id);
-                    }
-                  },
-                  child: messageWidget,
-                );
-              } else {
-                return GestureDetector(
-                  onLongPress: () {
-                    _toggleSelectionMode();
-                    _toggleMessageSelection(message.id);
-                  },
-                  child: messageWidget,
-                );
-              }
-            },
+                    },
+                    child: messageWidget,
+                  );
+                }
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1489,6 +1531,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
     if (conversationId != _lastConversationId) {
       _lastConversationId = conversationId;
+      _userPausedAutoScroll = false; // Reset pause on conversation change
       if (conversationId == null) {
         _shouldAutoScrollToBottom = true;
         _pendingConversationScrollReset = false;
@@ -1531,6 +1574,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final canScroll =
         _scrollController.hasClients &&
         _scrollController.position.maxScrollExtent > 0;
+    // Check if any message is currently streaming (for scroll button indicator)
+    final isStreamingAnyMessage = ref
+        .watch(chatMessagesProvider)
+        .any((msg) => msg.isStreaming);
 
     // On keyboard open, if already near bottom, auto-scroll to bottom to keep input visible
     if (keyboardVisible && !_lastKeyboardVisible) {
@@ -2209,10 +2256,25 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                           child: IconButton(
                                             onPressed: _scrollToBottom,
                                             splashRadius: 24,
+                                            tooltip:
+                                                _userPausedAutoScroll &&
+                                                    isStreamingAnyMessage
+                                                ? 'Resume auto-scroll'
+                                                : 'Scroll to bottom',
                                             icon: Icon(
-                                              Platform.isIOS
-                                                  ? CupertinoIcons.arrow_down
-                                                  : Icons.keyboard_arrow_down,
+                                              // Show play icon when auto-scroll
+                                              // is paused during streaming
+                                              _userPausedAutoScroll &&
+                                                      isStreamingAnyMessage
+                                                  ? (Platform.isIOS
+                                                        ? CupertinoIcons
+                                                              .play_arrow_solid
+                                                        : Icons.play_arrow)
+                                                  : (Platform.isIOS
+                                                        ? CupertinoIcons
+                                                              .arrow_down
+                                                        : Icons
+                                                              .keyboard_arrow_down),
                                               size: IconSize.lg,
                                               color: context
                                                   .conduitTheme
