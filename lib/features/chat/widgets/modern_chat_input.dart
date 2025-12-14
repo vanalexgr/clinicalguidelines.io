@@ -105,6 +105,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   bool _pendingFocus = false;
   bool _isRecording = false;
   bool _hasText = false; // track locally without rebuilding on each keystroke
+  bool _isMultiline = false; // track multiline for dynamic border radius
   StreamSubscription<String>? _voiceStreamSubscription;
   late VoiceInputService _voiceService;
   StreamSubscription<String>? _textSub;
@@ -393,6 +394,8 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final String text = _controller.text;
     final TextSelection selection = _controller.selection;
     final bool hasText = text.trim().isNotEmpty;
+    // Consider multiline if text contains newlines or exceeds ~50 chars
+    final bool isMultiline = text.contains('\n') || text.length > 50;
     final _PromptCommandMatch? match = _resolvePromptCommand(
       text,
       selection,
@@ -402,7 +405,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final bool wasShowing = _showPromptOverlay;
     final String previousCommand = _currentPromptCommand;
 
-    bool needsUpdate = hasText != _hasText || shouldShow != _showPromptOverlay;
+    bool needsUpdate =
+        hasText != _hasText ||
+        isMultiline != _isMultiline ||
+        shouldShow != _showPromptOverlay;
 
     if (!needsUpdate) {
       if (match != null) {
@@ -422,6 +428,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
 
     setState(() {
       _hasText = hasText;
+      _isMultiline = isMultiline;
       if (match != null) {
         if (previousCommand != match.command) {
           _promptSelectionIndex = 0;
@@ -1203,8 +1210,13 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
 
     final bool showCompactComposer = quickPills.isEmpty;
 
+    // Use a reduced border radius when content is multiline to prevent text
+    // from overflowing outside the rounded corners (fixes #272)
+    final double compactRadius = _isMultiline
+        ? AppBorderRadius.xl
+        : AppBorderRadius.round;
     final BorderRadius shellRadius = BorderRadius.circular(
-      showCompactComposer ? AppBorderRadius.round : _composerRadius,
+      showCompactComposer ? compactRadius : _composerRadius,
     );
 
     final BoxDecoration shellDecoration = BoxDecoration(
