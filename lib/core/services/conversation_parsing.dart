@@ -191,6 +191,57 @@ List<Map<String, dynamic>>? _extractToolCalls(
   return null;
 }
 
+/// Extract error data from OpenWebUI message format.
+/// OpenWebUI stores errors in a separate 'error' field with 'content' inside.
+/// Returns a map suitable for ChatMessageError.fromJson().
+Map<String, dynamic>? _extractErrorData(
+  Map<String, dynamic> msgData,
+  Map<String, dynamic>? historyMsg,
+) {
+  // Check msgData first, then historyMsg
+  final errorRaw = msgData['error'] ?? historyMsg?['error'];
+  if (errorRaw == null) return null;
+
+  // Handle different error formats from OpenWebUI
+  if (errorRaw is Map) {
+    // Most common: { error: { content: "error message" } }
+    final content = errorRaw['content'];
+    if (content is String && content.isNotEmpty) {
+      return {'content': content};
+    }
+    // Alternative: { error: { message: "error message" } }
+    final message = errorRaw['message'];
+    if (message is String && message.isNotEmpty) {
+      return {'content': message};
+    }
+    // Nested error: { error: { error: { message: "..." } } }
+    final nestedError = errorRaw['error'];
+    if (nestedError is Map) {
+      final nestedMessage = nestedError['message'];
+      if (nestedMessage is String && nestedMessage.isNotEmpty) {
+        return {'content': nestedMessage};
+      }
+    }
+    // FastAPI detail format: { detail: "..." }
+    final detail = errorRaw['detail'];
+    if (detail is String && detail.isNotEmpty) {
+      return {'content': detail};
+    }
+    // If it's a map but we couldn't extract content, still return an error
+    // to indicate there was an error (matches legacy error === true behavior)
+    return const {'content': null};
+  } else if (errorRaw is String && errorRaw.isNotEmpty) {
+    // Simple string error
+    return {'content': errorRaw};
+  } else if (errorRaw == true) {
+    // Legacy format: error === true means content IS the error message
+    // Return a marker so the UI knows this is an error message
+    return const {'content': null};
+  }
+
+  return null;
+}
+
 Map<String, dynamic> _parseOpenWebUIMessageToJson(
   Map<String, dynamic> msgData, {
   Map<String, dynamic>? historyMsg,
@@ -252,6 +303,9 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
       contentString = synthesized;
     }
   }
+
+  // Extract error field from OpenWebUI - preserve it separately for round-trip
+  final errorData = _extractErrorData(msgData, historyMsg);
 
   final role = _resolveRole(msgData);
 
@@ -325,6 +379,7 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
     'sources': _parseSourcesField(sourcesRaw),
     'usage': usage,
     'versions': const <Map<String, dynamic>>[],
+    if (errorData != null) 'error': errorData,
   };
 }
 

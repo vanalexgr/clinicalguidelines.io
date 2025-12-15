@@ -843,6 +843,8 @@ class ApiService {
           'attachment_ids': List<String>.from(msg.attachmentIds!),
         if (_sanitizeFilesForWebUI(msg.files) != null)
           'files': _sanitizeFilesForWebUI(msg.files),
+        // Preserve error field for OpenWebUI compatibility
+        if (msg.error != null) 'error': msg.error!.toJson(),
       };
 
       // Update parent's childrenIds if there's a previous message
@@ -863,6 +865,8 @@ class ApiService {
           'attachment_ids': List<String>.from(msg.attachmentIds!),
         if (_sanitizeFilesForWebUI(msg.files) != null)
           'files': _sanitizeFilesForWebUI(msg.files),
+        // Preserve error field for OpenWebUI compatibility
+        if (msg.error != null) 'error': msg.error!.toJson(),
       });
 
       previousId = messageId;
@@ -977,6 +981,8 @@ class ApiService {
           'sources': msg.sources.map((s) => s.toJson()).toList(),
         // Include usage statistics for persistence (issue #274)
         if (msg.usage != null) 'usage': msg.usage,
+        // Preserve error field for OpenWebUI compatibility
+        if (msg.error != null) 'error': msg.error!.toJson(),
       };
 
       // Update parent's childrenIds
@@ -1014,6 +1020,8 @@ class ApiService {
           'sources': msg.sources.map((s) => s.toJson()).toList(),
         // Include usage statistics for persistence (issue #274)
         if (msg.usage != null) 'usage': msg.usage,
+        // Preserve error field for OpenWebUI compatibility
+        if (msg.error != null) 'error': msg.error!.toJson(),
       });
 
       previousId = messageId;
