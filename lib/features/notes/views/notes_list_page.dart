@@ -16,6 +16,7 @@ import '../../../core/widgets/error_boundary.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/utils/ui_utils.dart';
 import '../../../shared/widgets/improved_loading_states.dart';
+import '../../../shared/widgets/loading_states.dart';
 import '../../../shared/widgets/themed_dialogs.dart';
 import '../../../shared/widgets/middle_ellipsis_text.dart';
 import '../../../shared/utils/conversation_context_menu.dart';
@@ -346,18 +347,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
   }
 
   Widget _buildRefreshableScrollView(List<Widget> slivers) {
-    if (Platform.isIOS) {
-      return CustomScrollView(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          CupertinoSliverRefreshControl(onRefresh: _refreshNotes),
-          ...slivers,
-        ],
-      );
-    }
-
-    return RefreshIndicator(
+    return ConduitRefreshIndicator(
       onRefresh: _refreshNotes,
       child: CustomScrollView(
         controller: _scrollController,
@@ -551,7 +541,9 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
                           Text(
                             preview,
                             style: AppTypography.bodySmallStyle.copyWith(
-                              color: sidebarTheme.foreground.withValues(alpha: 0.6),
+                              color: sidebarTheme.foreground.withValues(
+                                alpha: 0.6,
+                              ),
                               height: 1.4,
                             ),
                             maxLines: 2,
@@ -566,23 +558,30 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
                               Platform.isIOS
                                   ? CupertinoIcons.clock
                                   : Icons.schedule_rounded,
-                              color: sidebarTheme.foreground.withValues(alpha: 0.4),
+                              color: sidebarTheme.foreground.withValues(
+                                alpha: 0.4,
+                              ),
                               size: 12,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               timeText,
                               style: AppTypography.tiny.copyWith(
-                                color: sidebarTheme.foreground.withValues(alpha: 0.5),
+                                color: sidebarTheme.foreground.withValues(
+                                  alpha: 0.5,
+                                ),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            if (note.user != null && note.user!.name != null) ...[
+                            if (note.user != null &&
+                                note.user!.name != null) ...[
                               const SizedBox(width: Spacing.sm),
                               Text(
                                 '·',
                                 style: AppTypography.tiny.copyWith(
-                                  color: sidebarTheme.foreground.withValues(alpha: 0.3),
+                                  color: sidebarTheme.foreground.withValues(
+                                    alpha: 0.3,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: Spacing.sm),
@@ -590,7 +589,9 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
                                 child: Text(
                                   note.user!.name!,
                                   style: AppTypography.tiny.copyWith(
-                                    color: sidebarTheme.foreground.withValues(alpha: 0.5),
+                                    color: sidebarTheme.foreground.withValues(
+                                      alpha: 0.5,
+                                    ),
                                     fontWeight: FontWeight.w500,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -618,7 +619,8 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
                         minWidth: TouchTarget.badge,
                         minHeight: TouchTarget.badge,
                       ),
-                      onPressed: () => _showNoteContextMenu(buttonContext, note),
+                      onPressed: () =>
+                          _showNoteContextMenu(buttonContext, note),
                     ),
                   ),
                 ],
