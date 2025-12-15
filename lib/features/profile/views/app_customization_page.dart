@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -44,79 +45,185 @@ class AppCustomizationPage extends ConsumerWidget {
     final currentLanguageCode = locale?.toLanguageTag() ?? 'system';
     final languageLabel = _resolveLanguageLabel(context, currentLanguageCode);
     final activeTheme = ref.watch(appThemePaletteProvider);
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight + 24;
+
+    final theme = Theme.of(context);
+    final conduitTheme = context.conduitTheme;
 
     return Scaffold(
-      backgroundColor: context.sidebarTheme.background,
-      appBar: _buildAppBar(context),
-      body: SafeArea(
-        child: ListView(
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.pagePadding,
-            vertical: Spacing.pagePadding,
-          ),
-          children: [
-            _buildThemesDropdownSection(
-              context,
-              ref,
-              themeMode,
-              themeDescription,
-              activeTheme,
-              settings,
+      backgroundColor: conduitTheme.surfaceBackground,
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight + 8),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0.0, 0.4, 1.0],
+              colors: [
+                theme.scaffoldBackgroundColor,
+                theme.scaffoldBackgroundColor.withValues(alpha: 0.85),
+                theme.scaffoldBackgroundColor.withValues(alpha: 0.0),
+              ],
             ),
-            const SizedBox(height: Spacing.md),
-            _buildLanguageSection(
-              context,
-              ref,
-              currentLanguageCode,
-              languageLabel,
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: SizedBox(
+              height: kToolbarHeight,
+              child: Row(
+                children: [
+                  // Leading (back button)
+                  if (canPop)
+                    Padding(
+                      padding: const EdgeInsets.only(left: Spacing.inputPadding),
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(context).maybePop(),
+                          child: _buildAppBarPill(
+                            context,
+                            Icon(
+                              UiUtils.platformIcon(
+                                ios: CupertinoIcons.back,
+                                android: Icons.arrow_back,
+                              ),
+                              color: conduitTheme.textPrimary,
+                              size: IconSize.appBar,
+                            ),
+                            isCircular: true,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(width: Spacing.inputPadding),
+                  // Title centered
+                  Expanded(
+                    child: Center(
+                      child: _buildAppBarPill(
+                        context,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Spacing.md,
+                            vertical: Spacing.xs,
+                          ),
+                          child: Text(
+                            l10n.appCustomization,
+                            style: AppTypography.headlineSmallStyle.copyWith(
+                              color: conduitTheme.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Trailing spacer to balance
+                  if (canPop)
+                    const SizedBox(width: 44 + Spacing.inputPadding)
+                  else
+                    const SizedBox(width: Spacing.inputPadding),
+                ],
+              ),
             ),
-            const SizedBox(height: Spacing.xl),
-            _buildSttSection(context, ref, settings),
-            const SizedBox(height: Spacing.xl),
-            _buildTtsDropdownSection(context, ref, settings),
-            const SizedBox(height: Spacing.xl),
-            _buildChatSection(context, ref, settings),
-            const SizedBox(height: Spacing.xl),
-            _buildSocketHealthSection(context, ref),
-          ],
+          ),
         ),
+      ),
+      body: ListView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          Spacing.pagePadding,
+          topPadding,
+          Spacing.pagePadding,
+          Spacing.pagePadding + MediaQuery.of(context).padding.bottom,
+        ),
+        children: [
+          _buildThemesDropdownSection(
+            context,
+            ref,
+            themeMode,
+            themeDescription,
+            activeTheme,
+            settings,
+          ),
+          const SizedBox(height: Spacing.md),
+          _buildLanguageSection(
+            context,
+            ref,
+            currentLanguageCode,
+            languageLabel,
+          ),
+          const SizedBox(height: Spacing.xl),
+          _buildSttSection(context, ref, settings),
+          const SizedBox(height: Spacing.xl),
+          _buildTtsDropdownSection(context, ref, settings),
+          const SizedBox(height: Spacing.xl),
+          _buildChatSection(context, ref, settings),
+          const SizedBox(height: Spacing.xl),
+          _buildSocketHealthSection(context, ref),
+        ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final canPop = ModalRoute.of(context)?.canPop ?? false;
-    return AppBar(
-      backgroundColor: context.sidebarTheme.background,
-      surfaceTintColor: Colors.transparent,
-      elevation: Elevation.none,
-      toolbarHeight: kToolbarHeight,
-      automaticallyImplyLeading: false,
-      leading: canPop
-          ? IconButton(
-              icon: Icon(
-                UiUtils.platformIcon(
-                  ios: CupertinoIcons.back,
-                  android: Icons.arrow_back,
-                ),
-                color: context.conduitTheme.iconPrimary,
+  Widget _buildAppBarPill(
+    BuildContext context,
+    Widget child, {
+    bool isCircular = false,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final backgroundColor = isDark
+        ? Color.lerp(context.conduitTheme.cardBackground, Colors.white, 0.08)!
+        : Color.lerp(context.conduitTheme.inputBackground, Colors.black, 0.06)!;
+
+    final borderColor = context.conduitTheme.cardBorder.withValues(
+      alpha: isDark ? 0.65 : 0.55,
+    );
+
+    final borderRadius = isCircular
+        ? BorderRadius.circular(100)
+        : BorderRadius.circular(AppBorderRadius.pill);
+
+    if (isCircular) {
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: backgroundColor.withValues(alpha: 0.85),
+                borderRadius: borderRadius,
+                border: Border.all(color: borderColor, width: BorderWidth.thin),
               ),
-              onPressed: () => Navigator.of(context).maybePop(),
-              tooltip: AppLocalizations.of(context)!.back,
-            )
-          : null,
-      titleSpacing: 0,
-      title: Text(
-        AppLocalizations.of(context)!.appCustomization,
-        style: AppTypography.headlineSmallStyle.copyWith(
-          color: context.conduitTheme.textPrimary,
-          fontWeight: FontWeight.w600,
+              child: Center(child: child),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: backgroundColor.withValues(alpha: 0.85),
+            borderRadius: borderRadius,
+            border: Border.all(color: borderColor, width: BorderWidth.thin),
+          ),
+          child: child,
         ),
       ),
-      centerTitle: true,
     );
   }
 

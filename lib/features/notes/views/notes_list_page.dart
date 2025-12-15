@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -122,150 +123,272 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
       return Scaffold(backgroundColor: sidebarTheme.background);
     }
 
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final l10n = AppLocalizations.of(context)!;
+
     return ErrorBoundary(
       child: Scaffold(
-        backgroundColor: sidebarTheme.background,
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(context),
-              _buildSearchField(context),
-              Expanded(child: _buildBody(context)),
-            ],
+        backgroundColor: context.conduitTheme.surfaceBackground,
+        extendBodyBehindAppBar: true,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight + 64),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: const [0.0, 0.4, 1.0],
+                colors: [
+                  Theme.of(context).scaffoldBackgroundColor,
+                  Theme.of(context).scaffoldBackgroundColor.withValues(
+                    alpha: 0.85,
+                  ),
+                  Theme.of(context).scaffoldBackgroundColor.withValues(
+                    alpha: 0.0,
+                  ),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // App bar row with back button and title
+                  SizedBox(
+                    height: kToolbarHeight,
+                    child: Row(
+                      children: [
+                        // Leading (back button)
+                        if (canPop)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: Spacing.inputPadding,
+                            ),
+                            child: Center(
+                              child: GestureDetector(
+                                onTap: () => Navigator.of(context).maybePop(),
+                                child: _buildAppBarPill(
+                                  context,
+                                  Icon(
+                                    UiUtils.platformIcon(
+                                      ios: CupertinoIcons.back,
+                                      android: Icons.arrow_back,
+                                    ),
+                                    color: context.conduitTheme.textPrimary,
+                                    size: IconSize.appBar,
+                                  ),
+                                  isCircular: true,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          const SizedBox(width: Spacing.inputPadding),
+                        // Title centered
+                        Expanded(
+                          child: Center(
+                            child: _buildAppBarPill(
+                              context,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: Spacing.md,
+                                  vertical: Spacing.xs,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Platform.isIOS
+                                          ? CupertinoIcons.doc_text_fill
+                                          : Icons.notes_rounded,
+                                      color: context.conduitTheme.textPrimary
+                                          .withValues(alpha: 0.7),
+                                      size: IconSize.md,
+                                    ),
+                                    const SizedBox(width: Spacing.sm),
+                                    Text(
+                                      l10n.notes,
+                                      style:
+                                          AppTypography.headlineSmallStyle
+                                              .copyWith(
+                                                color: context
+                                                    .conduitTheme
+                                                    .textPrimary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Trailing spacer to balance
+                        if (canPop)
+                          const SizedBox(
+                            width: 44 + Spacing.inputPadding,
+                          )
+                        else
+                          const SizedBox(width: Spacing.inputPadding),
+                      ],
+                    ),
+                  ),
+                  // Search bar directly below title
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Spacing.inputPadding,
+                      Spacing.xs,
+                      Spacing.inputPadding,
+                      Spacing.sm,
+                    ),
+                    child: _buildFloatingSearchField(context),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
+        body: _buildBody(context),
         floatingActionButton: _buildFAB(context),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    final sidebarTheme = context.sidebarTheme;
-    final l10n = AppLocalizations.of(context)!;
-    final canPop = ModalRoute.of(context)?.canPop ?? false;
+  Widget _buildAppBarPill(
+    BuildContext context,
+    Widget child, {
+    bool isCircular = false,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        canPop ? Spacing.xs : Spacing.inputPadding,
-        Spacing.md,
-        Spacing.inputPadding,
-        Spacing.sm,
-      ),
-      child: Row(
-        children: [
-          if (canPop) ...[
-            IconButton(
-              icon: Icon(
-                UiUtils.platformIcon(
-                  ios: CupertinoIcons.back,
-                  android: Icons.arrow_back,
-                ),
-                color: sidebarTheme.foreground.withValues(alpha: 0.8),
+    final backgroundColor = isDark
+        ? Color.lerp(context.conduitTheme.cardBackground, Colors.white, 0.08)!
+        : Color.lerp(context.conduitTheme.inputBackground, Colors.black, 0.06)!;
+
+    final borderColor = context.conduitTheme.cardBorder.withValues(
+      alpha: isDark ? 0.65 : 0.55,
+    );
+
+    final borderRadius = isCircular
+        ? BorderRadius.circular(100)
+        : BorderRadius.circular(AppBorderRadius.pill);
+
+    if (isCircular) {
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: backgroundColor.withValues(alpha: 0.85),
+                borderRadius: borderRadius,
+                border: Border.all(color: borderColor, width: BorderWidth.thin),
               ),
-              onPressed: () => Navigator.of(context).maybePop(),
-              tooltip: l10n.back,
-            ),
-            const SizedBox(width: Spacing.xs),
-          ],
-          Icon(
-            Platform.isIOS ? CupertinoIcons.doc_text_fill : Icons.notes_rounded,
-            color: sidebarTheme.foreground.withValues(alpha: 0.7),
-            size: IconSize.lg,
-          ),
-          const SizedBox(width: Spacing.sm),
-          Expanded(
-            child: Text(
-              l10n.notes,
-              style: AppTypography.headlineSmallStyle.copyWith(
-                color: sidebarTheme.foreground,
-                fontWeight: FontWeight.w700,
-              ),
+              child: Center(child: child),
             ),
           ),
-        ],
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: backgroundColor.withValues(alpha: 0.85),
+            borderRadius: borderRadius,
+            border: Border.all(color: borderColor, width: BorderWidth.thin),
+          ),
+          child: child,
+        ),
       ),
     );
   }
 
-  Widget _buildSearchField(BuildContext context) {
-    final sidebarTheme = context.sidebarTheme;
+  Widget _buildFloatingSearchField(BuildContext context) {
+    final theme = Theme.of(context);
+    final conduitTheme = context.conduitTheme;
+    final isDark = theme.brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Spacing.inputPadding,
-        Spacing.xs,
-        Spacing.inputPadding,
-        Spacing.sm,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: TextField(
-          controller: _searchController,
-          focusNode: _searchFocusNode,
-          onChanged: (_) => _onSearchChanged(),
-          style: AppTypography.standard.copyWith(
-            color: sidebarTheme.foreground,
+    final backgroundColor = isDark
+        ? Color.lerp(conduitTheme.cardBackground, Colors.white, 0.08)!
+        : Color.lerp(conduitTheme.inputBackground, Colors.black, 0.06)!;
+
+    final borderColor = conduitTheme.cardBorder.withValues(
+      alpha: isDark ? 0.65 : 0.55,
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppBorderRadius.pill),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: backgroundColor.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(AppBorderRadius.pill),
+            border: Border.all(color: borderColor, width: BorderWidth.thin),
           ),
-          decoration: InputDecoration(
-            isDense: true,
-            hintText: l10n.searchNotes,
-            hintStyle: AppTypography.standard.copyWith(
-              color: sidebarTheme.foreground.withValues(alpha: 0.5),
-            ),
-            prefixIcon: Icon(
-              Platform.isIOS ? CupertinoIcons.search : Icons.search_rounded,
-              color: sidebarTheme.foreground.withValues(alpha: 0.6),
-              size: IconSize.input,
-            ),
-            prefixIconConstraints: const BoxConstraints(
-              minWidth: TouchTarget.minimum,
-              minHeight: TouchTarget.minimum,
-            ),
-            suffixIcon: _query.isNotEmpty
-                ? IconButton(
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _query = '');
-                      _searchFocusNode.unfocus();
-                    },
-                    icon: Icon(
-                      Platform.isIOS
-                          ? CupertinoIcons.clear_circled_solid
-                          : Icons.clear_rounded,
-                      color: sidebarTheme.foreground.withValues(alpha: 0.6),
-                      size: IconSize.input,
-                    ),
-                  )
-                : null,
-            suffixIconConstraints: const BoxConstraints(
-              minWidth: TouchTarget.minimum,
-              minHeight: TouchTarget.minimum,
-            ),
-            filled: true,
-            fillColor: sidebarTheme.accent.withValues(alpha: 0.85),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppBorderRadius.md),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppBorderRadius.md),
-              borderSide: BorderSide(
-                color: sidebarTheme.border.withValues(alpha: 0.2),
-                width: BorderWidth.thin,
+          child: Material(
+            color: Colors.transparent,
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              onChanged: (_) => _onSearchChanged(),
+              style: AppTypography.standard.copyWith(
+                color: conduitTheme.textPrimary,
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppBorderRadius.md),
-              borderSide: BorderSide(
-                color: sidebarTheme.ring.withValues(alpha: 0.5),
-                width: BorderWidth.regular,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: l10n.searchNotes,
+                hintStyle: AppTypography.standard.copyWith(
+                  color: conduitTheme.textSecondary.withValues(alpha: 0.6),
+                ),
+                prefixIcon: Icon(
+                  Platform.isIOS ? CupertinoIcons.search : Icons.search,
+                  color: conduitTheme.iconSecondary,
+                  size: IconSize.input,
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: TouchTarget.minimum,
+                  minHeight: TouchTarget.minimum,
+                ),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                          _searchFocusNode.unfocus();
+                        },
+                        icon: Icon(
+                          Platform.isIOS
+                              ? CupertinoIcons.clear_circled_solid
+                              : Icons.clear,
+                          color: conduitTheme.iconSecondary,
+                          size: IconSize.input,
+                        ),
+                      )
+                    : null,
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: TouchTarget.minimum,
+                  minHeight: TouchTarget.minimum,
+                ),
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.md,
+                  vertical: Spacing.sm,
+                ),
               ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: Spacing.md,
-              vertical: Spacing.sm,
             ),
           ),
         ),
@@ -322,7 +445,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
           );
           slivers.add(
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: Spacing.sm),
+              padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) =>
@@ -347,12 +470,23 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
   }
 
   Widget _buildRefreshableScrollView(List<Widget> slivers) {
+    // Add top padding for floating app bar and search bar
+    final topPadding = MediaQuery.of(context).padding.top;
+    // App bar height: kToolbarHeight + search bar (48) + padding (xs + sm)
+    final appBarHeight = kToolbarHeight + 48 + Spacing.xs + Spacing.sm;
+    final paddedSlivers = <Widget>[
+      SliverToBoxAdapter(
+        child: SizedBox(height: topPadding + appBarHeight),
+      ),
+      ...slivers,
+    ];
+
     return ConduitRefreshIndicator(
       onRefresh: _refreshNotes,
       child: CustomScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        slivers: slivers,
+        slivers: paddedSlivers,
       ),
     );
   }
@@ -691,10 +825,17 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
     final sidebarTheme = context.sidebarTheme;
     final l10n = AppLocalizations.of(context)!;
     final isSearchActive = _query.isNotEmpty;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final appBarHeight = kToolbarHeight + 48 + Spacing.xs + Spacing.sm;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.xxl),
+        padding: EdgeInsets.fromLTRB(
+          Spacing.xxl,
+          topPadding + appBarHeight,
+          Spacing.xxl,
+          Spacing.xxl,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -765,17 +906,29 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
 
   Widget _buildLoading(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Center(child: ImprovedLoadingState(message: l10n.loadingNotes));
+    final topPadding = MediaQuery.of(context).padding.top;
+    final appBarHeight = kToolbarHeight + 48 + Spacing.xs + Spacing.sm;
+    return Padding(
+      padding: EdgeInsets.only(top: topPadding + appBarHeight),
+      child: Center(child: ImprovedLoadingState(message: l10n.loadingNotes)),
+    );
   }
 
   Widget _buildError(BuildContext context, Object error) {
     final theme = context.conduitTheme;
     final sidebarTheme = context.sidebarTheme;
     final l10n = AppLocalizations.of(context)!;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final appBarHeight = kToolbarHeight + 48 + Spacing.xs + Spacing.sm;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.xxl),
+        padding: EdgeInsets.fromLTRB(
+          Spacing.xxl,
+          topPadding + appBarHeight,
+          Spacing.xxl,
+          Spacing.xxl,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
