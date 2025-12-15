@@ -879,5 +879,38 @@
   "ldapNotEnabled": "此服务器未启用 LDAP 验证",
   "ssoPlatformNotSupported": "此平台不支持 SSO 验证。请改用凭据或 LDAP 验证。",
   "continueWithProvider": "使用 {provider} 继续",
-  "or": "或"
+  "or": "或",
+  "usageInfo": "信息",
+  "usageInfoTitle": "响应统计",
+  "usageTokenGeneration": "Token 生成",
+  "usagePromptEval": "提示处理",
+  "usageTotalDuration": "总耗时",
+  "usageTokensPerSecond": "{speed} t/s",
+  "@usageTokensPerSecond": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "usageTokenCount": "{count} 个 token",
+  "@usageTokenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "usageSecondsFormat": "{seconds}秒",
+  "@usageSecondsFormat": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "usageLoadDuration": "模型加载时间",
+  "usageQueueTime": "排队时间",
+  "usageReasoningTokens": "推理 token",
+  "usageTotalTokens": "总 token"
 }

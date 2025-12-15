@@ -657,5 +657,38 @@
   "ldapNotEnabled": "이 서버에서 LDAP 인증이 활성화되어 있지 않습니다",
   "ssoPlatformNotSupported": "이 플랫폼에서는 SSO 인증이 지원되지 않습니다. 대신 자격 증명 또는 LDAP 인증을 사용하세요.",
   "continueWithProvider": "{provider}(으)로 계속",
-  "or": "또는"
+  "or": "또는",
+  "usageInfo": "정보",
+  "usageInfoTitle": "응답 통계",
+  "usageTokenGeneration": "토큰 생성",
+  "usagePromptEval": "프롬프트 처리",
+  "usageTotalDuration": "총 소요 시간",
+  "usageTokensPerSecond": "{speed} t/s",
+  "@usageTokensPerSecond": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "usageTokenCount": "{count}개 토큰",
+  "@usageTokenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "usageSecondsFormat": "{seconds}초",
+  "@usageSecondsFormat": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "usageLoadDuration": "모델 로드 시간",
+  "usageQueueTime": "대기 시간",
+  "usageReasoningTokens": "추론 토큰",
+  "usageTotalTokens": "총 토큰"
 }
