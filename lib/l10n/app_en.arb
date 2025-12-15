@@ -1000,6 +1000,72 @@
   "@ttsStop": {
     "description": "Action to stop text to speech playback"
   },
+  "usageInfo": "Info",
+  "@usageInfo": {
+    "description": "Action to show usage/performance statistics for a response"
+  },
+  "usageInfoTitle": "Response Statistics",
+  "@usageInfoTitle": {
+    "description": "Title for the usage statistics dialog/sheet"
+  },
+  "usageTokenGeneration": "Token Generation",
+  "@usageTokenGeneration": {
+    "description": "Label for token generation speed metric"
+  },
+  "usagePromptEval": "Prompt Processing",
+  "@usagePromptEval": {
+    "description": "Label for prompt evaluation/pre-processing speed metric"
+  },
+  "usageTotalDuration": "Total Duration",
+  "@usageTotalDuration": {
+    "description": "Label for total response generation duration"
+  },
+  "usageTokensPerSecond": "{speed} t/s",
+  "@usageTokensPerSecond": {
+    "description": "Tokens per second display format",
+    "placeholders": {
+      "speed": {
+        "type": "String",
+        "example": "45.2"
+      }
+    }
+  },
+  "usageTokenCount": "{count} tokens",
+  "@usageTokenCount": {
+    "description": "Token count display format",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "128"
+      }
+    }
+  },
+  "usageSecondsFormat": "{seconds}s",
+  "@usageSecondsFormat": {
+    "description": "Seconds duration format",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "2.34"
+      }
+    }
+  },
+  "usageLoadDuration": "Model Load Time",
+  "@usageLoadDuration": {
+    "description": "Label for model loading duration metric"
+  },
+  "usageQueueTime": "Queue Time",
+  "@usageQueueTime": {
+    "description": "Label for queue waiting time metric"
+  },
+  "usageReasoningTokens": "Reasoning Tokens",
+  "@usageReasoningTokens": {
+    "description": "Label for reasoning/thinking tokens count"
+  },
+  "usageTotalTokens": "Total Tokens",
+  "@usageTotalTokens": {
+    "description": "Label for total token count"
+  },
   "edit": "Edit",
   "@edit": {
     "description": "Action to edit an item/message."

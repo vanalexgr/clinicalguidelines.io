@@ -966,7 +966,7 @@ class ApiService {
         if (msg.attachmentIds != null && msg.attachmentIds!.isNotEmpty)
           'attachment_ids': List<String>.from(msg.attachmentIds!),
         if (sanitizedFiles != null) 'files': sanitizedFiles,
-        // Mirror status updates, follow-ups, code executions, and sources
+        // Mirror status updates, follow-ups, code executions, sources, and usage
         if (msg.statusHistory.isNotEmpty)
           'statusHistory': msg.statusHistory.map((s) => s.toJson()).toList(),
         if (msg.followUps.isNotEmpty)
@@ -975,6 +975,8 @@ class ApiService {
           'codeExecutions': msg.codeExecutions.map((e) => e.toJson()).toList(),
         if (msg.sources.isNotEmpty)
           'sources': msg.sources.map((s) => s.toJson()).toList(),
+        // Include usage statistics for persistence (issue #274)
+        if (msg.usage != null) 'usage': msg.usage,
       };
 
       // Update parent's childrenIds
@@ -1001,7 +1003,7 @@ class ApiService {
         if (msg.attachmentIds != null && msg.attachmentIds!.isNotEmpty)
           'attachment_ids': List<String>.from(msg.attachmentIds!),
         if (sanitizedArrayFiles != null) 'files': sanitizedArrayFiles,
-        // Mirror status updates, follow-ups, code executions, and sources
+        // Mirror status updates, follow-ups, code executions, sources, and usage
         if (msg.statusHistory.isNotEmpty)
           'statusHistory': msg.statusHistory.map((s) => s.toJson()).toList(),
         if (msg.followUps.isNotEmpty)
@@ -1010,6 +1012,8 @@ class ApiService {
           'codeExecutions': msg.codeExecutions.map((e) => e.toJson()).toList(),
         if (msg.sources.isNotEmpty)
           'sources': msg.sources.map((s) => s.toJson()).toList(),
+        // Include usage statistics for persistence (issue #274)
+        if (msg.usage != null) 'usage': msg.usage,
       });
 
       previousId = messageId;
@@ -1747,6 +1751,10 @@ class ApiService {
   }
 
   // Send chat completed notification
+  // This persists usage data and other message metadata to the server
+  /// Notify backend that chat streaming is complete.
+  /// This triggers any configured filters/actions on the backend.
+  /// Matches OpenWebUI's chatCompletedHandler in Chat.svelte.
   Future<void> sendChatCompleted({
     required String chatId,
     required String messageId,
@@ -1754,61 +1762,61 @@ class ApiService {
     required String model,
     Map<String, dynamic>? modelItem,
     String? sessionId,
+    List<String>? filterIds,
   }) async {
-    _traceApi('Sending chat completed notification (optional endpoint)');
-
-    // This endpoint appears to be optional or deprecated in newer OpenWebUI versions
-    // The main chat synchronization happens through /api/v1/chats/{id} updates
-    // We'll still try to call it but won't fail if it doesn't work
-
-    // Format messages to match OpenWebUI expected structure
-    // Note: Removing 'id' field as it causes 400 error
+    // Format messages to match OpenWebUI expected structure exactly
     final formattedMessages = messages.map((msg) {
-      final formatted = {
-        // Don't include 'id' - it causes 400 error with detail: 'id'
+      final formatted = <String, dynamic>{
+        'id': msg['id'],
         'role': msg['role'],
         'content': msg['content'],
         'timestamp':
             msg['timestamp'] ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
       };
-
-      // Add model info for assistant messages
-      if (msg['role'] == 'assistant') {
-        formatted['model'] = model;
-        if (msg.containsKey('usage')) {
-          formatted['usage'] = msg['usage'];
-        }
+      // Include info if present (OpenWebUI sends this)
+      if (msg.containsKey('info') && msg['info'] != null) {
+        formatted['info'] = msg['info'];
       }
-
+      // Include usage if present (issue #274)
+      if (msg.containsKey('usage') && msg['usage'] != null) {
+        formatted['usage'] = msg['usage'];
+      }
+      // Include sources if present
+      if (msg.containsKey('sources') && msg['sources'] != null) {
+        formatted['sources'] = msg['sources'];
+      }
       return formatted;
     }).toList();
 
-    // Include the message ID and session ID at the top level - server expects these
-    final requestData = {
-      'id': messageId, // The server expects the assistant message ID here
-      'chat_id': chatId,
+    final requestData = <String, dynamic>{
       'model': model,
       'messages': formattedMessages,
-      'session_id':
-          sessionId ?? const Uuid().v4().substring(0, 20), // Add session_id
-      // Don't include model_item as it might not be expected
+      'chat_id': chatId,
+      'session_id': sessionId ?? const Uuid().v4().substring(0, 20),
+      'id': messageId,
     };
 
+    // Include filter_ids if provided (for outlet filters)
+    if (filterIds != null && filterIds.isNotEmpty) {
+      requestData['filter_ids'] = filterIds;
+    }
+
+    // Include model_item if available
+    if (modelItem != null) {
+      requestData['model_item'] = modelItem;
+    }
+
     try {
-      final response = await _dio.post(
+      await _dio.post(
         '/api/chat/completed',
         data: requestData,
         options: Options(
-          sendTimeout: const Duration(seconds: 4),
-          receiveTimeout: const Duration(seconds: 4),
+          sendTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
         ),
       );
-      _traceApi('Chat completed response: ${response.statusCode}');
-    } catch (e) {
-      // This is a non-critical endpoint - main sync happens via /api/v1/chats/{id}
-      _traceApi(
-        'Chat completed endpoint not available or failed (non-critical): $e',
-      );
+    } catch (_) {
+      // Non-critical - filters/actions may not be configured
     }
   }
 
@@ -2824,6 +2832,16 @@ class ApiService {
     // Add only essential parameters
     if (conversationId != null) {
       data['chat_id'] = conversationId;
+    }
+
+    // Request usage statistics if model supports it (issue #274)
+    // Matches OpenWebUI: only sends stream_options when model.info.meta.capabilities.usage is true
+    final supportsUsage =
+        modelItem?['capabilities']?['usage'] == true ||
+        (modelItem?['info'] as Map?)?['meta']?['capabilities']?['usage'] ==
+            true;
+    if (supportsUsage) {
+      data['stream_options'] = {'include_usage': true};
     }
 
     // Add feature flags via 'features' object only (not as top-level params).
