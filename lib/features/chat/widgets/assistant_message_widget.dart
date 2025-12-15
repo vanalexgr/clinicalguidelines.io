@@ -878,6 +878,12 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                             ),
                     ),
 
+                    // Display error banner if message or active version has an error
+                    if (_getActiveError() != null) ...[
+                      const SizedBox(height: Spacing.sm),
+                      _buildErrorBanner(_getActiveError()!),
+                    ],
+
                     if (hasCodeExecutions) ...[
                       const SizedBox(height: Spacing.md),
                       CodeExecutionListView(
@@ -922,6 +928,62 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
         );
+  }
+
+  /// Get the error for the currently active message or version.
+  ChatMessageError? _getActiveError() {
+    if (widget.message is! ChatMessage) return null;
+    final msg = widget.message as ChatMessage;
+
+    // If viewing a version, return the version's error
+    if (_activeVersionIndex >= 0 &&
+        _activeVersionIndex < msg.versions.length) {
+      return msg.versions[_activeVersionIndex].error;
+    }
+
+    // Otherwise return the main message's error
+    return msg.error;
+  }
+
+  /// Build an error banner matching OpenWebUI's error display style.
+  /// Shows error content in a red-tinted container with an info icon.
+  Widget _buildErrorBanner(ChatMessageError error) {
+    final theme = Theme.of(context);
+    final errorColor = theme.colorScheme.error;
+    final errorContent = error.content;
+
+    // If no content, show a generic error message
+    final displayText = (errorContent != null && errorContent.isNotEmpty)
+        ? errorContent
+        : 'An error occurred while generating this response.';
+
+    return Container(
+      padding: const EdgeInsets.all(Spacing.md),
+      decoration: BoxDecoration(
+        color: errorColor.withValues(alpha: 0.1),
+        border: Border.all(color: errorColor.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(Spacing.sm),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 20,
+            color: errorColor,
+          ),
+          const SizedBox(width: Spacing.sm),
+          Expanded(
+            child: Text(
+              displayText,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: errorColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildEnhancedMarkdownContent(String content) {
@@ -1252,7 +1314,11 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     final ttsState = ref.watch(textToSpeechControllerProvider);
     final messageId = _messageId;
     final hasSpeechText = _ttsPlainText.trim().isNotEmpty;
-    final isErrorMessage =
+    // Check for error using the error field (preferred) or legacy content detection
+    // Also check the active version's error if viewing a version
+    final activeError = _getActiveError();
+    final hasErrorField = activeError != null;
+    final isErrorMessage = hasErrorField ||
         widget.message.content.contains('⚠️') ||
         widget.message.content.contains('Error') ||
         widget.message.content.contains('timeout') ||

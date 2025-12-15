@@ -1126,34 +1126,33 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
         // Server reports an error for the current assistant message
         try {
           dynamic err = payload is Map ? payload['error'] : null;
-          String content = '';
+          String errorContent = '';
           if (err is Map) {
             final c = err['content'];
             if (c is String) {
-              content = c;
+              errorContent = c;
             } else if (c != null) {
-              content = c.toString();
+              errorContent = c.toString();
             }
           } else if (err is String) {
-            content = err;
+            errorContent = err;
           } else if (payload is Map && payload['message'] is String) {
-            content = payload['message'];
+            errorContent = payload['message'];
           }
-          if (content.isNotEmpty) {
-            // Replace current assistant message with a readable error
-            replaceLastMessageContent('⚠️ $content');
-          }
+          // Set the error field on the message for proper OpenWebUI round-trip
+          // Also drop search-only status rows so the error feels cleaner
+          updateLastMessageWith((message) {
+            final filtered = message.statusHistory
+                .where((status) => status.action != 'knowledge_search')
+                .toList(growable: false);
+            return message.copyWith(
+              error: errorContent.isNotEmpty
+                  ? ChatMessageError(content: errorContent)
+                  : const ChatMessageError(content: null),
+              statusHistory: filtered,
+            );
+          });
         } catch (_) {}
-        // Drop search-only status rows so the error feels cleaner
-        updateLastMessageWith((message) {
-          final filtered = message.statusHistory
-              .where((status) => status.action != 'knowledge_search')
-              .toList(growable: false);
-          if (filtered.length == message.statusHistory.length) {
-            return message;
-          }
-          return message.copyWith(statusHistory: filtered);
-        });
         // Ensure UI exits streaming state
         wrappedFinishStreaming();
       } else if ((type == 'chat:message:delta' || type == 'message') &&

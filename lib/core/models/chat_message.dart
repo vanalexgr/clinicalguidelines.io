@@ -31,13 +31,90 @@ sealed class ChatMessage with _$ChatMessage {
     List<ChatSourceReference> sources,
     Map<String, dynamic>? usage,
     // Previous generated versions of this assistant message (OpenWebUI-style)
-    @JsonKey(includeFromJson: false, includeToJson: false)
+    // Parsed from sibling messages in OpenWebUI history
+    @JsonKey(fromJson: _versionsFromJson, toJson: _versionsToJson)
     @Default(<ChatMessageVersion>[])
     List<ChatMessageVersion> versions,
+    // Error information from OpenWebUI (stored separately from content)
+    @JsonKey(fromJson: _chatMessageErrorFromJson, toJson: _chatMessageErrorToJson)
+    ChatMessageError? error,
   }) = _ChatMessage;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) =>
       _$ChatMessageFromJson(json);
+}
+
+/// Error information for a chat message, matching OpenWebUI's error format.
+/// OpenWebUI stores errors as `{ error: { content: "..." } }` on messages.
+@freezed
+abstract class ChatMessageError with _$ChatMessageError {
+  const factory ChatMessageError({
+    /// The error message content
+    @JsonKey(fromJson: _nullableString) String? content,
+  }) = _ChatMessageError;
+
+  factory ChatMessageError.fromJson(Map<String, dynamic> json) =>
+      _$ChatMessageErrorFromJson(json);
+}
+
+/// Parse ChatMessageError from various OpenWebUI formats.
+ChatMessageError? _chatMessageErrorFromJson(dynamic value) {
+  if (value == null) return null;
+
+  // Legacy format: error === true means content IS the error
+  if (value == true) {
+    return const ChatMessageError(content: null);
+  }
+
+  if (value is String && value.isNotEmpty) {
+    return ChatMessageError(content: value);
+  }
+
+  if (value is Map) {
+    // Most common: { content: "error message" }
+    final content = value['content'];
+    if (content is String && content.isNotEmpty) {
+      return ChatMessageError(content: content);
+    }
+
+    // Alternative: { message: "error message" }
+    final message = value['message'];
+    if (message is String && message.isNotEmpty) {
+      return ChatMessageError(content: message);
+    }
+
+    // Nested error: { error: { message: "..." } }
+    final nestedError = value['error'];
+    if (nestedError is Map) {
+      final nestedMessage = nestedError['message'];
+      if (nestedMessage is String && nestedMessage.isNotEmpty) {
+        return ChatMessageError(content: nestedMessage);
+      }
+    }
+
+    // FastAPI detail format: { detail: "..." }
+    final detail = value['detail'];
+    if (detail is String && detail.isNotEmpty) {
+      return ChatMessageError(content: detail);
+    }
+
+    // If it's a map but we couldn't extract content, still return an error
+    // to indicate there was an error (matches legacy error === true behavior)
+    return const ChatMessageError(content: null);
+  }
+
+  return null;
+}
+
+/// Convert ChatMessageError to OpenWebUI format for persistence.
+Map<String, dynamic>? _chatMessageErrorToJson(ChatMessageError? error) {
+  if (error == null) return null;
+  if (error.content == null) {
+    // Legacy format - just return true to indicate error
+    // But OpenWebUI expects a map, so return empty content
+    return const {'content': ''};
+  }
+  return {'content': error.content};
 }
 
 @freezed
@@ -58,6 +135,9 @@ abstract class ChatMessageVersion with _$ChatMessageVersion {
     @Default(<String>[]) List<String> followUps,
     @Default(<ChatCodeExecution>[]) List<ChatCodeExecution> codeExecutions,
     Map<String, dynamic>? usage,
+    // Error information preserved from the original message
+    @JsonKey(fromJson: _chatMessageErrorFromJson, toJson: _chatMessageErrorToJson)
+    ChatMessageError? error,
   }) = _ChatMessageVersion;
 
   factory ChatMessageVersion.fromJson(Map<String, dynamic> json) =>
@@ -204,6 +284,35 @@ int? _safeInt(dynamic value) {
 
 List<String> _stringListToJson(List<String> value) =>
     List<String>.from(value, growable: false);
+
+/// Parse ChatMessageVersion list from JSON.
+List<ChatMessageVersion> _versionsFromJson(dynamic value) {
+  if (value is List) {
+    return value
+        .whereType<Map>()
+        .map((item) {
+          try {
+            final Map<String, dynamic> versionMap = {};
+            item.forEach((key, v) {
+              versionMap[key.toString()] = v;
+            });
+            return ChatMessageVersion.fromJson(versionMap);
+          } catch (e) {
+            // Skip invalid entries
+            return null;
+          }
+        })
+        .where((item) => item != null)
+        .cast<ChatMessageVersion>()
+        .toList(growable: false);
+  }
+  return const [];
+}
+
+/// Convert ChatMessageVersion list to JSON.
+List<Map<String, dynamic>> _versionsToJson(List<ChatMessageVersion> versions) {
+  return versions.map((v) => v.toJson()).toList(growable: false);
+}
 
 List<ChatStatusItem> _statusItemsFromJson(dynamic value) {
   if (value is List) {

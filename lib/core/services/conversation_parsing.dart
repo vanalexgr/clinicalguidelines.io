@@ -146,16 +146,24 @@ Map<String, dynamic> parseFullConversation(Map<String, dynamic> chatData) {
           merged['content'] = synthesized;
         }
 
-        messages.add(
-          _parseOpenWebUIMessageToJson(merged, historyMsg: historyMsg),
+        final parsed = _parseOpenWebUIMessageToJson(
+          merged,
+          historyMsg: historyMsg,
         );
+        // Add versions from siblings
+        _addVersionsFromSiblings(parsed, msgData, historyMessagesMap);
+        messages.add(parsed);
         index = j;
         continue;
       }
 
-      messages.add(
-        _parseOpenWebUIMessageToJson(msgData, historyMsg: historyMsg),
+      final parsed = _parseOpenWebUIMessageToJson(
+        msgData,
+        historyMsg: historyMsg,
       );
+      // Add versions from siblings
+      _addVersionsFromSiblings(parsed, msgData, historyMessagesMap);
+      messages.add(parsed);
       index++;
     }
   }
@@ -188,6 +196,171 @@ List<Map<String, dynamic>>? _extractToolCalls(
   if (toolCallsRaw is List) {
     return toolCallsRaw.whereType<Map>().map(_coerceJsonMap).toList();
   }
+  return null;
+}
+
+/// Add versions from sibling messages (alternative responses with same parent).
+/// Siblings are stored in `_siblings` by `_buildMessagesListFromHistory`.
+void _addVersionsFromSiblings(
+  Map<String, dynamic> parsed,
+  Map<String, dynamic> msgData,
+  Map<String, dynamic>? historyMessagesMap,
+) {
+  final siblings = msgData['_siblings'];
+  if (siblings is! List || siblings.isEmpty) return;
+
+  final versions = <Map<String, dynamic>>[];
+  for (final siblingData in siblings) {
+    if (siblingData is! Map<String, dynamic>) continue;
+
+    final siblingId = siblingData['id']?.toString();
+    final historyMsg = historyMessagesMap != null && siblingId != null
+        ? (historyMessagesMap[siblingId] as Map<String, dynamic>?)
+        : null;
+
+    // Parse the sibling as a version
+    final version = _parseSiblingAsVersion(siblingData, historyMsg: historyMsg);
+    if (version != null) {
+      versions.add(version);
+    }
+  }
+
+  if (versions.isNotEmpty) {
+    parsed['versions'] = versions;
+  }
+}
+
+/// Parse a sibling message as a ChatMessageVersion JSON map.
+Map<String, dynamic>? _parseSiblingAsVersion(
+  Map<String, dynamic> msgData, {
+  Map<String, dynamic>? historyMsg,
+}) {
+  // Extract content (same logic as _parseOpenWebUIMessageToJson)
+  dynamic content = msgData['content'];
+  if ((content == null || (content is String && content.isEmpty)) &&
+      historyMsg != null &&
+      historyMsg['content'] != null) {
+    content = historyMsg['content'];
+  }
+
+  var contentString = '';
+  if (content is List) {
+    final buffer = StringBuffer();
+    for (final entry in content) {
+      if (entry is Map && entry['type'] == 'text') {
+        final text = entry['text']?.toString();
+        if (text != null && text.isNotEmpty) {
+          buffer.write(text);
+        }
+      }
+    }
+    contentString = buffer.toString();
+  } else {
+    contentString = content?.toString() ?? '';
+  }
+
+  if (historyMsg != null) {
+    final histContent = historyMsg['content'];
+    if (histContent is String && histContent.length > contentString.length) {
+      contentString = histContent;
+    }
+  }
+
+  // Extract files
+  final effectiveFiles = msgData['files'] ?? historyMsg?['files'];
+  List<Map<String, dynamic>>? files;
+  if (effectiveFiles is List) {
+    final allFiles = <Map<String, dynamic>>[];
+    for (final entry in effectiveFiles) {
+      if (entry is! Map) continue;
+      if (entry['type'] != null && entry['url'] != null) {
+        final fileMap = <String, dynamic>{
+          'type': entry['type'],
+          'url': entry['url'],
+        };
+        if (entry['name'] != null) fileMap['name'] = entry['name'];
+        if (entry['size'] != null) fileMap['size'] = entry['size'];
+        allFiles.add(fileMap);
+      }
+    }
+    files = allFiles.isNotEmpty ? allFiles : null;
+  }
+
+  // Extract other fields
+  final sourcesRaw = historyMsg != null
+      ? historyMsg['sources'] ?? historyMsg['citations']
+      : msgData['sources'] ?? msgData['citations'];
+  final followUpsRaw = historyMsg != null
+      ? historyMsg['followUps'] ?? historyMsg['follow_ups']
+      : msgData['followUps'] ?? msgData['follow_ups'];
+  final codeExecRaw = historyMsg != null
+      ? historyMsg['codeExecutions'] ?? historyMsg['code_executions']
+      : msgData['codeExecutions'] ?? msgData['code_executions'];
+  final rawUsage = _coerceJsonMap(historyMsg?['usage'] ?? msgData['usage']);
+  final errorData = _extractErrorData(msgData, historyMsg);
+
+  return <String, dynamic>{
+    'id': (msgData['id'] ?? _uuid.v4()).toString(),
+    'content': contentString,
+    'timestamp': _parseTimestamp(msgData['timestamp']).toIso8601String(),
+    if (msgData['model'] != null) 'model': msgData['model'].toString(),
+    if (files != null) 'files': files,
+    'sources': _parseSourcesField(sourcesRaw),
+    'followUps': _coerceStringList(followUpsRaw),
+    'codeExecutions': _parseCodeExecutionsField(codeExecRaw),
+    if (rawUsage.isNotEmpty) 'usage': rawUsage,
+    if (errorData != null) 'error': errorData,
+  };
+}
+
+/// Extract error data from OpenWebUI message format.
+/// OpenWebUI stores errors in a separate 'error' field with 'content' inside.
+/// Returns a map suitable for ChatMessageError.fromJson().
+Map<String, dynamic>? _extractErrorData(
+  Map<String, dynamic> msgData,
+  Map<String, dynamic>? historyMsg,
+) {
+  // Check msgData first, then historyMsg
+  final errorRaw = msgData['error'] ?? historyMsg?['error'];
+  if (errorRaw == null) return null;
+
+  // Handle different error formats from OpenWebUI
+  if (errorRaw is Map) {
+    // Most common: { error: { content: "error message" } }
+    final content = errorRaw['content'];
+    if (content is String && content.isNotEmpty) {
+      return {'content': content};
+    }
+    // Alternative: { error: { message: "error message" } }
+    final message = errorRaw['message'];
+    if (message is String && message.isNotEmpty) {
+      return {'content': message};
+    }
+    // Nested error: { error: { error: { message: "..." } } }
+    final nestedError = errorRaw['error'];
+    if (nestedError is Map) {
+      final nestedMessage = nestedError['message'];
+      if (nestedMessage is String && nestedMessage.isNotEmpty) {
+        return {'content': nestedMessage};
+      }
+    }
+    // FastAPI detail format: { detail: "..." }
+    final detail = errorRaw['detail'];
+    if (detail is String && detail.isNotEmpty) {
+      return {'content': detail};
+    }
+    // If it's a map but we couldn't extract content, still return an error
+    // to indicate there was an error (matches legacy error === true behavior)
+    return const {'content': null};
+  } else if (errorRaw is String && errorRaw.isNotEmpty) {
+    // Simple string error
+    return {'content': errorRaw};
+  } else if (errorRaw == true) {
+    // Legacy format: error === true means content IS the error message
+    // Return a marker so the UI knows this is an error message
+    return const {'content': null};
+  }
+
   return null;
 }
 
@@ -252,6 +425,9 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
       contentString = synthesized;
     }
   }
+
+  // Extract error field from OpenWebUI - preserve it separately for round-trip
+  final errorData = _extractErrorData(msgData, historyMsg);
 
   final role = _resolveRole(msgData);
 
@@ -325,6 +501,7 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
     'sources': _parseSourcesField(sourcesRaw),
     'usage': usage,
     'versions': const <Map<String, dynamic>>[],
+    if (errorData != null) 'error': errorData,
   };
 }
 
@@ -338,6 +515,8 @@ String _resolveRole(Map<String, dynamic> msgData) {
   return 'user';
 }
 
+/// Build the message chain from history, following parent links from currentId.
+/// Also collects sibling messages (alternative versions) for each message.
 List<Map<String, dynamic>> _buildMessagesListFromHistory(
   Map<String, dynamic> history,
 ) {
@@ -347,6 +526,7 @@ List<Map<String, dynamic>> _buildMessagesListFromHistory(
     return const [];
   }
 
+  // Build the main chain from currentId back to root
   List<Map<String, dynamic>> buildChain(String? id) {
     if (id == null) return const [];
     final raw = messagesMap[id];
@@ -360,7 +540,48 @@ List<Map<String, dynamic>> _buildMessagesListFromHistory(
     return [msg];
   }
 
-  return buildChain(currentId);
+  final chain = buildChain(currentId);
+
+  // For each message in the chain, find sibling versions
+  // Siblings are other children of the same parent
+  for (final msg in chain) {
+    final parentId = msg['parentId']?.toString();
+    if (parentId == null || parentId.isEmpty) continue;
+
+    final parent = messagesMap[parentId];
+    if (parent is! Map) continue;
+
+    final childrenIds = parent['childrenIds'];
+    if (childrenIds is! List || childrenIds.length <= 1) continue;
+
+    // Collect sibling messages (same role, different id)
+    final msgId = msg['id']?.toString();
+    final msgRole = msg['role']?.toString();
+    final siblings = <Map<String, dynamic>>[];
+
+    for (final siblingId in childrenIds) {
+      final sibId = siblingId?.toString();
+      if (sibId == null || sibId == msgId) continue;
+
+      final siblingRaw = messagesMap[sibId];
+      if (siblingRaw is! Map) continue;
+
+      final sibling = _coerceJsonMap(siblingRaw);
+      final siblingRole = sibling['role']?.toString();
+
+      // Only include siblings with the same role (e.g., alternative assistant responses)
+      if (siblingRole == msgRole) {
+        sibling['id'] = sibId;
+        siblings.add(sibling);
+      }
+    }
+
+    if (siblings.isNotEmpty) {
+      msg['_siblings'] = siblings;
+    }
+  }
+
+  return chain;
 }
 
 DateTime _parseTimestamp(dynamic timestamp) {

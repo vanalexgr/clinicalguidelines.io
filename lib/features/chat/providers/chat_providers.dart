@@ -644,6 +644,7 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
       followUps: List<String>.from(last.followUps),
       codeExecutions: List<ChatCodeExecution>.from(last.codeExecutions),
       usage: last.usage == null ? null : Map<String, dynamic>.from(last.usage!),
+      error: last.error, // Preserve error in version snapshot
     );
 
     final updated = last.copyWith(
@@ -655,6 +656,7 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
       codeExecutions: const [],
       sources: const [],
       usage: null,
+      error: null, // Clear error for new generation
       versions: [...last.versions, snapshot],
     );
 
@@ -1414,6 +1416,7 @@ Future<void> regenerateMessage(
             followUps: prev.followUps,
             codeExecutions: prev.codeExecutions,
             usage: prev.usage,
+            error: prev.error, // Preserve error in version snapshot
           );
           ref
               .read(chatMessagesProvider.notifier)
@@ -2483,16 +2486,16 @@ Future<void> _sendMessageInternal(
       final errorMessage = ChatMessage(
         id: const Uuid().v4(),
         role: 'assistant',
-        content:
-            '''⚠️ There was an issue with the message format. This might be because:
-
-• The image attachment couldn't be processed
-• The request format is incompatible with the selected model
-• The message contains unsupported content
-
-Please try sending the message again, or try without attachments.''',
+        content: '',
         timestamp: DateTime.now(),
         isStreaming: false,
+        error: const ChatMessageError(
+          content: 'There was an issue with the message format. This might be '
+              'because the image attachment couldn\'t be processed, the request '
+              'format is incompatible with the selected model, or the message '
+              'contains unsupported content. Please try sending the message '
+              'again, or try without attachments.',
+        ),
       );
       ref.read(chatMessagesProvider.notifier).addMessage(errorMessage);
     } else if (e.toString().contains('401') || e.toString().contains('403')) {
@@ -2502,11 +2505,14 @@ Please try sending the message again, or try without attachments.''',
       final errorMessage = ChatMessage(
         id: const Uuid().v4(),
         role: 'assistant',
-        content:
-            '⚠️ Unable to connect to the AI model. The server returned an error (500).\n\n'
-            'This is typically a server-side issue. Please try again or contact your administrator.',
+        content: '',
         timestamp: DateTime.now(),
         isStreaming: false,
+        error: const ChatMessageError(
+          content: 'Unable to connect to the AI model. The server returned an '
+              'error (500). This is typically a server-side issue. Please try '
+              'again or contact your administrator.',
+        ),
       );
       ref.read(chatMessagesProvider.notifier).addMessage(errorMessage);
     } else if (e.toString().contains('404')) {
@@ -2517,11 +2523,14 @@ Please try sending the message again, or try without attachments.''',
       final errorMessage = ChatMessage(
         id: const Uuid().v4(),
         role: 'assistant',
-        content:
-            '🤖 The selected AI model doesn\'t seem to be available.\n\n'
-            'Please try selecting a different model or check with your administrator.',
+        content: '',
         timestamp: DateTime.now(),
         isStreaming: false,
+        error: const ChatMessageError(
+          content: 'The selected AI model doesn\'t seem to be available. '
+              'Please try selecting a different model or check with your '
+              'administrator.',
+        ),
       );
       ref.read(chatMessagesProvider.notifier).addMessage(errorMessage);
     } else {
@@ -2529,11 +2538,13 @@ Please try sending the message again, or try without attachments.''',
       final errorMessage = ChatMessage(
         id: const Uuid().v4(),
         role: 'assistant',
-        content:
-            '❌ An unexpected error occurred while processing your request.\n\n'
-            'Please try again or check your connection.',
+        content: '',
         timestamp: DateTime.now(),
         isStreaming: false,
+        error: const ChatMessageError(
+          content: 'An unexpected error occurred while processing your request. '
+              'Please try again or check your connection.',
+        ),
       );
       ref.read(chatMessagesProvider.notifier).addMessage(errorMessage);
     }
