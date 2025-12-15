@@ -66,52 +66,30 @@ class ProfilePage extends ConsumerWidget {
   }
 
   Scaffold _buildScaffold(BuildContext context, {required Widget body}) {
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
-      backgroundColor: context.sidebarTheme.background,
-      appBar: _buildAppBar(context),
+      backgroundColor: context.conduitTheme.surfaceBackground,
+      extendBodyBehindAppBar: true,
+      appBar: FloatingAppBar(
+        leading: canPop ? const FloatingAppBarBackButton() : null,
+        title: FloatingAppBarTitle(text: l10n.you),
+      ),
       body: body,
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final canPop = ModalRoute.of(context)?.canPop ?? false;
-    return AppBar(
-      backgroundColor: context.sidebarTheme.background,
-      surfaceTintColor: Colors.transparent,
-      elevation: Elevation.none,
-      toolbarHeight: kToolbarHeight,
-      automaticallyImplyLeading: false,
-      leading: canPop
-          ? IconButton(
-              icon: Icon(
-                UiUtils.platformIcon(
-                  ios: CupertinoIcons.back,
-                  android: Icons.arrow_back,
-                ),
-                color: context.conduitTheme.iconPrimary,
-              ),
-              onPressed: () => Navigator.of(context).maybePop(),
-              tooltip: AppLocalizations.of(context)!.back,
-            )
-          : null,
-      titleSpacing: 0,
-      title: Text(
-        AppLocalizations.of(context)!.you,
-        style: AppTypography.headlineSmallStyle.copyWith(
-          color: context.conduitTheme.textPrimary,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      centerTitle: true,
-    );
-  }
-
   Widget _buildCenteredState(BuildContext context, Widget child) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(Spacing.pagePadding),
-        child: Center(child: child),
+    final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight + 24;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        Spacing.pagePadding,
+        topPadding,
+        Spacing.pagePadding,
+        Spacing.pagePadding + MediaQuery.of(context).padding.bottom,
       ),
+      child: Center(child: child),
     );
   }
 
@@ -121,23 +99,26 @@ class ProfilePage extends ConsumerWidget {
     dynamic userData,
     ApiService? api,
   ) {
-    return SafeArea(
-      child: ListView(
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: Spacing.pagePadding,
-          vertical: Spacing.pagePadding,
-        ),
-        children: [
-          _buildProfileHeader(context, userData, api),
-          const SizedBox(height: Spacing.xl),
-          _buildAccountSection(context, ref),
-          const SizedBox(height: Spacing.xl),
-          _buildSupportSection(context),
-        ],
+    // Calculate top padding to account for app bar + safe area
+    final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight + 24;
+
+    return ListView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
       ),
+      padding: EdgeInsets.fromLTRB(
+        Spacing.pagePadding,
+        topPadding,
+        Spacing.pagePadding,
+        Spacing.pagePadding + MediaQuery.of(context).padding.bottom,
+      ),
+      children: [
+        _buildProfileHeader(context, userData, api),
+        const SizedBox(height: Spacing.xl),
+        _buildAccountSection(context, ref),
+        const SizedBox(height: Spacing.xl),
+        _buildSupportSection(context),
+      ],
     );
   }
 

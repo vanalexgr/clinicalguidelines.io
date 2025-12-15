@@ -22,6 +22,7 @@ import '../../../core/utils/user_avatar_utils.dart';
 import '../../../shared/utils/conversation_context_menu.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../../shared/widgets/model_avatar.dart';
+import '../../../shared/widgets/conduit_components.dart';
 import '../../../shared/widgets/responsive_drawer_layout.dart';
 import '../../../core/models/model.dart';
 import '../../../core/models/conversation.dart';
@@ -113,12 +114,26 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   // Legacy helper removed: drawer now uses slivers with lazy delegates.
 
   Widget _buildRefreshableScrollableSlivers({required List<Widget> slivers}) {
+    // Add padding at top and bottom for floating elements
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    final paddedSlivers = <Widget>[
+      // Top padding for floating search bar area (sm + search height + md)
+      const SliverToBoxAdapter(
+        child: SizedBox(height: Spacing.sm + 48 + Spacing.md),
+      ),
+      ...slivers,
+      // Bottom padding for floating user tile area (xl + tile height + md + safe area)
+      SliverToBoxAdapter(
+        child: SizedBox(height: Spacing.xl + 52 + Spacing.md + bottomPadding),
+      ),
+    ];
+
     final scroll = CustomScrollView(
       key: const PageStorageKey<String>('chats_drawer_scroll'),
       controller: _listController,
       physics: const AlwaysScrollableScrollPhysics(),
       cacheExtent: 800,
-      slivers: slivers,
+      slivers: paddedSlivers,
     );
 
     final refreshableScroll = ConduitRefreshIndicator(
@@ -163,96 +178,151 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
         color: sidebarTheme.background,
         border: Border(right: BorderSide(color: sidebarTheme.border)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Spacing.inputPadding,
-              Spacing.sm,
-              Spacing.md,
-              Spacing.sm,
+          // Main scrollable content - extends behind floating elements
+          Positioned.fill(
+            child: _buildConversationList(context),
+          ),
+          // Floating top area with gradient background (matches app bar pattern)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.4, 1.0],
+                  colors: [
+                    sidebarTheme.background,
+                    sidebarTheme.background.withValues(alpha: 0.85),
+                    sidebarTheme.background.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Small top padding
+                  const SizedBox(height: Spacing.sm),
+                  // Floating search bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Spacing.inputPadding,
+                    ),
+                    child: _buildFloatingSearchField(context),
+                  ),
+                  // Gradient fade area below
+                  const SizedBox(height: Spacing.md),
+                ],
+              ),
             ),
-            child: Row(children: [Expanded(child: _buildSearchField(context))]),
           ),
-          Expanded(child: _buildConversationList(context)),
-          Divider(
-            height: 1,
-            color: sidebarTheme.border.withValues(alpha: 0.28),
+          // Floating bottom area with gradient background (matches chat input pattern)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.4, 1.0],
+                  colors: [
+                    sidebarTheme.background.withValues(alpha: 0.0),
+                    sidebarTheme.background.withValues(alpha: 0.85),
+                    sidebarTheme.background,
+                  ],
+                ),
+              ),
+              child: Builder(
+                builder: (context) {
+                  final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Gradient fade area above
+                      const SizedBox(height: Spacing.xl),
+                      // Floating user tile
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          Spacing.screenPadding,
+                          0,
+                          Spacing.screenPadding,
+                          bottomPadding + Spacing.md,
+                        ),
+                        child: _buildFloatingBottomSection(context),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
-          _buildBottomSection(context),
         ],
       ),
     );
   }
 
-  Widget _buildSearchField(BuildContext context) {
-    final sidebarTheme = context.sidebarTheme;
-    return Material(
-      color: Colors.transparent,
-      child: TextField(
-        controller: _searchController,
-        focusNode: _searchFocusNode,
-        onChanged: (_) => _onSearchChanged(),
-        style: AppTypography.standard.copyWith(color: sidebarTheme.foreground),
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: AppLocalizations.of(context)!.searchConversations,
-          hintStyle: AppTypography.standard.copyWith(
-            color: sidebarTheme.foreground.withValues(alpha: 0.6),
+  Widget _buildFloatingSearchField(BuildContext context) {
+    final conduitTheme = context.conduitTheme;
+
+    return FloatingAppBarPill(
+      child: Material(
+        color: Colors.transparent,
+        child: TextField(
+          controller: _searchController,
+          focusNode: _searchFocusNode,
+          onChanged: (_) => _onSearchChanged(),
+          style: AppTypography.standard.copyWith(
+            color: conduitTheme.textPrimary,
           ),
-          prefixIcon: Icon(
-            Platform.isIOS ? CupertinoIcons.search : Icons.search,
-            color: sidebarTheme.foreground.withValues(alpha: 0.7),
-            size: IconSize.input,
-          ),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: TouchTarget.minimum,
-            minHeight: TouchTarget.minimum,
-          ),
-          suffixIcon: _query.isNotEmpty
-              ? IconButton(
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _query = '');
-                    _searchFocusNode.unfocus();
-                  },
-                  icon: Icon(
-                    Platform.isIOS
-                        ? CupertinoIcons.clear_circled_solid
-                        : Icons.clear,
-                    color: sidebarTheme.foreground.withValues(alpha: 0.7),
-                    size: IconSize.input,
-                  ),
-                )
-              : null,
-          suffixIconConstraints: const BoxConstraints(
-            minWidth: TouchTarget.minimum,
-            minHeight: TouchTarget.minimum,
-          ),
-          filled: true,
-          fillColor: sidebarTheme.accent.withValues(alpha: 0.9),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.md),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.md),
-            borderSide: BorderSide(
-              color: sidebarTheme.border.withValues(alpha: 0.28),
-              width: BorderWidth.thin,
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: AppLocalizations.of(context)!.searchConversations,
+            hintStyle: AppTypography.standard.copyWith(
+              color: conduitTheme.textSecondary.withValues(alpha: 0.6),
             ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.md),
-            borderSide: BorderSide(
-              color: sidebarTheme.ring.withValues(alpha: 0.6),
-              width: BorderWidth.thin,
+            prefixIcon: Icon(
+              Platform.isIOS ? CupertinoIcons.search : Icons.search,
+              color: conduitTheme.iconSecondary,
+              size: IconSize.input,
             ),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: Spacing.md,
-            vertical: Spacing.xs,
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: TouchTarget.minimum,
+              minHeight: TouchTarget.minimum,
+            ),
+            suffixIcon: _query.isNotEmpty
+                ? IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _query = '');
+                      _searchFocusNode.unfocus();
+                    },
+                    icon: Icon(
+                      Platform.isIOS
+                          ? CupertinoIcons.clear_circled_solid
+                          : Icons.clear,
+                      color: conduitTheme.iconSecondary,
+                      size: IconSize.input,
+                    ),
+                  )
+                : null,
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: TouchTarget.minimum,
+              minHeight: TouchTarget.minimum,
+            ),
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: Spacing.md,
+              vertical: Spacing.sm,
+            ),
           ),
         ),
       ),
@@ -1608,9 +1678,8 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     }
   }
 
-  Widget _buildBottomSection(BuildContext context) {
-    final theme = context.conduitTheme;
-    final sidebarTheme = context.sidebarTheme;
+  Widget _buildFloatingBottomSection(BuildContext context) {
+    final conduitTheme = context.conduitTheme;
     final authUser = ref.watch(currentUserProvider2);
     final asyncUser = ref.watch(currentUserProvider);
     final user = asyncUser.maybeWhen(
@@ -1630,96 +1699,82 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     final initial = initialFor(displayName);
     final avatarUrl = resolveUserAvatarUrlForUser(api, user);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Spacing.sm, 0, Spacing.sm, Spacing.sm),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (user != null) ...[
-            const SizedBox(height: Spacing.sm),
+    if (user == null) return const SizedBox.shrink();
+
+    return FloatingAppBarPill(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.sm,
+          vertical: Spacing.xs,
+        ),
+        child: Row(
+          children: [
             Container(
-              padding: const EdgeInsets.all(Spacing.sm),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: sidebarTheme.accent.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(AppBorderRadius.small),
+                borderRadius: BorderRadius.circular(
+                  AppBorderRadius.avatar,
+                ),
                 border: Border.all(
-                  color: sidebarTheme.border.withValues(alpha: 0.28),
+                  color: conduitTheme.buttonPrimary.withValues(alpha: 0.25),
                   width: BorderWidth.thin,
                 ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(
-                        AppBorderRadius.avatar,
-                      ),
-                      border: Border.all(
-                        color: theme.buttonPrimary.withValues(alpha: 0.25),
-                        width: BorderWidth.thin,
-                      ),
-                    ),
-                    // Hard-edge clipping is cheaper than anti-aliased clipping
-                    // and sufficient for avatar squares with rounded corners.
-                    clipBehavior: Clip.hardEdge,
-                    child: UserAvatar(
-                      size: 36,
-                      imageUrl: avatarUrl,
-                      fallbackText: initial,
-                    ),
-                  ),
-                  const SizedBox(width: Spacing.sm),
-                  Expanded(
-                    child: Text(
-                      displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.bodySmallStyle.copyWith(
-                        color: sidebarTheme.foreground,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ),
-                  // Notes icon (hidden when feature is disabled)
-                  if (notesEnabled)
-                    IconButton(
-                      tooltip: AppLocalizations.of(context)!.notes,
-                      onPressed: () {
-                        Navigator.of(context).maybePop();
-                        context.pushNamed(RouteNames.notes);
-                      },
-                      visualDensity: VisualDensity.compact,
-                      icon: Icon(
-                        Platform.isIOS
-                            ? CupertinoIcons.doc_text
-                            : Icons.note_alt_outlined,
-                        color: sidebarTheme.foreground.withValues(alpha: 0.8),
-                        size: IconSize.medium,
-                      ),
-                    ),
-                  IconButton(
-                    tooltip: AppLocalizations.of(context)!.manage,
-                    onPressed: () {
-                      Navigator.of(context).maybePop();
-                      context.pushNamed(RouteNames.profile);
-                    },
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      Platform.isIOS
-                          ? CupertinoIcons.settings
-                          : Icons.settings_rounded,
-                      color: sidebarTheme.foreground.withValues(alpha: 0.8),
-                      size: IconSize.medium,
-                    ),
-                  ),
-                ],
+              clipBehavior: Clip.hardEdge,
+              child: UserAvatar(
+                size: 36,
+                imageUrl: avatarUrl,
+                fallbackText: initial,
+              ),
+            ),
+            const SizedBox(width: Spacing.sm),
+            Expanded(
+              child: Text(
+                displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodySmallStyle.copyWith(
+                  color: conduitTheme.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+            // Notes icon (hidden when feature is disabled)
+            if (notesEnabled)
+              IconButton(
+                tooltip: AppLocalizations.of(context)!.notes,
+                onPressed: () {
+                  Navigator.of(context).maybePop();
+                  context.pushNamed(RouteNames.notes);
+                },
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  Platform.isIOS
+                      ? CupertinoIcons.doc_text
+                      : Icons.note_alt_outlined,
+                  color: conduitTheme.iconPrimary,
+                  size: IconSize.medium,
+                ),
+              ),
+            IconButton(
+              tooltip: AppLocalizations.of(context)!.manage,
+              onPressed: () {
+                Navigator.of(context).maybePop();
+                context.pushNamed(RouteNames.profile);
+              },
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                Platform.isIOS
+                    ? CupertinoIcons.settings
+                    : Icons.settings_rounded,
+                color: conduitTheme.iconPrimary,
+                size: IconSize.medium,
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

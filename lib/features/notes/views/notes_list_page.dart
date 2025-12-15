@@ -14,7 +14,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/services/navigation_service.dart';
 import '../../../core/widgets/error_boundary.dart';
 import '../../../shared/theme/theme_extensions.dart';
-import '../../../shared/utils/ui_utils.dart';
+import '../../../shared/widgets/conduit_components.dart';
 import '../../../shared/widgets/improved_loading_states.dart';
 import '../../../shared/widgets/loading_states.dart';
 import '../../../shared/widgets/themed_dialogs.dart';
@@ -122,83 +122,43 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
       return Scaffold(backgroundColor: sidebarTheme.background);
     }
 
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final l10n = AppLocalizations.of(context)!;
+
     return ErrorBoundary(
       child: Scaffold(
-        backgroundColor: sidebarTheme.background,
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(context),
-              _buildSearchField(context),
-              Expanded(child: _buildBody(context)),
-            ],
+        backgroundColor: context.conduitTheme.surfaceBackground,
+        extendBodyBehindAppBar: true,
+        appBar: FloatingAppBar(
+          leading: canPop ? const FloatingAppBarBackButton() : null,
+          title: FloatingAppBarTitle(
+            text: l10n.notes,
+            icon: Platform.isIOS
+                ? CupertinoIcons.doc_text_fill
+                : Icons.notes_rounded,
+          ),
+          bottomHeight: 64,
+          bottom: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Spacing.inputPadding,
+              Spacing.xs,
+              Spacing.inputPadding,
+              Spacing.sm,
+            ),
+            child: _buildFloatingSearchField(context),
           ),
         ),
+        body: _buildBody(context),
         floatingActionButton: _buildFAB(context),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    final sidebarTheme = context.sidebarTheme;
-    final l10n = AppLocalizations.of(context)!;
-    final canPop = ModalRoute.of(context)?.canPop ?? false;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        canPop ? Spacing.xs : Spacing.inputPadding,
-        Spacing.md,
-        Spacing.inputPadding,
-        Spacing.sm,
-      ),
-      child: Row(
-        children: [
-          if (canPop) ...[
-            IconButton(
-              icon: Icon(
-                UiUtils.platformIcon(
-                  ios: CupertinoIcons.back,
-                  android: Icons.arrow_back,
-                ),
-                color: sidebarTheme.foreground.withValues(alpha: 0.8),
-              ),
-              onPressed: () => Navigator.of(context).maybePop(),
-              tooltip: l10n.back,
-            ),
-            const SizedBox(width: Spacing.xs),
-          ],
-          Icon(
-            Platform.isIOS ? CupertinoIcons.doc_text_fill : Icons.notes_rounded,
-            color: sidebarTheme.foreground.withValues(alpha: 0.7),
-            size: IconSize.lg,
-          ),
-          const SizedBox(width: Spacing.sm),
-          Expanded(
-            child: Text(
-              l10n.notes,
-              style: AppTypography.headlineSmallStyle.copyWith(
-                color: sidebarTheme.foreground,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchField(BuildContext context) {
-    final sidebarTheme = context.sidebarTheme;
+  Widget _buildFloatingSearchField(BuildContext context) {
+    final conduitTheme = context.conduitTheme;
     final l10n = AppLocalizations.of(context)!;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Spacing.inputPadding,
-        Spacing.xs,
-        Spacing.inputPadding,
-        Spacing.sm,
-      ),
+    return FloatingAppBarPill(
       child: Material(
         color: Colors.transparent,
         child: TextField(
@@ -206,17 +166,17 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
           focusNode: _searchFocusNode,
           onChanged: (_) => _onSearchChanged(),
           style: AppTypography.standard.copyWith(
-            color: sidebarTheme.foreground,
+            color: conduitTheme.textPrimary,
           ),
           decoration: InputDecoration(
             isDense: true,
             hintText: l10n.searchNotes,
             hintStyle: AppTypography.standard.copyWith(
-              color: sidebarTheme.foreground.withValues(alpha: 0.5),
+              color: conduitTheme.textSecondary.withValues(alpha: 0.6),
             ),
             prefixIcon: Icon(
-              Platform.isIOS ? CupertinoIcons.search : Icons.search_rounded,
-              color: sidebarTheme.foreground.withValues(alpha: 0.6),
+              Platform.isIOS ? CupertinoIcons.search : Icons.search,
+              color: conduitTheme.iconSecondary,
               size: IconSize.input,
             ),
             prefixIconConstraints: const BoxConstraints(
@@ -233,8 +193,8 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
                     icon: Icon(
                       Platform.isIOS
                           ? CupertinoIcons.clear_circled_solid
-                          : Icons.clear_rounded,
-                      color: sidebarTheme.foreground.withValues(alpha: 0.6),
+                          : Icons.clear,
+                      color: conduitTheme.iconSecondary,
                       size: IconSize.input,
                     ),
                   )
@@ -243,26 +203,10 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
               minWidth: TouchTarget.minimum,
               minHeight: TouchTarget.minimum,
             ),
-            filled: true,
-            fillColor: sidebarTheme.accent.withValues(alpha: 0.85),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppBorderRadius.md),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppBorderRadius.md),
-              borderSide: BorderSide(
-                color: sidebarTheme.border.withValues(alpha: 0.2),
-                width: BorderWidth.thin,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppBorderRadius.md),
-              borderSide: BorderSide(
-                color: sidebarTheme.ring.withValues(alpha: 0.5),
-                width: BorderWidth.regular,
-              ),
-            ),
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: Spacing.md,
               vertical: Spacing.sm,
@@ -322,7 +266,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
           );
           slivers.add(
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: Spacing.sm),
+              padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) =>
@@ -347,12 +291,23 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
   }
 
   Widget _buildRefreshableScrollView(List<Widget> slivers) {
+    // Add top padding for floating app bar and search bar
+    final topPadding = MediaQuery.of(context).padding.top;
+    // App bar height: kToolbarHeight + search bar (48) + padding (xs + sm)
+    final appBarHeight = kToolbarHeight + 48 + Spacing.xs + Spacing.sm;
+    final paddedSlivers = <Widget>[
+      SliverToBoxAdapter(
+        child: SizedBox(height: topPadding + appBarHeight),
+      ),
+      ...slivers,
+    ];
+
     return ConduitRefreshIndicator(
       onRefresh: _refreshNotes,
       child: CustomScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        slivers: slivers,
+        slivers: paddedSlivers,
       ),
     );
   }
@@ -691,10 +646,17 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
     final sidebarTheme = context.sidebarTheme;
     final l10n = AppLocalizations.of(context)!;
     final isSearchActive = _query.isNotEmpty;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final appBarHeight = kToolbarHeight + 48 + Spacing.xs + Spacing.sm;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.xxl),
+        padding: EdgeInsets.fromLTRB(
+          Spacing.xxl,
+          topPadding + appBarHeight,
+          Spacing.xxl,
+          Spacing.xxl,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -765,17 +727,29 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
 
   Widget _buildLoading(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Center(child: ImprovedLoadingState(message: l10n.loadingNotes));
+    final topPadding = MediaQuery.of(context).padding.top;
+    final appBarHeight = kToolbarHeight + 48 + Spacing.xs + Spacing.sm;
+    return Padding(
+      padding: EdgeInsets.only(top: topPadding + appBarHeight),
+      child: Center(child: ImprovedLoadingState(message: l10n.loadingNotes)),
+    );
   }
 
   Widget _buildError(BuildContext context, Object error) {
     final theme = context.conduitTheme;
     final sidebarTheme = context.sidebarTheme;
     final l10n = AppLocalizations.of(context)!;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final appBarHeight = kToolbarHeight + 48 + Spacing.xs + Spacing.sm;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.xxl),
+        padding: EdgeInsets.fromLTRB(
+          Spacing.xxl,
+          topPadding + appBarHeight,
+          Spacing.xxl,
+          Spacing.xxl,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

@@ -956,57 +956,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     required Widget child,
     bool isCircular = false,
   }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Use same high-contrast colors as the floating chat input
-    final backgroundColor = isDark
-        ? Color.lerp(context.conduitTheme.cardBackground, Colors.white, 0.08)!
-        : Color.lerp(context.conduitTheme.inputBackground, Colors.black, 0.06)!;
-
-    final borderColor = context.conduitTheme.cardBorder.withValues(
-      alpha: isDark ? 0.65 : 0.55,
-    );
-
-    final borderRadius = isCircular
-        ? BorderRadius.circular(100)
-        : BorderRadius.circular(AppBorderRadius.pill);
-
-    // For circular buttons, ensure the entire widget is constrained to a square
-    if (isCircular) {
-      return SizedBox(
-        width: 44,
-        height: 44,
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: backgroundColor.withValues(alpha: 0.85),
-                borderRadius: borderRadius,
-                border: Border.all(color: borderColor, width: BorderWidth.thin),
-              ),
-              child: Center(child: child),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: backgroundColor.withValues(alpha: 0.85),
-            borderRadius: borderRadius,
-            border: Border.all(color: borderColor, width: BorderWidth.thin),
-          ),
-          child: child,
-        ),
-      ),
+    return FloatingAppBarPill(
+      isCircular: isCircular,
+      child: child,
     );
   }
 
@@ -1550,11 +1502,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             trimmedConversationTitle.isNotEmpty)
         ? trimmedConversationTitle
         : null;
+    // Watch loading state for app bar skeleton
+    final isLoadingConversation = ref.watch(isLoadingConversationProvider);
     final formattedModelName = selectedModel != null
         ? _formatModelDisplayName(selectedModel.name)
         : null;
     final modelLabel = formattedModelName ?? l10n.chooseModel;
-    final hasConversationTitle = displayConversationTitle != null;
+    final hasConversationTitle =
+        displayConversationTitle != null || isLoadingConversation;
     final TextStyle modelTextStyle = hasConversationTitle
         ? AppTypography.small.copyWith(
             color: context.conduitTheme.textSecondary,
@@ -1794,8 +1749,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       : LayoutBuilder(
                           builder: (context, constraints) {
                             // Build title pill (tappable for context menu)
+                            // Show skeleton when loading, actual title otherwise
                             Widget? titlePill;
-                            if (displayConversationTitle != null) {
+                            if (isLoadingConversation) {
+                              // Show skeleton pill while loading conversation
+                              titlePill = _buildAppBarPill(
+                                context: context,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: Spacing.md,
+                                    vertical: Spacing.xs,
+                                  ),
+                                  child: ConduitLoading.skeleton(
+                                    width: 120,
+                                    height: 18,
+                                    borderRadius: BorderRadius.circular(
+                                      AppBorderRadius.sm,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            } else if (displayConversationTitle != null) {
                               titlePill = GestureDetector(
                                 onTap: () {
                                   final conversation = ref.read(
@@ -1843,95 +1817,141 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             }
 
                             // Build model selector pill
-                            final modelPill = GestureDetector(
-                              onTap: () async {
-                                final modelsAsync = ref.read(modelsProvider);
-
-                                if (modelsAsync.isLoading) {
-                                  try {
-                                    final models = await ref.read(
-                                      modelsProvider.future,
-                                    );
-                                    if (!mounted) return;
-                                    // ignore: use_build_context_synchronously
-                                    _showModelDropdown(context, ref, models);
-                                  } catch (e) {
-                                    DebugLogger.error(
-                                      'model-load-failed',
-                                      scope: 'chat/model-selector',
-                                      error: e,
-                                    );
-                                  }
-                                } else if (modelsAsync.hasValue) {
-                                  _showModelDropdown(
-                                    context,
-                                    ref,
-                                    modelsAsync.value!,
-                                  );
-                                } else if (modelsAsync.hasError) {
-                                  try {
-                                    ref.invalidate(modelsProvider);
-                                    final models = await ref.read(
-                                      modelsProvider.future,
-                                    );
-                                    if (!mounted) return;
-                                    // ignore: use_build_context_synchronously
-                                    _showModelDropdown(context, ref, models);
-                                  } catch (e) {
-                                    DebugLogger.error(
-                                      'model-refresh-failed',
-                                      scope: 'chat/model-selector',
-                                      error: e,
-                                    );
-                                  }
-                                }
-                              },
-                              child: _buildAppBarPill(
+                            // Show skeleton when loading, actual model selector otherwise
+                            final Widget modelPill;
+                            if (isLoadingConversation) {
+                              // Show skeleton pill while loading conversation
+                              modelPill = _buildAppBarPill(
                                 context: context,
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: Spacing.sm,
                                     vertical: Spacing.xs,
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxWidth:
-                                              constraints.maxWidth -
-                                              Spacing.xxl,
-                                        ),
-                                        child: MiddleEllipsisText(
-                                          modelLabel,
-                                          style: modelTextStyle,
-                                          textAlign: TextAlign.center,
-                                          semanticsLabel: modelLabel,
-                                        ),
-                                      ),
-                                      const SizedBox(width: Spacing.xs),
-                                      Icon(
-                                        Platform.isIOS
-                                            ? CupertinoIcons.chevron_down
-                                            : Icons.keyboard_arrow_down,
-                                        color:
-                                            context.conduitTheme.iconSecondary,
-                                        size: IconSize.small,
-                                      ),
-                                    ],
+                                  child: ConduitLoading.skeleton(
+                                    width: 80,
+                                    height: 14,
+                                    borderRadius: BorderRadius.circular(
+                                      AppBorderRadius.sm,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
+                              );
+                            } else {
+                              modelPill = GestureDetector(
+                                onTap: () async {
+                                  final modelsAsync = ref.read(modelsProvider);
+
+                                  if (modelsAsync.isLoading) {
+                                    try {
+                                      final models = await ref.read(
+                                        modelsProvider.future,
+                                      );
+                                      if (!mounted) return;
+                                      // ignore: use_build_context_synchronously
+                                      _showModelDropdown(context, ref, models);
+                                    } catch (e) {
+                                      DebugLogger.error(
+                                        'model-load-failed',
+                                        scope: 'chat/model-selector',
+                                        error: e,
+                                      );
+                                    }
+                                  } else if (modelsAsync.hasValue) {
+                                    _showModelDropdown(
+                                      context,
+                                      ref,
+                                      modelsAsync.value!,
+                                    );
+                                  } else if (modelsAsync.hasError) {
+                                    try {
+                                      ref.invalidate(modelsProvider);
+                                      final models = await ref.read(
+                                        modelsProvider.future,
+                                      );
+                                      if (!mounted) return;
+                                      // ignore: use_build_context_synchronously
+                                      _showModelDropdown(context, ref, models);
+                                    } catch (e) {
+                                      DebugLogger.error(
+                                        'model-refresh-failed',
+                                        scope: 'chat/model-selector',
+                                        error: e,
+                                      );
+                                    }
+                                  }
+                                },
+                                child: _buildAppBarPill(
+                                  context: context,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: Spacing.sm,
+                                      vertical: Spacing.xs,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxWidth:
+                                                constraints.maxWidth -
+                                                Spacing.xxl,
+                                          ),
+                                          child: MiddleEllipsisText(
+                                            modelLabel,
+                                            style: modelTextStyle,
+                                            textAlign: TextAlign.center,
+                                            semanticsLabel: modelLabel,
+                                          ),
+                                        ),
+                                        const SizedBox(width: Spacing.xs),
+                                        Icon(
+                                          Platform.isIOS
+                                              ? CupertinoIcons.chevron_down
+                                              : Icons.keyboard_arrow_down,
+                                          color:
+                                              context.conduitTheme.iconSecondary,
+                                          size: IconSize.small,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
 
                             return Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (titlePill != null) ...[
-                                  titlePill,
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    switchInCurve: Curves.easeOut,
+                                    switchOutCurve: Curves.easeIn,
+                                    child: KeyedSubtree(
+                                      key: ValueKey(
+                                        isLoadingConversation
+                                            ? 'loading'
+                                            : 'title-$displayConversationTitle',
+                                      ),
+                                      child: titlePill,
+                                    ),
+                                  ),
                                   const SizedBox(height: Spacing.xs),
                                 ],
-                                modelPill,
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  switchInCurve: Curves.easeOut,
+                                  switchOutCurve: Curves.easeIn,
+                                  child: KeyedSubtree(
+                                    key: ValueKey(
+                                      isLoadingConversation
+                                          ? 'model-loading'
+                                          : 'model-$modelLabel',
+                                    ),
+                                    child: modelPill,
+                                  ),
+                                ),
                                 if (isReviewerMode)
                                   Padding(
                                     padding: const EdgeInsets.only(

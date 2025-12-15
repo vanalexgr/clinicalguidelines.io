@@ -44,79 +44,52 @@ class AppCustomizationPage extends ConsumerWidget {
     final currentLanguageCode = locale?.toLanguageTag() ?? 'system';
     final languageLabel = _resolveLanguageLabel(context, currentLanguageCode);
     final activeTheme = ref.watch(appThemePaletteProvider);
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight + 24;
 
     return Scaffold(
-      backgroundColor: context.sidebarTheme.background,
-      appBar: _buildAppBar(context),
-      body: SafeArea(
-        child: ListView(
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.pagePadding,
-            vertical: Spacing.pagePadding,
-          ),
-          children: [
-            _buildThemesDropdownSection(
-              context,
-              ref,
-              themeMode,
-              themeDescription,
-              activeTheme,
-              settings,
-            ),
-            const SizedBox(height: Spacing.md),
-            _buildLanguageSection(
-              context,
-              ref,
-              currentLanguageCode,
-              languageLabel,
-            ),
-            const SizedBox(height: Spacing.xl),
-            _buildSttSection(context, ref, settings),
-            const SizedBox(height: Spacing.xl),
-            _buildTtsDropdownSection(context, ref, settings),
-            const SizedBox(height: Spacing.xl),
-            _buildChatSection(context, ref, settings),
-            const SizedBox(height: Spacing.xl),
-            _buildSocketHealthSection(context, ref),
-          ],
-        ),
+      backgroundColor: context.conduitTheme.surfaceBackground,
+      extendBodyBehindAppBar: true,
+      appBar: FloatingAppBar(
+        leading: canPop ? const FloatingAppBarBackButton() : null,
+        title: FloatingAppBarTitle(text: l10n.appCustomization),
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final canPop = ModalRoute.of(context)?.canPop ?? false;
-    return AppBar(
-      backgroundColor: context.sidebarTheme.background,
-      surfaceTintColor: Colors.transparent,
-      elevation: Elevation.none,
-      toolbarHeight: kToolbarHeight,
-      automaticallyImplyLeading: false,
-      leading: canPop
-          ? IconButton(
-              icon: Icon(
-                UiUtils.platformIcon(
-                  ios: CupertinoIcons.back,
-                  android: Icons.arrow_back,
-                ),
-                color: context.conduitTheme.iconPrimary,
-              ),
-              onPressed: () => Navigator.of(context).maybePop(),
-              tooltip: AppLocalizations.of(context)!.back,
-            )
-          : null,
-      titleSpacing: 0,
-      title: Text(
-        AppLocalizations.of(context)!.appCustomization,
-        style: AppTypography.headlineSmallStyle.copyWith(
-          color: context.conduitTheme.textPrimary,
-          fontWeight: FontWeight.w600,
+      body: ListView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
         ),
+        padding: EdgeInsets.fromLTRB(
+          Spacing.pagePadding,
+          topPadding,
+          Spacing.pagePadding,
+          Spacing.pagePadding + MediaQuery.of(context).padding.bottom,
+        ),
+        children: [
+          _buildThemesDropdownSection(
+            context,
+            ref,
+            themeMode,
+            themeDescription,
+            activeTheme,
+            settings,
+          ),
+          const SizedBox(height: Spacing.md),
+          _buildLanguageSection(
+            context,
+            ref,
+            currentLanguageCode,
+            languageLabel,
+          ),
+          const SizedBox(height: Spacing.xl),
+          _buildSttSection(context, ref, settings),
+          const SizedBox(height: Spacing.xl),
+          _buildTtsDropdownSection(context, ref, settings),
+          const SizedBox(height: Spacing.xl),
+          _buildChatSection(context, ref, settings),
+          const SizedBox(height: Spacing.xl),
+          _buildSocketHealthSection(context, ref),
+        ],
       ),
-      centerTitle: true,
     );
   }
 

@@ -478,25 +478,19 @@ class _SsoAuthPageState extends ConsumerState<SsoAuthPage> {
     return ErrorBoundary(
       child: Scaffold(
         backgroundColor: context.conduitTheme.surfaceBackground,
-        appBar: AppBar(
-          backgroundColor: context.conduitTheme.surfaceBackground,
-          elevation: 0,
-          leading: ConduitIconButton(
-            icon: Platform.isIOS ? CupertinoIcons.back : Icons.arrow_back,
-            onPressed: () => context.pop(),
-            tooltip: l10n?.back ?? 'Back',
+        extendBodyBehindAppBar: true,
+        appBar: FloatingAppBar(
+          leading: FloatingAppBarBackButton(
+            onTap: () => context.pop(),
           ),
-          title: Text(
-            l10n?.sso ?? 'SSO',
-            style: context.conduitTheme.headingMedium,
-          ),
-          centerTitle: true,
+          title: FloatingAppBarTitle(text: l10n?.sso ?? 'SSO'),
           actions: [
             if (_controller != null)
-              ConduitIconButton(
-                icon: Platform.isIOS ? CupertinoIcons.refresh : Icons.refresh,
-                onPressed: _refresh,
-                tooltip: l10n?.retry ?? 'Retry',
+              FloatingAppBarAction(
+                child: FloatingAppBarIconButton(
+                  icon: Platform.isIOS ? CupertinoIcons.refresh : Icons.refresh,
+                  onTap: _refresh,
+                ),
               ),
           ],
         ),

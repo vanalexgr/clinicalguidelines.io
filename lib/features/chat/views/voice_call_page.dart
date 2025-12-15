@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/markdown_to_text.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/conduit_components.dart';
 import '../providers/chat_providers.dart';
 import '../services/voice_call_service.dart';
 
@@ -155,16 +157,17 @@ class _VoiceCallPageState extends ConsumerState<VoiceCallPage>
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text(l10n.voiceCallTitle),
-        leading: IconButton(
-          icon: const Icon(CupertinoIcons.xmark),
-          onPressed: () async {
+      extendBodyBehindAppBar: true,
+      appBar: FloatingAppBar(
+        leading: FloatingAppBarIconButton(
+          icon: Platform.isIOS ? CupertinoIcons.xmark : Icons.close,
+          onTap: () async {
             await _service?.stopCall();
             if (!context.mounted) return;
             Navigator.of(context).pop();
           },
         ),
+        title: FloatingAppBarTitle(text: l10n.voiceCallTitle),
       ),
       body: SafeArea(
         child: Column(
