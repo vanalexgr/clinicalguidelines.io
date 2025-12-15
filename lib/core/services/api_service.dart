@@ -1048,7 +1048,7 @@ class ApiService {
               'modelIdx': 0,
               'done': true,
               if (ver.files != null) 'files': _sanitizeFilesForWebUI(ver.files),
-              // Mirror follow-ups, code executions, and sources for versions
+              // Mirror follow-ups, code executions, sources, and errors for versions
               if (ver.followUps.isNotEmpty)
                 'followUps': List<String>.from(ver.followUps),
               if (ver.codeExecutions.isNotEmpty)
@@ -1057,6 +1057,8 @@ class ApiService {
                     .toList(),
               if (ver.sources.isNotEmpty)
                 'sources': ver.sources.map((s) => s.toJson()).toList(),
+              // Preserve error field for OpenWebUI compatibility
+              if (ver.error != null) 'error': ver.error!.toJson(),
             };
             // Link into parent (parentForVersions is always non-null here)
             if (messagesMap.containsKey(parentForVersions)) {

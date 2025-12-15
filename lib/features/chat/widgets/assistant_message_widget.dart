@@ -878,13 +878,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                             ),
                     ),
 
-                    // Display error banner if message has an error
-                    if (widget.message is ChatMessage &&
-                        (widget.message as ChatMessage).error != null) ...[
+                    // Display error banner if message or active version has an error
+                    if (_getActiveError() != null) ...[
                       const SizedBox(height: Spacing.sm),
-                      _buildErrorBanner(
-                        (widget.message as ChatMessage).error!,
-                      ),
+                      _buildErrorBanner(_getActiveError()!),
                     ],
 
                     if (hasCodeExecutions) ...[
@@ -931,6 +928,21 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
         );
+  }
+
+  /// Get the error for the currently active message or version.
+  ChatMessageError? _getActiveError() {
+    if (widget.message is! ChatMessage) return null;
+    final msg = widget.message as ChatMessage;
+
+    // If viewing a version, return the version's error
+    if (_activeVersionIndex >= 0 &&
+        _activeVersionIndex < msg.versions.length) {
+      return msg.versions[_activeVersionIndex].error;
+    }
+
+    // Otherwise return the main message's error
+    return msg.error;
   }
 
   /// Build an error banner matching OpenWebUI's error display style.
@@ -1303,8 +1315,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     final messageId = _messageId;
     final hasSpeechText = _ttsPlainText.trim().isNotEmpty;
     // Check for error using the error field (preferred) or legacy content detection
-    final hasErrorField = widget.message is ChatMessage &&
-        (widget.message as ChatMessage).error != null;
+    // Also check the active version's error if viewing a version
+    final activeError = _getActiveError();
+    final hasErrorField = activeError != null;
     final isErrorMessage = hasErrorField ||
         widget.message.content.contains('⚠️') ||
         widget.message.content.contains('Error') ||

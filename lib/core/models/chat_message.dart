@@ -31,7 +31,8 @@ sealed class ChatMessage with _$ChatMessage {
     List<ChatSourceReference> sources,
     Map<String, dynamic>? usage,
     // Previous generated versions of this assistant message (OpenWebUI-style)
-    @JsonKey(includeFromJson: false, includeToJson: false)
+    // Parsed from sibling messages in OpenWebUI history
+    @JsonKey(fromJson: _versionsFromJson, toJson: _versionsToJson)
     @Default(<ChatMessageVersion>[])
     List<ChatMessageVersion> versions,
     // Error information from OpenWebUI (stored separately from content)
@@ -134,6 +135,9 @@ abstract class ChatMessageVersion with _$ChatMessageVersion {
     @Default(<String>[]) List<String> followUps,
     @Default(<ChatCodeExecution>[]) List<ChatCodeExecution> codeExecutions,
     Map<String, dynamic>? usage,
+    // Error information preserved from the original message
+    @JsonKey(fromJson: _chatMessageErrorFromJson, toJson: _chatMessageErrorToJson)
+    ChatMessageError? error,
   }) = _ChatMessageVersion;
 
   factory ChatMessageVersion.fromJson(Map<String, dynamic> json) =>
@@ -280,6 +284,35 @@ int? _safeInt(dynamic value) {
 
 List<String> _stringListToJson(List<String> value) =>
     List<String>.from(value, growable: false);
+
+/// Parse ChatMessageVersion list from JSON.
+List<ChatMessageVersion> _versionsFromJson(dynamic value) {
+  if (value is List) {
+    return value
+        .whereType<Map>()
+        .map((item) {
+          try {
+            final Map<String, dynamic> versionMap = {};
+            item.forEach((key, v) {
+              versionMap[key.toString()] = v;
+            });
+            return ChatMessageVersion.fromJson(versionMap);
+          } catch (e) {
+            // Skip invalid entries
+            return null;
+          }
+        })
+        .where((item) => item != null)
+        .cast<ChatMessageVersion>()
+        .toList(growable: false);
+  }
+  return const [];
+}
+
+/// Convert ChatMessageVersion list to JSON.
+List<Map<String, dynamic>> _versionsToJson(List<ChatMessageVersion> versions) {
+  return versions.map((v) => v.toJson()).toList(growable: false);
+}
 
 List<ChatStatusItem> _statusItemsFromJson(dynamic value) {
   if (value is List) {
