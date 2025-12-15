@@ -879,5 +879,38 @@
   "ldapNotEnabled": "此伺服器未啟用 LDAP 驗證",
   "ssoPlatformNotSupported": "此平台不支援 SSO 驗證。請改用憑據或 LDAP 驗證。",
   "continueWithProvider": "使用 {provider} 繼續",
-  "or": "或"
+  "or": "或",
+  "usageInfo": "資訊",
+  "usageInfoTitle": "回應統計",
+  "usageTokenGeneration": "Token 生成",
+  "usagePromptEval": "提示處理",
+  "usageTotalDuration": "總耗時",
+  "usageTokensPerSecond": "{speed} t/s",
+  "@usageTokensPerSecond": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "usageTokenCount": "{count} 個 token",
+  "@usageTokenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "usageSecondsFormat": "{seconds}秒",
+  "@usageSecondsFormat": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "usageLoadDuration": "模型載入時間",
+  "usageQueueTime": "排隊時間",
+  "usageReasoningTokens": "推理 token",
+  "usageTotalTokens": "總 token"
 }

@@ -156,6 +156,12 @@ sealed class Model with _$Model {
       }
     }
 
+    // Extract usage capability from info.meta.capabilities (OpenWebUI format)
+    // This indicates whether the model supports stream_options.include_usage
+    final infoMetaCapabilities =
+        infoMeta?['capabilities'] as Map<String, dynamic>?;
+    final supportsUsage = infoMetaCapabilities?['usage'] == true;
+
     // Fallback to top-level toolIds (for cached models serialized via toJson)
     if (toolIds == null || toolIds.isEmpty) {
       final topLevelToolIds = json['toolIds'];
@@ -199,6 +205,7 @@ sealed class Model with _$Model {
         'pricing': json['pricing'],
         'context_length': json['context_length'],
         'supported_parameters': supportedParamsList ?? supportedParams,
+        'usage': supportsUsage,
       },
       metadata: mergedMetadata,
       toolIds: toolIds,

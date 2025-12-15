@@ -879,5 +879,38 @@
   "ldapNotEnabled": "LDAP-аутентификация не включена на этом сервере",
   "ssoPlatformNotSupported": "SSO-аутентификация не поддерживается на этой платформе. Пожалуйста, используйте учётные данные или LDAP-аутентификацию.",
   "continueWithProvider": "Продолжить с {provider}",
-  "or": "или"
+  "or": "или",
+  "usageInfo": "Инфо",
+  "usageInfoTitle": "Статистика ответа",
+  "usageTokenGeneration": "Генерация токенов",
+  "usagePromptEval": "Обработка промпта",
+  "usageTotalDuration": "Общая длительность",
+  "usageTokensPerSecond": "{speed} т/с",
+  "@usageTokensPerSecond": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "usageTokenCount": "{count} токенов",
+  "@usageTokenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "usageSecondsFormat": "{seconds}с",
+  "@usageSecondsFormat": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "usageLoadDuration": "Время загрузки модели",
+  "usageQueueTime": "Время в очереди",
+  "usageReasoningTokens": "Токены рассуждений",
+  "usageTotalTokens": "Всего токенов"
 }

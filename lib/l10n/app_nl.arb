@@ -879,5 +879,38 @@
   "ldapNotEnabled": "LDAP-authenticatie is niet ingeschakeld op deze server",
   "ssoPlatformNotSupported": "SSO-authenticatie wordt niet ondersteund op dit platform. Gebruik in plaats daarvan inloggegevens of LDAP-authenticatie.",
   "continueWithProvider": "Doorgaan met {provider}",
-  "or": "of"
+  "or": "of",
+  "usageInfo": "Info",
+  "usageInfoTitle": "Antwoordstatistieken",
+  "usageTokenGeneration": "Tokengeneratie",
+  "usagePromptEval": "Promptverwerking",
+  "usageTotalDuration": "Totale duur",
+  "usageTokensPerSecond": "{speed} t/s",
+  "@usageTokensPerSecond": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "usageTokenCount": "{count} tokens",
+  "@usageTokenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "usageSecondsFormat": "{seconds}s",
+  "@usageSecondsFormat": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "usageLoadDuration": "Modellaadtijd",
+  "usageQueueTime": "Wachttijd",
+  "usageReasoningTokens": "Redeneertokens",
+  "usageTotalTokens": "Totaal tokens"
 }

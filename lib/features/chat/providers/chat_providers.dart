@@ -1521,6 +1521,10 @@ Future<void> regenerateMessage(
       'actions': <dynamic>[],
       'filters': <dynamic>[],
       'tags': <dynamic>[],
+      // Include capabilities from the actual model for usage stats support
+      'capabilities': selectedModel.capabilities,
+      // Include info/metadata for usage capability detection
+      'info': selectedModel.metadata?['info'],
     };
 
     // WebSocket-only streaming requires socket connection
@@ -2217,6 +2221,10 @@ Future<void> _sendMessageInternal(
       'actions': <dynamic>[],
       'filters': <dynamic>[],
       'tags': <dynamic>[],
+      // Include capabilities from the actual model for usage stats support
+      'capabilities': selectedModel.capabilities,
+      // Include info/metadata for usage capability detection
+      'info': selectedModel.metadata?['info'],
     };
 
     // WebSocket-only streaming requires socket connection.

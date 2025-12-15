@@ -576,12 +576,15 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
 
       setFollowUps(assistant.id, assistant.followUps);
       updateMessageById(assistant.id, (current) {
+        // Preserve existing usage if server doesn't have it yet (issue #274)
+        // Usage is captured from streaming but may not be persisted on server
+        final effectiveUsage = assistant.usage ?? current.usage;
         return current.copyWith(
           followUps: List<String>.from(assistant.followUps),
           statusHistory: assistant.statusHistory,
           sources: assistant.sources,
           metadata: {...?current.metadata, ...?assistant.metadata},
-          usage: assistant.usage,
+          usage: effectiveUsage,
         );
       });
     } catch (_) {
@@ -638,6 +641,14 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
             }
             try {
               final Map<String, dynamic> j = jsonDecode(dataStr);
+
+              // Capture usage statistics from OpenAI-style streaming (issue #274)
+              // Usage is sent in the final chunk with stream_options.include_usage
+              final usageData = j['usage'];
+              if (usageData is Map<String, dynamic> && usageData.isNotEmpty) {
+                updateLastMessageWith((m) => m.copyWith(usage: usageData));
+              }
+
               final choices = j['choices'];
               if (choices is List && choices.isNotEmpty) {
                 final choice = choices.first;
@@ -746,6 +757,18 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
 
       if (type == 'chat:completion' && payload != null) {
         if (payload is Map<String, dynamic>) {
+          // Capture usage statistics whenever they appear (issue #274)
+          // Usage may come in a separate payload before the done:true payload
+          final usageData = payload['usage'];
+          if (usageData is Map<String, dynamic> && usageData.isNotEmpty) {
+            final targetId = _resolveTargetMessageId(messageId, getMessages);
+            if (targetId != null) {
+              updateMessageById(targetId, (current) {
+                return current.copyWith(usage: usageData);
+              });
+            }
+          }
+
           final rawSources = payload['sources'] ?? payload['citations'];
           final normalizedSources = _normalizeSourcesPayload(rawSources);
           if (normalizedSources != null && normalizedSources.isNotEmpty) {
@@ -832,18 +855,55 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
           }
           if (payload['done'] == true) {
             try {
+              // Get current messages to send with usage data (issue #274)
+              final currentMessages = getMessages();
+              final messagesForCompleted = currentMessages.map((m) {
+                final msgMap = <String, dynamic>{
+                  'id': m.id,
+                  'role': m.role,
+                  'content': m.content,
+                  'timestamp': m.timestamp.millisecondsSinceEpoch ~/ 1000,
+                };
+                if (m.role == 'assistant' && m.usage != null) {
+                  msgMap['usage'] = m.usage;
+                }
+                if (m.sources.isNotEmpty) {
+                  msgMap['sources'] = m.sources.map((s) => s.toJson()).toList();
+                }
+                return msgMap;
+              }).toList();
+
+              // Send chatCompleted to run any filters/actions
               // ignore: unawaited_futures
               api.sendChatCompleted(
                 chatId: activeConversationId ?? '',
                 messageId: assistantMessageId,
-                messages: const [],
+                messages: messagesForCompleted,
                 model: modelId,
                 modelItem: modelItem,
                 sessionId: sessionId,
               );
-            } catch (_) {}
 
-            Future.microtask(refreshConversationSnapshot);
+              // Sync conversation to persist usage data (issue #274)
+              // chatCompleted doesn't persist - syncConversationMessages does
+              final chatId = activeConversationId;
+              if (chatId != null && chatId.isNotEmpty) {
+                // ignore: unawaited_futures
+                api.syncConversationMessages(
+                  chatId,
+                  currentMessages,
+                  model: modelId,
+                );
+              }
+            } catch (_) {
+              // Non-critical - continue if sync fails
+            }
+
+            // Delay snapshot refresh to allow backend to persist data
+            Future.delayed(
+              const Duration(milliseconds: 500),
+              refreshConversationSnapshot,
+            );
 
             final msgs = getMessages();
             if (msgs.isNotEmpty && msgs.last.role == 'assistant') {

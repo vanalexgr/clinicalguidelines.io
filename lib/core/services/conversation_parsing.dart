@@ -305,6 +305,10 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
       ? historyMsg['sources'] ?? historyMsg['citations']
       : msgData['sources'] ?? msgData['citations'];
 
+  // Parse usage data - Open WebUI stores this in 'usage' field on messages
+  final rawUsage = _coerceJsonMap(historyMsg?['usage'] ?? msgData['usage']);
+  final Map<String, dynamic>? usage = rawUsage.isEmpty ? null : rawUsage;
+
   return <String, dynamic>{
     'id': (msgData['id'] ?? _uuid.v4()).toString(),
     'role': role,
@@ -319,7 +323,7 @@ Map<String, dynamic> _parseOpenWebUIMessageToJson(
     'followUps': _coerceStringList(followUpsRaw),
     'codeExecutions': _parseCodeExecutionsField(codeExecRaw),
     'sources': _parseSourcesField(sourcesRaw),
-    'usage': _coerceJsonMap(msgData['usage']),
+    'usage': usage,
     'versions': const <Map<String, dynamic>>[],
   };
 }

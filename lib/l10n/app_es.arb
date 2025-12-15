@@ -879,5 +879,38 @@
   "ldapNotEnabled": "La autenticación LDAP no está habilitada en este servidor",
   "ssoPlatformNotSupported": "La autenticación SSO no es compatible con esta plataforma. Por favor, use credenciales o autenticación LDAP en su lugar.",
   "continueWithProvider": "Continuar con {provider}",
-  "or": "o"
+  "or": "o",
+  "usageInfo": "Info",
+  "usageInfoTitle": "Estadísticas de respuesta",
+  "usageTokenGeneration": "Generación de tokens",
+  "usagePromptEval": "Procesamiento del prompt",
+  "usageTotalDuration": "Duración total",
+  "usageTokensPerSecond": "{speed} t/s",
+  "@usageTokensPerSecond": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "usageTokenCount": "{count} tokens",
+  "@usageTokenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "usageSecondsFormat": "{seconds}s",
+  "@usageSecondsFormat": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "usageLoadDuration": "Tiempo de carga del modelo",
+  "usageQueueTime": "Tiempo en cola",
+  "usageReasoningTokens": "Tokens de razonamiento",
+  "usageTotalTokens": "Tokens totales"
 }
