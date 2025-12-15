@@ -956,57 +956,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     required Widget child,
     bool isCircular = false,
   }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Use same high-contrast colors as the floating chat input
-    final backgroundColor = isDark
-        ? Color.lerp(context.conduitTheme.cardBackground, Colors.white, 0.08)!
-        : Color.lerp(context.conduitTheme.inputBackground, Colors.black, 0.06)!;
-
-    final borderColor = context.conduitTheme.cardBorder.withValues(
-      alpha: isDark ? 0.65 : 0.55,
-    );
-
-    final borderRadius = isCircular
-        ? BorderRadius.circular(100)
-        : BorderRadius.circular(AppBorderRadius.pill);
-
-    // For circular buttons, ensure the entire widget is constrained to a square
-    if (isCircular) {
-      return SizedBox(
-        width: 44,
-        height: 44,
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: backgroundColor.withValues(alpha: 0.85),
-                borderRadius: borderRadius,
-                border: Border.all(color: borderColor, width: BorderWidth.thin),
-              ),
-              child: Center(child: child),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: backgroundColor.withValues(alpha: 0.85),
-            borderRadius: borderRadius,
-            border: Border.all(color: borderColor, width: BorderWidth.thin),
-          ),
-          child: child,
-        ),
-      ),
+    return FloatingAppBarPill(
+      isCircular: isCircular,
+      child: child,
     );
   }
 

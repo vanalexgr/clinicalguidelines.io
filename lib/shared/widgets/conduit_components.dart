@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/theme_extensions.dart';
@@ -9,6 +11,307 @@ import '../../core/services/settings_service.dart';
 
 /// Unified component library following Conduit design patterns
 /// This provides consistent, reusable UI components throughout the app
+
+// =============================================================================
+// FLOATING APP BAR COMPONENTS
+// =============================================================================
+
+/// A pill-shaped container with blur effect for floating app bar elements.
+/// Used for back buttons, titles, and action buttons in the floating app bar.
+class FloatingAppBarPill extends StatelessWidget {
+  final Widget child;
+  final bool isCircular;
+
+  const FloatingAppBarPill({
+    super.key,
+    required this.child,
+    this.isCircular = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final conduitTheme = context.conduitTheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final backgroundColor = isDark
+        ? Color.lerp(conduitTheme.cardBackground, Colors.white, 0.08)!
+        : Color.lerp(conduitTheme.inputBackground, Colors.black, 0.06)!;
+
+    final borderColor = conduitTheme.cardBorder.withValues(
+      alpha: isDark ? 0.65 : 0.55,
+    );
+
+    final borderRadius = isCircular
+        ? BorderRadius.circular(100)
+        : BorderRadius.circular(AppBorderRadius.pill);
+
+    if (isCircular) {
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: backgroundColor.withValues(alpha: 0.85),
+                borderRadius: borderRadius,
+                border: Border.all(color: borderColor, width: BorderWidth.thin),
+              ),
+              child: Center(child: child),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: backgroundColor.withValues(alpha: 0.85),
+            borderRadius: borderRadius,
+            border: Border.all(color: borderColor, width: BorderWidth.thin),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// A floating app bar with gradient background and pill-shaped elements.
+/// Provides a consistent app bar style across the app with blur effects.
+///
+/// Supports:
+/// - Simple title with optional leading/actions
+/// - Custom title widget for complex layouts
+/// - Bottom widget for search bars or other content
+/// - Flexible actions positioning
+class FloatingAppBar extends StatelessWidget implements PreferredSizeWidget {
+  /// Leading widget (typically a back button or menu button)
+  final Widget? leading;
+
+  /// Title widget - can be a simple [FloatingAppBarTitle] or custom widget
+  final Widget title;
+
+  /// Action widgets displayed on the right side
+  final List<Widget>? actions;
+
+  /// Bottom widget displayed below the main row (e.g., search bar)
+  final Widget? bottom;
+
+  /// Height of the bottom widget (used for preferredSize calculation)
+  final double bottomHeight;
+
+  /// Whether to show a trailing spacer when there's a leading widget but no actions
+  /// Set to false if you want the title to use all available space
+  final bool balanceLeading;
+
+  const FloatingAppBar({
+    super.key,
+    this.leading,
+    required this.title,
+    this.actions,
+    this.bottom,
+    this.bottomHeight = 0,
+    this.balanceLeading = true,
+  });
+
+  @override
+  Size get preferredSize => Size.fromHeight(kToolbarHeight + bottomHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: const [0.0, 0.4, 1.0],
+          colors: [
+            theme.scaffoldBackgroundColor,
+            theme.scaffoldBackgroundColor.withValues(alpha: 0.85),
+            theme.scaffoldBackgroundColor.withValues(alpha: 0.0),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: kToolbarHeight,
+              child: Row(
+                children: [
+                  // Leading
+                  if (leading != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: Spacing.inputPadding),
+                      child: Center(child: leading),
+                    )
+                  else
+                    const SizedBox(width: Spacing.inputPadding),
+                  // Title centered
+                  Expanded(
+                    child: Center(child: title),
+                  ),
+                  // Actions or trailing spacer
+                  if (actions != null && actions!.isNotEmpty)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: actions!,
+                    )
+                  else if (leading != null && balanceLeading)
+                    const SizedBox(width: 44 + Spacing.inputPadding)
+                  else
+                    const SizedBox(width: Spacing.inputPadding),
+                ],
+              ),
+            ),
+            if (bottom != null) bottom!,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Helper to build a standard floating app bar title pill with text.
+class FloatingAppBarTitle extends StatelessWidget {
+  final String text;
+  final IconData? icon;
+
+  const FloatingAppBarTitle({
+    super.key,
+    required this.text,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final conduitTheme = context.conduitTheme;
+
+    return FloatingAppBarPill(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.md,
+          vertical: Spacing.xs,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                color: conduitTheme.textPrimary.withValues(alpha: 0.7),
+                size: IconSize.md,
+              ),
+              const SizedBox(width: Spacing.sm),
+            ],
+            Text(
+              text,
+              style: AppTypography.headlineSmallStyle.copyWith(
+                color: conduitTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Helper to build a standard floating app bar back button.
+class FloatingAppBarBackButton extends StatelessWidget {
+  final VoidCallback? onTap;
+  final IconData? icon;
+
+  const FloatingAppBarBackButton({
+    super.key,
+    this.onTap,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final conduitTheme = context.conduitTheme;
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+
+    return GestureDetector(
+      onTap: onTap ?? () => Navigator.of(context).maybePop(),
+      child: FloatingAppBarPill(
+        isCircular: true,
+        child: Icon(
+          icon ?? (isIOS ? Icons.arrow_back_ios_new : Icons.arrow_back),
+          color: conduitTheme.textPrimary,
+          size: IconSize.appBar,
+        ),
+      ),
+    );
+  }
+}
+
+/// Helper to build a floating app bar icon button (circular pill with icon).
+class FloatingAppBarIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  final Color? iconColor;
+
+  const FloatingAppBarIconButton({
+    super.key,
+    required this.icon,
+    this.onTap,
+    this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final conduitTheme = context.conduitTheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: FloatingAppBarPill(
+        isCircular: true,
+        child: Icon(
+          icon,
+          color: iconColor ?? conduitTheme.textPrimary,
+          size: IconSize.appBar,
+        ),
+      ),
+    );
+  }
+}
+
+/// Helper to build a floating app bar action with padding.
+class FloatingAppBarAction extends StatelessWidget {
+  final Widget child;
+
+  const FloatingAppBarAction({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: Spacing.inputPadding),
+      child: Center(child: child),
+    );
+  }
+}
+
+// =============================================================================
+// EXISTING COMPONENTS
+// =============================================================================
 
 class ConduitButton extends ConsumerWidget {
   final String text;

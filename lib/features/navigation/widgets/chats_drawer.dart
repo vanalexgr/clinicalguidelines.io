@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +22,7 @@ import '../../../core/utils/user_avatar_utils.dart';
 import '../../../shared/utils/conversation_context_menu.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../../shared/widgets/model_avatar.dart';
+import '../../../shared/widgets/conduit_components.dart';
 import '../../../shared/widgets/responsive_drawer_layout.dart';
 import '../../../core/models/model.dart';
 import '../../../core/models/conversation.dart';
@@ -268,81 +268,60 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   }
 
   Widget _buildFloatingSearchField(BuildContext context) {
-    final theme = Theme.of(context);
     final conduitTheme = context.conduitTheme;
-    final isDark = theme.brightness == Brightness.dark;
 
-    final backgroundColor = isDark
-        ? Color.lerp(conduitTheme.cardBackground, Colors.white, 0.08)!
-        : Color.lerp(conduitTheme.inputBackground, Colors.black, 0.06)!;
-
-    final borderColor = conduitTheme.cardBorder.withValues(
-      alpha: isDark ? 0.65 : 0.55,
-    );
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppBorderRadius.pill),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: backgroundColor.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.circular(AppBorderRadius.pill),
-            border: Border.all(color: borderColor, width: BorderWidth.thin),
+    return FloatingAppBarPill(
+      child: Material(
+        color: Colors.transparent,
+        child: TextField(
+          controller: _searchController,
+          focusNode: _searchFocusNode,
+          onChanged: (_) => _onSearchChanged(),
+          style: AppTypography.standard.copyWith(
+            color: conduitTheme.textPrimary,
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              onChanged: (_) => _onSearchChanged(),
-              style: AppTypography.standard.copyWith(
-                color: conduitTheme.textPrimary,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: AppLocalizations.of(context)!.searchConversations,
-                hintStyle: AppTypography.standard.copyWith(
-                  color: conduitTheme.textSecondary.withValues(alpha: 0.6),
-                ),
-                prefixIcon: Icon(
-                  Platform.isIOS ? CupertinoIcons.search : Icons.search,
-                  color: conduitTheme.iconSecondary,
-                  size: IconSize.input,
-                ),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: TouchTarget.minimum,
-                  minHeight: TouchTarget.minimum,
-                ),
-                suffixIcon: _query.isNotEmpty
-                    ? IconButton(
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                          _searchFocusNode.unfocus();
-                        },
-                        icon: Icon(
-                          Platform.isIOS
-                              ? CupertinoIcons.clear_circled_solid
-                              : Icons.clear,
-                          color: conduitTheme.iconSecondary,
-                          size: IconSize.input,
-                        ),
-                      )
-                    : null,
-                suffixIconConstraints: const BoxConstraints(
-                  minWidth: TouchTarget.minimum,
-                  minHeight: TouchTarget.minimum,
-                ),
-                filled: false,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.md,
-                  vertical: Spacing.sm,
-                ),
-              ),
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: AppLocalizations.of(context)!.searchConversations,
+            hintStyle: AppTypography.standard.copyWith(
+              color: conduitTheme.textSecondary.withValues(alpha: 0.6),
+            ),
+            prefixIcon: Icon(
+              Platform.isIOS ? CupertinoIcons.search : Icons.search,
+              color: conduitTheme.iconSecondary,
+              size: IconSize.input,
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: TouchTarget.minimum,
+              minHeight: TouchTarget.minimum,
+            ),
+            suffixIcon: _query.isNotEmpty
+                ? IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _query = '');
+                      _searchFocusNode.unfocus();
+                    },
+                    icon: Icon(
+                      Platform.isIOS
+                          ? CupertinoIcons.clear_circled_solid
+                          : Icons.clear,
+                      color: conduitTheme.iconSecondary,
+                      size: IconSize.input,
+                    ),
+                  )
+                : null,
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: TouchTarget.minimum,
+              minHeight: TouchTarget.minimum,
+            ),
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: Spacing.md,
+              vertical: Spacing.sm,
             ),
           ),
         ),
@@ -1700,9 +1679,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   }
 
   Widget _buildFloatingBottomSection(BuildContext context) {
-    final theme = Theme.of(context);
     final conduitTheme = context.conduitTheme;
-    final isDark = theme.brightness == Brightness.dark;
     final authUser = ref.watch(currentUserProvider2);
     final asyncUser = ref.watch(currentUserProvider);
     final user = asyncUser.maybeWhen(
@@ -1722,98 +1699,81 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     final initial = initialFor(displayName);
     final avatarUrl = resolveUserAvatarUrlForUser(api, user);
 
-    final backgroundColor = isDark
-        ? Color.lerp(conduitTheme.cardBackground, Colors.white, 0.08)!
-        : Color.lerp(conduitTheme.inputBackground, Colors.black, 0.06)!;
-
-    final borderColor = conduitTheme.cardBorder.withValues(
-      alpha: isDark ? 0.65 : 0.55,
-    );
-
     if (user == null) return const SizedBox.shrink();
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppBorderRadius.pill),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.sm,
-            vertical: Spacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: backgroundColor.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.circular(AppBorderRadius.pill),
-            border: Border.all(color: borderColor, width: BorderWidth.thin),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(
-                    AppBorderRadius.avatar,
-                  ),
-                  border: Border.all(
-                    color: conduitTheme.buttonPrimary.withValues(alpha: 0.25),
-                    width: BorderWidth.thin,
-                  ),
+    return FloatingAppBarPill(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.sm,
+          vertical: Spacing.xs,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(
+                  AppBorderRadius.avatar,
                 ),
-                clipBehavior: Clip.hardEdge,
-                child: UserAvatar(
-                  size: 36,
-                  imageUrl: avatarUrl,
-                  fallbackText: initial,
+                border: Border.all(
+                  color: conduitTheme.buttonPrimary.withValues(alpha: 0.25),
+                  width: BorderWidth.thin,
                 ),
               ),
-              const SizedBox(width: Spacing.sm),
-              Expanded(
-                child: Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodySmallStyle.copyWith(
-                    color: conduitTheme.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.none,
-                  ),
+              clipBehavior: Clip.hardEdge,
+              child: UserAvatar(
+                size: 36,
+                imageUrl: avatarUrl,
+                fallbackText: initial,
+              ),
+            ),
+            const SizedBox(width: Spacing.sm),
+            Expanded(
+              child: Text(
+                displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodySmallStyle.copyWith(
+                  color: conduitTheme.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.none,
                 ),
               ),
-              // Notes icon (hidden when feature is disabled)
-              if (notesEnabled)
-                IconButton(
-                  tooltip: AppLocalizations.of(context)!.notes,
-                  onPressed: () {
-                    Navigator.of(context).maybePop();
-                    context.pushNamed(RouteNames.notes);
-                  },
-                  visualDensity: VisualDensity.compact,
-                  icon: Icon(
-                    Platform.isIOS
-                        ? CupertinoIcons.doc_text
-                        : Icons.note_alt_outlined,
-                    color: conduitTheme.iconPrimary,
-                    size: IconSize.medium,
-                  ),
-                ),
+            ),
+            // Notes icon (hidden when feature is disabled)
+            if (notesEnabled)
               IconButton(
-                tooltip: AppLocalizations.of(context)!.manage,
+                tooltip: AppLocalizations.of(context)!.notes,
                 onPressed: () {
                   Navigator.of(context).maybePop();
-                  context.pushNamed(RouteNames.profile);
+                  context.pushNamed(RouteNames.notes);
                 },
                 visualDensity: VisualDensity.compact,
                 icon: Icon(
                   Platform.isIOS
-                      ? CupertinoIcons.settings
-                      : Icons.settings_rounded,
+                      ? CupertinoIcons.doc_text
+                      : Icons.note_alt_outlined,
                   color: conduitTheme.iconPrimary,
                   size: IconSize.medium,
                 ),
               ),
-            ],
-          ),
+            IconButton(
+              tooltip: AppLocalizations.of(context)!.manage,
+              onPressed: () {
+                Navigator.of(context).maybePop();
+                context.pushNamed(RouteNames.profile);
+              },
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                Platform.isIOS
+                    ? CupertinoIcons.settings
+                    : Icons.settings_rounded,
+                color: conduitTheme.iconPrimary,
+                size: IconSize.medium,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -15,6 +15,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/widgets/error_boundary.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/utils/ui_utils.dart';
+import '../../../shared/widgets/conduit_components.dart';
 import '../../../shared/widgets/improved_loading_states.dart';
 import '../../../shared/widgets/middle_ellipsis_text.dart';
 import '../../../shared/widgets/themed_dialogs.dart';
@@ -815,55 +816,9 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     Widget child, {
     bool isCircular = false,
   }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    final backgroundColor = isDark
-        ? Color.lerp(context.conduitTheme.cardBackground, Colors.white, 0.08)!
-        : Color.lerp(context.conduitTheme.inputBackground, Colors.black, 0.06)!;
-
-    final borderColor = context.conduitTheme.cardBorder.withValues(
-      alpha: isDark ? 0.65 : 0.55,
-    );
-
-    final borderRadius = isCircular
-        ? BorderRadius.circular(100)
-        : BorderRadius.circular(AppBorderRadius.pill);
-
-    if (isCircular) {
-      return SizedBox(
-        width: 44,
-        height: 44,
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: backgroundColor.withValues(alpha: 0.85),
-                borderRadius: borderRadius,
-                border: Border.all(color: borderColor, width: BorderWidth.thin),
-              ),
-              child: Center(child: child),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: backgroundColor.withValues(alpha: 0.85),
-            borderRadius: borderRadius,
-            border: Border.all(color: borderColor, width: BorderWidth.thin),
-          ),
-          child: child,
-        ),
-      ),
+    return FloatingAppBarPill(
+      isCircular: isCircular,
+      child: child,
     );
   }
 

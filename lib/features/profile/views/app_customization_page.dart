@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -48,88 +47,12 @@ class AppCustomizationPage extends ConsumerWidget {
     final canPop = ModalRoute.of(context)?.canPop ?? false;
     final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight + 24;
 
-    final theme = Theme.of(context);
-    final conduitTheme = context.conduitTheme;
-
     return Scaffold(
-      backgroundColor: conduitTheme.surfaceBackground,
+      backgroundColor: context.conduitTheme.surfaceBackground,
       extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight + 8),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: const [0.0, 0.4, 1.0],
-              colors: [
-                theme.scaffoldBackgroundColor,
-                theme.scaffoldBackgroundColor.withValues(alpha: 0.85),
-                theme.scaffoldBackgroundColor.withValues(alpha: 0.0),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: kToolbarHeight,
-              child: Row(
-                children: [
-                  // Leading (back button)
-                  if (canPop)
-                    Padding(
-                      padding: const EdgeInsets.only(left: Spacing.inputPadding),
-                      child: Center(
-                        child: GestureDetector(
-                          onTap: () => Navigator.of(context).maybePop(),
-                          child: _buildAppBarPill(
-                            context,
-                            Icon(
-                              UiUtils.platformIcon(
-                                ios: CupertinoIcons.back,
-                                android: Icons.arrow_back,
-                              ),
-                              color: conduitTheme.textPrimary,
-                              size: IconSize.appBar,
-                            ),
-                            isCircular: true,
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox(width: Spacing.inputPadding),
-                  // Title centered
-                  Expanded(
-                    child: Center(
-                      child: _buildAppBarPill(
-                        context,
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: Spacing.md,
-                            vertical: Spacing.xs,
-                          ),
-                          child: Text(
-                            l10n.appCustomization,
-                            style: AppTypography.headlineSmallStyle.copyWith(
-                              color: conduitTheme.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Trailing spacer to balance
-                  if (canPop)
-                    const SizedBox(width: 44 + Spacing.inputPadding)
-                  else
-                    const SizedBox(width: Spacing.inputPadding),
-                ],
-              ),
-            ),
-          ),
-        ),
+      appBar: FloatingAppBar(
+        leading: canPop ? const FloatingAppBarBackButton() : null,
+        title: FloatingAppBarTitle(text: l10n.appCustomization),
       ),
       body: ListView(
         physics: const BouncingScrollPhysics(
@@ -166,63 +89,6 @@ class AppCustomizationPage extends ConsumerWidget {
           const SizedBox(height: Spacing.xl),
           _buildSocketHealthSection(context, ref),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAppBarPill(
-    BuildContext context,
-    Widget child, {
-    bool isCircular = false,
-  }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    final backgroundColor = isDark
-        ? Color.lerp(context.conduitTheme.cardBackground, Colors.white, 0.08)!
-        : Color.lerp(context.conduitTheme.inputBackground, Colors.black, 0.06)!;
-
-    final borderColor = context.conduitTheme.cardBorder.withValues(
-      alpha: isDark ? 0.65 : 0.55,
-    );
-
-    final borderRadius = isCircular
-        ? BorderRadius.circular(100)
-        : BorderRadius.circular(AppBorderRadius.pill);
-
-    if (isCircular) {
-      return SizedBox(
-        width: 44,
-        height: 44,
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: backgroundColor.withValues(alpha: 0.85),
-                borderRadius: borderRadius,
-                border: Border.all(color: borderColor, width: BorderWidth.thin),
-              ),
-              child: Center(child: child),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: backgroundColor.withValues(alpha: 0.85),
-            borderRadius: borderRadius,
-            border: Border.all(color: borderColor, width: BorderWidth.thin),
-          ),
-          child: child,
-        ),
       ),
     );
   }
