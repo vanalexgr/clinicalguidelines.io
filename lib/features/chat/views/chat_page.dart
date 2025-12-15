@@ -2030,6 +2030,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       // Messages Area fills entire space with pull-to-refresh
                       Positioned.fill(
                         child: ConduitRefreshIndicator(
+                          // Position indicator below the floating app bar
+                          edgeOffset:
+                              MediaQuery.of(context).padding.top +
+                              kToolbarHeight,
                           onRefresh: () async {
                             // Reload active conversation messages from server
                             final api = ref.read(apiServiceProvider);

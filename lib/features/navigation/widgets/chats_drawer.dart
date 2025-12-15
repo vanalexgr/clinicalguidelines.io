@@ -13,6 +13,7 @@ import '../../../shared/theme/theme_extensions.dart';
 import '../../chat/providers/chat_providers.dart' as chat;
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/services/navigation_service.dart';
+import '../../../shared/widgets/loading_states.dart';
 import '../../../shared/widgets/themed_dialogs.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 import '../../../core/utils/user_display_name.dart';
@@ -112,19 +113,6 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
   // Legacy helper removed: drawer now uses slivers with lazy delegates.
 
   Widget _buildRefreshableScrollableSlivers({required List<Widget> slivers}) {
-    if (Platform.isIOS) {
-      final scroll = CustomScrollView(
-        key: const PageStorageKey<String>('chats_drawer_scroll'),
-        controller: _listController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          CupertinoSliverRefreshControl(onRefresh: _refreshChats),
-          ...slivers,
-        ],
-      );
-      return CupertinoScrollbar(controller: _listController, child: scroll);
-    }
-
     final scroll = CustomScrollView(
       key: const PageStorageKey<String>('chats_drawer_scroll'),
       controller: _listController,
@@ -132,10 +120,20 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       cacheExtent: 800,
       slivers: slivers,
     );
-    return RefreshIndicator(
+
+    final refreshableScroll = ConduitRefreshIndicator(
       onRefresh: _refreshChats,
-      child: Scrollbar(controller: _listController, child: scroll),
+      child: scroll,
     );
+
+    if (Platform.isIOS) {
+      return CupertinoScrollbar(
+        controller: _listController,
+        child: refreshableScroll,
+      );
+    }
+
+    return Scrollbar(controller: _listController, child: refreshableScroll);
   }
 
   @override
