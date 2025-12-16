@@ -5,7 +5,6 @@
   "back": "Retour",
   "you": "Vous",
   "loadingProfile": "Chargement du profil...",
-  "unableToLoadProfile": "Impossible de charger le profil",
   "pleaseCheckConnection": "Veuillez vérifier votre connexion et réessayer",
   "connectionIssueTitle": "Impossible d'atteindre votre serveur",
   "@connectionIssueTitle": {
@@ -49,7 +48,6 @@
   "token": "Jeton",
   "usernameOrEmail": "Nom d'utilisateur ou e‑mail",
   "password": "Mot de passe",
-  "signInWithApiKey": "Se connecter avec une clé API",
   "signInWithToken": "Se connecter avec un jeton",
   "connectToServer": "Se connecter au serveur",
   "enterServerAddress": "Saisissez l'adresse de votre serveur Open-WebUI pour commencer",
@@ -118,8 +116,6 @@
   "voicePromptTapStart": "Appuyez sur \"Démarrer\" pour commencer",
   "voiceActionStop": "Arrêter",
   "voiceActionStart": "Démarrer",
-  "messageInputLabel": "Saisie du message",
-  "messageInputHint": "Saisissez votre message",
   "messageHintText": "Demander à Conduit",
   "stopGenerating": "Arrêter la génération",
   "codeCopiedToClipboard": "Code copié dans le presse-papiers.",
@@ -128,7 +124,6 @@
   "file": "Fichier",
   "photo": "Photo",
   "camera": "Appareil photo",
-  "pasteFromClipboard": "Coller",
   "pasteImage": "Coller l'image",
   "apiUnavailable": "Service API indisponible",
   "unableToLoadImage": "Impossible de charger l'image",
@@ -229,7 +224,6 @@
   "noConversationsYet": "Aucune conversation pour l'instant",
   "usernameOrEmailHint": "Entrez votre nom d'utilisateur ou e‑mail",
   "passwordHint": "Entrez votre mot de passe",
-  "enterApiKey": "Entrez votre clé API",
   "enterToken": "Entrez votre jeton JWT",
   "tokenHint": "Obtenez le jeton JWT dans les paramètres d'OpenWebUI. Les clés API (sk-...) ne sont pas prises en charge pour le streaming.",
   "apiKeyNotSupported": "Les clés API (sk-...) ne sont pas prises en charge. Veuillez utiliser un jeton JWT à la place.",
@@ -247,7 +241,6 @@
   "@allowSelfSignedCertificatesDescription": {
     "description": "Texte d'aide expliquant les risques liés à l'activation de l'option de certificat auto-signé."
   },
-  "headerNameEmpty": "Le nom de l'en-tête ne peut pas être vide",
   "headerNameTooLong": "Nom d'en-tête trop long (max 64 caractères)",
   "headerNameInvalidChars": "Nom d'en-tête invalide. Utilisez uniquement des lettres, des chiffres et ces symboles : !#$&-^_`|~",
   "headerNameReserved": "Impossible d'écraser l'en-tête réservé « {key} »",
@@ -258,7 +251,6 @@
       }
     }
   },
-  "headerValueEmpty": "La valeur de l'en-tête ne peut pas être vide",
   "headerValueTooLong": "Valeur d'en-tête trop longue (max 1024 caractères)",
   "headerValueInvalidChars": "La valeur de l'en-tête contient des caractères invalides. Utilisez uniquement des caractères ASCII imprimables.",
   "headerValueUnsafe": "La valeur de l'en-tête semble contenir du contenu potentiellement dangereux",
@@ -787,12 +779,9 @@
       }
     }
   },
-  "noteTitle": "Titre de la note",
   "writeNote": "Écrivez quelque chose...",
-  "noteSaved": "Note enregistrée",
   "saving": "Enregistrement...",
   "saved": "Enregistré",
-  "unsavedChanges": "Modifications non enregistrées",
   "noteCopiedToClipboard": "Note copiée dans le presse-papiers",
   "generateTitle": "Générer un titre",
   "generatingTitle": "Génération du titre...",
@@ -815,15 +804,6 @@
   "previous7Days": "7 derniers jours",
   "previous30Days": "30 derniers jours",
   "older": "Plus ancien",
-  "tapToExpand": "Appuyez pour développer",
-  "byAuthor": "Par {name}",
-  "@byAuthor": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "wordCount": "{count} mots",
   "@wordCount": {
     "placeholders": {
@@ -858,17 +838,11 @@
       }
     }
   },
-  "widgetAskConduit": "Demander à Conduit",
-  "widgetCamera": "Appareil photo",
-  "widgetPhotos": "Photos",
-  "widgetClipboard": "Presse-papiers",
-  "widgetDescription": "Accès rapide au chat Conduit avec appareil photo, photos et raccourcis du presse-papiers",
   "sso": "SSO",
   "ssoDescription": "Connectez-vous avec le fournisseur d'identité de votre organisation",
   "signInWithSso": "Se connecter avec SSO",
   "ssoAuthenticating": "Authentification...",
   "ssoAuthFailed": "Échec de l'authentification SSO",
-  "ssoTokenNotFound": "Impossible de récupérer le jeton d'authentification du fournisseur SSO",
   "ssoLoadingLogin": "Chargement de la page de connexion...",
   "ldap": "LDAP",
   "ldapDescription": "Connectez-vous avec vos identifiants d'annuaire LDAP",

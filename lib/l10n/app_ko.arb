@@ -5,7 +5,6 @@
   "back": "뒤로",
   "you": "프로필",
   "loadingProfile": "프로필 로딩 중...",
-  "unableToLoadProfile": "프로필을 불러올 수 없습니다",
   "pleaseCheckConnection": "연결을 확인하고 다시 시도해주세요",
   "connectionIssueTitle": "서버에 연결할 수 없습니다",
   "connectionIssueSubtitle": "다시 연결하거나 로그아웃하여 다른 서버를 선택하세요.",
@@ -90,7 +89,6 @@
   "token": "토큰",
   "usernameOrEmail": "사용자 이름 또는 이메일",
   "password": "비밀번호",
-  "signInWithApiKey": "API 키로 로그인",
   "signInWithToken": "토큰으로 로그인",
   "connectToServer": "서버 연결",
   "enterServerAddress": "시작하려면 Open-WebUI 서버 주소를 입력하세요",
@@ -181,8 +179,6 @@
   "voiceCallSpeaking": "말하는 중",
   "voiceCallDisconnected": "연결 끊김",
   "voiceCallErrorHelp": "다음을 확인하세요:\n• 마이크 권한이 부여되었는지\n• 기기에서 음성 인식이 사용 가능한지\n• 서버에 연결되어 있는지",
-  "messageInputLabel": "메시지 입력",
-  "messageInputHint": "메시지를 입력하세요",
   "messageHintText": "Conduit에게 물어보기",
   "stopGenerating": "생성 중지",
   "send": "전송",
@@ -192,7 +188,6 @@
   "chooseDifferentFile": "다른 파일 선택",
   "photo": "사진",
   "camera": "카메라",
-  "pasteFromClipboard": "붙여넣기",
   "pasteImage": "이미지 붙여넣기",
   "apiUnavailable": "API 서비스를 사용할 수 없습니다",
   "unableToLoadImage": "이미지를 불러올 수 없습니다",
@@ -339,7 +334,6 @@
   "noConversationsYet": "아직 대화가 없습니다",
   "usernameOrEmailHint": "사용자 이름 또는 이메일을 입력하세요",
   "passwordHint": "비밀번호를 입력하세요",
-  "enterApiKey": "API 키를 입력하세요",
   "enterToken": "JWT 토큰을 입력하세요",
   "tokenHint": "OpenWebUI 설정에서 JWT 토큰을 가져오세요. API 키(sk-...)는 스트리밍에 지원되지 않습니다.",
   "apiKeyNotSupported": "API 키(sk-...)는 지원되지 않습니다. JWT 토큰을 사용하세요.",
@@ -351,7 +345,6 @@
   "customHeadersDescription": "인증, API 키 또는 특수 서버 요구사항을 위한 사용자 정의 HTTP 헤더를 추가하세요.",
   "allowSelfSignedCertificates": "자체 서명된 인증서 신뢰",
   "allowSelfSignedCertificatesDescription": "자체 서명된 경우에도 이 서버의 TLS 인증서를 수락합니다. 신뢰하는 서버에만 사용하세요.",
-  "headerNameEmpty": "헤더 이름은 비어 있을 수 없습니다",
   "headerNameTooLong": "헤더 이름이 너무 깁니다 (최대 64자)",
   "headerNameInvalidChars": "잘못된 헤더 이름입니다. 문자, 숫자 및 다음 기호만 사용하세요: !#$&-^_`|~",
   "headerNameReserved": "예약된 헤더 \"{key}\"를 재정의할 수 없습니다",
@@ -363,7 +356,6 @@
       }
     }
   },
-  "headerValueEmpty": "헤더 값은 비어 있을 수 없습니다",
   "headerValueTooLong": "헤더 값이 너무 깁니다 (최대 1024자)",
   "headerValueInvalidChars": "헤더 값에 잘못된 문자가 포함되어 있습니다. 인쇄 가능한 ASCII만 사용하세요.",
   "headerValueUnsafe": "헤더 값에 잠재적으로 안전하지 않은 콘텐츠가 포함된 것으로 보입니다",
@@ -565,12 +557,9 @@
       }
     }
   },
-  "noteTitle": "노트 제목",
   "writeNote": "무언가 작성하세요...",
-  "noteSaved": "노트 저장됨",
   "saving": "저장 중...",
   "saved": "저장됨",
-  "unsavedChanges": "저장되지 않은 변경사항",
   "noteCopiedToClipboard": "노트가 클립보드에 복사됨",
   "generateTitle": "제목 생성",
   "generatingTitle": "제목 생성 중...",
@@ -593,15 +582,6 @@
   "previous7Days": "지난 7일",
   "previous30Days": "지난 30일",
   "older": "이전",
-  "tapToExpand": "탭하여 확장",
-  "byAuthor": "{name} 작성",
-  "@byAuthor": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "wordCount": "{count}단어",
   "@wordCount": {
     "placeholders": {
@@ -636,17 +616,11 @@
       }
     }
   },
-  "widgetAskConduit": "Conduit에게 묻기",
-  "widgetCamera": "카메라",
-  "widgetPhotos": "사진",
-  "widgetClipboard": "클립보드",
-  "widgetDescription": "카메라, 사진 및 클립보드 바로가기로 Conduit 채팅에 빠르게 액세스",
   "sso": "SSO",
   "ssoDescription": "조직의 ID 공급자로 로그인",
   "signInWithSso": "SSO로 로그인",
   "ssoAuthenticating": "인증 중...",
   "ssoAuthFailed": "SSO 인증 실패",
-  "ssoTokenNotFound": "SSO 공급자에서 인증 토큰을 검색할 수 없습니다",
   "ssoLoadingLogin": "로그인 페이지 로딩 중...",
   "ldap": "LDAP",
   "ldapDescription": "LDAP 디렉토리 자격 증명으로 로그인",

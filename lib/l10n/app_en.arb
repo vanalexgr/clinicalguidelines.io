@@ -20,10 +20,6 @@
   "@loadingProfile": {
     "description": "Progress message while fetching profile data."
   },
-  "unableToLoadProfile": "Unable to load profile",
-  "@unableToLoadProfile": {
-    "description": "Error title shown when profile request fails."
-  },
   "pleaseCheckConnection": "Please check your connection and try again",
   "connectionIssueTitle": "Can't reach your server",
   "@connectionIssueTitle": {
@@ -227,10 +223,6 @@
   "password": "Password",
   "@password": {
     "description": "Label for password input field."
-  },
-  "signInWithApiKey": "Sign in with API Key",
-  "@signInWithApiKey": {
-    "description": "Alternative sign-in method using an API key."
   },
   "signInWithToken": "Sign in with Token",
   "@signInWithToken": {
@@ -562,14 +554,6 @@
   "@voiceCallErrorHelp": {
     "description": "Guidance shown when the voice call encounters an error."
   },
-  "messageInputLabel": "Message input",
-  "@messageInputLabel": {
-    "description": "Accessibility label for the message input."
-  },
-  "messageInputHint": "Type your message",
-  "@messageInputHint": {
-    "description": "Hint shown in the message input field."
-  },
   "messageHintText": "Ask Conduit",
   "@messageHintText": {
     "description": "Short placeholder text in the message input."
@@ -605,10 +589,6 @@
   "camera": "Camera",
   "@camera": {
     "description": "Camera source label."
-  },
-  "pasteFromClipboard": "Paste",
-  "@pasteFromClipboard": {
-    "description": "Action label to paste images or files from the clipboard."
   },
   "pasteImage": "Paste Image",
   "@pasteImage": {
@@ -1086,10 +1066,6 @@
   "@passwordHint": {
     "description": "Hint text for password input."
   },
-  "enterApiKey": "Enter your API key",
-  "@enterApiKey": {
-    "description": "Hint text for API key input."
-  },
   "enterToken": "Enter your JWT token",
   "@enterToken": {
     "description": "Hint text for JWT token input."
@@ -1134,10 +1110,6 @@
   "@allowSelfSignedCertificatesDescription": {
     "description": "Helper text clarifying the risks of enabling the self-signed certificate toggle."
   },
-  "headerNameEmpty": "Header name cannot be empty",
-  "@headerNameEmpty": {
-    "description": "Validation message for empty header name."
-  },
   "headerNameTooLong": "Header name too long (max 64 characters)",
   "@headerNameTooLong": {
     "description": "Validation message for header name length."
@@ -1154,10 +1126,6 @@
         "type": "String"
       }
     }
-  },
-  "headerValueEmpty": "Header value cannot be empty",
-  "@headerValueEmpty": {
-    "description": "Validation message for empty header value."
   },
   "headerValueTooLong": "Header value too long (max 1024 characters)",
   "@headerValueTooLong": {
@@ -1723,17 +1691,9 @@
       }
     }
   },
-  "noteTitle": "Note title",
-  "@noteTitle": {
-    "description": "Hint text for note title input field."
-  },
   "writeNote": "Write something...",
   "@writeNote": {
     "description": "Hint text for note content input field."
-  },
-  "noteSaved": "Note saved",
-  "@noteSaved": {
-    "description": "Confirmation message when note is saved."
   },
   "saving": "Saving...",
   "@saving": {
@@ -1742,10 +1702,6 @@
   "saved": "Saved",
   "@saved": {
     "description": "Status text when content is saved."
-  },
-  "unsavedChanges": "Unsaved changes",
-  "@unsavedChanges": {
-    "description": "Status text when there are unsaved changes."
   },
   "noteCopiedToClipboard": "Note copied to clipboard",
   "@noteCopiedToClipboard": {
@@ -1835,20 +1791,6 @@
   "@older": {
     "description": "Time range label for items older than 30 days."
   },
-  "tapToExpand": "Tap to expand",
-  "@tapToExpand": {
-    "description": "Hint text shown on collapsed sections."
-  },
-  "byAuthor": "By {name}",
-  "@byAuthor": {
-    "description": "Attribution text showing the note author.",
-    "placeholders": {
-      "name": {
-        "type": "String",
-        "example": "John"
-      }
-    }
-  },
   "wordCount": "{count} words",
   "@wordCount": {
     "description": "Status bar text showing word count.",
@@ -1868,26 +1810,6 @@
         "example": "500"
       }
     }
-  },
-  "widgetAskConduit": "Ask Conduit",
-  "@widgetAskConduit": {
-    "description": "Main button text on the home screen widget."
-  },
-  "widgetCamera": "Camera",
-  "@widgetCamera": {
-    "description": "Camera button label on the home screen widget."
-  },
-  "widgetPhotos": "Photos",
-  "@widgetPhotos": {
-    "description": "Photos button label on the home screen widget."
-  },
-  "widgetClipboard": "Clipboard",
-  "@widgetClipboard": {
-    "description": "Clipboard button label on the home screen widget."
-  },
-  "widgetDescription": "Quick access to Conduit chat with camera, photos, and clipboard shortcuts",
-  "@widgetDescription": {
-    "description": "Description shown in the widget picker when adding the widget."
   },
   "mermaidPreviewUnavailable": "Mermaid preview is not available on this platform.",
   "@mermaidPreviewUnavailable": {
@@ -1944,10 +1866,6 @@
   "ssoAuthFailed": "SSO authentication failed",
   "@ssoAuthFailed": {
     "description": "Error message when SSO authentication fails."
-  },
-  "ssoTokenNotFound": "Could not retrieve authentication token from SSO provider",
-  "@ssoTokenNotFound": {
-    "description": "Error message when SSO token cannot be captured."
   },
   "ssoLoadingLogin": "Loading login page...",
   "@ssoLoadingLogin": {

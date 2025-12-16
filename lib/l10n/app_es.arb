@@ -5,7 +5,6 @@
   "back": "Atrás",
   "you": "Tú",
   "loadingProfile": "Cargando perfil...",
-  "unableToLoadProfile": "No se puede cargar el perfil",
   "pleaseCheckConnection": "Por favor, verifica tu conexión e inténtalo de nuevo",
   "connectionIssueTitle": "No se puede conectar al servidor",
   "@connectionIssueTitle": {
@@ -49,7 +48,6 @@
   "token": "Token",
   "usernameOrEmail": "Usuario o correo electrónico",
   "password": "Contraseña",
-  "signInWithApiKey": "Iniciar sesión con clave API",
   "signInWithToken": "Iniciar sesión con token",
   "connectToServer": "Conectar al servidor",
   "enterServerAddress": "Ingresa la dirección de tu servidor Open-WebUI para comenzar",
@@ -118,8 +116,6 @@
   "voicePromptTapStart": "Toca Iniciar para comenzar",
   "voiceActionStop": "Detener",
   "voiceActionStart": "Iniciar",
-  "messageInputLabel": "Entrada de mensaje",
-  "messageInputHint": "Escribe tu mensaje",
   "messageHintText": "Pregunta a Conduit",
   "stopGenerating": "Detener generación",
   "codeCopiedToClipboard": "Código copiado al portapapeles.",
@@ -128,7 +124,6 @@
   "file": "Archivo",
   "photo": "Foto",
   "camera": "Cámara",
-  "pasteFromClipboard": "Pegar",
   "pasteImage": "Pegar imagen",
   "apiUnavailable": "Servicio de API no disponible",
   "unableToLoadImage": "No se puede cargar la imagen",
@@ -229,7 +224,6 @@
   "noConversationsYet": "Aún no hay conversaciones",
   "usernameOrEmailHint": "Ingresa tu usuario o correo electrónico",
   "passwordHint": "Ingresa tu contraseña",
-  "enterApiKey": "Ingresa tu clave API",
   "enterToken": "Ingresa tu token JWT",
   "tokenHint": "Obtén el token JWT desde la configuración de OpenWebUI. Las claves API (sk-...) no son compatibles con streaming.",
   "apiKeyNotSupported": "Las claves API (sk-...) no son compatibles. Por favor usa un token JWT en su lugar.",
@@ -247,7 +241,6 @@
   "@allowSelfSignedCertificatesDescription": {
     "description": "Texto de ayuda que aclara los riesgos de habilitar el interruptor de certificados autofirmados."
   },
-  "headerNameEmpty": "El nombre del encabezado no puede estar vacío",
   "headerNameTooLong": "Nombre de encabezado demasiado largo (máx. 64 caracteres)",
   "headerNameInvalidChars": "Nombre de encabezado inválido. Usa solo letras, números y estos símbolos: !#$&-^_`|~",
   "headerNameReserved": "No se puede sobrescribir el encabezado reservado \"{key}\"",
@@ -258,7 +251,6 @@
       }
     }
   },
-  "headerValueEmpty": "El valor del encabezado no puede estar vacío",
   "headerValueTooLong": "Valor de encabezado demasiado largo (máx. 1024 caracteres)",
   "headerValueInvalidChars": "El valor del encabezado contiene caracteres inválidos. Usa solo ASCII imprimible.",
   "headerValueUnsafe": "El valor del encabezado parece contener contenido potencialmente inseguro",
@@ -787,12 +779,9 @@
       }
     }
   },
-  "noteTitle": "Título de la nota",
   "writeNote": "Escribe algo...",
-  "noteSaved": "Nota guardada",
   "saving": "Guardando...",
   "saved": "Guardado",
-  "unsavedChanges": "Cambios sin guardar",
   "noteCopiedToClipboard": "Nota copiada al portapapeles",
   "generateTitle": "Generar título",
   "generatingTitle": "Generando título...",
@@ -815,15 +804,6 @@
   "previous7Days": "Últimos 7 días",
   "previous30Days": "Últimos 30 días",
   "older": "Más antiguo",
-  "tapToExpand": "Toca para expandir",
-  "byAuthor": "Por {name}",
-  "@byAuthor": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "wordCount": "{count} palabras",
   "@wordCount": {
     "placeholders": {
@@ -858,17 +838,11 @@
       }
     }
   },
-  "widgetAskConduit": "Preguntar a Conduit",
-  "widgetCamera": "Cámara",
-  "widgetPhotos": "Fotos",
-  "widgetClipboard": "Portapapeles",
-  "widgetDescription": "Acceso rápido al chat de Conduit con cámara, fotos y atajos del portapapeles",
   "sso": "SSO",
   "ssoDescription": "Iniciar sesión con el proveedor de identidad de su organización",
   "signInWithSso": "Iniciar sesión con SSO",
   "ssoAuthenticating": "Autenticando...",
   "ssoAuthFailed": "Error de autenticación SSO",
-  "ssoTokenNotFound": "No se pudo obtener el token de autenticación del proveedor SSO",
   "ssoLoadingLogin": "Cargando página de inicio de sesión...",
   "ldap": "LDAP",
   "ldapDescription": "Iniciar sesión con sus credenciales de directorio LDAP",

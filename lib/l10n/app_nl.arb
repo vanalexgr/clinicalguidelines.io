@@ -5,7 +5,6 @@
   "back": "Terug",
   "you": "Jij",
   "loadingProfile": "Profiel laden...",
-  "unableToLoadProfile": "Kan profiel niet laden",
   "pleaseCheckConnection": "Controleer je verbinding en probeer het opnieuw",
   "connectionIssueTitle": "Kan je server niet bereiken",
   "@connectionIssueTitle": {
@@ -49,7 +48,6 @@
   "token": "Token",
   "usernameOrEmail": "Gebruikersnaam of e-mail",
   "password": "Wachtwoord",
-  "signInWithApiKey": "Inloggen met API-sleutel",
   "signInWithToken": "Inloggen met token",
   "connectToServer": "Verbinden met server",
   "enterServerAddress": "Voer je Open-WebUI serveradres in om te beginnen",
@@ -118,8 +116,6 @@
   "voicePromptTapStart": "Tik op Start om te beginnen",
   "voiceActionStop": "Stop",
   "voiceActionStart": "Start",
-  "messageInputLabel": "Berichtinvoer",
-  "messageInputHint": "Typ je bericht",
   "messageHintText": "Vraag Conduit",
   "stopGenerating": "Stop met genereren",
   "codeCopiedToClipboard": "Code gekopieerd naar klembord.",
@@ -128,7 +124,6 @@
   "file": "Bestand",
   "photo": "Foto",
   "camera": "Camera",
-  "pasteFromClipboard": "Plakken",
   "pasteImage": "Afbeelding plakken",
   "apiUnavailable": "API-service niet beschikbaar",
   "unableToLoadImage": "Kan afbeelding niet laden",
@@ -229,7 +224,6 @@
   "noConversationsYet": "Nog geen gesprekken",
   "usernameOrEmailHint": "Voer je gebruikersnaam of e-mail in",
   "passwordHint": "Voer je wachtwoord in",
-  "enterApiKey": "Voer je API-sleutel in",
   "enterToken": "Voer je JWT-token in",
   "tokenHint": "Haal het JWT-token uit de OpenWebUI-instellingen. API-sleutels (sk-...) worden niet ondersteund voor streaming.",
   "apiKeyNotSupported": "API-sleutels (sk-...) worden niet ondersteund. Gebruik in plaats daarvan een JWT-token.",
@@ -247,7 +241,6 @@
   "@allowSelfSignedCertificatesDescription": {
     "description": "Hulptekst die de risico's van het inschakelen van de schakelaar voor zelfondertekende certificaten verduidelijkt."
   },
-  "headerNameEmpty": "Header-naam mag niet leeg zijn",
   "headerNameTooLong": "Header-naam te lang (max 64 tekens)",
   "headerNameInvalidChars": "Ongeldige header-naam. Gebruik alleen letters, cijfers en deze symbolen: !#$&-^_`|~",
   "headerNameReserved": "Kan gereserveerde header '{key}' niet overschrijven",
@@ -258,7 +251,6 @@
       }
     }
   },
-  "headerValueEmpty": "Header-waarde mag niet leeg zijn",
   "headerValueTooLong": "Header-waarde te lang (max 1024 tekens)",
   "headerValueInvalidChars": "Header-waarde bevat ongeldige tekens. Gebruik alleen afdrukbare ASCII.",
   "headerValueUnsafe": "Header-waarde lijkt mogelijk onveilige inhoud te bevatten",
@@ -787,12 +779,9 @@
       }
     }
   },
-  "noteTitle": "Notitietitel",
   "writeNote": "Schrijf iets...",
-  "noteSaved": "Notitie opgeslagen",
   "saving": "Opslaan...",
   "saved": "Opgeslagen",
-  "unsavedChanges": "Niet-opgeslagen wijzigingen",
   "noteCopiedToClipboard": "Notitie gekopieerd naar klembord",
   "generateTitle": "Titel genereren",
   "generatingTitle": "Titel genereren...",
@@ -815,15 +804,6 @@
   "previous7Days": "Afgelopen 7 dagen",
   "previous30Days": "Afgelopen 30 dagen",
   "older": "Ouder",
-  "tapToExpand": "Tik om uit te vouwen",
-  "byAuthor": "Door {name}",
-  "@byAuthor": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "wordCount": "{count} woorden",
   "@wordCount": {
     "placeholders": {
@@ -858,17 +838,11 @@
       }
     }
   },
-  "widgetAskConduit": "Vraag Conduit",
-  "widgetCamera": "Camera",
-  "widgetPhotos": "Foto's",
-  "widgetClipboard": "Klembord",
-  "widgetDescription": "Snelle toegang tot Conduit-chat met camera, foto's en klembordsnelkoppelingen",
   "sso": "SSO",
   "ssoDescription": "Aanmelden met de identiteitsprovider van uw organisatie",
   "signInWithSso": "Aanmelden met SSO",
   "ssoAuthenticating": "Authenticeren...",
   "ssoAuthFailed": "SSO-authenticatie mislukt",
-  "ssoTokenNotFound": "Kan authenticatietoken niet ophalen van SSO-provider",
   "ssoLoadingLogin": "Inlogpagina laden...",
   "ldap": "LDAP",
   "ldapDescription": "Aanmelden met uw LDAP-directorygegevens",
