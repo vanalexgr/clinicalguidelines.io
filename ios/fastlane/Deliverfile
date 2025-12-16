@@ -4,7 +4,7 @@
 submit_for_review(true)
 skip_metadata(false)
 release_notes({
-  'default' => "https://github.com/cogwheel0/conduit/releases/tag/v2.3.8",
+  'default' => "Start new chat from folder, accesibility fix and home widget fixes.",
 })
 promotional_text({'default' => "https://github.com/cogwheel0/conduit/releases/tag/v2.3.8"})
 skip_screenshots(true)

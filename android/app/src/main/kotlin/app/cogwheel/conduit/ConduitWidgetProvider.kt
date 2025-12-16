@@ -52,12 +52,14 @@ class ConduitWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.conduit_widget)
 
             // Set up click handlers using home_widget's launch intent
+            // The homeWidget=true query param is required for the home_widget package to
+            // recognize these URLs and forward them to the Flutter widgetClicked stream
             views.setOnClickPendingIntent(
                 R.id.widget_container,
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_NEW_CHAT")
+                    Uri.parse("conduit://$ACTION_NEW_CHAT?homeWidget=true")
                 )
             )
             views.setOnClickPendingIntent(
@@ -65,7 +67,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_NEW_CHAT")
+                    Uri.parse("conduit://$ACTION_NEW_CHAT?homeWidget=true")
                 )
             )
             views.setOnClickPendingIntent(
@@ -73,7 +75,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_MIC")
+                    Uri.parse("conduit://$ACTION_MIC?homeWidget=true")
                 )
             )
             views.setOnClickPendingIntent(
@@ -81,7 +83,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_CAMERA")
+                    Uri.parse("conduit://$ACTION_CAMERA?homeWidget=true")
                 )
             )
             views.setOnClickPendingIntent(
@@ -89,7 +91,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_PHOTOS")
+                    Uri.parse("conduit://$ACTION_PHOTOS?homeWidget=true")
                 )
             )
             views.setOnClickPendingIntent(
@@ -97,7 +99,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_CLIPBOARD")
+                    Uri.parse("conduit://$ACTION_CLIPBOARD?homeWidget=true")
                 )
             )
 
