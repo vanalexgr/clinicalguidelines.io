@@ -853,6 +853,21 @@ class SelectedModel extends _$SelectedModel {
   void clear() => state = null;
 }
 
+/// Tracks a pending folder ID for the next new conversation.
+///
+/// When a user starts a new chat from within a folder context menu,
+/// this provider holds the folder ID so that the conversation is
+/// automatically placed in that folder upon creation.
+@Riverpod(keepAlive: true)
+class PendingFolderId extends _$PendingFolderId {
+  @override
+  String? build() => null;
+
+  void set(String? folderId) => state = folderId;
+
+  void clear() => state = null;
+}
+
 // Track if the current model selection is manual (user-selected) or automatic (default)
 @Riverpod(keepAlive: true)
 class IsManualModelSelection extends _$IsManualModelSelection {

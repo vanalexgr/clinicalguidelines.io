@@ -981,6 +981,9 @@ void startNewChat(dynamic ref) {
 
   // Clear context attachments (web pages, YouTube, knowledge base docs)
   ref.read(contextAttachmentsProvider.notifier).clear();
+
+  // Clear any pending folder selection
+  ref.read(pendingFolderIdProvider.notifier).clear();
 }
 
 // Available tools provider
@@ -1892,6 +1895,9 @@ Future<void> _sendMessageInternal(
   );
 
   if (activeConversation == null) {
+    // Check if there's a pending folder ID for this new conversation
+    final pendingFolderId = ref.read(pendingFolderIdProvider);
+
     // Create new conversation with the first message included
     final localConversation = Conversation(
       id: const Uuid().v4(),
@@ -1900,6 +1906,7 @@ Future<void> _sendMessageInternal(
       updatedAt: DateTime.now(),
       systemPrompt: userSystemPrompt,
       messages: [userMessage], // Include the user message
+      folderId: pendingFolderId,
     );
 
     // Set as active conversation locally
@@ -1914,13 +1921,19 @@ Future<void> _sendMessageInternal(
           messages: [userMessage], // Include the first message in creation
           model: selectedModel.id,
           systemPrompt: userSystemPrompt,
+          folderId: pendingFolderId,
         );
+
+        // Clear the pending folder ID after successful creation
+        ref.read(pendingFolderIdProvider.notifier).clear();
+
         final updatedConversation = localConversation.copyWith(
           id: serverConversation.id,
           systemPrompt: serverConversation.systemPrompt ?? userSystemPrompt,
           messages: serverConversation.messages.isNotEmpty
               ? serverConversation.messages
               : [userMessage],
+          folderId: serverConversation.folderId ?? pendingFolderId,
         );
         ref.read(activeConversationProvider.notifier).set(updatedConversation);
         activeConversation = updatedConversation;
@@ -1945,7 +1958,10 @@ Future<void> _sendMessageInternal(
             // handle any disposal gracefully.
             final isMounted = ref is Ref ? ref.mounted : true;
             if (isMounted) {
-              refreshConversationsCache(ref);
+              refreshConversationsCache(
+                ref,
+                includeFolders: pendingFolderId != null,
+              );
             }
           } catch (_) {
             // If ref is disposed or invalid, skip
@@ -1954,10 +1970,16 @@ Future<void> _sendMessageInternal(
       } catch (e) {
         // Still add the message locally
         ref.read(chatMessagesProvider.notifier).addMessage(userMessage);
+
+        // Clear the pending folder ID on failure to prevent stale state
+        ref.read(pendingFolderIdProvider.notifier).clear();
       }
     } else {
       // Add message for reviewer mode
       ref.read(chatMessagesProvider.notifier).addMessage(userMessage);
+
+      // Clear the pending folder ID even in reviewer mode
+      ref.read(pendingFolderIdProvider.notifier).clear();
     }
   } else {
     // Add user message to existing conversation
@@ -2490,7 +2512,8 @@ Future<void> _sendMessageInternal(
         timestamp: DateTime.now(),
         isStreaming: false,
         error: const ChatMessageError(
-          content: 'There was an issue with the message format. This might be '
+          content:
+              'There was an issue with the message format. This might be '
               'because the image attachment couldn\'t be processed, the request '
               'format is incompatible with the selected model, or the message '
               'contains unsupported content. Please try sending the message '
@@ -2509,7 +2532,8 @@ Future<void> _sendMessageInternal(
         timestamp: DateTime.now(),
         isStreaming: false,
         error: const ChatMessageError(
-          content: 'Unable to connect to the AI model. The server returned an '
+          content:
+              'Unable to connect to the AI model. The server returned an '
               'error (500). This is typically a server-side issue. Please try '
               'again or contact your administrator.',
         ),
@@ -2527,7 +2551,8 @@ Future<void> _sendMessageInternal(
         timestamp: DateTime.now(),
         isStreaming: false,
         error: const ChatMessageError(
-          content: 'The selected AI model doesn\'t seem to be available. '
+          content:
+              'The selected AI model doesn\'t seem to be available. '
               'Please try selecting a different model or check with your '
               'administrator.',
         ),
@@ -2542,7 +2567,8 @@ Future<void> _sendMessageInternal(
         timestamp: DateTime.now(),
         isStreaming: false,
         error: const ChatMessageError(
-          content: 'An unexpected error occurred while processing your request. '
+          content:
+              'An unexpected error occurred while processing your request. '
               'Please try again or check your connection.',
         ),
       );

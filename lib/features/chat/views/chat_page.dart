@@ -31,6 +31,7 @@ import 'voice_call_page.dart';
 import '../../../shared/services/tasks/task_queue.dart';
 import '../../tools/providers/tools_providers.dart';
 import '../../../core/models/chat_message.dart';
+import '../../../core/models/folder.dart';
 import '../../../core/models/model.dart';
 import '../providers/context_attachments_provider.dart';
 import '../../../shared/widgets/loading_states.dart';
@@ -125,6 +126,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     // Clear context attachments (web pages, YouTube, knowledge base docs)
     ref.read(contextAttachmentsProvider.notifier).clear();
+
+    // Clear any pending folder selection
+    ref.read(pendingFolderIdProvider.notifier).clear();
 
     // Scroll to top
     if (_scrollController.hasClients) {
@@ -956,10 +960,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     required Widget child,
     bool isCircular = false,
   }) {
-    return FloatingAppBarPill(
-      isCircular: isCircular,
-      child: child,
-    );
+    return FloatingAppBarPill(isCircular: isCircular, child: child);
   }
 
   Widget _buildMessagesList(ThemeData theme) {
@@ -1413,6 +1414,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final greetingText = resolvedGreetingName != null
         ? l10n.onboardStartTitle(resolvedGreetingName)
         : null;
+
+    // Check if there's a pending folder for the new chat
+    final pendingFolderId = ref.watch(pendingFolderIdProvider);
+    final folders = ref
+        .watch(foldersProvider)
+        .maybeWhen(data: (list) => list, orElse: () => <Folder>[]);
+    final pendingFolder = pendingFolderId != null
+        ? folders.where((f) => f.id == pendingFolderId).firstOrNull
+        : null;
+
     // Add top padding for floating app bar, bottom padding for floating input.
     final topPadding =
         MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
@@ -1439,22 +1450,58 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.max,
                 children: [
-                  SizedBox(
-                    height: greetingHeight,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 260),
-                      curve: Curves.easeOutCubic,
-                      opacity: _greetingReady ? 1 : 0,
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: Text(
-                          _greetingReady ? greetingDisplay : '',
+                  if (pendingFolder != null) ...[
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.newChat,
                           style: greetingStyle,
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: Spacing.sm),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Platform.isIOS
+                                  ? CupertinoIcons.folder_fill
+                                  : Icons.folder_rounded,
+                              size: 14,
+                              color: context.conduitTheme.textSecondary,
+                            ),
+                            const SizedBox(width: Spacing.xs),
+                            Text(
+                              pendingFolder.name,
+                              style: AppTypography.small.copyWith(
+                                color: context.conduitTheme.textSecondary,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    SizedBox(
+                      height: greetingHeight,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOutCubic,
+                        opacity: _greetingReady ? 1 : 0,
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: Text(
+                            _greetingReady ? greetingDisplay : '',
+                            style: greetingStyle,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -1909,8 +1956,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                           Platform.isIOS
                                               ? CupertinoIcons.chevron_down
                                               : Icons.keyboard_arrow_down,
-                                          color:
-                                              context.conduitTheme.iconSecondary,
+                                          color: context
+                                              .conduitTheme
+                                              .iconSecondary,
                                           size: IconSize.small,
                                         ),
                                       ],
