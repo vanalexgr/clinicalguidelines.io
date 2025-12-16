@@ -22,8 +22,14 @@
 	<array>
 		<string>en</string>
 		<string>de</string>
+		<string>es</string>
 		<string>fr</string>
 		<string>it</string>
+		<string>ko</string>
+		<string>nl</string>
+		<string>ru</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
 	</array>
 	<key>CFBundleName</key>
 	<string>conduit</string>
