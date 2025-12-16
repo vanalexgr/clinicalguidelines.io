@@ -1596,8 +1596,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                   hintStyle: baseChatStyle.copyWith(
                     color: animatedPlaceholder,
                     fontWeight: recordingWeight,
-                    fontStyle:
-                        _isRecording ? FontStyle.italic : FontStyle.normal,
+                    fontStyle: _isRecording
+                        ? FontStyle.italic
+                        : FontStyle.normal,
                   ),
                   filled: false,
                   border: InputBorder.none,

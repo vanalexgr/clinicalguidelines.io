@@ -11,6 +11,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../auth/providers/unified_auth_providers.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../chat/providers/chat_providers.dart' as chat;
+import '../../chat/providers/context_attachments_provider.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/services/navigation_service.dart';
 import '../../../shared/widgets/loading_states.dart';
@@ -1114,24 +1115,75 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                         const SizedBox(width: Spacing.sm),
                         Flexible(
                           fit: textFit,
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.standard.copyWith(
-                              color: theme.textPrimary,
-                              fontWeight: FontWeight.w400,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.standard.copyWith(
+                                    color: theme.textPrimary,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: Spacing.xs),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.sidebarTheme.accent
+                                      .withValues(alpha: 0.7),
+                                  borderRadius:
+                                      BorderRadius.circular(AppBorderRadius.xs),
+                                  border: Border.all(
+                                    color: context.sidebarTheme.border
+                                        .withValues(alpha: 0.35),
+                                    width: BorderWidth.micro,
+                                  ),
+                                ),
+                                child: Text(
+                                  '$count',
+                                  style: AppTypography.tiny.copyWith(
+                                    color: context.sidebarTheme.foreground
+                                        .withValues(alpha: 0.8),
+                                    decoration: TextDecoration.none,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: Spacing.sm),
-                        Text(
-                          '$count',
-                          style: AppTypography.standard.copyWith(
-                            color: theme.textSecondary,
+                        SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: IconButton(
+                            iconSize: IconSize.xs,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            style: IconButton.styleFrom(
+                              shape: const CircleBorder(),
+                            ),
+                            icon: Icon(
+                              Platform.isIOS
+                                  ? CupertinoIcons.plus_circle
+                                  : Icons.add_circle_outline_rounded,
+                              color: theme.iconSecondary,
+                              size: IconSize.listItem,
+                            ),
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              _startNewChatInFolder(folderId);
+                            },
+                            tooltip: AppLocalizations.of(context)!.newChat,
                           ),
                         ),
-                        const SizedBox(width: Spacing.xs),
+                        const SizedBox(width: Spacing.sm),
                         Icon(
                           isExpanded
                               ? (Platform.isIOS
@@ -1275,6 +1327,28 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
         ),
       ],
     );
+  }
+
+  void _startNewChatInFolder(String folderId) {
+    // Set the pending folder ID for the new conversation
+    ref.read(pendingFolderIdProvider.notifier).set(folderId);
+
+    // Clear current conversation and start fresh
+    ref.read(chat.chatMessagesProvider.notifier).clearMessages();
+    ref.read(activeConversationProvider.notifier).clear();
+
+    // Clear context attachments (web pages, YouTube, knowledge base docs)
+    ref.read(contextAttachmentsProvider.notifier).clear();
+
+    // Close drawer using the responsive layout (same pattern as _selectConversation)
+    if (mounted) {
+      final mediaQuery = MediaQuery.maybeOf(context);
+      final isTablet =
+          mediaQuery != null && mediaQuery.size.shortestSide >= 600;
+      if (!isTablet) {
+        ResponsiveDrawerLayout.of(context)?.close();
+      }
+    }
   }
 
   Future<void> _renameFolder(
@@ -1639,6 +1713,9 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       // Immediately clear current chat to show loading skeleton in the chat view
       container.read(activeConversationProvider.notifier).clear();
       container.read(chat.chatMessagesProvider.notifier).clearMessages();
+
+      // Clear any pending folder selection when selecting an existing conversation
+      container.read(pendingFolderIdProvider.notifier).clear();
 
       // Close the slide drawer for faster perceived performance
       // (only on mobile; keep tablet drawer unless user toggles it)
