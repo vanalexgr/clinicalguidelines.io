@@ -1563,76 +1563,72 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                   : FontWeight.w400;
               final TextStyle baseChatStyle = AppTypography.chatMessageStyle;
 
-              // Wrap with Semantics to provide an accessible label for screen
-              // readers. We avoid MergeSemantics which caused double-
-              // announcements. The TextField provides its own text field
-              // semantics; this just adds the descriptive label.
-              return Semantics(
-                label: AppLocalizations.of(context)!.messageInputLabel,
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  enabled: widget.enabled,
-                  autofocus: false,
-                  minLines: 1,
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: sendOnEnter
-                      ? TextInputAction.send
-                      : TextInputAction.newline,
-                  autofillHints: const <String>[],
-                  showCursor: true,
-                  scrollPadding: const EdgeInsets.only(bottom: 80),
-                  keyboardAppearance: brightness,
-                  cursorColor: animatedTextColor,
-                  style: baseChatStyle.copyWith(
-                    color: animatedTextColor,
-                    fontStyle: _isRecording
-                        ? FontStyle.italic
-                        : FontStyle.normal,
-                    fontWeight: recordingWeight,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context)!.messageHintText,
-                    hintStyle: baseChatStyle.copyWith(
-                      color: animatedPlaceholder,
-                      fontWeight: recordingWeight,
-                      fontStyle: _isRecording
-                          ? FontStyle.italic
-                          : FontStyle.normal,
-                    ),
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    contentPadding: contentPadding,
-                    isDense: true,
-                    alignLabelWithHint: true,
-                  ),
-                  // Enable pasting images and files from clipboard
-                  contentInsertionConfiguration: ContentInsertionConfiguration(
-                    allowedMimeTypes: ClipboardAttachmentService
-                        .supportedImageMimeTypes
-                        .toList(),
-                    onContentInserted: _handleContentInserted,
-                  ),
-                  // Custom context menu with "Paste Image" option for iOS
-                  contextMenuBuilder: (context, editableTextState) {
-                    return _buildContextMenu(context, editableTextState);
-                  },
-                  onSubmitted: (_) {
-                    if (sendOnEnter) {
-                      _sendMessage();
-                    }
-                  },
-                  onTap: () {
-                    if (!widget.enabled) return;
-                    _ensureFocusedIfEnabled();
-                  },
+              // Rely on TextField's built-in accessibility via hintText.
+              // Wrapping with Semantics creates duplicate accessibility nodes
+              // which confuses screen readers and causes keyboard issues with
+              // alternative input methods (e.g., Braille keyboards).
+              // The hintText "Ask Conduit" provides sufficient context for
+              // screen readers to identify this as a message input field.
+              return TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                enabled: widget.enabled,
+                autofocus: false,
+                minLines: 1,
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                textCapitalization: TextCapitalization.sentences,
+                textInputAction: sendOnEnter
+                    ? TextInputAction.send
+                    : TextInputAction.newline,
+                autofillHints: const <String>[],
+                showCursor: true,
+                scrollPadding: const EdgeInsets.only(bottom: 80),
+                keyboardAppearance: brightness,
+                cursorColor: animatedTextColor,
+                style: baseChatStyle.copyWith(
+                  color: animatedTextColor,
+                  fontStyle: _isRecording ? FontStyle.italic : FontStyle.normal,
+                  fontWeight: recordingWeight,
                 ),
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context)!.messageHintText,
+                  hintStyle: baseChatStyle.copyWith(
+                    color: animatedPlaceholder,
+                    fontWeight: recordingWeight,
+                    fontStyle:
+                        _isRecording ? FontStyle.italic : FontStyle.normal,
+                  ),
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  contentPadding: contentPadding,
+                  isDense: true,
+                  alignLabelWithHint: true,
+                ),
+                // Enable pasting images and files from clipboard
+                contentInsertionConfiguration: ContentInsertionConfiguration(
+                  allowedMimeTypes: ClipboardAttachmentService
+                      .supportedImageMimeTypes
+                      .toList(),
+                  onContentInserted: _handleContentInserted,
+                ),
+                // Custom context menu with "Paste Image" option for iOS
+                contextMenuBuilder: (context, editableTextState) {
+                  return _buildContextMenu(context, editableTextState);
+                },
+                onSubmitted: (_) {
+                  if (sendOnEnter) {
+                    _sendMessage();
+                  }
+                },
+                onTap: () {
+                  if (!widget.enabled) return;
+                  _ensureFocusedIfEnabled();
+                },
               );
             },
           ),

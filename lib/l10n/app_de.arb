@@ -5,7 +5,6 @@
   "back": "Zurück",
   "you": "Du",
   "loadingProfile": "Profil wird geladen...",
-  "unableToLoadProfile": "Profil konnte nicht geladen werden",
   "pleaseCheckConnection": "Bitte überprüfe deine Verbindung und versuche es erneut",
   "connectionIssueTitle": "Server nicht erreichbar",
   "@connectionIssueTitle": {
@@ -49,7 +48,6 @@
   "token": "Token",
   "usernameOrEmail": "Benutzername oder E‑Mail",
   "password": "Passwort",
-  "signInWithApiKey": "Mit API-Schlüssel anmelden",
   "signInWithToken": "Mit Token anmelden",
   "connectToServer": "Mit Server verbinden",
   "enterServerAddress": "Gib die Adresse deines Open-WebUI-Servers ein, um zu beginnen",
@@ -118,8 +116,6 @@
   "voicePromptTapStart": "Tippe auf \"Starten\", um zu beginnen",
   "voiceActionStop": "Stopp",
   "voiceActionStart": "Starten",
-  "messageInputLabel": "Nachrichteneingabe",
-  "messageInputHint": "Nachricht eingeben",
   "messageHintText": "Frag Conduit",
   "stopGenerating": "Generierung stoppen",
   "codeCopiedToClipboard": "Code in die Zwischenablage kopiert.",
@@ -128,7 +124,6 @@
   "file": "Datei",
   "photo": "Foto",
   "camera": "Kamera",
-  "pasteFromClipboard": "Einfügen",
   "pasteImage": "Bild einfügen",
   "apiUnavailable": "API-Dienst nicht verfügbar",
   "unableToLoadImage": "Bild kann nicht geladen werden",
@@ -229,7 +224,6 @@
   "noConversationsYet": "Noch keine Unterhaltungen",
   "usernameOrEmailHint": "Gib deinen Benutzernamen oder deine E‑Mail ein",
   "passwordHint": "Gib dein Passwort ein",
-  "enterApiKey": "Gib deinen API-Schlüssel ein",
   "enterToken": "Gib dein JWT-Token ein",
   "tokenHint": "Hole das JWT-Token aus den OpenWebUI-Einstellungen. API-Schlüssel (sk-...) werden für Streaming nicht unterstützt.",
   "apiKeyNotSupported": "API-Schlüssel (sk-...) werden nicht unterstützt. Bitte verwende stattdessen ein JWT-Token.",
@@ -247,7 +241,6 @@
   "@allowSelfSignedCertificatesDescription": {
     "description": "Hilfetext, der die Risiken beim Aktivieren des Schalters für selbstsignierte Zertifikate erklärt."
   },
-  "headerNameEmpty": "Header-Name darf nicht leer sein",
   "headerNameTooLong": "Header-Name zu lang (max. 64 Zeichen)",
   "headerNameInvalidChars": "Ungültiger Header-Name. Verwende nur Buchstaben, Zahlen und diese Zeichen: !#$&-^_`|~",
   "headerNameReserved": "Reservierten Header \"{key}\" kann nicht überschrieben werden",
@@ -258,7 +251,6 @@
       }
     }
   },
-  "headerValueEmpty": "Header-Wert darf nicht leer sein",
   "headerValueTooLong": "Header-Wert zu lang (max. 1024 Zeichen)",
   "headerValueInvalidChars": "Header-Wert enthält ungültige Zeichen. Nur druckbare ASCII-Zeichen verwenden.",
   "headerValueUnsafe": "Header-Wert scheint potenziell unsicheren Inhalt zu enthalten",
@@ -787,12 +779,9 @@
       }
     }
   },
-  "noteTitle": "Notiz-Titel",
   "writeNote": "Schreibe etwas...",
-  "noteSaved": "Notiz gespeichert",
   "saving": "Speichern...",
   "saved": "Gespeichert",
-  "unsavedChanges": "Ungespeicherte Änderungen",
   "noteCopiedToClipboard": "Notiz in Zwischenablage kopiert",
   "generateTitle": "Titel generieren",
   "generatingTitle": "Titel wird generiert...",
@@ -815,15 +804,6 @@
   "previous7Days": "Letzte 7 Tage",
   "previous30Days": "Letzte 30 Tage",
   "older": "Älter",
-  "tapToExpand": "Tippen zum Erweitern",
-  "byAuthor": "Von {name}",
-  "@byAuthor": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "wordCount": "{count} Wörter",
   "@wordCount": {
     "placeholders": {
@@ -858,17 +838,11 @@
       }
     }
   },
-  "widgetAskConduit": "Conduit fragen",
-  "widgetCamera": "Kamera",
-  "widgetPhotos": "Fotos",
-  "widgetClipboard": "Zwischenablage",
-  "widgetDescription": "Schnellzugriff auf den Conduit-Chat mit Kamera, Fotos und Zwischenablage-Verknüpfungen",
   "sso": "SSO",
   "ssoDescription": "Mit dem Identitätsanbieter Ihrer Organisation anmelden",
   "signInWithSso": "Mit SSO anmelden",
   "ssoAuthenticating": "Authentifizierung...",
   "ssoAuthFailed": "SSO-Authentifizierung fehlgeschlagen",
-  "ssoTokenNotFound": "Authentifizierungstoken vom SSO-Anbieter konnte nicht abgerufen werden",
   "ssoLoadingLogin": "Anmeldeseite wird geladen...",
   "ldap": "LDAP",
   "ldapDescription": "Mit Ihren LDAP-Verzeichnis-Anmeldedaten anmelden",

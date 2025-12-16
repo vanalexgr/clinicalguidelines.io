@@ -5,7 +5,6 @@
   "back": "返回",
   "you": "你",
   "loadingProfile": "加載個人資料中...",
-  "unableToLoadProfile": "無法加載個人資料",
   "pleaseCheckConnection": "請檢查您的連接並重試",
   "connectionIssueTitle": "無法連接到您的服務器",
   "@connectionIssueTitle": {
@@ -49,7 +48,6 @@
   "token": "令牌",
   "usernameOrEmail": "用戶名或電子郵件",
   "password": "密碼",
-  "signInWithApiKey": "使用 API 密鑰登錄",
   "signInWithToken": "使用令牌登錄",
   "connectToServer": "連接到服務器",
   "enterServerAddress": "輸入您的 Open-WebUI 服務器地址以開始",
@@ -118,8 +116,6 @@
   "voicePromptTapStart": "點擊開始以開始",
   "voiceActionStop": "停止",
   "voiceActionStart": "開始",
-  "messageInputLabel": "消息輸入",
-  "messageInputHint": "輸入您的消息",
   "messageHintText": "問 Conduit",
   "stopGenerating": "停止生成",
   "codeCopiedToClipboard": "代碼已複製到剪貼板。",
@@ -128,7 +124,6 @@
   "file": "文件",
   "photo": "照片",
   "camera": "相機",
-  "pasteFromClipboard": "貼上",
   "pasteImage": "貼上圖片",
   "apiUnavailable": "API 服務不可用",
   "unableToLoadImage": "無法加載圖像",
@@ -229,7 +224,6 @@
   "noConversationsYet": "尚無對話",
   "usernameOrEmailHint": "輸入您的用戶名或電子郵件",
   "passwordHint": "輸入您的密碼",
-  "enterApiKey": "輸入您的 API 密鑰",
   "enterToken": "輸入您的 JWT 令牌",
   "tokenHint": "從 OpenWebUI 設定取得 JWT 令牌。API 密鑰 (sk-...) 不支援串流。",
   "apiKeyNotSupported": "不支援 API 密鑰 (sk-...)。請改用 JWT 令牌。",
@@ -247,7 +241,6 @@
   "@allowSelfSignedCertificatesDescription": {
     "description": "阐明启用自签名证书切换风险的帮助文本。"
   },
-  "headerNameEmpty": "標頭名稱不能爲空",
   "headerNameTooLong": "標頭名稱太長（最多 64 個字符）",
   "headerNameInvalidChars": "無效的標頭名稱。僅使用字母、數字和這些符號：!#$&-^_`|~",
   "headerNameReserved": "無法覆蓋保留的標頭「{key}」",
@@ -258,7 +251,6 @@
       }
     }
   },
-  "headerValueEmpty": "標頭值不能爲空",
   "headerValueTooLong": "標頭值太長（最多 1024 個字符）",
   "headerValueInvalidChars": "標頭值包含無效字符。僅使用可打印的 ASCII。",
   "headerValueUnsafe": "標頭值似乎包含潛在的不安全內容",
@@ -787,12 +779,9 @@
       }
     }
   },
-  "noteTitle": "筆記標題",
   "writeNote": "寫點什麼...",
-  "noteSaved": "筆記已儲存",
   "saving": "儲存中...",
   "saved": "已儲存",
-  "unsavedChanges": "未儲存的變更",
   "noteCopiedToClipboard": "筆記已複製到剪貼簿",
   "generateTitle": "產生標題",
   "generatingTitle": "正在產生標題...",
@@ -815,15 +804,6 @@
   "previous7Days": "過去 7 天",
   "previous30Days": "過去 30 天",
   "older": "更早",
-  "tapToExpand": "點擊展開",
-  "byAuthor": "作者：{name}",
-  "@byAuthor": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "wordCount": "{count} 字",
   "@wordCount": {
     "placeholders": {
@@ -858,17 +838,11 @@
       }
     }
   },
-  "widgetAskConduit": "詢問 Conduit",
-  "widgetCamera": "相機",
-  "widgetPhotos": "照片",
-  "widgetClipboard": "剪貼簿",
-  "widgetDescription": "快速存取 Conduit 聊天，支援相機、照片和剪貼簿捷徑",
   "sso": "SSO",
   "ssoDescription": "使用組織的身份提供商登入",
   "signInWithSso": "使用 SSO 登入",
   "ssoAuthenticating": "正在驗證...",
   "ssoAuthFailed": "SSO 驗證失敗",
-  "ssoTokenNotFound": "無法從 SSO 提供商取得驗證權杖",
   "ssoLoadingLogin": "正在載入登入頁面...",
   "ldap": "LDAP",
   "ldapDescription": "使用 LDAP 目錄憑據登入",
