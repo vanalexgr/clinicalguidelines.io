@@ -106,19 +106,53 @@ class HomeWidgetCoordinator extends _$HomeWidgetCoordinator {
     }
   }
 
-  /// Process initial widget action after ensuring router is ready.
+  /// Process initial widget action after ensuring router and auth are ready.
   Future<void> _processInitialWidgetAction() async {
     if (_pendingWidgetAction == null) return;
 
-    // Wait for router to be attached and app to be ready
+    // Wait for router to be attached first
     for (var i = 0; i < 50; i++) {
       // Try for up to 5 seconds
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      // Check if router is available
       if (NavigationService.currentRoute != null) {
         DebugLogger.log(
-          'Widget: Router ready, processing pending action',
+          'Widget: Router ready, waiting for authentication',
+          scope: 'widget',
+        );
+        break;
+      }
+    }
+
+    if (NavigationService.currentRoute == null) {
+      DebugLogger.log(
+        'Widget: Timeout waiting for router, clearing pending action',
+        scope: 'widget',
+      );
+      _pendingWidgetAction = null;
+      return;
+    }
+
+    // Check if action was already processed by stream handler while waiting
+    if (_pendingWidgetAction == null) return;
+
+    // Now wait for authentication to complete (up to 30 seconds for login flow)
+    for (var i = 0; i < 300; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      if (!ref.mounted) {
+        DebugLogger.log(
+          'Widget: Provider disposed while waiting for auth',
+          scope: 'widget',
+        );
+        _pendingWidgetAction = null;
+        return;
+      }
+
+      final authState = ref.read(authNavigationStateProvider);
+      if (authState == AuthNavigationState.authenticated) {
+        DebugLogger.log(
+          'Widget: Authenticated, processing pending action',
           scope: 'widget',
         );
         final uri = _pendingWidgetAction;
@@ -126,10 +160,18 @@ class HomeWidgetCoordinator extends _$HomeWidgetCoordinator {
         await _handleWidgetClick(uri);
         return;
       }
+
+      // If user is on login page and not loading, they need to authenticate
+      // Don't clear the pending action yet - keep waiting
+      if (authState == AuthNavigationState.needsLogin ||
+          authState == AuthNavigationState.error) {
+        // Continue waiting - user might be logging in
+        continue;
+      }
     }
 
     DebugLogger.log(
-      'Widget: Timeout waiting for router, clearing pending action',
+      'Widget: Timeout waiting for authentication, clearing pending action',
       scope: 'widget',
     );
     _pendingWidgetAction = null;
