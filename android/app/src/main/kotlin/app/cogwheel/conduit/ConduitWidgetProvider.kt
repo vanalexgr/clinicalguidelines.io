@@ -57,7 +57,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("homewidget://$ACTION_NEW_CHAT")
+                    Uri.parse("conduit://$ACTION_NEW_CHAT")
                 )
             )
             views.setOnClickPendingIntent(
@@ -65,7 +65,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("homewidget://$ACTION_NEW_CHAT")
+                    Uri.parse("conduit://$ACTION_NEW_CHAT")
                 )
             )
             views.setOnClickPendingIntent(
@@ -73,7 +73,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("homewidget://$ACTION_MIC")
+                    Uri.parse("conduit://$ACTION_MIC")
                 )
             )
             views.setOnClickPendingIntent(
@@ -81,7 +81,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("homewidget://$ACTION_CAMERA")
+                    Uri.parse("conduit://$ACTION_CAMERA")
                 )
             )
             views.setOnClickPendingIntent(
@@ -89,7 +89,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("homewidget://$ACTION_PHOTOS")
+                    Uri.parse("conduit://$ACTION_PHOTOS")
                 )
             )
             views.setOnClickPendingIntent(
@@ -97,7 +97,7 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                 HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("homewidget://$ACTION_CLIPBOARD")
+                    Uri.parse("conduit://$ACTION_CLIPBOARD")
                 )
             )
 

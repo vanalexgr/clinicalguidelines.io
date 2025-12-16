@@ -45,6 +45,16 @@
 				<string>ShareMedia-app.cogwheel.conduit</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>app.cogwheel.conduit.widget</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>conduit</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>

@@ -55,7 +55,7 @@ struct ConduitWidgetEntryView: View {
     var body: some View {
         VStack(spacing: 12) {
             // Main "Ask Conduit" pill - ChatGPT style
-            Link(destination: URL(string: "homewidget://new_chat")!) {
+            Link(destination: URL(string: "conduit://new_chat")!) {
                 HStack(spacing: 12) {
                     Image("HubIcon")
                         .renderingMode(.template)
@@ -82,25 +82,25 @@ struct ConduitWidgetEntryView: View {
             HStack(spacing: 8) {
                 CircularIconButton(
                     symbol: "camera",
-                    url: "homewidget://camera",
+                    url: "conduit://camera",
                     contentColor: contentColor,
                     buttonBackground: buttonBackground
                 )
                 CircularIconButton(
                     symbol: "photo.on.rectangle.angled",
-                    url: "homewidget://photos",
+                    url: "conduit://photos",
                     contentColor: contentColor,
                     buttonBackground: buttonBackground
                 )
                 CircularIconButton(
                     symbol: "waveform",
-                    url: "homewidget://mic",
+                    url: "conduit://mic",
                     contentColor: contentColor,
                     buttonBackground: buttonBackground
                 )
                 CircularIconButton(
                     symbol: "doc.on.clipboard",
-                    url: "homewidget://clipboard",
+                    url: "conduit://clipboard",
                     contentColor: contentColor,
                     buttonBackground: buttonBackground
                 )
