@@ -65,9 +65,13 @@ class ResponsiveDrawerLayoutState extends State<ResponsiveDrawerLayout>
   );
   late bool _isTabletDocked = widget.tabletInitiallyDocked;
 
+  /// Cached tablet state to avoid accessing context when unmounted.
+  bool _cachedIsTablet = false;
+
   bool _isTablet(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    return size.shortestSide >= 600;
+    _cachedIsTablet = size.shortestSide >= 600;
+    return _cachedIsTablet;
   }
 
   double get _panelWidth =>
@@ -79,8 +83,17 @@ class ResponsiveDrawerLayoutState extends State<ResponsiveDrawerLayout>
   double get _edgeWidth =>
       MediaQuery.of(context).size.width * widget.edgeFraction;
 
+  /// Returns whether the drawer is currently open.
+  /// Uses cached tablet state to avoid context access issues when unmounted.
   bool get isOpen =>
-      _isTablet(context) ? _isTabletDocked : _controller.value == 1.0;
+      _cachedIsTablet ? _isTabletDocked : _controller.value == 1.0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update cached tablet state when MediaQuery changes
+    _isTablet(context);
+  }
 
   @override
   void didUpdateWidget(covariant ResponsiveDrawerLayout oldWidget) {
