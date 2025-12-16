@@ -1532,10 +1532,26 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         ? _parseNum(completionDetails['reasoning_tokens'])
         : null;
 
+    // llama.cpp server format: pre-calculated tokens/second values
+    final predictedPerSecond = _parseNum(usage['predicted_per_second']);
+    final promptPerSecond = _parseNum(usage['prompt_per_second']);
+    final predictedN = _parseNum(usage['predicted_n']);
+    final promptN = _parseNum(usage['prompt_n']);
+
     // --- Token Generation Speed ---
-    // Priority: Ollama format > Groq/OpenAI extended format > token count only
-    if (evalCount != null && evalDuration != null && evalDuration > 0) {
-      // Ollama/llama.cpp: duration in nanoseconds
+    // Priority: llama.cpp direct > Ollama calculated > Groq/OpenAI > count only
+    if (predictedPerSecond != null && predictedPerSecond > 0) {
+      // llama.cpp server: pre-calculated tokens/second
+      stats.add(
+        _UsageStatRow(
+          label: l10n.usageTokenGeneration,
+          value: l10n.usageTokensPerSecond(predictedPerSecond.toStringAsFixed(1)),
+          detail: predictedN != null ? l10n.usageTokenCount(predictedN.toInt()) : null,
+          theme: theme,
+        ),
+      );
+    } else if (evalCount != null && evalDuration != null && evalDuration > 0) {
+      // Ollama: duration in nanoseconds
       final tgSpeed = evalCount / (evalDuration / 1e9);
       stats.add(
         _UsageStatRow(
@@ -1570,10 +1586,21 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
 
     // --- Prompt Processing Speed ---
-    if (promptEvalCount != null &&
+    // Priority: llama.cpp direct > Ollama calculated > Groq/OpenAI > count only
+    if (promptPerSecond != null && promptPerSecond > 0) {
+      // llama.cpp server: pre-calculated tokens/second
+      stats.add(
+        _UsageStatRow(
+          label: l10n.usagePromptEval,
+          value: l10n.usageTokensPerSecond(promptPerSecond.toStringAsFixed(1)),
+          detail: promptN != null ? l10n.usageTokenCount(promptN.toInt()) : null,
+          theme: theme,
+        ),
+      );
+    } else if (promptEvalCount != null &&
         promptEvalDuration != null &&
         promptEvalDuration > 0) {
-      // Ollama/llama.cpp: duration in nanoseconds
+      // Ollama: duration in nanoseconds
       final ppSpeed = promptEvalCount / (promptEvalDuration / 1e9);
       stats.add(
         _UsageStatRow(
