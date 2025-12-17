@@ -96,6 +96,43 @@ List<Map<String, dynamic>> _convertSourcesToOpenWebUIFormat(
   }).toList();
 }
 
+/// Converts ChatCodeExecution list to OpenWebUI's expected format.
+/// OpenWebUI expects `code_executions` (snake_case) with specific structure.
+/// ChatCodeExecution stores: { id, name, language, code, result, metadata }
+/// OpenWebUI expects: { id, name, code, language?, result?: { error?, output?, files? } }
+List<Map<String, dynamic>> _convertCodeExecutionsToOpenWebUIFormat(
+  List<ChatCodeExecution> executions,
+) {
+  return executions.map((exec) {
+    final result = <String, dynamic>{
+      'id': exec.id,
+      if (exec.name != null) 'name': exec.name,
+      if (exec.code != null) 'code': exec.code,
+      if (exec.language != null) 'language': exec.language,
+    };
+
+    // Convert the result if present
+    if (exec.result != null) {
+      final execResult = <String, dynamic>{};
+      if (exec.result!.output != null) execResult['output'] = exec.result!.output;
+      if (exec.result!.error != null) execResult['error'] = exec.result!.error;
+      if (exec.result!.files.isNotEmpty) {
+        execResult['files'] = exec.result!.files
+            .map((f) => <String, dynamic>{
+                  if (f.name != null) 'name': f.name,
+                  if (f.url != null) 'url': f.url,
+                })
+            .toList();
+      }
+      if (execResult.isNotEmpty) {
+        result['result'] = execResult;
+      }
+    }
+
+    return result;
+  }).toList();
+}
+
 class ApiService {
   final Dio _dio;
   final ServerConfig serverConfig;
@@ -1043,7 +1080,8 @@ class ApiService {
         if (msg.followUps.isNotEmpty)
           'followUps': List<String>.from(msg.followUps),
         if (msg.codeExecutions.isNotEmpty)
-          'codeExecutions': msg.codeExecutions.map((e) => e.toJson()).toList(),
+          'code_executions':
+              _convertCodeExecutionsToOpenWebUIFormat(msg.codeExecutions),
         // Convert sources back to OpenWebUI format (with document array)
         if (msg.sources.isNotEmpty)
           'sources': _convertSourcesToOpenWebUIFormat(msg.sources),
@@ -1084,7 +1122,8 @@ class ApiService {
         if (msg.followUps.isNotEmpty)
           'followUps': List<String>.from(msg.followUps),
         if (msg.codeExecutions.isNotEmpty)
-          'codeExecutions': msg.codeExecutions.map((e) => e.toJson()).toList(),
+          'code_executions':
+              _convertCodeExecutionsToOpenWebUIFormat(msg.codeExecutions),
         // Convert sources back to OpenWebUI format (with document array)
         if (msg.sources.isNotEmpty)
           'sources': _convertSourcesToOpenWebUIFormat(msg.sources),
@@ -1122,9 +1161,8 @@ class ApiService {
               if (ver.followUps.isNotEmpty)
                 'followUps': List<String>.from(ver.followUps),
               if (ver.codeExecutions.isNotEmpty)
-                'codeExecutions': ver.codeExecutions
-                    .map((e) => e.toJson())
-                    .toList(),
+                'code_executions':
+                    _convertCodeExecutionsToOpenWebUIFormat(ver.codeExecutions),
               // Convert sources back to OpenWebUI format (with document array)
               if (ver.sources.isNotEmpty)
                 'sources': _convertSourcesToOpenWebUIFormat(ver.sources),
