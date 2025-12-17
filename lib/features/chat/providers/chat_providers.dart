@@ -883,7 +883,7 @@ class ChatMessagesNotifier extends Notifier<List<ChatMessage>> {
 }
 
 // Pre-seed an assistant skeleton message (with a given id or a new one),
-// persist it to the server to keep the chain correct, and return the id.
+// persist it to the server to establish the message structure, and return the id.
 Future<String> _preseedAssistantAndPersist(
   dynamic ref, {
   String? existingAssistantId,
@@ -926,7 +926,11 @@ Future<String> _preseedAssistantAndPersist(
     } catch (_) {}
   }
 
-  // Sync conversation state to ensure WebUI can load conversation history
+  // Sync conversation state to establish the full message structure on the server.
+  // The server's upsert only sets parentId and model - we need to set role,
+  // timestamp, childrenIds, etc. for proper message rendering.
+  // Note: syncConversationMessages always sets done:true to prevent broken UI
+  // if streaming is interrupted (see api_service.dart).
   try {
     final api = ref.read(apiServiceProvider);
     final activeConv = ref.read(activeConversationProvider);
