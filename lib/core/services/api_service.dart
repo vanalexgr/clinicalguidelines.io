@@ -114,14 +114,17 @@ List<Map<String, dynamic>> _convertCodeExecutionsToOpenWebUIFormat(
     // Convert the result if present
     if (exec.result != null) {
       final execResult = <String, dynamic>{};
-      if (exec.result!.output != null) execResult['output'] = exec.result!.output;
+      if (exec.result!.output != null)
+        execResult['output'] = exec.result!.output;
       if (exec.result!.error != null) execResult['error'] = exec.result!.error;
       if (exec.result!.files.isNotEmpty) {
         execResult['files'] = exec.result!.files
-            .map((f) => <String, dynamic>{
-                  if (f.name != null) 'name': f.name,
-                  if (f.url != null) 'url': f.url,
-                })
+            .map(
+              (f) => <String, dynamic>{
+                if (f.name != null) 'name': f.name,
+                if (f.url != null) 'url': f.url,
+              },
+            )
             .toList();
       }
       if (execResult.isNotEmpty) {
@@ -939,11 +942,30 @@ class ApiService {
         'role': msg.role,
         'content': msg.content,
         'timestamp': msg.timestamp.millisecondsSinceEpoch ~/ 1000,
+        // Assistant message fields
+        if (msg.role == 'assistant' && msg.model != null) 'model': msg.model,
+        if (msg.role == 'assistant' && msg.model != null)
+          'modelName': msg.model,
+        if (msg.role == 'assistant') 'modelIdx': 0,
+        if (msg.role == 'assistant') 'done': true,
+        // User message fields
         if (msg.role == 'user' && model != null) 'models': [model],
         if (msg.attachmentIds != null && msg.attachmentIds!.isNotEmpty)
           'attachment_ids': List<String>.from(msg.attachmentIds!),
         if (_sanitizeFilesForWebUI(msg.files) != null)
           'files': _sanitizeFilesForWebUI(msg.files),
+        // Assistant message extended fields
+        if (msg.statusHistory.isNotEmpty)
+          'statusHistory': msg.statusHistory.map((s) => s.toJson()).toList(),
+        if (msg.followUps.isNotEmpty)
+          'followUps': List<String>.from(msg.followUps),
+        if (msg.codeExecutions.isNotEmpty)
+          'code_executions': _convertCodeExecutionsToOpenWebUIFormat(
+            msg.codeExecutions,
+          ),
+        if (msg.sources.isNotEmpty)
+          'sources': _convertSourcesToOpenWebUIFormat(msg.sources),
+        if (msg.usage != null) 'usage': msg.usage,
         // Preserve error field for OpenWebUI compatibility
         if (msg.error != null) 'error': msg.error!.toJson(),
       };
@@ -961,11 +983,30 @@ class ApiService {
         'role': msg.role,
         'content': msg.content,
         'timestamp': msg.timestamp.millisecondsSinceEpoch ~/ 1000,
+        // Assistant message fields
+        if (msg.role == 'assistant' && msg.model != null) 'model': msg.model,
+        if (msg.role == 'assistant' && msg.model != null)
+          'modelName': msg.model,
+        if (msg.role == 'assistant') 'modelIdx': 0,
+        if (msg.role == 'assistant') 'done': true,
+        // User message fields
         if (msg.role == 'user' && model != null) 'models': [model],
         if (msg.attachmentIds != null && msg.attachmentIds!.isNotEmpty)
           'attachment_ids': List<String>.from(msg.attachmentIds!),
         if (_sanitizeFilesForWebUI(msg.files) != null)
           'files': _sanitizeFilesForWebUI(msg.files),
+        // Assistant message extended fields
+        if (msg.statusHistory.isNotEmpty)
+          'statusHistory': msg.statusHistory.map((s) => s.toJson()).toList(),
+        if (msg.followUps.isNotEmpty)
+          'followUps': List<String>.from(msg.followUps),
+        if (msg.codeExecutions.isNotEmpty)
+          'code_executions': _convertCodeExecutionsToOpenWebUIFormat(
+            msg.codeExecutions,
+          ),
+        if (msg.sources.isNotEmpty)
+          'sources': _convertSourcesToOpenWebUIFormat(msg.sources),
+        if (msg.usage != null) 'usage': msg.usage,
         // Preserve error field for OpenWebUI compatibility
         if (msg.error != null) 'error': msg.error!.toJson(),
       });
@@ -1080,8 +1121,9 @@ class ApiService {
         if (msg.followUps.isNotEmpty)
           'followUps': List<String>.from(msg.followUps),
         if (msg.codeExecutions.isNotEmpty)
-          'code_executions':
-              _convertCodeExecutionsToOpenWebUIFormat(msg.codeExecutions),
+          'code_executions': _convertCodeExecutionsToOpenWebUIFormat(
+            msg.codeExecutions,
+          ),
         // Convert sources back to OpenWebUI format (with document array)
         if (msg.sources.isNotEmpty)
           'sources': _convertSourcesToOpenWebUIFormat(msg.sources),
@@ -1122,8 +1164,9 @@ class ApiService {
         if (msg.followUps.isNotEmpty)
           'followUps': List<String>.from(msg.followUps),
         if (msg.codeExecutions.isNotEmpty)
-          'code_executions':
-              _convertCodeExecutionsToOpenWebUIFormat(msg.codeExecutions),
+          'code_executions': _convertCodeExecutionsToOpenWebUIFormat(
+            msg.codeExecutions,
+          ),
         // Convert sources back to OpenWebUI format (with document array)
         if (msg.sources.isNotEmpty)
           'sources': _convertSourcesToOpenWebUIFormat(msg.sources),
@@ -1161,8 +1204,9 @@ class ApiService {
               if (ver.followUps.isNotEmpty)
                 'followUps': List<String>.from(ver.followUps),
               if (ver.codeExecutions.isNotEmpty)
-                'code_executions':
-                    _convertCodeExecutionsToOpenWebUIFormat(ver.codeExecutions),
+                'code_executions': _convertCodeExecutionsToOpenWebUIFormat(
+                  ver.codeExecutions,
+                ),
               // Convert sources back to OpenWebUI format (with document array)
               if (ver.sources.isNotEmpty)
                 'sources': _convertSourcesToOpenWebUIFormat(ver.sources),
