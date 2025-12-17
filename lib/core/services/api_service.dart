@@ -33,6 +33,69 @@ void _traceApi(String message) {
   DebugLogger.log(message, scope: 'api/trace');
 }
 
+/// Converts ChatSourceReference list back to OpenWebUI's expected format.
+/// OpenWebUI expects: { source: {...}, document: [...], metadata: [...] }
+/// But ChatSourceReference stores: { id, title, url, snippet, type, metadata }
+List<Map<String, dynamic>> _convertSourcesToOpenWebUIFormat(
+  List<ChatSourceReference> sources,
+) {
+  return sources.map((ref) {
+    final result = <String, dynamic>{};
+
+    // Build the source object
+    final sourceObj = <String, dynamic>{};
+    if (ref.id != null) sourceObj['id'] = ref.id;
+    if (ref.title != null) sourceObj['name'] = ref.title;
+    if (ref.url != null) sourceObj['url'] = ref.url;
+    if (ref.type != null) sourceObj['type'] = ref.type;
+
+    // Extract nested source from metadata if present
+    final metadataSource = ref.metadata?['source'];
+    if (metadataSource is Map) {
+      for (final entry in metadataSource.entries) {
+        sourceObj[entry.key.toString()] ??= entry.value;
+      }
+    }
+
+    if (sourceObj.isNotEmpty) {
+      result['source'] = sourceObj;
+    }
+
+    // Extract documents from metadata or use snippet
+    final documents = ref.metadata?['documents'];
+    if (documents is List && documents.isNotEmpty) {
+      result['document'] = documents;
+    } else if (ref.snippet != null && ref.snippet!.isNotEmpty) {
+      result['document'] = [ref.snippet];
+    }
+
+    // Extract metadata items
+    final metadataItems = ref.metadata?['items'];
+    if (metadataItems is List && metadataItems.isNotEmpty) {
+      result['metadata'] = metadataItems;
+    } else {
+      // Create a basic metadata entry
+      final basicMeta = <String, dynamic>{};
+      if (ref.id != null) basicMeta['source'] = ref.id;
+      if (ref.title != null) basicMeta['name'] = ref.title;
+      if (result['document'] is List) {
+        result['metadata'] = List.generate(
+          (result['document'] as List).length,
+          (_) => Map<String, dynamic>.from(basicMeta),
+        );
+      }
+    }
+
+    // Extract distances if present
+    final distances = ref.metadata?['distances'];
+    if (distances is List && distances.isNotEmpty) {
+      result['distances'] = distances;
+    }
+
+    return result;
+  }).toList();
+}
+
 class ApiService {
   final Dio _dio;
   final ServerConfig serverConfig;
@@ -981,8 +1044,9 @@ class ApiService {
           'followUps': List<String>.from(msg.followUps),
         if (msg.codeExecutions.isNotEmpty)
           'codeExecutions': msg.codeExecutions.map((e) => e.toJson()).toList(),
+        // Convert sources back to OpenWebUI format (with document array)
         if (msg.sources.isNotEmpty)
-          'sources': msg.sources.map((s) => s.toJson()).toList(),
+          'sources': _convertSourcesToOpenWebUIFormat(msg.sources),
         // Include usage statistics for persistence (issue #274)
         if (msg.usage != null) 'usage': msg.usage,
         // Preserve error field for OpenWebUI compatibility
@@ -1021,8 +1085,9 @@ class ApiService {
           'followUps': List<String>.from(msg.followUps),
         if (msg.codeExecutions.isNotEmpty)
           'codeExecutions': msg.codeExecutions.map((e) => e.toJson()).toList(),
+        // Convert sources back to OpenWebUI format (with document array)
         if (msg.sources.isNotEmpty)
-          'sources': msg.sources.map((s) => s.toJson()).toList(),
+          'sources': _convertSourcesToOpenWebUIFormat(msg.sources),
         // Include usage statistics for persistence (issue #274)
         if (msg.usage != null) 'usage': msg.usage,
         // Preserve error field for OpenWebUI compatibility
@@ -1060,8 +1125,9 @@ class ApiService {
                 'codeExecutions': ver.codeExecutions
                     .map((e) => e.toJson())
                     .toList(),
+              // Convert sources back to OpenWebUI format (with document array)
               if (ver.sources.isNotEmpty)
-                'sources': ver.sources.map((s) => s.toJson()).toList(),
+                'sources': _convertSourcesToOpenWebUIFormat(ver.sources),
               // Preserve error field for OpenWebUI compatibility
               if (ver.error != null) 'error': ver.error!.toJson(),
             };
