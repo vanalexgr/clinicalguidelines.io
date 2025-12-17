@@ -966,7 +966,10 @@ class ApiService {
         if (msg.role == 'assistant' && msg.model != null)
           'modelName': msg.model,
         if (msg.role == 'assistant') 'modelIdx': 0,
-        if (msg.role == 'assistant') 'done': !msg.isStreaming,
+        // Always set done: true when persisting to server.
+        // If streaming is interrupted, the message should still be marked done
+        // to prevent the web client from treating it as an in-progress stream.
+        if (msg.role == 'assistant') 'done': true,
         if (msg.role == 'user' && model != null) 'models': [model],
         if (msg.attachmentIds != null && msg.attachmentIds!.isNotEmpty)
           'attachment_ids': List<String>.from(msg.attachmentIds!),
@@ -1005,7 +1008,8 @@ class ApiService {
         if (msg.role == 'assistant' && msg.model != null)
           'modelName': msg.model,
         if (msg.role == 'assistant') 'modelIdx': 0,
-        if (msg.role == 'assistant') 'done': !msg.isStreaming,
+        // Always set done: true when persisting to server.
+        if (msg.role == 'assistant') 'done': true,
         if (msg.role == 'user' && model != null) 'models': [model],
         if (msg.attachmentIds != null && msg.attachmentIds!.isNotEmpty)
           'attachment_ids': List<String>.from(msg.attachmentIds!),
