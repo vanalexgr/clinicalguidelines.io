@@ -1,1 +1,1 @@
-https://github.com/cogwheel0/conduit/releases/tag/v2.3.8
+https://github.com/cogwheel0/conduit/releases/tag/v2.3.9
