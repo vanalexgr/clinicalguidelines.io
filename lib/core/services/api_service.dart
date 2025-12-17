@@ -2863,7 +2863,9 @@ class ApiService {
 
     // Check if memory is enabled in user's OpenWebUI settings
     // This syncs with the user's preference from the web interface
-    final bool memoryEnabled = userSettings?['memory'] == true;
+    // Memory setting is stored in ui.memory (matches OpenWebUI web client)
+    final uiMemorySettings = userSettings?['ui'] as Map<String, dynamic>?;
+    final bool memoryEnabled = uiMemorySettings?['memory'] == true;
 
     if (enableWebSearch || enableImageGeneration || memoryEnabled) {
       data['features'] = {
