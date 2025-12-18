@@ -1943,14 +1943,6 @@
   "@authenticateThroughProxy": {
     "description": "Button text to start proxy authentication."
   },
-  "serverBehindProxy": "Server behind proxy",
-  "@serverBehindProxy": {
-    "description": "Toggle label for servers behind authentication proxies."
-  },
-  "serverBehindProxyDescription": "Enable if your server uses oauth2-proxy or similar authentication.",
-  "@serverBehindProxyDescription": {
-    "description": "Description for the proxy server toggle."
-  },
   "continueWithProvider": "Continue with {provider}",
   "@continueWithProvider": {
     "description": "Button text for OAuth provider sign-in.",

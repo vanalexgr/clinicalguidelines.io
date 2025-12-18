@@ -886,5 +886,15 @@
   "usageLoadDuration": "模型載入時間",
   "usageQueueTime": "排隊時間",
   "usageReasoningTokens": "推理 token",
-  "usageTotalTokens": "總 token"
+  "usageTotalTokens": "總 token",
+  "proxyAuthentication": "代理認證",
+  "proxyAuthPlatformNotSupported": "代理認證需要行動裝置。請先透過瀏覽器進行認證。",
+  "proxyAuthLoading": "正在載入認證頁面...",
+  "proxyAuthFailed": "代理認證失敗",
+  "proxyAuthHelpText": "透過您組織的代理完成登入，然後登入 Open WebUI。您將被自動重新導向。",
+  "proxyAuthHelpTextSimple": "透過您的代理登入。認證後，點擊繼續以進行登入。",
+  "continueButton": "繼續",
+  "proxyAuthRequired": "此伺服器需要代理認證",
+  "proxyAuthRequiredDescription": "您的伺服器似乎位於認證代理（如 oauth2-proxy）後面。您需要先透過代理登入。",
+  "authenticateThroughProxy": "認證"
 }

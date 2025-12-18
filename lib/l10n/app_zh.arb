@@ -886,5 +886,15 @@
   "usageLoadDuration": "模型加载时间",
   "usageQueueTime": "排队时间",
   "usageReasoningTokens": "推理 token",
-  "usageTotalTokens": "总 token"
+  "usageTotalTokens": "总 token",
+  "proxyAuthentication": "代理认证",
+  "proxyAuthPlatformNotSupported": "代理认证需要移动设备。请先通过浏览器进行认证。",
+  "proxyAuthLoading": "正在加载认证页面...",
+  "proxyAuthFailed": "代理认证失败",
+  "proxyAuthHelpText": "通过您组织的代理完成登录，然后登录 Open WebUI。您将被自动重定向。",
+  "proxyAuthHelpTextSimple": "通过您的代理登录。认证后，点击继续以进行登录。",
+  "continueButton": "继续",
+  "proxyAuthRequired": "此服务器需要代理认证",
+  "proxyAuthRequiredDescription": "您的服务器似乎位于认证代理（如 oauth2-proxy）后面。您需要先通过代理登录。",
+  "authenticateThroughProxy": "认证"
 }

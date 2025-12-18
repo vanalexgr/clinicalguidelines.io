@@ -42,7 +42,6 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
   bool _isConnecting = false;
   bool _showAdvancedSettings = false;
   bool _allowSelfSignedCertificates = false;
-  bool _serverBehindProxy = false;
 
   @override
   void initState() {
@@ -107,16 +106,6 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         serverConfig: tempConfig,
         workerManager: workerManager,
       );
-
-      // If user indicated server is behind proxy, go directly to proxy auth
-      if (_serverBehindProxy) {
-        DebugLogger.log(
-          'User indicated server behind proxy, starting proxy auth',
-          scope: 'auth/connection',
-        );
-        await _handleProxyAuth(tempConfig, api, workerManager);
-        return;
-      }
 
       // First check connectivity with proxy detection
       DebugLogger.log('Checking server health...', scope: 'auth/connection');
@@ -881,64 +870,6 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
                   onChanged: (value) {
                     setState(() {
                       _allowSelfSignedCertificates = value;
-                    });
-                  },
-                  activeTrackColor: context.conduitTheme.buttonPrimary,
-                ),
-              ],
-            ),
-          ),
-          // Server behind proxy toggle
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(Spacing.md),
-            margin: const EdgeInsets.only(bottom: Spacing.md),
-            decoration: BoxDecoration(
-              color: context.conduitTheme.surfaceContainer.withValues(
-                alpha: 0.3,
-              ),
-              borderRadius: BorderRadius.circular(AppBorderRadius.small),
-              border: Border.all(
-                color: context.conduitTheme.dividerColor.withValues(alpha: 0.4),
-                width: BorderWidth.thin,
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Platform.isIOS ? CupertinoIcons.shield : Icons.security,
-                  color: context.conduitTheme.iconSecondary,
-                  size: IconSize.small,
-                ),
-                const SizedBox(width: Spacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.serverBehindProxy,
-                        style: context.conduitTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: context.conduitTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: Spacing.xs),
-                      Text(
-                        l10n.serverBehindProxyDescription,
-                        style: context.conduitTheme.bodySmall?.copyWith(
-                          color: context.conduitTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: Spacing.sm),
-                Switch.adaptive(
-                  value: _serverBehindProxy,
-                  onChanged: (value) {
-                    setState(() {
-                      _serverBehindProxy = value;
                     });
                   },
                   activeTrackColor: context.conduitTheme.buttonPrimary,
