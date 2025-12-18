@@ -11,7 +11,7 @@ import '../utils/debug_logger.dart';
 bool get isWebViewSupported =>
     !kIsWeb && (Platform.isIOS || Platform.isAndroid);
 
-/// Helper for clearing WebView data on supported platforms.
+/// Helper for managing WebView data and cookies.
 ///
 /// This is isolated in its own file to prevent platform coupling issues
 /// when the webview_flutter package isn't available.
@@ -70,5 +70,69 @@ class WebViewCookieHelper {
     }
 
     return success;
+  }
+
+  /// Gets cookies from a WebView controller via JavaScript.
+  ///
+  /// This can be used to extract session cookies set by proxy authentication
+  /// and pass them to HTTP clients like Dio.
+  ///
+  /// Note: Only works for cookies without the HttpOnly flag.
+  /// For HttpOnly cookies, iOS/Android platforms may share cookies
+  /// automatically through the shared cookie store.
+  ///
+  /// Returns a map of cookie names to values, or empty map if unavailable.
+  static Future<Map<String, String>> getCookiesFromController(
+    WebViewController controller,
+  ) async {
+    if (!isWebViewSupported) return {};
+
+    try {
+      final result = await controller.runJavaScriptReturningResult(
+        'document.cookie',
+      );
+
+      final cookieString = result.toString();
+      // Remove surrounding quotes if present
+      final cleaned =
+          cookieString.startsWith('"') && cookieString.endsWith('"')
+              ? cookieString.substring(1, cookieString.length - 1)
+              : cookieString;
+
+      if (cleaned.isEmpty || cleaned == 'null') return {};
+
+      final cookieMap = <String, String>{};
+      final pairs = cleaned.split(';');
+      for (final pair in pairs) {
+        final trimmed = pair.trim();
+        final idx = trimmed.indexOf('=');
+        if (idx > 0) {
+          final name = trimmed.substring(0, idx).trim();
+          final value = trimmed.substring(idx + 1).trim();
+          cookieMap[name] = value;
+        }
+      }
+
+      DebugLogger.auth(
+        'Retrieved ${cookieMap.length} cookies from WebView',
+      );
+      return cookieMap;
+    } catch (e) {
+      DebugLogger.warning(
+        'webview-get-cookies-failed',
+        scope: 'auth/webview',
+        data: {'error': e.toString()},
+      );
+      return {};
+    }
+  }
+
+  /// Formats cookies as a Cookie header string.
+  ///
+  /// This converts a map of cookie names to values into a properly formatted
+  /// Cookie header that can be sent with HTTP requests.
+  static String formatCookieHeader(Map<String, String> cookies) {
+    if (cookies.isEmpty) return '';
+    return cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
   }
 }

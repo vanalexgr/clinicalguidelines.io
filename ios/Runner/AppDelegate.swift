@@ -4,6 +4,7 @@ import Flutter
 import AppIntents
 import UIKit
 import UniformTypeIdentifiers
+import WebKit
 
 final class VoiceBackgroundAudioManager {
     static let shared = VoiceBackgroundAudioManager()
@@ -613,6 +614,18 @@ struct AppShortcuts: AppShortcutsProvider {
 @objc class AppDelegate: FlutterAppDelegate {
   private var backgroundStreamingHandler: BackgroundStreamingHandler?
 
+  /// Checks if a cookie matches a given URL based on domain.
+  private func cookieMatchesUrl(cookie: HTTPCookie, url: URL) -> Bool {
+    guard let host = url.host?.lowercased() else { return false }
+    let domain = cookie.domain.lowercased()
+
+    // Remove leading dot from cookie domain if present
+    let cleanDomain = domain.hasPrefix(".") ? String(domain.dropFirst()) : domain
+
+    // Exact match or subdomain match
+    return host == cleanDomain || host.hasSuffix(".\(cleanDomain)")
+  }
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -642,6 +655,46 @@ struct AppShortcuts: AppShortcutsProvider {
       // Register method call handler
       channel.setMethodCallHandler { [weak self] (call, result) in
         self?.backgroundStreamingHandler?.handle(call, result: result)
+      }
+    }
+
+    // Setup cookie manager channel for WebView cookie access
+    if let registrar = self.registrar(forPlugin: "CookieManagerChannel") {
+      let cookieChannel = FlutterMethodChannel(
+        name: "com.conduit.app/cookies",
+        binaryMessenger: registrar.messenger()
+      )
+
+      cookieChannel.setMethodCallHandler { [weak self] (call, result) in
+        if call.method == "getCookies" {
+          guard let args = call.arguments as? [String: Any],
+                let urlString = args["url"] as? String,
+                let url = URL(string: urlString) else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid URL", details: nil))
+            return
+          }
+
+          // Get cookies from WKWebView's cookie store
+          WKWebsiteDataStore.default().httpCookieStore.getAllCookies { [weak self] cookies in
+            guard let self = self else {
+              // Always call result to avoid leaving Dart side hanging
+              result([:])
+              return
+            }
+            var cookieDict: [String: String] = [:]
+
+            for cookie in cookies {
+              // Filter cookies for this domain
+              if self.cookieMatchesUrl(cookie: cookie, url: url) {
+                cookieDict[cookie.name] = cookie.value
+              }
+            }
+
+            result(cookieDict)
+          }
+        } else {
+          result(FlutterMethodNotImplemented)
+        }
       }
     }
 

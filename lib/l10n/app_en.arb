@@ -1903,6 +1903,54 @@
   "@ssoPlatformNotSupported": {
     "description": "Error message when SSO is attempted on an unsupported platform (desktop/web)."
   },
+  "proxyAuthentication": "Proxy Authentication",
+  "@proxyAuthentication": {
+    "description": "Title for the proxy authentication page."
+  },
+  "proxyAuthPlatformNotSupported": "Proxy authentication requires a mobile device. Please authenticate through a browser first.",
+  "@proxyAuthPlatformNotSupported": {
+    "description": "Error message when proxy auth is attempted on an unsupported platform."
+  },
+  "proxyAuthLoading": "Loading authentication page...",
+  "@proxyAuthLoading": {
+    "description": "Loading message while the proxy login page loads."
+  },
+  "proxyAuthFailed": "Proxy authentication failed",
+  "@proxyAuthFailed": {
+    "description": "Error message when proxy authentication fails."
+  },
+  "proxyAuthHelpText": "Complete sign-in through your organization's proxy, then sign in to Open WebUI. You'll be redirected automatically.",
+  "@proxyAuthHelpText": {
+    "description": "Help text explaining how to complete proxy authentication."
+  },
+  "proxyAuthHelpTextSimple": "Sign in through your proxy. Once authenticated, tap Continue to proceed to sign in.",
+  "@proxyAuthHelpTextSimple": {
+    "description": "Simplified help text for proxy-only authentication flow."
+  },
+  "continueButton": "Continue",
+  "@continueButton": {
+    "description": "Generic continue button text."
+  },
+  "proxyAuthRequired": "This server requires proxy authentication",
+  "@proxyAuthRequired": {
+    "description": "Message when server is behind an authentication proxy."
+  },
+  "proxyAuthRequiredDescription": "Your server appears to be behind an authentication proxy (like oauth2-proxy). You'll need to sign in through the proxy first.",
+  "@proxyAuthRequiredDescription": {
+    "description": "Detailed explanation of proxy authentication requirement."
+  },
+  "authenticateThroughProxy": "Authenticate",
+  "@authenticateThroughProxy": {
+    "description": "Button text to start proxy authentication."
+  },
+  "serverBehindProxy": "Server behind proxy",
+  "@serverBehindProxy": {
+    "description": "Toggle label for servers behind authentication proxies."
+  },
+  "serverBehindProxyDescription": "Enable if your server uses oauth2-proxy or similar authentication.",
+  "@serverBehindProxyDescription": {
+    "description": "Description for the proxy server toggle."
+  },
   "continueWithProvider": "Continue with {provider}",
   "@continueWithProvider": {
     "description": "Button text for OAuth provider sign-in.",
