@@ -4,6 +4,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import android.os.Build
 import android.os.Bundle
+import android.webkit.CookieManager
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
@@ -34,6 +35,41 @@ class MainActivity : FlutterActivity() {
         backgroundStreamingHandler.setup(flutterEngine)
 
         methodChannel = io.flutter.plugin.common.MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        
+        // Setup cookie manager channel for WebView cookie access
+        val cookieChannel = io.flutter.plugin.common.MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.conduit.app/cookies"
+        )
+        
+        cookieChannel.setMethodCallHandler { call, result ->
+            if (call.method == "getCookies") {
+                val url = call.argument<String>("url")
+                if (url == null) {
+                    result.error("INVALID_ARGS", "Invalid URL", null)
+                    return@setMethodCallHandler
+                }
+                
+                // Get cookies from Android's CookieManager (shared with WebView)
+                val cookieManager = CookieManager.getInstance()
+                val cookieString = cookieManager.getCookie(url)
+                
+                val cookieMap = mutableMapOf<String, String>()
+                if (cookieString != null) {
+                    // Parse cookie string: "name1=value1; name2=value2"
+                    cookieString.split(";").forEach { cookie ->
+                        val parts = cookie.trim().split("=", limit = 2)
+                        if (parts.size == 2) {
+                            cookieMap[parts[0].trim()] = parts[1].trim()
+                        }
+                    }
+                }
+                
+                result.success(cookieMap)
+            } else {
+                result.notImplemented()
+            }
+        }
         
         // Check if started with context
         handleIntent(intent)

@@ -13,6 +13,7 @@ import '../../features/chat/providers/chat_providers.dart';
 import '../../features/auth/views/authentication_page.dart';
 import '../../features/auth/views/connect_signin_page.dart';
 import '../../features/auth/views/connection_issue_page.dart';
+import '../../features/auth/views/proxy_auth_page.dart';
 import '../../features/auth/views/server_connection_page.dart';
 import '../../features/auth/views/sso_auth_page.dart';
 import '../../features/chat/views/chat_page.dart';
@@ -94,10 +95,13 @@ class RouterNotifier extends ChangeNotifier {
     final hasActiveServer = activeServer != null;
     if (!hasActiveServer) {
       // No server configured - redirect to server connection
-      // Exception: allow staying on server connection or authentication pages
+      // Exception: allow staying on server connection, authentication,
+      // proxy auth, and SSO pages during the connection/auth flow.
       // But always redirect away from connection issue page (user logged out)
       if (location == Routes.serverConnection ||
           location == Routes.authentication ||
+          location == Routes.proxyAuth ||
+          location == Routes.ssoAuth ||
           location == Routes.login) {
         return null;
       }
@@ -181,7 +185,8 @@ class RouterNotifier extends ChangeNotifier {
         location == Routes.login ||
         location == Routes.authentication ||
         location == Routes.connectionIssue ||
-        location == Routes.ssoAuth;
+        location == Routes.ssoAuth ||
+        location == Routes.proxyAuth;
   }
 
   @override
@@ -254,6 +259,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         return SsoAuthPage(
           serverConfig: config is ServerConfig ? config : null,
         );
+      },
+    ),
+    GoRoute(
+      path: Routes.proxyAuth,
+      name: RouteNames.proxyAuth,
+      builder: (context, state) {
+        final config = state.extra;
+        if (config is! ProxyAuthConfig) {
+          // Fallback - should not happen in normal flow
+          return const ServerConnectionPage();
+        }
+        return ProxyAuthPage(config: config);
       },
     ),
     GoRoute(

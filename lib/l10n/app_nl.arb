@@ -886,5 +886,15 @@
   "usageLoadDuration": "Modellaadtijd",
   "usageQueueTime": "Wachttijd",
   "usageReasoningTokens": "Redeneertokens",
-  "usageTotalTokens": "Totaal tokens"
+  "usageTotalTokens": "Totaal tokens",
+  "proxyAuthentication": "Proxy-authenticatie",
+  "proxyAuthPlatformNotSupported": "Proxy-authenticatie vereist een mobiel apparaat. Authenticeer eerst via een browser.",
+  "proxyAuthLoading": "Authenticatiepagina laden...",
+  "proxyAuthFailed": "Proxy-authenticatie mislukt",
+  "proxyAuthHelpText": "Meld u aan via de proxy van uw organisatie en vervolgens bij Open WebUI. U wordt automatisch doorgestuurd.",
+  "proxyAuthHelpTextSimple": "Meld u aan via uw proxy. Na authenticatie tikt u op Doorgaan om in te loggen.",
+  "continueButton": "Doorgaan",
+  "proxyAuthRequired": "Deze server vereist proxy-authenticatie",
+  "proxyAuthRequiredDescription": "Uw server lijkt achter een authenticatieproxy (zoals oauth2-proxy) te staan. U moet eerst inloggen via de proxy.",
+  "authenticateThroughProxy": "Authenticeren"
 }

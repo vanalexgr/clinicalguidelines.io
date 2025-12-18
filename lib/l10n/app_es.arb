@@ -886,5 +886,15 @@
   "usageLoadDuration": "Tiempo de carga del modelo",
   "usageQueueTime": "Tiempo en cola",
   "usageReasoningTokens": "Tokens de razonamiento",
-  "usageTotalTokens": "Tokens totales"
+  "usageTotalTokens": "Tokens totales",
+  "proxyAuthentication": "Autenticación de Proxy",
+  "proxyAuthPlatformNotSupported": "La autenticación de proxy requiere un dispositivo móvil. Por favor, autentíquese primero a través de un navegador.",
+  "proxyAuthLoading": "Cargando página de autenticación...",
+  "proxyAuthFailed": "Error en la autenticación de proxy",
+  "proxyAuthHelpText": "Complete el inicio de sesión a través del proxy de su organización, luego inicie sesión en Open WebUI. Será redirigido automáticamente.",
+  "proxyAuthHelpTextSimple": "Inicie sesión a través de su proxy. Una vez autenticado, toque Continuar para iniciar sesión.",
+  "continueButton": "Continuar",
+  "proxyAuthRequired": "Este servidor requiere autenticación de proxy",
+  "proxyAuthRequiredDescription": "Su servidor parece estar detrás de un proxy de autenticación (como oauth2-proxy). Deberá iniciar sesión a través del proxy primero.",
+  "authenticateThroughProxy": "Autenticar"
 }

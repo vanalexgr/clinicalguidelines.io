@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 
+import '../../../core/auth/webview_cookie_helper.dart';
 import '../../../core/models/server_config.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/api_service.dart';
@@ -16,9 +17,11 @@ import '../../../core/services/input_validation_service.dart';
 import '../../../core/services/navigation_service.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/widgets/error_boundary.dart';
+import '../providers/unified_auth_providers.dart';
 import '../../../shared/services/brand_service.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/conduit_components.dart';
+import 'proxy_auth_page.dart';
 
 class ServerConnectionPage extends ConsumerStatefulWidget {
   const ServerConnectionPage({super.key});
@@ -104,16 +107,33 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         workerManager: workerManager,
       );
 
-      // First check basic connectivity
+      // First check connectivity with proxy detection
       DebugLogger.log('Checking server health...', scope: 'auth/connection');
-      final isReachable = await api.checkHealth();
+      final healthResult = await api.checkHealthWithProxyDetection();
       DebugLogger.log(
-        'Health check result: $isReachable',
+        'Health check result: $healthResult',
         scope: 'auth/connection',
       );
-      if (!isReachable) {
+
+      // Handle proxy authentication requirement
+      if (healthResult == HealthCheckResult.proxyAuthRequired) {
+        DebugLogger.log(
+          'Server behind proxy detected, prompting for proxy auth',
+          scope: 'auth/connection',
+        );
+        await _handleProxyAuth(tempConfig, api, workerManager);
+        return;
+      }
+
+      if (healthResult == HealthCheckResult.unreachable) {
         throw Exception(
           'Could not reach the server. Please check the address.',
+        );
+      }
+
+      if (healthResult == HealthCheckResult.unhealthy) {
+        throw Exception(
+          'Server responded but may not be healthy. Please try again.',
         );
       }
 
@@ -164,6 +184,204 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
         });
       }
     }
+  }
+
+  /// Handles proxy authentication flow.
+  ///
+  /// Opens the proxy auth page in a WebView where the user authenticates
+  /// through the proxy (oauth2-proxy, Pangolin, etc.).
+  ///
+  /// After proxy auth completes, the cookies are captured and added to
+  /// the server config. Then the normal authentication flow proceeds.
+  Future<void> _handleProxyAuth(
+    ServerConfig tempConfig,
+    ApiService api,
+    WorkerManager workerManager,
+  ) async {
+    // Check if WebView is supported
+    if (!isWebViewSupported) {
+      throw Exception(
+        AppLocalizations.of(context)?.proxyAuthPlatformNotSupported ??
+            'Proxy authentication requires a mobile device.',
+      );
+    }
+
+    // Show proxy auth page
+    final proxyConfig = ProxyAuthConfig(serverConfig: tempConfig);
+
+    if (!mounted) return;
+
+    final result = await context.pushNamed<ProxyAuthResult>(
+      RouteNames.proxyAuth,
+      extra: proxyConfig,
+    );
+
+    if (!mounted) return;
+
+    // If user cancelled or proxy auth failed, show error
+    if (result == null || !result.success) {
+      setState(() {
+        _connectionError =
+            AppLocalizations.of(context)?.proxyAuthFailed ??
+            'Proxy authentication was cancelled or failed.';
+        _isConnecting = false;
+      });
+      return;
+    }
+
+    DebugLogger.log(
+      'Proxy auth completed, captured ${result.cookies?.length ?? 0} cookies, '
+      'JWT: ${result.isFullyAuthenticated}',
+      scope: 'auth/connection',
+    );
+
+    // Build updated headers with proxy cookies
+    final updatedHeaders = Map<String, String>.from(tempConfig.customHeaders);
+    if (result.cookies != null && result.cookies!.isNotEmpty) {
+      // Format cookies as Cookie header
+      final proxyCookieHeader = result.cookies!.entries
+          .map((e) => '${e.key}=${e.value}')
+          .join('; ');
+
+      // Merge with existing Cookie header if present (from advanced settings)
+      final existingCookies = updatedHeaders['Cookie'];
+      if (existingCookies != null && existingCookies.isNotEmpty) {
+        updatedHeaders['Cookie'] = '$existingCookies; $proxyCookieHeader';
+        DebugLogger.log(
+          'Merged ${result.cookies!.length} proxy cookies with existing Cookie header',
+          scope: 'auth/connection',
+        );
+      } else {
+        updatedHeaders['Cookie'] = proxyCookieHeader;
+        DebugLogger.log(
+          'Added Cookie header with ${result.cookies!.length} cookies',
+          scope: 'auth/connection',
+        );
+      }
+    }
+
+    // Create updated config with proxy cookies (and possibly JWT token)
+    final configWithCookies = ServerConfig(
+      id: tempConfig.id,
+      name: tempConfig.name,
+      url: tempConfig.url,
+      customHeaders: updatedHeaders,
+      isActive: tempConfig.isActive,
+      allowSelfSignedCertificates: tempConfig.allowSelfSignedCertificates,
+      // If we got a JWT token, store it as apiKey for API auth
+      apiKey: result.jwtToken,
+    );
+
+    // Create new API service with updated config
+    final apiWithCookies = ApiService(
+      serverConfig: configWithCookies,
+      workerManager: workerManager,
+      // If we have a JWT token, use it as auth token
+      authToken: result.jwtToken,
+    );
+
+    // Now verify it's an OpenWebUI server
+    DebugLogger.log(
+      'Verifying OpenWebUI server with proxy cookies...',
+      scope: 'auth/connection',
+    );
+
+    final backendConfig = await apiWithCookies.verifyAndGetConfig();
+    if (backendConfig == null) {
+      if (mounted) {
+        setState(() {
+          _connectionError =
+              'Could not verify OpenWebUI server. The proxy cookies may '
+              'have expired or be invalid. Please try again.';
+          _isConnecting = false;
+        });
+      }
+      return;
+    }
+
+    // Check if user is already fully authenticated via trusted headers
+    // (e.g., oauth2-proxy with X-Forwarded-Email)
+    if (result.isFullyAuthenticated) {
+      DebugLogger.log(
+        'User already authenticated via trusted headers, '
+        'skipping sign-in page',
+        scope: 'auth/connection',
+      );
+
+      // Save the server config and go directly to chat
+      await _completeAuthWithToken(
+        configWithCookies,
+        result.jwtToken!,
+      );
+      return;
+    }
+
+    DebugLogger.log(
+      'Server validated with proxy cookies, navigating to auth page',
+      scope: 'auth/connection',
+    );
+
+    if (mounted) {
+      final authFlowConfig = AuthFlowConfig(
+        serverConfig: configWithCookies,
+        backendConfig: backendConfig,
+      );
+      context.pushNamed(RouteNames.authentication, extra: authFlowConfig);
+    }
+  }
+
+  /// Completes authentication when user is already authenticated via
+  /// trusted headers (oauth2-proxy with X-Forwarded-Email).
+  Future<void> _completeAuthWithToken(
+    ServerConfig serverConfig,
+    String token,
+  ) async {
+    try {
+      // Save the server config first (needed for auth actions)
+      await _saveServerConfig(serverConfig);
+
+      // Use the same auth flow as SSO - loginWithApiKey handles
+      // saving credentials and updating auth state
+      final authActions = ref.read(authActionsProvider);
+      final success = await authActions.loginWithApiKey(
+        token,
+        rememberCredentials: true,
+        authType: 'proxy-sso', // Mark as proxy-obtained token
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        DebugLogger.auth('Proxy SSO login successful');
+        // Navigation is handled automatically by the router when auth state
+        // changes to authenticated. The router redirect will navigate to chat.
+      } else {
+        throw Exception('Login failed');
+      }
+    } catch (e, stack) {
+      DebugLogger.error(
+        'Failed to complete auth with token',
+        scope: 'auth/connection',
+        error: e,
+        stackTrace: stack,
+      );
+      if (mounted) {
+        setState(() {
+          _connectionError =
+              'Authentication failed. Please try signing in manually.';
+          _isConnecting = false;
+        });
+      }
+    }
+  }
+
+  /// Saves server config (extracted from authentication_page.dart)
+  Future<void> _saveServerConfig(ServerConfig config) async {
+    final storage = ref.read(optimizedStorageServiceProvider);
+    await storage.saveServerConfigs([config]);
+    await storage.setActiveServerId(config.id);
+    ref.invalidate(serverConfigsProvider);
+    ref.invalidate(activeServerProvider);
   }
 
   String _validateAndFormatUrl(String input) {
@@ -593,11 +811,13 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
   }
 
   Widget _buildAdvancedSettingsContent() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(Spacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Self-signed certificates toggle
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(Spacing.md),
@@ -628,9 +848,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocalizations.of(
-                          context,
-                        )!.allowSelfSignedCertificates,
+                        l10n.allowSelfSignedCertificates,
                         style: context.conduitTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: context.conduitTheme.textPrimary,
@@ -638,9 +856,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
                       ),
                       const SizedBox(height: Spacing.xs),
                       Text(
-                        AppLocalizations.of(
-                          context,
-                        )!.allowSelfSignedCertificatesDescription,
+                        l10n.allowSelfSignedCertificatesDescription,
                         style: context.conduitTheme.bodySmall?.copyWith(
                           color: context.conduitTheme.textSecondary,
                         ),
@@ -665,7 +881,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                AppLocalizations.of(context)!.customHeaders,
+                l10n.customHeaders,
                 style: context.conduitTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
@@ -683,7 +899,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
           ),
           const SizedBox(height: Spacing.xs),
           Text(
-            AppLocalizations.of(context)!.customHeadersDescription,
+            l10n.customHeadersDescription,
             style: context.conduitTheme.bodySmall?.copyWith(
               color: context.conduitTheme.textSecondary,
             ),
@@ -695,7 +911,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
               Expanded(
                 flex: 2,
                 child: AccessibleFormField(
-                  label: AppLocalizations.of(context)!.headerName,
+                  label: l10n.headerName,
                   hint: 'X-Custom-Header',
                   controller: _headerKeyController,
                   validator: (value) => _validateHeaderKey(value ?? ''),
@@ -708,8 +924,8 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
               Expanded(
                 flex: 3,
                 child: AccessibleFormField(
-                  label: AppLocalizations.of(context)!.headerValue,
-                  hint: AppLocalizations.of(context)!.headerValueHint,
+                  label: l10n.headerValue,
+                  hint: l10n.headerValueHint,
                   controller: _headerValueController,
                   validator: (value) => _validateHeaderValue(value ?? ''),
                   semanticLabel: 'Enter header value',
@@ -724,8 +940,8 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
                     ? null
                     : _addCustomHeader,
                 tooltip: _customHeaders.length >= 10
-                    ? AppLocalizations.of(context)!.maximumHeadersReached
-                    : AppLocalizations.of(context)!.addHeader,
+                    ? l10n.maximumHeadersReached
+                    : l10n.addHeader,
                 backgroundColor: _customHeaders.length >= 10
                     ? context.conduitTheme.surfaceContainer
                     : context.conduitTheme.buttonPrimary,

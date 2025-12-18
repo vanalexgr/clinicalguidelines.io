@@ -886,5 +886,15 @@
   "usageLoadDuration": "Время загрузки модели",
   "usageQueueTime": "Время в очереди",
   "usageReasoningTokens": "Токены рассуждений",
-  "usageTotalTokens": "Всего токенов"
+  "usageTotalTokens": "Всего токенов",
+  "proxyAuthentication": "Аутентификация через прокси",
+  "proxyAuthPlatformNotSupported": "Аутентификация через прокси требует мобильное устройство. Пожалуйста, сначала авторизуйтесь через браузер.",
+  "proxyAuthLoading": "Загрузка страницы аутентификации...",
+  "proxyAuthFailed": "Ошибка аутентификации через прокси",
+  "proxyAuthHelpText": "Войдите через прокси вашей организации, затем войдите в Open WebUI. Вы будете перенаправлены автоматически.",
+  "proxyAuthHelpTextSimple": "Войдите через ваш прокси. После аутентификации нажмите Продолжить для входа.",
+  "continueButton": "Продолжить",
+  "proxyAuthRequired": "Этот сервер требует аутентификацию через прокси",
+  "proxyAuthRequiredDescription": "Ваш сервер, похоже, находится за прокси аутентификации (например, oauth2-proxy). Сначала необходимо войти через прокси.",
+  "authenticateThroughProxy": "Аутентифицировать"
 }

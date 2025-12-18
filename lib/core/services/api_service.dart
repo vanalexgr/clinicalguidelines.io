@@ -33,6 +33,28 @@ void _traceApi(String message) {
   DebugLogger.log(message, scope: 'api/trace');
 }
 
+/// Result of a health check with proxy detection.
+///
+/// This enum distinguishes between different failure modes:
+/// - [healthy]: Server is reachable and responding normally
+/// - [unhealthy]: Server responded but not with expected status
+/// - [proxyAuthRequired]: Server is behind an auth proxy (oauth2-proxy, etc.)
+/// - [unreachable]: Server could not be reached at all
+enum HealthCheckResult {
+  /// Server is healthy and responding normally
+  healthy,
+
+  /// Server responded but not with expected status
+  unhealthy,
+
+  /// Server appears to be behind an authentication proxy
+  /// (detected via redirect or HTML login page response)
+  proxyAuthRequired,
+
+  /// Server could not be reached
+  unreachable,
+}
+
 /// Converts ChatSourceReference list back to OpenWebUI's expected format.
 /// OpenWebUI expects: { source: {...}, document: [...], metadata: [...] }
 /// But ChatSourceReference stores: { id, title, url, snippet, type, metadata }
@@ -114,9 +136,12 @@ List<Map<String, dynamic>> _convertCodeExecutionsToOpenWebUIFormat(
     // Convert the result if present
     if (exec.result != null) {
       final execResult = <String, dynamic>{};
-      if (exec.result!.output != null)
+      if (exec.result!.output != null) {
         execResult['output'] = exec.result!.output;
-      if (exec.result!.error != null) execResult['error'] = exec.result!.error;
+      }
+      if (exec.result!.error != null) {
+        execResult['error'] = exec.result!.error;
+      }
       if (exec.result!.files.isNotEmpty) {
         execResult['files'] = exec.result!.files
             .map(
@@ -327,6 +352,154 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Health check with proxy detection.
+  ///
+  /// This method detects when the server is behind an authentication proxy
+  /// (like oauth2-proxy) by checking for:
+  /// - HTTP redirects (302, 307, 308) to login pages
+  /// - HTML responses instead of expected JSON/text
+  ///
+  /// When a proxy is detected, returns [HealthCheckResult.proxyAuthRequired]
+  /// so the app can show a WebView for proxy authentication.
+  Future<HealthCheckResult> checkHealthWithProxyDetection() async {
+    try {
+      // Create a temporary Dio instance that doesn't follow redirects
+      // so we can detect proxy redirects
+      final tempDio = Dio(
+        BaseOptions(
+          baseUrl: serverConfig.url,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+          followRedirects: false,
+          validateStatus: (status) => true, // Accept all status codes
+          headers: serverConfig.customHeaders.isNotEmpty
+              ? Map<String, String>.from(serverConfig.customHeaders)
+              : null,
+        ),
+      );
+
+      // Configure self-signed cert support if needed
+      if (!kIsWeb && serverConfig.allowSelfSignedCertificates) {
+        final baseUri = _parseBaseUri(serverConfig.url);
+        if (baseUri != null) {
+          final host = baseUri.host.toLowerCase();
+          final port = baseUri.hasPort ? baseUri.port : null;
+          (tempDio.httpClientAdapter as IOHttpClientAdapter)
+              .createHttpClient = () {
+            final client = HttpClient();
+            client.badCertificateCallback =
+                (X509Certificate cert, String requestHost, int requestPort) {
+              if (requestHost.toLowerCase() != host) return false;
+              if (port == null) return true;
+              return requestPort == port;
+            };
+            return client;
+          };
+        }
+      }
+
+      final response = await tempDio.get('/health');
+      final statusCode = response.statusCode ?? 0;
+
+      DebugLogger.log(
+        'Proxy detection health check: status=$statusCode',
+        scope: 'api/proxy-detect',
+      );
+
+      // Check for redirects (proxy authentication pages)
+      if (statusCode == 302 || statusCode == 307 || statusCode == 308) {
+        final location = response.headers.value('location');
+        DebugLogger.log(
+          'Detected redirect to: $location - likely proxy auth required',
+          scope: 'api/proxy-detect',
+        );
+        return HealthCheckResult.proxyAuthRequired;
+      }
+
+      // Check for 401/403 which may indicate proxy auth
+      if (statusCode == 401 || statusCode == 403) {
+        // Check if the response is HTML (proxy login page)
+        final contentType = response.headers.value('content-type') ?? '';
+        if (contentType.contains('text/html')) {
+          DebugLogger.log(
+            'Detected HTML response on 401/403 - likely proxy auth required',
+            scope: 'api/proxy-detect',
+          );
+          return HealthCheckResult.proxyAuthRequired;
+        }
+      }
+
+      // Check for successful response
+      if (statusCode == 200) {
+        // Verify it's not an HTML login page masquerading as 200
+        final contentType = response.headers.value('content-type') ?? '';
+        final data = response.data;
+
+        // OpenWebUI's /health returns {"status": true} or plain "true"
+        // If we get HTML, it's probably a proxy login page
+        if (contentType.contains('text/html')) {
+          // OpenWebUI's /health returns JSON, not HTML.
+          // Any HTML response indicates a proxy page or misconfiguration.
+          final htmlContent = data?.toString().toLowerCase() ?? '';
+          final hasLoginKeywords = htmlContent.contains('login') ||
+              htmlContent.contains('sign in') ||
+              htmlContent.contains('authenticate') ||
+              htmlContent.contains('oauth');
+
+          DebugLogger.log(
+            'Detected HTML response on /health - '
+            '${hasLoginKeywords ? 'login page detected' : 'unexpected HTML'}',
+            scope: 'api/proxy-detect',
+          );
+
+          // All HTML responses suggest proxy auth is needed
+          // (either login page or custom proxy page)
+          return HealthCheckResult.proxyAuthRequired;
+        }
+
+        return HealthCheckResult.healthy;
+      }
+
+      return HealthCheckResult.unhealthy;
+    } on DioException catch (e) {
+      DebugLogger.log(
+        'Proxy detection failed with DioException: ${e.type}',
+        scope: 'api/proxy-detect',
+      );
+
+      // Connection errors mean unreachable
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.unknown) {
+        return HealthCheckResult.unreachable;
+      }
+
+      // Check if response indicates proxy
+      final response = e.response;
+      if (response != null) {
+        final statusCode = response.statusCode ?? 0;
+        if (statusCode == 302 || statusCode == 307 || statusCode == 308) {
+          return HealthCheckResult.proxyAuthRequired;
+        }
+
+        final contentType = response.headers.value('content-type') ?? '';
+        if (contentType.contains('text/html') &&
+            (statusCode == 401 || statusCode == 403 || statusCode == 200)) {
+          return HealthCheckResult.proxyAuthRequired;
+        }
+      }
+
+      return HealthCheckResult.unreachable;
+    } catch (e) {
+      DebugLogger.error(
+        'proxy-detection-failed',
+        scope: 'api/proxy-detect',
+        error: e,
+      );
+      return HealthCheckResult.unreachable;
     }
   }
 
