@@ -988,6 +988,10 @@ void startNewChat(dynamic ref) {
 
   // Clear any pending folder selection
   ref.read(pendingFolderIdProvider.notifier).clear();
+
+  // Reset to default model for new conversations (fixes #296)
+  ref.read(isManualModelSelectionProvider.notifier).set(false);
+  ref.invalidate(defaultModelProvider);
 }
 
 // Available tools provider
