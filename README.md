@@ -73,10 +73,11 @@ flutter run -d ios   # or: -d android
 ### Authentication
 Conduit supports multiple authentication flows when connecting to your Open‑WebUI:
 - **Username + Password**: Sign in directly against servers that expose a login endpoint. Credentials are stored securely using platform keychains.
-- **SSO / OAuth** (iOS & Android): Authenticate via your server's configured OAuth providers (Google, Microsoft, GitHub, OIDC, etc.) using an in-app WebView. The token is automatically captured after the OAuth flow completes. Also supports reverse proxy authentication (Authelia, Authentik, etc.).
+- **SSO / OAuth** (iOS & Android): Authenticate via your server's configured OAuth providers (Google, Microsoft, GitHub, OIDC, etc.) using an in-app WebView. The token is automatically captured after the OAuth flow completes.
+- **Reverse Proxy Support** (iOS & Android): Seamlessly connect to Open WebUI instances behind authentication proxies like oauth2-proxy, Authelia, or Authentik. Conduit automatically detects when proxy authentication is required and guides you through the login flow—no endpoint allowlisting or server-side configuration needed. Proxy session cookies are captured from the native cookie store and included in all subsequent API requests.
 - **LDAP**: Sign in using LDAP credentials if enabled on your server.
 - **JWT Token**: Paste a server‑issued JWT token for manual token-based auth.
-- **Custom Headers**: Add headers during login (e.g., `X-API-Key`, `Authorization`, `X-Org`, or self‑hosted SSO headers) that Conduit will include on all HTTP/WebSocket requests (see [Endpoint Allowlist](#endpoint-allowlist-custom-auth) for reverse proxy whitelisting).
+- **Custom Headers**: Add headers during login (e.g., `X-API-Key`, `Authorization`, `X-Org`) that Conduit will include on all HTTP/WebSocket requests.
 
 The authentication page dynamically displays available options based on your server's configuration.
 
@@ -206,18 +207,6 @@ If you experience problems with real-time streaming or chat updates, ensure webs
 - Credentials are stored using platform secure storage (Keychain/Keystore).
 - No analytics or telemetry are collected.
 - Network calls are only made to your configured Open‑WebUI server.
-
-### Endpoint Allowlist (Custom Auth)
-
-If you protect Open‑WebUI with SSO or a reverse proxy (Authlia, Authentik,
-etc.), whitelist these path prefixes so Conduit can complete login, sync, and
-streaming flows. Paths are relative to your server base URL.
-
-- `/health`
-- `/api/*`
-
-WebSocket connections use the Socket.IO handshake on `/ws/socket.io`. Ensure the
-same headers (or allowlist rules) apply there as well.
 
 ## License
 
