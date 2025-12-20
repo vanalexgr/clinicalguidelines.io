@@ -451,7 +451,7 @@ class _SocketPersistenceObserver extends WidgetsBindingObserver {
   final Ref _ref;
   _SocketPersistenceObserver(this._ref);
 
-  static const String _socketId = 'socket-keepalive';
+  static const String _socketId = BackgroundStreamingHandler.socketKeepaliveId;
   Timer? _heartbeat;
   bool _bgActive = false;
   bool _isBackgrounded = false;
@@ -469,9 +469,11 @@ class _SocketPersistenceObserver extends WidgetsBindingObserver {
     if (!_shouldKeepAlive()) return;
     try {
       BackgroundStreamingHandler.instance.startBackgroundExecution([_socketId]);
-      // Periodic keep-alive (primarily useful on iOS)
+      // Periodic keep-alive for iOS background task management.
+      // On Android, foreground service keeps app alive without frequent pings.
+      // 5-minute interval is sufficient and matches wakelock timeout buffer.
       _heartbeat?.cancel();
-      _heartbeat = Timer.periodic(const Duration(seconds: 30), (_) async {
+      _heartbeat = Timer.periodic(const Duration(minutes: 5), (_) async {
         try {
           await BackgroundStreamingHandler.instance.keepAlive();
         } catch (_) {}

@@ -12,6 +12,10 @@ class BackgroundStreamingHandler {
     'conduit/background_streaming',
   );
 
+  /// Stream ID used for socket keepalive - not counted as an "active stream"
+  /// since it's a background task, not user-visible streaming.
+  static const String socketKeepaliveId = 'socket-keepalive';
+
   static BackgroundStreamingHandler? _instance;
   static BackgroundStreamingHandler get instance =>
       _instance ??= BackgroundStreamingHandler._();
@@ -23,6 +27,10 @@ class BackgroundStreamingHandler {
   final Set<String> _activeStreamIds = <String>{};
   final Map<String, StreamState> _streamStates = <String, StreamState>{};
 
+  /// Returns count of actual content streams (excludes socket keepalive).
+  int get _userVisibleStreamCount =>
+      _activeStreamIds.where((id) => id != socketKeepaliveId).length;
+
   // Callbacks for platform-specific events
   void Function(List<String> streamIds)? onStreamsSuspending;
   void Function()? onBackgroundTaskExpiring;
@@ -32,6 +40,15 @@ class BackgroundStreamingHandler {
   bool Function()? shouldContinueInBackground;
   void Function(String error, String errorType, List<String> streamIds)?
   onServiceFailed;
+
+  /// Called when Android 14's foreground service time limit is reached.
+  /// The service stops after 5 hours (buffer before Android's 6-hour limit).
+  /// [remainingMinutes] will be 0 when this is called.
+  void Function(int remainingMinutes)? onBackgroundTimeLimitApproaching;
+
+  /// Called when microphone permission was requested but not granted,
+  /// causing fallback to dataSync-only foreground service type.
+  void Function()? onMicrophonePermissionFallback;
 
   void _setupMethodCallHandler() {
     _channel.setMethodCallHandler((call) async {
@@ -105,6 +122,29 @@ class BackgroundStreamingHandler {
             _activeStreamIds.remove(streamId);
             _streamStates.remove(streamId);
           }
+          break;
+
+        case 'timeLimitApproaching':
+          final Map<String, dynamic> args =
+              call.arguments as Map<String, dynamic>;
+          final int remainingMinutes = args['remainingMinutes'] as int? ?? -1;
+
+          DebugLogger.stream(
+            'time-limit-approaching',
+            scope: 'background',
+            data: {'remainingMinutes': remainingMinutes},
+          );
+
+          onBackgroundTimeLimitApproaching?.call(remainingMinutes);
+          break;
+
+        case 'microphonePermissionFallback':
+          DebugLogger.stream(
+            'mic-permission-fallback',
+            scope: 'background',
+          );
+
+          onMicrophonePermissionFallback?.call();
           break;
       }
     });
@@ -226,11 +266,41 @@ class BackgroundStreamingHandler {
   Future<void> keepAlive() async {
     if (!Platform.isIOS && !Platform.isAndroid) return;
 
+    // Skip keep-alive if no active streams - this ensures Android's count
+    // stays synchronized with Flutter's actual state
+    if (_activeStreamIds.isEmpty) return;
+
     try {
-      await _channel.invokeMethod('keepAlive');
+      await _channel.invokeMethod('keepAlive', {
+        // Pass user-visible stream count (excludes socket-keepalive)
+        // for accurate logging, but service still runs for any background task
+        'streamCount': _userVisibleStreamCount,
+      });
       DebugLogger.stream('keepalive-success', scope: 'background');
     } catch (e) {
       DebugLogger.error('keepalive-failed', scope: 'background', error: e);
+    }
+  }
+
+  /// Check if notification permission is granted (Android 13+ only).
+  ///
+  /// Returns true on iOS, Android < 13, or if permission is granted.
+  /// Returns false if Android 13+ and permission is not granted.
+  Future<bool> checkNotificationPermission() async {
+    if (!Platform.isAndroid) return true;
+
+    try {
+      final bool? hasPermission = await _channel.invokeMethod<bool>(
+        'checkNotificationPermission',
+      );
+      return hasPermission ?? true;
+    } catch (e) {
+      DebugLogger.error(
+        'check-notification-permission-failed',
+        scope: 'background',
+        error: e,
+      );
+      return true; // Assume granted on error to not block functionality
     }
   }
 

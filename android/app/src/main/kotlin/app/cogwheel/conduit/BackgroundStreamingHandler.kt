@@ -3,12 +3,14 @@ package app.cogwheel.conduit
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.Manifest
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -25,7 +27,6 @@ import org.json.JSONObject
 
 class BackgroundStreamingService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
-    private val activeStreams = mutableSetOf<String>()
     private var activeStreamCount = 0
     private var isForeground = false
     private var currentForegroundType: Int = 0
@@ -38,6 +39,10 @@ class BackgroundStreamingService : Service() {
         const val ACTION_STOP = "STOP_STREAMING"
         const val EXTRA_REQUIRES_MICROPHONE = "requiresMicrophone"
         const val EXTRA_STREAM_COUNT = "streamCount"
+        
+        const val ACTION_TIME_LIMIT_APPROACHING = "app.cogwheel.conduit.TIME_LIMIT_APPROACHING"
+        const val ACTION_MIC_PERMISSION_FALLBACK = "app.cogwheel.conduit.MIC_PERMISSION_FALLBACK"
+        const val EXTRA_REMAINING_MINUTES = "remainingMinutes"
     }
 
     override fun onCreate() {
@@ -74,7 +79,7 @@ class BackgroundStreamingService : Service() {
                 ensureNotificationChannel()
                 val fallbackNotification = NotificationCompat.Builder(this, CHANNEL_ID)
                     .setContentTitle("Conduit")
-                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setSmallIcon(R.mipmap.ic_launcher)
                     .setSilent(true)
                     .setOngoing(true)  // Prevent user from dismissing foreground service notification
                     .build()
@@ -213,6 +218,8 @@ class BackgroundStreamingService : Service() {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             }
             println("BackgroundStreamingService: Microphone permission missing; falling back to data sync type")
+            // Notify handler about the permission fallback
+            sendBroadcast(Intent(ACTION_MIC_PERMISSION_FALLBACK))
         }
 
         return ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
@@ -228,11 +235,23 @@ class BackgroundStreamingService : Service() {
     private fun createMinimalNotification(): Notification {
         ensureNotificationChannel()
 
+        // Create PendingIntent to open app when notification is tapped
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+        val pendingIntent = launchIntent?.let {
+            PendingIntent.getActivity(
+                this,
+                0,
+                it,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
         // Create a minimal, silent notification (required for foreground service)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Conduit")
             .setContentText("Background service active")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
@@ -310,35 +329,42 @@ class BackgroundStreamingService : Service() {
     }
     
     private fun keepAlive() {
-        if (activeStreamCount <= 0) {
-            stopStreaming()
-            return
-        }
-
-        // Check if we're approaching Android 14's 6-hour dataSync limit
+        // Check if we've hit Android 14's dataSync time limit
+        // We stop at 5 hours to provide a 1-hour buffer before Android's 6-hour hard limit
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && isForeground) {
             val uptime = System.currentTimeMillis() - foregroundStartTime
-            val fiveHours = 5 * 60 * 60 * 1000L // 5 hours in milliseconds
+            val fiveHours = 5 * 60 * 60 * 1000L
             
             if (uptime > fiveHours) {
-                println("BackgroundStreamingService: Approaching time limit (${uptime / 3600000}h), stopping service")
+                println("BackgroundStreamingService: Time limit reached (${uptime / 3600000}h), stopping service")
+                // Notify Flutter before stopping
+                sendBroadcast(Intent(ACTION_TIME_LIMIT_APPROACHING).apply {
+                    putExtra(EXTRA_REMAINING_MINUTES, 0)
+                })
                 stopStreaming()
                 return
             }
         }
         
-        // Refresh wake lock to maintain CPU availability for streaming.
-        // Wake lock has 6-minute timeout, keepAlive is called every 5 minutes,
-        // ensuring continuous coverage with 1-minute overlap buffer.
-        // Note: Foreground services prevent process termination but NOT CPU sleep.
-        releaseWakeLock()
-        acquireWakeLock()
-        println("BackgroundStreamingService: Keep alive - wake lock refreshed, ${activeStreamCount} active streams")
+        // activeStreamCount reflects user-visible streams (excludes socket-keepalive)
+        if (activeStreamCount > 0) {
+            // Refresh wake lock to maintain CPU availability for actual streaming.
+            // Wake lock has 6-minute timeout, keepAlive is called every 5 minutes,
+            // ensuring continuous coverage with 1-minute overlap buffer.
+            // Note: Foreground services prevent process termination but NOT CPU sleep.
+            releaseWakeLock()
+            acquireWakeLock()
+            println("BackgroundStreamingService: Keep alive - wake lock refreshed, ${activeStreamCount} active streams")
+        } else {
+            // No active streams - just socket keepalive running.
+            // Foreground service keeps app alive; no wakelock needed.
+            releaseWakeLock()
+            println("BackgroundStreamingService: Keep alive (background task, no wakelock)")
+        }
     }
     
     private fun stopStreaming() {
         println("BackgroundStreamingService: Stopping service...")
-        activeStreams.clear()
         activeStreamCount = 0
         releaseWakeLock()
         
@@ -381,7 +407,6 @@ class BackgroundStreamingService : Service() {
             }
         }
         releaseWakeLock()
-        activeStreams.clear()
         activeStreamCount = 0
         isForeground = false
         foregroundStartTime = 0
@@ -401,7 +426,8 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
     private val streamsRequiringMic = mutableSetOf<String>()
     private var backgroundJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private var serviceFailureReceiver: android.content.BroadcastReceiver? = null
+    private var broadcastReceiver: android.content.BroadcastReceiver? = null
+    private var receiverRegistered = false
     
     companion object {
         private const val CHANNEL_NAME = "conduit/background_streaming"
@@ -416,38 +442,72 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         
         createNotificationChannel()
-        setupServiceFailureReceiver()
+        setupBroadcastReceiver()
     }
     
-    private fun setupServiceFailureReceiver() {
-        serviceFailureReceiver = object : android.content.BroadcastReceiver() {
+    private fun hasNotificationPermission(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+    
+    private fun setupBroadcastReceiver() {
+        if (receiverRegistered) return
+        
+        broadcastReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == "app.cogwheel.conduit.FOREGROUND_SERVICE_FAILED") {
-                    val error = intent.getStringExtra("error") ?: "Unknown error"
-                    val errorType = intent.getStringExtra("errorType") ?: "Exception"
+                when (intent?.action) {
+                    "app.cogwheel.conduit.FOREGROUND_SERVICE_FAILED" -> {
+                        val error = intent.getStringExtra("error") ?: "Unknown error"
+                        val errorType = intent.getStringExtra("errorType") ?: "Exception"
+                        
+                        println("BackgroundStreamingHandler: Service failure received: $errorType - $error")
+                        
+                        // Notify Flutter about the service failure
+                        channel.invokeMethod("serviceFailed", mapOf(
+                            "error" to error,
+                            "errorType" to errorType,
+                            "streamIds" to activeStreams.toList()
+                        ))
+                        
+                        // Clear active streams since service failed
+                        activeStreams.clear()
+                        streamsRequiringMic.clear()
+                    }
                     
-                    println("BackgroundStreamingHandler: Service failure received: $errorType - $error")
+                    BackgroundStreamingService.ACTION_TIME_LIMIT_APPROACHING -> {
+                        val remainingMinutes = intent.getIntExtra(
+                            BackgroundStreamingService.EXTRA_REMAINING_MINUTES, -1
+                        )
+                        println("BackgroundStreamingHandler: Time limit approaching - $remainingMinutes minutes remaining")
+                        
+                        channel.invokeMethod("timeLimitApproaching", mapOf(
+                            "remainingMinutes" to remainingMinutes
+                        ))
+                    }
                     
-                    // Notify Flutter about the service failure
-                    channel.invokeMethod("serviceFailed", mapOf(
-                        "error" to error,
-                        "errorType" to errorType,
-                        "streamIds" to activeStreams.toList()
-                    ))
-                    
-                    // Clear active streams since service failed
-                    activeStreams.clear()
-                    streamsRequiringMic.clear()
+                    BackgroundStreamingService.ACTION_MIC_PERMISSION_FALLBACK -> {
+                        println("BackgroundStreamingHandler: Microphone permission fallback triggered")
+                        channel.invokeMethod("microphonePermissionFallback", null)
+                    }
                 }
             }
         }
         
-        val filter = android.content.IntentFilter("app.cogwheel.conduit.FOREGROUND_SERVICE_FAILED")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(serviceFailureReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(serviceFailureReceiver, filter)
+        val filter = android.content.IntentFilter().apply {
+            addAction("app.cogwheel.conduit.FOREGROUND_SERVICE_FAILED")
+            addAction(BackgroundStreamingService.ACTION_TIME_LIMIT_APPROACHING)
+            addAction(BackgroundStreamingService.ACTION_MIC_PERMISSION_FALLBACK)
         }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(broadcastReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(broadcastReceiver, filter)
+        }
+        receiverRegistered = true
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
@@ -474,7 +534,8 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
             }
             
             "keepAlive" -> {
-                keepAlive()
+                val streamCount = call.argument<Int>("streamCount")
+                keepAlive(streamCount)
                 result.success(null)
             }
             
@@ -491,6 +552,10 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
             
             "recoverStreamStates" -> {
                 result.success(recoverStreamStates())
+            }
+            
+            "checkNotificationPermission" -> {
+                result.success(hasNotificationPermission())
             }
             
             else -> {
@@ -562,7 +627,10 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         backgroundJob?.cancel()
         backgroundJob = scope.launch {
             while (activeStreams.isNotEmpty()) {
-                delay(30000) // Check every 30 seconds
+                // Check every 5 minutes - matches Flutter keepAlive interval.
+                // This is a safety mechanism to clean up if Flutter fails to
+                // call stopBackgroundExecution (e.g., crash recovery).
+                delay(5 * 60 * 1000L)
                 
                 // Notify Dart side to check stream health
                 channel.invokeMethod("checkStreams", null, object : MethodChannel.Result {
@@ -594,15 +662,24 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         backgroundJob = null
     }
 
-    private fun keepAlive() {
-        if (activeStreams.isEmpty()) return
+    private fun keepAlive(userVisibleStreamCount: Int? = null) {
+        // Check local activeStreams to decide if service should run
+        // (includes socket-keepalive and other background tasks)
+        if (activeStreams.isEmpty()) {
+            stopForegroundService()
+            return
+        }
+        
+        // Use Flutter's user-visible stream count for logging (excludes socket-keepalive)
+        // Fall back to local count if not provided
+        val streamCount = userVisibleStreamCount ?: activeStreams.size
         
         try {
             val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
             serviceIntent.action = "KEEP_ALIVE"
             serviceIntent.putExtra(
                 BackgroundStreamingService.EXTRA_STREAM_COUNT,
-                activeStreams.size,
+                streamCount,
             )
             serviceIntent.putExtra(
                 BackgroundStreamingService.EXTRA_REQUIRES_MICROPHONE,
@@ -708,13 +785,16 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
         stopForegroundService()
         
         // Unregister broadcast receiver
-        try {
-            serviceFailureReceiver?.let {
-                context.unregisterReceiver(it)
+        if (receiverRegistered) {
+            try {
+                broadcastReceiver?.let {
+                    context.unregisterReceiver(it)
+                }
+            } catch (e: Exception) {
+                println("BackgroundStreamingHandler: Error unregistering receiver: ${e.message}")
             }
-        } catch (e: Exception) {
-            println("BackgroundStreamingHandler: Error unregistering receiver: ${e.message}")
+            broadcastReceiver = null
+            receiverRegistered = false
         }
-        serviceFailureReceiver = null
     }
 }
