@@ -709,39 +709,50 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                         ),
                       ),
                     ),
-                    // Actions (more menu)
+                    // Actions (more menu) - uses PopupMenuButton for tap interaction
                     Padding(
                       padding: const EdgeInsets.only(right: Spacing.inputPadding),
                       child: Center(
                         child: PopupMenuButton<String>(
-                          tooltip: '',
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppBorderRadius.md),
-                          ),
                           onSelected: (value) {
                             switch (value) {
-                              case 'generate_title':
+                              case 'generate':
+                                HapticFeedback.selectionClick();
                                 _generateTitle();
                               case 'copy':
+                                HapticFeedback.selectionClick();
                                 _copyToClipboard();
                               case 'delete':
+                                HapticFeedback.mediumImpact();
                                 _deleteNote();
                             }
                           },
+                          offset: const Offset(0, 44),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppBorderRadius.card,
+                            ),
+                          ),
+                          color: conduitTheme.surfaceContainer,
                           itemBuilder: (context) => [
                             PopupMenuItem(
-                              value: 'generate_title',
+                              value: 'generate',
                               child: Row(
                                 children: [
                                   Icon(
                                     Platform.isIOS
                                         ? CupertinoIcons.sparkles
                                         : Icons.auto_awesome_rounded,
-                                    color: conduitTheme.buttonPrimary,
-                                    size: IconSize.md,
+                                    size: IconSize.small,
+                                    color: conduitTheme.textPrimary,
                                   ),
                                   const SizedBox(width: Spacing.sm),
-                                  Text(l10n.generateTitle),
+                                  Text(
+                                    l10n.generateTitle,
+                                    style: TextStyle(
+                                      color: conduitTheme.textPrimary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -753,11 +764,16 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                                     Platform.isIOS
                                         ? CupertinoIcons.doc_on_clipboard
                                         : Icons.copy_rounded,
-                                    color: conduitTheme.iconPrimary,
-                                    size: IconSize.md,
+                                    size: IconSize.small,
+                                    color: conduitTheme.textPrimary,
                                   ),
                                   const SizedBox(width: Spacing.sm),
-                                  Text(l10n.copy),
+                                  Text(
+                                    l10n.copy,
+                                    style: TextStyle(
+                                      color: conduitTheme.textPrimary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -769,13 +785,15 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                                     Platform.isIOS
                                         ? CupertinoIcons.delete
                                         : Icons.delete_rounded,
+                                    size: IconSize.small,
                                     color: conduitTheme.error,
-                                    size: IconSize.md,
                                   ),
                                   const SizedBox(width: Spacing.sm),
                                   Text(
                                     l10n.delete,
-                                    style: TextStyle(color: conduitTheme.error),
+                                    style: TextStyle(
+                                      color: conduitTheme.error,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -823,17 +841,13 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   }
 
   Widget _buildFloatingMetadataBar(BuildContext context) {
-    final theme = Theme.of(context);
     final conduitTheme = context.conduitTheme;
     final l10n = AppLocalizations.of(context)!;
-    final isDark = theme.brightness == Brightness.dark;
 
-    final backgroundColor = isDark
-        ? Color.lerp(conduitTheme.cardBackground, Colors.white, 0.08)!
-        : Color.lerp(conduitTheme.inputBackground, Colors.black, 0.06)!;
-
-    final borderColor = conduitTheme.cardBorder.withValues(
-      alpha: isDark ? 0.65 : 0.55,
+    // Use consistent colors with the floating app bar pills
+    final backgroundColor = conduitTheme.surfaceContainer.withValues(alpha: 0.9);
+    final borderColor = conduitTheme.surfaceContainerHighest.withValues(
+      alpha: 0.4,
     );
 
     final dateFormat = DateFormat.MMMd();
@@ -898,7 +912,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       child: Text(
         '·',
         style: AppTypography.tiny.copyWith(
-          color: theme.textTertiary.withValues(alpha: 0.5),
+          color: theme.textSecondary.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -921,14 +935,14 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         children: [
           Icon(
             icon,
-            color: theme.textTertiary.withValues(alpha: 0.7),
+            color: theme.textSecondary,
             size: IconSize.xs,
           ),
           const SizedBox(width: Spacing.xxs),
           Text(
             label,
             style: AppTypography.tiny.copyWith(
-              color: theme.textTertiary.withValues(alpha: 0.7),
+              color: theme.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),

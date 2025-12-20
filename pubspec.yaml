@@ -1,6 +1,6 @@
 name: conduit
 description: Open-source mobile client for Open-WebUI
-version: 2.3.9+86
+version: 2.3.10+87
 publish_to: 'none'
 
 environment:
@@ -80,6 +80,8 @@ dependencies:
   home_widget: ^0.8.1
   flutter_highlight: ^0.7.0
   pasteboard: ^0.4.0
+  super_context_menu: ^0.9.1
+  super_drag_and_drop: ^0.9.1
   
   # Clipboard functionality is available through flutter/services (part of Flutter SDK)
 

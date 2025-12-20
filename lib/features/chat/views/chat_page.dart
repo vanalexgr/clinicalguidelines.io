@@ -1817,18 +1817,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                 ),
                               );
                             } else if (displayConversationTitle != null) {
-                              titlePill = GestureDetector(
-                                onTap: () {
-                                  final conversation = ref.read(
-                                    activeConversationProvider,
-                                  );
-                                  if (conversation == null) return;
-                                  showConversationContextMenu(
-                                    context: context,
-                                    ref: ref,
-                                    conversation: conversation,
-                                  );
-                                },
+                              final conversation = ref.read(
+                                activeConversationProvider,
+                              );
+                              titlePill = ConduitContextMenu(
+                                actions: buildConversationActions(
+                                  context: context,
+                                  ref: ref,
+                                  conversation: conversation,
+                                ),
                                 child: _buildAppBarPill(
                                   context: context,
                                   child: Padding(

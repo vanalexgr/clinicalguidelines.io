@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../auth/providers/unified_auth_providers.dart';
@@ -18,11 +19,9 @@ import '../../../shared/widgets/loading_states.dart';
 import '../../../shared/widgets/themed_dialogs.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 import '../../../core/utils/user_display_name.dart';
-import '../../../core/utils/model_icon_utils.dart';
 import '../../../core/utils/user_avatar_utils.dart';
 import '../../../shared/utils/conversation_context_menu.dart';
 import '../../../shared/widgets/user_avatar.dart';
-import '../../../shared/widgets/model_avatar.dart';
 import '../../../shared/widgets/conduit_components.dart';
 import '../../../shared/widgets/responsive_drawer_layout.dart';
 import '../../../core/models/model.dart';
@@ -182,9 +181,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
       child: Stack(
         children: [
           // Main scrollable content - extends behind floating elements
-          Positioned.fill(
-            child: _buildConversationList(context),
-          ),
+          Positioned.fill(child: _buildConversationList(context)),
           // Floating top area with gradient background (matches app bar pattern)
           Positioned(
             top: 0,
@@ -241,7 +238,9 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
               ),
               child: Builder(
                 builder: (context) {
-                  final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+                  final bottomPadding = MediaQuery.of(
+                    context,
+                  ).viewPadding.bottom;
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1003,26 +1002,50 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     final expandedMap = ref.watch(_expandedFoldersProvider);
     final isExpanded = expandedMap[folderId] ?? defaultExpanded;
     final isHover = _dragHoverFolderId == folderId;
-    return DragTarget<_DragConversationData>(
-      onWillAcceptWithDetails: (details) {
+    final baseColor = theme.surfaceContainer;
+    final hoverColor = theme.buttonPrimary.withValues(alpha: 0.08);
+    final borderColor = isHover
+        ? theme.buttonPrimary.withValues(alpha: 0.60)
+        : theme.surfaceContainerHighest.withValues(alpha: 0.40);
+
+    Color? overlayForStates(Set<WidgetState> states) {
+      if (states.contains(WidgetState.pressed)) {
+        return theme.buttonPrimary.withValues(alpha: Alpha.buttonPressed);
+      }
+      if (states.contains(WidgetState.hovered) ||
+          states.contains(WidgetState.focused)) {
+        return theme.buttonPrimary.withValues(alpha: Alpha.hover);
+      }
+      return Colors.transparent;
+    }
+
+    return DropRegion(
+      formats: const [], // Local data only
+      onDropOver: (event) {
         setState(() => _dragHoverFolderId = folderId);
-        return true;
+        return DropOperation.move;
       },
-      onLeave: (_) => setState(() => _dragHoverFolderId = null),
-      onAcceptWithDetails: (details) async {
+      onDropEnter: (_) => setState(() => _dragHoverFolderId = folderId),
+      onDropLeave: (_) => setState(() => _dragHoverFolderId = null),
+      onPerformDrop: (event) async {
         setState(() {
           _dragHoverFolderId = null;
           _isDragging = false;
         });
+        // Get local data from the drop event (serialized as Map)
+        final localData = event.session.items.first.localData;
+        if (localData is! Map) return;
+        final conversationId = localData['id'] as String?;
+        if (conversationId == null) return;
         try {
           final api = ref.read(apiServiceProvider);
           if (api == null) throw Exception('No API service');
-          await api.moveConversationToFolder(details.data.id, folderId);
+          await api.moveConversationToFolder(conversationId, folderId);
           HapticFeedback.selectionClick();
           ref
               .read(conversationsProvider.notifier)
               .updateConversation(
-                details.data.id,
+                conversationId,
                 (conversation) => conversation.copyWith(
                   folderId: folderId,
                   updatedAt: DateTime.now(),
@@ -1043,25 +1066,9 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           }
         }
       },
-      builder: (context, candidateData, rejectedData) {
-        final baseColor = theme.surfaceContainer;
-        final hoverColor = theme.buttonPrimary.withValues(alpha: 0.08);
-        final borderColor = isHover
-            ? theme.buttonPrimary.withValues(alpha: 0.60)
-            : theme.surfaceContainerHighest.withValues(alpha: 0.40);
-
-        Color? overlayForStates(Set<WidgetState> states) {
-          if (states.contains(WidgetState.pressed)) {
-            return theme.buttonPrimary.withValues(alpha: Alpha.buttonPressed);
-          }
-          if (states.contains(WidgetState.hovered) ||
-              states.contains(WidgetState.focused)) {
-            return theme.buttonPrimary.withValues(alpha: Alpha.hover);
-          }
-          return Colors.transparent;
-        }
-
-        return Material(
+      child: ConduitContextMenu(
+        actions: _buildFolderActions(folderId, name),
+        child: Material(
           color: isHover ? hoverColor : baseColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppBorderRadius.small),
@@ -1075,10 +1082,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
               current[folderId] = next;
               ref.read(_expandedFoldersProvider.notifier).set(current);
             },
-            onLongPress: () {
-              HapticFeedback.selectionClick();
-              _showFolderContextMenu(context, folderId, name);
-            },
+            onLongPress: null, // Handled by ConduitContextMenu
             overlayColor: WidgetStateProperty.resolveWith(overlayForStates),
             child: ConstrainedBox(
               constraints: const BoxConstraints(
@@ -1136,10 +1140,12 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: context.sidebarTheme.accent
-                                      .withValues(alpha: 0.7),
-                                  borderRadius:
-                                      BorderRadius.circular(AppBorderRadius.xs),
+                                  color: context.sidebarTheme.accent.withValues(
+                                    alpha: 0.7,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    AppBorderRadius.xs,
+                                  ),
                                   border: Border.all(
                                     color: context.sidebarTheme.border
                                         .withValues(alpha: 0.35),
@@ -1202,8 +1208,8 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -1296,37 +1302,33 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     );
   }
 
-  void _showFolderContextMenu(
-    BuildContext context,
+  List<ConduitContextMenuAction> _buildFolderActions(
     String folderId,
     String folderName,
   ) {
     final l10n = AppLocalizations.of(context)!;
 
-    showConduitContextMenu(
-      context: context,
-      actions: [
-        ConduitContextMenuAction(
-          cupertinoIcon: CupertinoIcons.pencil,
-          materialIcon: Icons.edit_rounded,
-          label: l10n.rename,
-          onBeforeClose: () => HapticFeedback.selectionClick(),
-          onSelected: () async {
-            await _renameFolder(context, folderId, folderName);
-          },
-        ),
-        ConduitContextMenuAction(
-          cupertinoIcon: CupertinoIcons.delete,
-          materialIcon: Icons.delete_rounded,
-          label: l10n.delete,
-          destructive: true,
-          onBeforeClose: () => HapticFeedback.mediumImpact(),
-          onSelected: () async {
-            await _confirmAndDeleteFolder(context, folderId, folderName);
-          },
-        ),
-      ],
-    );
+    return [
+      ConduitContextMenuAction(
+        cupertinoIcon: CupertinoIcons.pencil,
+        materialIcon: Icons.edit_rounded,
+        label: l10n.rename,
+        onBeforeClose: () => HapticFeedback.selectionClick(),
+        onSelected: () async {
+          await _renameFolder(context, folderId, folderName);
+        },
+      ),
+      ConduitContextMenuAction(
+        cupertinoIcon: CupertinoIcons.delete,
+        materialIcon: Icons.delete_rounded,
+        label: l10n.delete,
+        destructive: true,
+        onBeforeClose: () => HapticFeedback.mediumImpact(),
+        onSelected: () async {
+          await _confirmAndDeleteFolder(context, folderId, folderName);
+        },
+      ),
+    ];
   }
 
   void _startNewChatInFolder(String folderId) {
@@ -1433,26 +1435,33 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
     final theme = context.conduitTheme;
     final l10n = AppLocalizations.of(context)!;
     final isHover = _dragHoverFolderId == '__UNFILE__';
-    return DragTarget<_DragConversationData>(
-      onWillAcceptWithDetails: (details) {
+    return DropRegion(
+      formats: const [], // Local data only
+      onDropOver: (event) {
         setState(() => _dragHoverFolderId = '__UNFILE__');
-        return true;
+        return DropOperation.move;
       },
-      onLeave: (_) => setState(() => _dragHoverFolderId = null),
-      onAcceptWithDetails: (details) async {
+      onDropEnter: (_) => setState(() => _dragHoverFolderId = '__UNFILE__'),
+      onDropLeave: (_) => setState(() => _dragHoverFolderId = null),
+      onPerformDrop: (event) async {
         setState(() {
           _dragHoverFolderId = null;
           _isDragging = false;
         });
+        // Get local data from the drop event (serialized as Map)
+        final localData = event.session.items.first.localData;
+        if (localData is! Map) return;
+        final conversationId = localData['id'] as String?;
+        if (conversationId == null) return;
         try {
           final api = ref.read(apiServiceProvider);
           if (api == null) throw Exception('No API service');
-          await api.moveConversationToFolder(details.data.id, null);
+          await api.moveConversationToFolder(conversationId, null);
           HapticFeedback.selectionClick();
           ref
               .read(conversationsProvider.notifier)
               .updateConversation(
-                details.data.id,
+                conversationId,
                 (conversation) => conversation.copyWith(
                   folderId: null,
                   updatedAt: DateTime.now(),
@@ -1471,45 +1480,43 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
           }
         }
       },
-      builder: (context, candidate, rejected) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          decoration: BoxDecoration(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        decoration: BoxDecoration(
+          color: isHover
+              ? theme.buttonPrimary.withValues(alpha: 0.08)
+              : theme.surfaceContainer.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(AppBorderRadius.small),
+          border: Border.all(
             color: isHover
-                ? theme.buttonPrimary.withValues(alpha: 0.08)
-                : theme.surfaceContainer.withValues(alpha: 0.03),
-            borderRadius: BorderRadius.circular(AppBorderRadius.small),
-            border: Border.all(
-              color: isHover
-                  ? theme.buttonPrimary.withValues(alpha: 0.5)
-                  : theme.dividerColor.withValues(alpha: 0.5),
-              width: BorderWidth.standard,
-            ),
+                ? theme.buttonPrimary.withValues(alpha: 0.5)
+                : theme.dividerColor.withValues(alpha: 0.5),
+            width: BorderWidth.standard,
           ),
-          padding: const EdgeInsets.all(Spacing.sm),
-          child: Row(
-            children: [
-              Icon(
-                Platform.isIOS
-                    ? CupertinoIcons.folder_badge_minus
-                    : Icons.folder_off_outlined,
-                color: theme.iconPrimary,
-                size: IconSize.small,
-              ),
-              const SizedBox(width: Spacing.sm),
-              Expanded(
-                child: Text(
-                  'Drop here to remove from folder',
-                  style: AppTypography.bodySmallStyle.copyWith(
-                    color: theme.textPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
+        ),
+        padding: const EdgeInsets.all(Spacing.sm),
+        child: Row(
+          children: [
+            Icon(
+              Platform.isIOS
+                  ? CupertinoIcons.folder_badge_minus
+                  : Icons.folder_off_outlined,
+              color: theme.iconPrimary,
+              size: IconSize.small,
+            ),
+            const SizedBox(width: Spacing.sm),
+            Expanded(
+              child: Text(
+                'Drop here to remove from folder',
+                style: AppTypography.bodySmallStyle.copyWith(
+                  color: theme.textPrimary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1529,81 +1536,84 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
         (ref.watch(chat.isLoadingConversationProvider) == true);
     final bool isPinned = conv.pinned == true;
 
-    Model? model;
-    final modelId = (conv.model is String && (conv.model as String).isNotEmpty)
-        ? conv.model as String
-        : null;
-    if (modelId != null) {
-      model = modelsById[modelId];
-    }
+    // Check if folders feature is enabled to enable drag
+    final foldersEnabled = ref.watch(foldersFeatureEnabledProvider);
+    final dragEnabled = foldersEnabled && !isLoadingSelected;
 
-    final api = ref.watch(apiServiceProvider);
-    final modelIconUrl = resolveModelIconUrlForModel(api, model);
-
-    Widget? leading;
-    if (modelId != null) {
-      leading = ModelAvatar(
-        size: 28,
-        imageUrl: modelIconUrl,
-        label: model?.name ?? modelId,
-      );
-    }
-
-    final tile = _ConversationTile(
+    final tileWidget = _ConversationTile(
       title: title,
       pinned: isPinned,
       selected: isActive,
       isLoading: isLoadingSelected,
-      leading: leading,
       onTap: _isLoadingConversation
           ? null
           : () => _selectConversation(context, conv.id),
-      onLongPress: null,
-      onMorePressed: (buttonContext) {
-        showConversationContextMenu(
-          context: buttonContext,
-          ref: ref,
-          conversation: conv,
-        );
-      },
     );
 
-    return RepaintBoundary(
+    final contextMenuTile = ConduitContextMenu(
+      actions: buildConversationActions(
+        context: context,
+        ref: ref,
+        conversation: conv,
+      ),
       child: Padding(
-        padding: EdgeInsets.only(
-          bottom: Spacing.xs,
-          left: inFolder ? Spacing.md : 0,
-        ),
-        child: LongPressDraggable<_DragConversationData>(
-          data: _DragConversationData(id: conv.id, title: title),
-          dragAnchorStrategy: pointerDragAnchorStrategy,
-          feedback: _ConversationDragFeedback(
-            title: title,
-            pinned: isPinned,
-            theme: theme,
-          ),
-          childWhenDragging: Opacity(
-            opacity: 0.5,
-            child: IgnorePointer(child: tile),
-          ),
-          onDragStarted: () {
-            HapticFeedback.lightImpact();
-            final hasFolder =
-                (conv.folderId != null && (conv.folderId as String).isNotEmpty);
-            setState(() {
-              _isDragging = true;
-              _draggingHasFolder = hasFolder;
-            });
-          },
-          onDragEnd: (_) => setState(() {
-            _dragHoverFolderId = null;
-            _isDragging = false;
-            _draggingHasFolder = false;
-          }),
-          child: tile,
-        ),
+        padding: EdgeInsets.only(left: inFolder ? Spacing.sm : 0),
+        child: tileWidget,
       ),
     );
+
+    // Wrap with drag support if folders are enabled
+    Widget tile;
+    if (dragEnabled) {
+      tile = DragItemWidget(
+        allowedOperations: () => [DropOperation.move],
+        canAddItemToExistingSession: true,
+        dragItemProvider: (request) async {
+          // Set drag state when drag starts
+          HapticFeedback.lightImpact();
+          final hasFolder =
+              (conv.folderId != null && (conv.folderId as String).isNotEmpty);
+          setState(() {
+            _isDragging = true;
+            _draggingHasFolder = hasFolder;
+          });
+
+          // Listen for drag completion to reset state
+          void onDragCompleted() {
+            if (mounted) {
+              setState(() {
+                _dragHoverFolderId = null;
+                _isDragging = false;
+                _draggingHasFolder = false;
+              });
+            }
+            request.session.dragCompleted.removeListener(onDragCompleted);
+          }
+
+          request.session.dragCompleted.addListener(onDragCompleted);
+
+          // Provide drag data with conversation info as serializable Map
+          final item = DragItem(localData: {'id': conv.id, 'title': title});
+          return item;
+        },
+        dragBuilder: (context, child) {
+          // Custom drag preview
+          return Opacity(
+            opacity: 0.9,
+            child: _ConversationDragFeedback(
+              title: title,
+              pinned: isPinned,
+              theme: theme,
+            ),
+          );
+        },
+        child: DraggableWidget(child: contextMenuTile),
+      );
+    } else {
+      tile = contextMenuTile;
+    }
+
+    return RepaintBoundary(child: tile);
   }
 
   Widget _buildArchivedHeader(int count) {
@@ -1790,9 +1800,7 @@ class _ChatsDrawerState extends ConsumerState<ChatsDrawer> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(
-                  AppBorderRadius.avatar,
-                ),
+                borderRadius: BorderRadius.circular(AppBorderRadius.avatar),
                 border: Border.all(
                   color: conduitTheme.buttonPrimary.withValues(alpha: 0.25),
                   width: BorderWidth.thin,
@@ -1916,12 +1924,6 @@ class _ExpandedFoldersNotifier extends Notifier<Map<String, bool>> {
   void set(Map<String, bool> value) => state = Map<String, bool>.from(value);
 }
 
-class _DragConversationData {
-  final String id;
-  final String title;
-  const _DragConversationData({required this.id, required this.title});
-}
-
 class _ConversationDragFeedback extends StatelessWidget {
   final String title;
   final bool pinned;
@@ -1958,7 +1960,6 @@ class _ConversationDragFeedback extends StatelessWidget {
           pinned: pinned,
           selected: false,
           isLoading: false,
-          onMorePressed: null,
         ),
       ),
     );
@@ -1970,23 +1971,21 @@ class _ConversationTileContent extends StatelessWidget {
   final bool pinned;
   final bool selected;
   final bool isLoading;
-  final void Function(BuildContext)? onMorePressed;
-  final Widget? leading;
 
   const _ConversationTileContent({
     required this.title,
     required this.pinned,
     required this.selected,
     required this.isLoading,
-    this.onMorePressed,
-    this.leading,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.conduitTheme;
+
+    // Enhanced typography with better visual hierarchy
     final textStyle = AppTypography.standard.copyWith(
-      color: theme.textPrimary,
+      color: selected ? theme.textPrimary : theme.textSecondary,
       fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
       height: 1.4,
     );
@@ -1996,20 +1995,30 @@ class _ConversationTileContent extends StatelessWidget {
         final hasFiniteWidth = constraints.maxWidth.isFinite;
         final textFit = hasFiniteWidth ? FlexFit.tight : FlexFit.loose;
 
-        final trailing = <Widget>[];
+        final trailingWidgets = <Widget>[];
+
         if (pinned) {
-          trailing.addAll([
-            const SizedBox(width: Spacing.xs),
-            Icon(
-              Platform.isIOS ? CupertinoIcons.pin_fill : Icons.push_pin_rounded,
-              color: theme.iconSecondary,
-              size: IconSize.xs,
+          trailingWidgets.addAll([
+            const SizedBox(width: Spacing.sm),
+            Container(
+              padding: const EdgeInsets.all(Spacing.xxs),
+              decoration: BoxDecoration(
+                color: theme.buttonPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppBorderRadius.xs),
+              ),
+              child: Icon(
+                Platform.isIOS
+                    ? CupertinoIcons.pin_fill
+                    : Icons.push_pin_rounded,
+                color: theme.buttonPrimary.withValues(alpha: 0.7),
+                size: IconSize.xs,
+              ),
             ),
           ]);
         }
 
         if (isLoading) {
-          trailing.addAll([
+          trailingWidgets.addAll([
             const SizedBox(width: Spacing.sm),
             SizedBox(
               width: IconSize.sm,
@@ -2022,47 +2031,11 @@ class _ConversationTileContent extends StatelessWidget {
               ),
             ),
           ]);
-        } else if (onMorePressed != null) {
-          trailing.addAll([
-            const SizedBox(width: Spacing.sm),
-            Builder(
-              builder: (buttonContext) {
-                return IconButton(
-                  iconSize: IconSize.sm,
-                  visualDensity: const VisualDensity(
-                    horizontal: -2,
-                    vertical: -2,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: TouchTarget.listItem,
-                    minHeight: TouchTarget.listItem,
-                  ),
-                  icon: Icon(
-                    Platform.isIOS
-                        ? CupertinoIcons.ellipsis
-                        : Icons.more_vert_rounded,
-                    color: theme.iconSecondary,
-                  ),
-                  onPressed: () => onMorePressed!(buttonContext),
-                  tooltip: AppLocalizations.of(context)!.more,
-                );
-              },
-            ),
-          ]);
         }
 
         return Row(
           mainAxisSize: hasFiniteWidth ? MainAxisSize.max : MainAxisSize.min,
           children: [
-            if (leading != null) ...[
-              SizedBox(
-                width: TouchTarget.listItem,
-                height: TouchTarget.listItem,
-                child: Center(child: leading!),
-              ),
-              const SizedBox(width: Spacing.sm),
-            ],
             Flexible(
               fit: textFit,
               child: MiddleEllipsisText(
@@ -2071,7 +2044,7 @@ class _ConversationTileContent extends StatelessWidget {
                 semanticsLabel: title,
               ),
             ),
-            ...trailing,
+            ...trailingWidgets,
           ],
         );
       },
@@ -2079,98 +2052,103 @@ class _ConversationTileContent extends StatelessWidget {
   }
 }
 
-class _ConversationTile extends StatelessWidget {
+class _ConversationTile extends StatefulWidget {
   final String title;
   final bool pinned;
   final bool selected;
   final bool isLoading;
-  final Widget? leading;
   final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
-  final void Function(BuildContext)? onMorePressed;
 
   const _ConversationTile({
     required this.title,
     required this.pinned,
     required this.selected,
     required this.isLoading,
-    this.leading,
     required this.onTap,
-    this.onLongPress,
-    this.onMorePressed,
   });
+
+  @override
+  State<_ConversationTile> createState() => _ConversationTileState();
+}
+
+class _ConversationTileState extends State<_ConversationTile> {
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.conduitTheme;
-    const BorderRadius borderRadius = BorderRadius.zero;
-    final Color background = selected
-        ? theme.buttonPrimary.withValues(alpha: 0.1)
-        : Colors.transparent;
-    final Color borderColor = selected
-        ? theme.buttonPrimary.withValues(alpha: 0.5)
-        : Colors.transparent;
+    final sidebarTheme = context.sidebarTheme;
+    final borderRadius = BorderRadius.circular(AppBorderRadius.sm);
 
-    final List<BoxShadow> shadow = const [];
+    // Use opaque backgrounds for proper context menu snapshot rendering
+    final Color baseBackground = sidebarTheme.background;
+
+    final Color background = widget.selected
+        ? Color.alphaBlend(
+            theme.buttonPrimary.withValues(alpha: 0.1),
+            baseBackground,
+          )
+        : (_isHovered
+              ? Color.alphaBlend(
+                  theme.buttonPrimary.withValues(alpha: 0.05),
+                  baseBackground,
+                )
+              : baseBackground);
+
+    // Border styling
+    final Color borderColor = widget.selected
+        ? theme.buttonPrimary.withValues(alpha: 0.4)
+        : Colors.transparent;
 
     Color? overlayForStates(Set<WidgetState> states) {
       if (states.contains(WidgetState.pressed)) {
         return theme.buttonPrimary.withValues(alpha: Alpha.buttonPressed);
       }
-      if (states.contains(WidgetState.focused) ||
-          states.contains(WidgetState.hovered)) {
-        return theme.buttonPrimary.withValues(alpha: Alpha.hover);
-      }
       return Colors.transparent;
     }
 
     return Semantics(
-      selected: selected,
+      selected: widget.selected,
       button: true,
-      child: Material(
-        color: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: borderRadius),
-        child: InkWell(
-          borderRadius: borderRadius,
-          onTap: isLoading ? null : onTap,
-          onLongPress: onLongPress,
-          overlayColor: WidgetStateProperty.resolveWith(overlayForStates),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              color: background,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(
+            horizontal: Spacing.xs,
+            vertical: Spacing.xxs,
+          ),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: borderRadius,
+            border: widget.selected
+                ? Border.all(color: borderColor, width: BorderWidth.regular)
+                : null,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: borderRadius,
+            child: InkWell(
               borderRadius: borderRadius,
-              border: selected
-                  ? Border(
-                      top: BorderSide(
-                        color: borderColor,
-                        width: BorderWidth.thin,
-                      ),
-                      bottom: BorderSide(
-                        color: borderColor,
-                        width: BorderWidth.thin,
-                      ),
-                    )
-                  : null,
-              boxShadow: shadow,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minHeight: TouchTarget.listItem,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.md,
-                  vertical: Spacing.xs,
+              onTap: widget.isLoading ? null : widget.onTap,
+              overlayColor: WidgetStateProperty.resolveWith(overlayForStates),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: TouchTarget.listItem,
                 ),
-                child: _ConversationTileContent(
-                  title: title,
-                  pinned: pinned,
-                  selected: selected,
-                  isLoading: isLoading,
-                  onMorePressed: onMorePressed,
-                  leading: leading,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Spacing.md,
+                    vertical: Spacing.sm,
+                  ),
+                  child: _ConversationTileContent(
+                    title: widget.title,
+                    pinned: widget.pinned,
+                    selected: widget.selected,
+                    isLoading: widget.isLoading,
+                  ),
                 ),
               ),
             ),
