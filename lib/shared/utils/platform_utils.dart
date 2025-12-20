@@ -164,26 +164,6 @@ class IOSEnhancements {
     );
   }
 
-  /// Create iOS-style context menu
-  static Widget createContextMenu({
-    required Widget child,
-    required List<ContextMenuAction> actions,
-  }) {
-    return CupertinoContextMenu(
-      actions: actions
-          .map(
-            (action) => CupertinoContextMenuAction(
-              onPressed: action.onPressed,
-              isDefaultAction: action.isDefault,
-              isDestructiveAction: action.isDestructive,
-              child: Text(action.title),
-            ),
-          )
-          .toList(),
-      child: child,
-    );
-  }
-
   /// Create iOS-style action sheet
   static void showActionSheet({
     required BuildContext context,
@@ -458,20 +438,6 @@ enum HapticType { light, medium, heavy, selection }
 enum ButtonType { filled, outlined, text }
 
 enum CardType { filled, outlined, elevated }
-
-class ContextMenuAction {
-  final String title;
-  final VoidCallback onPressed;
-  final bool isDefault;
-  final bool isDestructive;
-
-  const ContextMenuAction({
-    required this.title,
-    required this.onPressed,
-    this.isDefault = false,
-    this.isDestructive = false,
-  });
-}
 
 class ActionSheetAction {
   final String title;

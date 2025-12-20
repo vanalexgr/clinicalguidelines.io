@@ -243,6 +243,28 @@ class AppTheme {
         iconColor: tokens.neutralTone80,
         textColor: tokens.neutralOnSurface,
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: surfaces.popover,
+        surfaceTintColor: Colors.transparent,
+        elevation: Elevation.high,
+        shadowColor: shadows.shadowLg.first.color,
+        shape: RoundedRectangleBorder(
+          borderRadius: shapes.large,
+          side: BorderSide(
+            color: surfaces.border.withValues(alpha: 0.15),
+            width: 0.5,
+          ),
+        ),
+        textStyle: textTheme.bodyMedium?.copyWith(
+          color: tokens.neutralOnSurface,
+        ),
+        labelTextStyle: WidgetStateProperty.all(
+          textTheme.bodyMedium?.copyWith(
+            color: tokens.neutralOnSurface,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
       textTheme: textTheme,
       extensions: <ThemeExtension<dynamic>>[
         tokens,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import '../../../shared/theme/theme_extensions.dart';
 // app_theme not required here; using theme extension tokens
@@ -183,13 +184,23 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     }
 
     _pendingFocus = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    // Request focus synchronously if we're already in a safe context,
+    // otherwise defer to next frame
+    if (WidgetsBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      // We're in a build/layout phase, defer to next frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _pendingFocus = false;
+        if (widget.enabled && !_focusNode.hasFocus) {
+          _focusNode.requestFocus();
+        }
+      });
+    } else {
+      // Safe to request focus immediately
       _pendingFocus = false;
-      if (widget.enabled && !_focusNode.hasFocus) {
-        _focusNode.requestFocus();
-      }
-    });
+      _focusNode.requestFocus();
+    }
   }
 
   @override
@@ -1032,11 +1043,8 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       });
     });
 
-    final messages = ref.watch(chatMessagesProvider);
-    final isGenerating =
-        messages.isNotEmpty &&
-        messages.last.role == 'assistant' &&
-        messages.last.isStreaming;
+    // Use dedicated streaming provider to avoid rebuilding on every message change
+    final isGenerating = ref.watch(isChatStreamingProvider);
     final stopGeneration = ref.read(stopGenerationProvider);
 
     final webSearchEnabled = ref.watch(webSearchEnabledProvider);
@@ -1340,9 +1348,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     // For compact mode, render text field shell with floating buttons on sides
     if (showCompactComposer) {
       // Build the text field shell
-      Widget textFieldShell = AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
+      Widget textFieldShell = Container(
         padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
         constraints: const BoxConstraints(minHeight: TouchTarget.input),
         decoration: shellDecoration,
@@ -1404,9 +1410,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     }
 
     // For expanded mode with quick pills, use the full shell
-    Widget shell = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
+    Widget shell = Container(
       decoration: shellDecoration,
       child: ConstrainedBox(
         constraints: BoxConstraints(

@@ -414,33 +414,40 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
       return Colors.transparent;
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Spacing.sm),
-      child: Container(
-        decoration: BoxDecoration(
-          color: sidebarTheme.accent.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(AppBorderRadius.card),
-          border: Border.all(
-            color: sidebarTheme.border.withValues(alpha: 0.15),
-            width: BorderWidth.thin,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
+    // Compute opaque background for proper context menu snapshot rendering
+    final cardBackground = Color.alphaBlend(
+      sidebarTheme.accent.withValues(alpha: 0.5),
+      sidebarTheme.background,
+    );
+
+    return ConduitContextMenu(
+      actions: _buildNoteActions(context, note),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: Spacing.sm),
         child: Material(
-          color: Colors.transparent,
+          color: cardBackground,
           borderRadius: BorderRadius.circular(AppBorderRadius.card),
-          child: InkWell(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppBorderRadius.card),
+              border: Border.all(
+                color: sidebarTheme.border.withValues(alpha: 0.15),
+                width: BorderWidth.thin,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: InkWell(
             borderRadius: BorderRadius.circular(AppBorderRadius.card),
             overlayColor: WidgetStateProperty.resolveWith(overlayForStates),
             onTap: () {
@@ -450,7 +457,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
                 pathParameters: {'id': note.id},
               );
             },
-            onLongPress: () => _showNoteContextMenu(context, note),
+            onLongPress: null, // Handled by ConduitContextMenu
             child: Padding(
               padding: const EdgeInsets.all(Spacing.md),
               child: Row(
@@ -558,32 +565,13 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
                       ],
                     ),
                   ),
-                  // More button
-                  Builder(
-                    builder: (buttonContext) => IconButton(
-                      icon: Icon(
-                        Platform.isIOS
-                            ? CupertinoIcons.ellipsis
-                            : Icons.more_vert_rounded,
-                        color: sidebarTheme.foreground.withValues(alpha: 0.5),
-                        size: IconSize.md,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: TouchTarget.badge,
-                        minHeight: TouchTarget.badge,
-                      ),
-                      onPressed: () =>
-                          _showNoteContextMenu(buttonContext, note),
-                    ),
-                  ),
                 ],
               ),
             ),
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -594,51 +582,51 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
         date.day == now.day;
   }
 
-  void _showNoteContextMenu(BuildContext context, Note note) {
+  List<ConduitContextMenuAction> _buildNoteActions(
+    BuildContext context,
+    Note note,
+  ) {
     final l10n = AppLocalizations.of(context)!;
 
-    showConduitContextMenu(
-      context: context,
-      actions: [
-        ConduitContextMenuAction(
-          cupertinoIcon: CupertinoIcons.pencil,
-          materialIcon: Icons.edit_rounded,
-          label: l10n.edit,
-          onBeforeClose: () => HapticFeedback.selectionClick(),
-          onSelected: () async {
-            context.pushNamed(
-              RouteNames.noteEditor,
-              pathParameters: {'id': note.id},
-            );
-          },
-        ),
-        ConduitContextMenuAction(
-          cupertinoIcon: CupertinoIcons.doc_on_clipboard,
-          materialIcon: Icons.copy_rounded,
-          label: l10n.copy,
-          onBeforeClose: () => HapticFeedback.selectionClick(),
-          onSelected: () async {
-            final messenger = ScaffoldMessenger.of(context);
-            await Clipboard.setData(ClipboardData(text: note.markdownContent));
-            if (!mounted) return;
-            messenger.showSnackBar(
-              SnackBar(
-                content: Text(l10n.noteCopiedToClipboard),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          },
-        ),
-        ConduitContextMenuAction(
-          cupertinoIcon: CupertinoIcons.delete,
-          materialIcon: Icons.delete_rounded,
-          label: l10n.delete,
-          destructive: true,
-          onBeforeClose: () => HapticFeedback.mediumImpact(),
-          onSelected: () async => _deleteNote(note),
-        ),
-      ],
-    );
+    return [
+      ConduitContextMenuAction(
+        cupertinoIcon: CupertinoIcons.pencil,
+        materialIcon: Icons.edit_rounded,
+        label: l10n.edit,
+        onBeforeClose: () => HapticFeedback.selectionClick(),
+        onSelected: () async {
+          context.pushNamed(
+            RouteNames.noteEditor,
+            pathParameters: {'id': note.id},
+          );
+        },
+      ),
+      ConduitContextMenuAction(
+        cupertinoIcon: CupertinoIcons.doc_on_clipboard,
+        materialIcon: Icons.copy_rounded,
+        label: l10n.copy,
+        onBeforeClose: () => HapticFeedback.selectionClick(),
+        onSelected: () async {
+          final messenger = ScaffoldMessenger.of(context);
+          await Clipboard.setData(ClipboardData(text: note.markdownContent));
+          if (!mounted) return;
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(l10n.noteCopiedToClipboard),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+      ),
+      ConduitContextMenuAction(
+        cupertinoIcon: CupertinoIcons.delete,
+        materialIcon: Icons.delete_rounded,
+        label: l10n.delete,
+        destructive: true,
+        onBeforeClose: () => HapticFeedback.mediumImpact(),
+        onSelected: () async => _deleteNote(note),
+      ),
+    ];
   }
 
   Widget _buildEmptyState(BuildContext context) {

@@ -433,51 +433,32 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
     super.dispose();
   }
 
-  Future<void> _showMessageMenu(BuildContext context) async {
-    // Don't show menu while editing - use the visible Save/Cancel buttons instead
-    if (_isEditing) return;
+  List<ConduitContextMenuAction> _buildMessageActions(BuildContext context) {
+    // Don't show menu while editing - return empty list
+    if (_isEditing) return [];
 
     final l10n = AppLocalizations.of(context)!;
-    HapticFeedback.selectionClick();
 
-    // Get the position of the bubble to show menu below it
-    Offset? menuPosition;
-    final RenderBox? renderBox =
-        _bubbleKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox != null) {
-      final position = renderBox.localToGlobal(Offset.zero);
-      final size = renderBox.size;
-      // Position menu at bottom-right of the bubble
-      menuPosition = Offset(
-        position.dx + size.width,
-        position.dy + size.height,
-      );
-    }
-
-    await showConduitContextMenu(
-      context: context,
-      position: menuPosition,
-      actions: [
-        ConduitContextMenuAction(
-          cupertinoIcon: CupertinoIcons.pencil,
-          materialIcon: Icons.edit_outlined,
-          label: l10n.edit,
-          onBeforeClose: () => HapticFeedback.selectionClick(),
-          onSelected: () async => _startInlineEdit(),
-        ),
-        ConduitContextMenuAction(
-          cupertinoIcon: CupertinoIcons.doc_on_clipboard,
-          materialIcon: Icons.content_copy,
-          label: l10n.copy,
-          onBeforeClose: () => HapticFeedback.selectionClick(),
-          onSelected: () async {
-            if (widget.onCopy != null) {
-              widget.onCopy!();
-            }
-          },
-        ),
-      ],
-    );
+    return [
+      ConduitContextMenuAction(
+        cupertinoIcon: CupertinoIcons.pencil,
+        materialIcon: Icons.edit_outlined,
+        label: l10n.edit,
+        onBeforeClose: () => HapticFeedback.selectionClick(),
+        onSelected: () async => _startInlineEdit(),
+      ),
+      ConduitContextMenuAction(
+        cupertinoIcon: CupertinoIcons.doc_on_clipboard,
+        materialIcon: Icons.content_copy,
+        label: l10n.copy,
+        onBeforeClose: () => HapticFeedback.selectionClick(),
+        onSelected: () async {
+          if (widget.onCopy != null) {
+            widget.onCopy!();
+          }
+        },
+      ),
+    ];
   }
 
   @override
@@ -498,10 +479,15 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
     final inlineEditFill = context.conduitTheme.surfaceContainer.withValues(
       alpha: 0.92,
     );
+    // Use rounded rectangle for multiline, pill for single-line (like chat input)
+    // Consider multiline if text exceeds ~50 chars or contains newlines
+    // Check length first (O(1)) to short-circuit before scanning for newlines
+    final content = widget.message.content;
+    final isMultiline = content.length > 50 || content.contains('\n');
+    final bubbleRadius = isMultiline ? AppBorderRadius.xl : AppBorderRadius.pill;
 
-    return GestureDetector(
-      onLongPress: () => _showMessageMenu(context),
-      behavior: HitTestBehavior.translucent,
+    return ConduitContextMenu(
+      actions: _buildMessageActions(context),
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.only(
@@ -539,9 +525,7 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
                         ),
                         decoration: BoxDecoration(
                           color: context.conduitTheme.chatBubbleUser,
-                          borderRadius: BorderRadius.circular(
-                            AppBorderRadius.messageBubble,
-                          ),
+                          borderRadius: BorderRadius.circular(bubbleRadius),
                         ),
                         child: _isEditing
                             ? Focus(
