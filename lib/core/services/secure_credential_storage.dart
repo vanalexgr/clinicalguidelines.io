@@ -24,7 +24,6 @@ class SecureCredentialStorage {
   /// Get Android-specific secure storage options
   AndroidOptions _getAndroidOptions() {
     return const AndroidOptions(
-      encryptedSharedPreferences: true,
       sharedPreferencesName: 'conduit_secure_prefs',
       preferencesKeyPrefix: 'conduit_',
       // Avoid auto-wipe on transient errors; handle gracefully in code

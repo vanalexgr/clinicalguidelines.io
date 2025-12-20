@@ -24,7 +24,7 @@ dependencies:
   
   
   # Storage
-  flutter_secure_storage: ^9.2.4
+  flutter_secure_storage: ^10.0.0
   hive_ce: ^2.14.0
   hive_ce_flutter: ^2.3.2
   shared_preferences: ^2.3.2

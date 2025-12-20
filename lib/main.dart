@@ -62,7 +62,6 @@ void main() {
 
       const secureStorage = FlutterSecureStorage(
         aOptions: AndroidOptions(
-          encryptedSharedPreferences: true,
           sharedPreferencesName: 'conduit_secure_prefs',
           preferencesKeyPrefix: 'conduit_',
           resetOnError: false,
