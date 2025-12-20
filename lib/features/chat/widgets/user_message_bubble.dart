@@ -498,6 +498,12 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
     final inlineEditFill = context.conduitTheme.surfaceContainer.withValues(
       alpha: 0.92,
     );
+    // Use rounded rectangle for multiline, pill for single-line (like chat input)
+    // Consider multiline if text exceeds ~50 chars or contains newlines
+    // Check length first (O(1)) to short-circuit before scanning for newlines
+    final content = widget.message.content;
+    final isMultiline = content.length > 50 || content.contains('\n');
+    final bubbleRadius = isMultiline ? AppBorderRadius.xl : AppBorderRadius.pill;
 
     return GestureDetector(
       onLongPress: () => _showMessageMenu(context),
@@ -539,9 +545,7 @@ class _UserMessageBubbleState extends ConsumerState<UserMessageBubble> {
                         ),
                         decoration: BoxDecoration(
                           color: context.conduitTheme.chatBubbleUser,
-                          borderRadius: BorderRadius.circular(
-                            AppBorderRadius.messageBubble,
-                          ),
+                          borderRadius: BorderRadius.circular(bubbleRadius),
                         ),
                         child: _isEditing
                             ? Focus(

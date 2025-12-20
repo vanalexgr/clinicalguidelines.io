@@ -1340,9 +1340,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     // For compact mode, render text field shell with floating buttons on sides
     if (showCompactComposer) {
       // Build the text field shell
-      Widget textFieldShell = AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
+      Widget textFieldShell = Container(
         padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
         constraints: const BoxConstraints(minHeight: TouchTarget.input),
         decoration: shellDecoration,
@@ -1404,9 +1402,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     }
 
     // For expanded mode with quick pills, use the full shell
-    Widget shell = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
+    Widget shell = Container(
       decoration: shellDecoration,
       child: ConstrainedBox(
         constraints: BoxConstraints(
