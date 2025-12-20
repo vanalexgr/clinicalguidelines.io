@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import '../../../shared/theme/theme_extensions.dart';
 // app_theme not required here; using theme extension tokens
@@ -183,13 +184,23 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     }
 
     _pendingFocus = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    // Request focus synchronously if we're already in a safe context,
+    // otherwise defer to next frame
+    if (WidgetsBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      // We're in a build/layout phase, defer to next frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _pendingFocus = false;
+        if (widget.enabled && !_focusNode.hasFocus) {
+          _focusNode.requestFocus();
+        }
+      });
+    } else {
+      // Safe to request focus immediately
       _pendingFocus = false;
-      if (widget.enabled && !_focusNode.hasFocus) {
-        _focusNode.requestFocus();
-      }
-    });
+      _focusNode.requestFocus();
+    }
   }
 
   @override
@@ -1032,11 +1043,8 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       });
     });
 
-    final messages = ref.watch(chatMessagesProvider);
-    final isGenerating =
-        messages.isNotEmpty &&
-        messages.last.role == 'assistant' &&
-        messages.last.isStreaming;
+    // Use dedicated streaming provider to avoid rebuilding on every message change
+    final isGenerating = ref.watch(isChatStreamingProvider);
     final stopGeneration = ref.read(stopGenerationProvider);
 
     final webSearchEnabled = ref.watch(webSearchEnabledProvider);

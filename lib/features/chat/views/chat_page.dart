@@ -1570,16 +1570,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             height: 1.3,
           );
 
-    // Keyboard visibility
-    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    // Keyboard visibility - use viewInsetsOf for more efficient partial subscription
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     // Whether the messages list can actually scroll (avoids showing button when not needed)
     final canScroll =
         _scrollController.hasClients &&
         _scrollController.position.maxScrollExtent > 0;
-    // Check if any message is currently streaming (for scroll button indicator)
-    final isStreamingAnyMessage = ref
-        .watch(chatMessagesProvider)
-        .any((msg) => msg.isStreaming);
+    // Use dedicated streaming provider to avoid iterating all messages on rebuild
+    final isStreamingAnyMessage = ref.watch(isChatStreamingProvider);
 
     // On keyboard open, if already near bottom, auto-scroll to bottom to keep input visible
     if (keyboardVisible && !_lastKeyboardVisible) {
@@ -1601,15 +1599,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       });
     }
 
-    // Focus composer on app startup once
+    // Focus composer on app startup once (minimal delay for layout to settle)
     if (!_didStartupFocus) {
       _didStartupFocus = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (!mounted) return;
-          final current = ref.read(inputFocusTriggerProvider);
-          ref.read(inputFocusTriggerProvider.notifier).set(current + 1);
-        });
+        if (!mounted) return;
+        ref.read(inputFocusTriggerProvider.notifier).increment();
       });
     }
 
