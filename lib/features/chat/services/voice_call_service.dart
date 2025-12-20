@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:developer' as developer;
+import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_callkit_incoming/entities/call_event.dart';
@@ -327,20 +328,34 @@ class VoiceCallService {
       // Initialize voice input first so we know which STT mode will be used
       await _voiceInput.initialize();
 
-      // Only activate VoiceBackgroundAudioManager for server STT
-      // For local STT, speech_to_text handles its own iOS audio session
+      // Determine if we need microphone foreground service type.
+      // On Android 14+, FOREGROUND_SERVICE_TYPE_MICROPHONE is required for any
+      // background microphone access - including speech_to_text's local STT.
+      // On iOS, speech_to_text handles its own audio session so we only need
+      // the microphone type for server STT (which uses our VAD recorder).
       final useServerMic =
           (_voiceInput.prefersServerOnly && _voiceInput.hasServerStt) ||
           (!_voiceInput.hasLocalStt && _voiceInput.hasServerStt);
+      final requiresMicrophone = Platform.isAndroid || useServerMic;
       await BackgroundStreamingHandler.instance.startBackgroundExecution(const [
         _voiceCallStreamId,
-      ], requiresMicrophone: useServerMic);
+      ], requiresMicrophone: requiresMicrophone);
 
       // Set up periodic keep-alive to refresh wake lock (every 5 minutes)
       _keepAliveTimer?.cancel();
       _keepAliveTimer = Timer.periodic(
         const Duration(minutes: 5),
-        (_) => BackgroundStreamingHandler.instance.keepAlive(),
+        (_) async {
+          final success = await BackgroundStreamingHandler.instance.keepAlive();
+          if (!success) {
+            // Keep-alive failed but don't stop the call - service may still work
+            developer.log(
+              'Voice call keep-alive failed',
+              name: 'VoiceCallService',
+              level: 900, // WARNING
+            );
+          }
+        },
       );
 
       // Set up socket event listener for assistant responses

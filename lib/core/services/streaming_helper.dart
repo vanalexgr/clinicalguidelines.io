@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -7,6 +8,7 @@ import '../../core/models/chat_message.dart';
 import '../../core/models/socket_event.dart';
 import '../../core/services/socket_service.dart';
 import '../../core/utils/tool_calls_parser.dart';
+import 'background_streaming_handler.dart';
 import 'navigation_service.dart';
 import 'conversation_delta_listener.dart';
 import '../../shared/widgets/themed_dialogs.dart';
@@ -219,11 +221,41 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   // Track if streaming has been finished to avoid duplicate cleanup
   bool hasFinished = false;
 
-  // Wrap finishStreaming to always clear the cancel token
+  // Start background execution to keep app alive during streaming (iOS/Android)
+  // Uses the assistantMessageId as a unique stream identifier
+  final streamId = 'chat-stream-$assistantMessageId';
+  if (Platform.isIOS || Platform.isAndroid) {
+    // Fire-and-forget: background execution is best-effort and shouldn't block streaming
+    BackgroundStreamingHandler.instance
+        .startBackgroundExecution([streamId])
+        .catchError((Object e) {
+          DebugLogger.error(
+            'background-start-failed',
+            scope: 'streaming/helper',
+            error: e,
+          );
+        });
+  }
+
+  // Wrap finishStreaming to always clear the cancel token and stop background execution
   void wrappedFinishStreaming() {
     if (hasFinished) return;
     hasFinished = true;
     api.clearStreamCancelToken(assistantMessageId);
+
+    // Stop background execution when streaming completes
+    if (Platform.isIOS || Platform.isAndroid) {
+      BackgroundStreamingHandler.instance
+          .stopBackgroundExecution([streamId])
+          .catchError((Object e) {
+            DebugLogger.error(
+              'background-stop-failed',
+              scope: 'streaming/helper',
+              error: e,
+            );
+          });
+    }
+
     finishStreaming();
   }
 

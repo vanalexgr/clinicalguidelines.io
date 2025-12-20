@@ -132,6 +132,104 @@ void _scheduleConversationWarmup(Ref ref, {bool force = false}) {
   });
 }
 
+/// Initialize background streaming handler with error callbacks.
+///
+/// This registers callbacks for platform events (service failures, time limits, etc.)
+Future<void> _initializeBackgroundStreaming(Ref ref) async {
+  try {
+    await BackgroundStreamingHandler.instance.initialize(
+      serviceFailedCallback: (error, errorType, streamIds) {
+        if (!ref.mounted) return;
+        DebugLogger.error(
+          'background-service-failed',
+          scope: 'startup',
+          error: error,
+          data: {'type': errorType, 'streams': streamIds.length},
+        );
+        // Clear any streaming state in chat providers for failed streams
+        // The UI will show the partially completed message
+      },
+      timeLimitApproachingCallback: (remainingMinutes) {
+        if (!ref.mounted) return;
+        DebugLogger.warning(
+          'background-time-limit',
+          scope: 'startup',
+          data: {'remainingMinutes': remainingMinutes},
+        );
+        // Could show a notification to the user here
+      },
+      microphonePermissionFallbackCallback: () {
+        if (!ref.mounted) return;
+        DebugLogger.warning('background-mic-fallback', scope: 'startup');
+        // Microphone permission not granted, falling back to data sync only
+      },
+      streamsSuspendingCallback: (streamIds) {
+        if (!ref.mounted) return;
+        DebugLogger.stream(
+          'streams-suspending',
+          scope: 'startup',
+          data: {'count': streamIds.length},
+        );
+      },
+      backgroundTaskExpiringCallback: () {
+        if (!ref.mounted) return;
+        DebugLogger.stream('background-task-expiring', scope: 'startup');
+      },
+      backgroundTaskExtendedCallback: (streamIds, estimatedSeconds) {
+        if (!ref.mounted) return;
+        DebugLogger.stream(
+          'background-task-extended',
+          scope: 'startup',
+          data: {'count': streamIds.length, 'seconds': estimatedSeconds},
+        );
+      },
+      backgroundKeepAliveCallback: () {
+        // Keep-alive signal received from platform
+      },
+    );
+
+    if (!ref.mounted) return;
+
+    // Check background refresh status on iOS and log warning if disabled
+    final bgRefreshEnabled = await BackgroundStreamingHandler.instance
+        .checkBackgroundRefreshStatus();
+
+    if (!ref.mounted) return;
+
+    if (!bgRefreshEnabled) {
+      DebugLogger.warning(
+        'background-refresh-disabled',
+        scope: 'startup',
+        data: {
+          'message':
+              'Background App Refresh is disabled. Background streaming may be limited.',
+        },
+      );
+    }
+
+    // Check notification permission on Android 13+ and log warning if denied
+    // Without notification permission, foreground service runs silently without user awareness
+    final notificationPermission = await BackgroundStreamingHandler.instance
+        .checkNotificationPermission();
+
+    if (!ref.mounted) return;
+
+    if (!notificationPermission) {
+      DebugLogger.warning(
+        'notification-permission-denied',
+        scope: 'startup',
+        data: {
+          'message':
+              'Notification permission denied. Background streaming notifications will not be shown.',
+        },
+      );
+    }
+  } catch (e) {
+    if (!ref.mounted) return;
+    DebugLogger.error('background-init-failed', scope: 'startup', error: e);
+  }
+}
+
 /// App-level startup/background task flow orchestrator.
 ///
 /// Moves background initialization out of widgets and into a Riverpod controller,
@@ -197,6 +295,12 @@ class AppStartupFlow extends _$AppStartupFlow {
     Future<void>.delayed(const Duration(milliseconds: 96), () {
       if (!ref.mounted) return;
       keepAlive(socketPersistenceProvider);
+    });
+
+    // Initialize background streaming handler with error callbacks
+    Future<void>.delayed(const Duration(milliseconds: 64), () {
+      if (!ref.mounted) return;
+      _initializeBackgroundStreaming(ref);
     });
 
     // Warm the conversations list in the background as soon as possible,
@@ -451,7 +555,7 @@ class _SocketPersistenceObserver extends WidgetsBindingObserver {
   final Ref _ref;
   _SocketPersistenceObserver(this._ref);
 
-  static const String _socketId = 'socket-keepalive';
+  static const String _socketId = BackgroundStreamingHandler.socketKeepaliveId;
   Timer? _heartbeat;
   bool _bgActive = false;
   bool _isBackgrounded = false;
@@ -467,27 +571,61 @@ class _SocketPersistenceObserver extends WidgetsBindingObserver {
   void _startBackground() {
     if (_bgActive) return;
     if (!_shouldKeepAlive()) return;
-    try {
-      BackgroundStreamingHandler.instance.startBackgroundExecution([_socketId]);
-      // Periodic keep-alive (primarily useful on iOS)
-      _heartbeat?.cancel();
-      _heartbeat = Timer.periodic(const Duration(seconds: 30), (_) async {
-        try {
-          await BackgroundStreamingHandler.instance.keepAlive();
-        } catch (_) {}
-      });
-      _bgActive = true;
-    } catch (_) {}
+
+    // Mark as active immediately to prevent duplicate attempts
+    _bgActive = true;
+
+    BackgroundStreamingHandler.instance
+        .startBackgroundExecution([_socketId])
+        .then((_) {
+          // Guard: if background was stopped while awaiting, don't create timer
+          if (!_bgActive) return;
+
+          // Periodic keep-alive for iOS background task management.
+          // On Android, foreground service keeps app alive without frequent pings.
+          // 5-minute interval is sufficient and matches wakelock timeout buffer.
+          _heartbeat?.cancel();
+          _heartbeat = Timer.periodic(const Duration(minutes: 5), (_) async {
+            final success = await BackgroundStreamingHandler.instance
+                .keepAlive();
+            if (!success) {
+              DebugLogger.warning(
+                'socket-keepalive-failed',
+                scope: 'background',
+              );
+              // Keep-alive failed but don't stop - the service may still be running
+            }
+          });
+        })
+        .catchError((Object e) {
+          _bgActive = false; // Rollback on failure
+          DebugLogger.error(
+            'socket-bg-start-failed',
+            scope: 'background',
+            error: e,
+          );
+        });
   }
 
   void _stopBackground() {
     if (!_bgActive) return;
-    try {
-      BackgroundStreamingHandler.instance.stopBackgroundExecution([_socketId]);
-    } catch (_) {}
+
+    // Mark as inactive immediately to prevent race conditions
+    _bgActive = false;
     _heartbeat?.cancel();
     _heartbeat = null;
-    _bgActive = false;
+
+    // Fire-and-forget with proper error handling
+    // We don't await because lifecycle callbacks should return quickly
+    BackgroundStreamingHandler.instance
+        .stopBackgroundExecution([_socketId])
+        .catchError((Object e) {
+          DebugLogger.error(
+            'socket-bg-stop-failed',
+            scope: 'background',
+            error: e,
+          );
+        });
   }
 
   @override
@@ -501,6 +639,9 @@ class _SocketPersistenceObserver extends WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         _isBackgrounded = false;
         _stopBackground();
+        // Reconcile background state on resume to detect orphaned services
+        // or stale Flutter state from native service crashes
+        _reconcileOnResume();
         break;
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
@@ -508,6 +649,18 @@ class _SocketPersistenceObserver extends WidgetsBindingObserver {
         _stopBackground();
         break;
     }
+  }
+
+  void _reconcileOnResume() {
+    // Fire-and-forget reconciliation with error handling
+    BackgroundStreamingHandler.instance.reconcileState().catchError((Object e) {
+      DebugLogger.error(
+        'socket-reconcile-failed',
+        scope: 'background',
+        error: e,
+      );
+      return false; // Return false to satisfy Future<bool> type
+    });
   }
 
   // Called when active conversation changes; only acts during background
