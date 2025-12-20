@@ -6,28 +6,77 @@ import UIKit
 import UniformTypeIdentifiers
 import WebKit
 
+/// Manages AVAudioSession for voice calls in the background.
+///
+/// IMPORTANT: This manager is ONLY used for server-side STT (speech-to-text).
+/// When using local STT via speech_to_text plugin, that plugin manages its own
+/// audio session. Do NOT activate this manager when local STT is in use to
+/// avoid audio session conflicts.
+///
+/// The voice_call_service.dart checks `useServerMic` before calling
+/// startBackgroundExecution with requiresMicrophone:true.
 final class VoiceBackgroundAudioManager {
     static let shared = VoiceBackgroundAudioManager()
 
     private var isActive = false
+    private let lock = NSLock()
+    
+    /// Flag indicating another component (e.g., speech_to_text plugin) owns the audio session.
+    /// When true, this manager will skip activation to avoid conflicts.
+    private var externalSessionOwner = false
 
     private init() {}
+    
+    /// Mark that an external component (e.g., speech_to_text) is managing the audio session.
+    /// Call this before starting local STT to prevent conflicts.
+    func setExternalSessionOwner(_ isExternal: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        externalSessionOwner = isExternal
+        
+        if isExternal {
+            print("VoiceBackgroundAudioManager: External session owner active, deferring to external management")
+        }
+    }
+    
+    /// Check if an external component owns the audio session.
+    var hasExternalSessionOwner: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return externalSessionOwner
+    }
 
     func activate() {
+        lock.lock()
+        defer { lock.unlock() }
+        
         guard !isActive else { return }
+        
+        // Skip if another component is managing the audio session
+        if externalSessionOwner {
+            print("VoiceBackgroundAudioManager: Skipping activation - external session owner active")
+            return
+        }
 
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(
-                .playAndRecord,
-                mode: .voiceChat,
-                options: [
-                    .allowBluetooth,
-                    .allowBluetoothA2DP,
-                    .mixWithOthers,
-                    .defaultToSpeaker,
-                ]
-            )
+            // Check current category to avoid unnecessary reconfiguration
+            // This helps prevent conflicts if speech_to_text already configured the session
+            let currentCategory = session.category
+            let needsReconfiguration = currentCategory != .playAndRecord
+            
+            if needsReconfiguration {
+                try session.setCategory(
+                    .playAndRecord,
+                    mode: .voiceChat,
+                    options: [
+                        .allowBluetooth,
+                        .allowBluetoothA2DP,
+                        .mixWithOthers,
+                        .defaultToSpeaker,
+                    ]
+                )
+            }
             try session.setActive(true, options: .notifyOthersOnDeactivation)
             isActive = true
         } catch {
@@ -36,7 +85,17 @@ final class VoiceBackgroundAudioManager {
     }
 
     func deactivate() {
+        lock.lock()
+        defer { lock.unlock() }
+        
         guard isActive else { return }
+        
+        // Don't deactivate if external owner - they manage their own lifecycle
+        if externalSessionOwner {
+            print("VoiceBackgroundAudioManager: Skipping deactivation - external session owner active")
+            isActive = false
+            return
+        }
 
         let session = AVAudioSession.sharedInstance()
         do {
@@ -46,6 +105,13 @@ final class VoiceBackgroundAudioManager {
         }
 
         isActive = false
+    }
+    
+    /// Check if audio session is currently active (thread-safe).
+    var isSessionActive: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return isActive
     }
 }
 
@@ -87,6 +153,7 @@ class BackgroundStreamingHandler: NSObject {
     @objc private func appDidEnterBackground() {
         if !activeStreams.isEmpty {
             startBackgroundTask()
+            scheduleBGProcessingTask()
         }
     }
     
@@ -119,17 +186,37 @@ class BackgroundStreamingHandler: NSObject {
             keepAlive()
             result(nil)
             
-        case "saveStreamStates":
+        case "checkBackgroundRefreshStatus":
+            // Check if background app refresh is enabled by the user
+            let status = UIApplication.shared.backgroundRefreshStatus
+            switch status {
+            case .available:
+                result(true)
+            case .denied, .restricted:
+                result(false)
+            @unknown default:
+                result(true) // Assume available for future cases
+            }
+        
+        case "setExternalAudioSessionOwner":
+            // Coordinate with speech_to_text plugin to prevent audio session conflicts
             if let args = call.arguments as? [String: Any],
-               let states = args["states"] as? [[String: Any]] {
-                saveStreamStates(states)
+               let isExternal = args["isExternal"] as? Bool {
+                VoiceBackgroundAudioManager.shared.setExternalSessionOwner(isExternal)
                 result(nil)
             } else {
-                result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
+                result(FlutterError(code: "INVALID_ARGS", message: "Missing isExternal argument", details: nil))
             }
             
-        case "recoverStreamStates":
-            result(recoverStreamStates())
+        case "getActiveStreamCount":
+            // Return count for Flutter-native state reconciliation
+            result(activeStreams.count)
+            
+        case "stopAllBackgroundExecution":
+            // Stop all streams (used for reconciliation when orphaned service detected)
+            let allStreams = Array(activeStreams)
+            stopBackgroundExecution(streamIds: allStreams)
+            result(nil)
             
         default:
             result(FlutterMethodNotImplemented)
@@ -137,16 +224,24 @@ class BackgroundStreamingHandler: NSObject {
     }
     
     private func startBackgroundExecution(streamIds: [String], requiresMic: Bool) {
+        // Add new stream IDs to active set
         activeStreams.formUnion(streamIds)
+        
+        // Clean up any mic streams that are no longer active (e.g., completed streams)
+        // This ensures microphoneStreams stays in sync with activeStreams
         microphoneStreams.formIntersection(activeStreams)
+        
+        // If these new streams require microphone, add them to the mic set
         if requiresMic {
             microphoneStreams.formUnion(streamIds)
         }
 
+        // Activate audio session for microphone access in background
         if !microphoneStreams.isEmpty {
             VoiceBackgroundAudioManager.shared.activate()
         }
 
+        // Start background tasks if app is already backgrounded
         if UIApplication.shared.applicationState == .background {
             startBackgroundTask()
             scheduleBGProcessingTask()
@@ -171,7 +266,11 @@ class BackgroundStreamingHandler: NSObject {
         guard backgroundTask == .invalid else { return }
         
         backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "ConduitStreaming") { [weak self] in
-            self?.endBackgroundTask()
+            guard let self = self else { return }
+            // Notify Flutter about streams being suspended before task expires
+            self.notifyStreamsSuspending(reason: "background_task_expiring")
+            self.channel?.invokeMethod("backgroundTaskExpiring", arguments: nil)
+            self.endBackgroundTask()
         }
     }
     
@@ -183,40 +282,65 @@ class BackgroundStreamingHandler: NSObject {
     }
     
     private func keepAlive() {
+        // Use atomic task refresh: start new task before ending old one
+        // This prevents the brief window where iOS could suspend the app
         if backgroundTask != .invalid {
-            endBackgroundTask()
+            let oldTask = backgroundTask
+            
+            // Begin a new task BEFORE marking old one invalid
+            // This ensures continuous background execution coverage
+            let newTask = UIApplication.shared.beginBackgroundTask(withName: "ConduitStreaming") { [weak self] in
+                guard let self = self else { return }
+                self.notifyStreamsSuspending(reason: "keepalive_task_expiring")
+                self.channel?.invokeMethod("backgroundTaskExpiring", arguments: nil)
+                // End this specific task, not whatever is in backgroundTask
+                if self.backgroundTask != .invalid {
+                    UIApplication.shared.endBackgroundTask(self.backgroundTask)
+                    self.backgroundTask = .invalid
+                }
+            }
+            
+            // Only update state if we successfully got a new task
+            if newTask != .invalid {
+                backgroundTask = newTask
+                // Now safe to end old task
+                UIApplication.shared.endBackgroundTask(oldTask)
+            }
+            // If newTask is .invalid, keep the old task running (it's better than nothing)
+        } else if !activeStreams.isEmpty {
+            // No current task but we have active streams - start one
             startBackgroundTask()
         }
 
+        // Keep audio session active for microphone streams
         if !microphoneStreams.isEmpty {
             VoiceBackgroundAudioManager.shared.activate()
         }
     }
     
-    private func saveStreamStates(_ states: [[String: Any]]) {
-        do {
-            let jsonData = try JSONSerialization.data(withJSONObject: states, options: [])
-            UserDefaults.standard.set(jsonData, forKey: "ConduitActiveStreams")
-        } catch {
-            print("BackgroundStreamingHandler: Failed to serialize stream states: \(error)")
-        }
-    }
-
-    private func recoverStreamStates() -> [[String: Any]] {
-        guard let jsonData = UserDefaults.standard.data(forKey: "ConduitActiveStreams") else {
-            return []
-        }
-        do {
-            if let states = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [[String: Any]] {
-                return states
-            }
-        } catch {
-            print("BackgroundStreamingHandler: Failed to deserialize stream states: \(error)")
-        }
-        return []
+    private func notifyStreamsSuspending(reason: String) {
+        guard !activeStreams.isEmpty else { return }
+        channel?.invokeMethod("streamsSuspending", arguments: [
+            "streamIds": Array(activeStreams),
+            "reason": reason
+        ])
     }
 
     // MARK: - BGTaskScheduler Methods
+    //
+    // IMPORTANT: BGProcessingTask limitations on iOS:
+    // - iOS schedules these during opportunistic windows (device charging, overnight, etc.)
+    // - The earliestBeginDate is a HINT, not a guarantee of immediate execution
+    // - Typical execution time is ~1-3 minutes when granted, but may NOT run at all
+    // - BGProcessingTask is "best-effort bonus time", NOT "guaranteed extended execution"
+    //
+    // For reliable background execution:
+    // - Voice calls: UIBackgroundModes "audio" + AVAudioSession keeps app alive reliably
+    // - Chat streaming: beginBackgroundTask gives ~30 seconds (only reliable mechanism)
+    // - Socket keepalive: Best-effort; iOS may suspend app regardless
+    //
+    // The BGProcessingTask here provides opportunistic extended time for long-running
+    // streams, but callers should NOT depend on it for critical functionality.
 
     func registerBackgroundTasks() {
         BGTaskScheduler.shared.register(
@@ -235,7 +359,9 @@ class BackgroundStreamingHandler: NSObject {
         request.requiresNetworkConnectivity = true
         request.requiresExternalPower = false
 
-        // Schedule for immediate execution when app backgrounds
+        // Request execution as soon as possible (best-effort only)
+        // WARNING: iOS heavily throttles BGProcessingTask - it may run hours later or not at all.
+        // This is supplementary to beginBackgroundTask, which is the primary mechanism.
         request.earliestBeginDate = Date(timeIntervalSinceNow: 1)
 
         do {
@@ -262,9 +388,12 @@ class BackgroundStreamingHandler: NSObject {
 
         // Set expiration handler
         task.expirationHandler = { [weak self] in
+            guard let self = self else { return }
             print("BackgroundStreamingHandler: BGProcessingTask expiring")
-            self?.notifyTaskExpiring()
-            self?.bgProcessingTask = nil
+            // Notify Flutter about streams being suspended
+            self.notifyStreamsSuspending(reason: "bg_processing_task_expiring")
+            self.channel?.invokeMethod("backgroundTaskExpiring", arguments: nil)
+            self.bgProcessingTask = nil
         }
 
         // Notify Flutter that we have extended background time
@@ -273,21 +402,23 @@ class BackgroundStreamingHandler: NSObject {
             "estimatedTime": 180 // ~3 minutes typical for BGProcessingTask
         ])
 
-        // Keep task alive while streams are active
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
+        // Keep task alive while streams are active using async Task
+        Task { [weak self] in
+            guard let self = self else {
+                task.setTaskCompleted(success: false)
+                return
+            }
 
-            // Keep sending keepAlive signals
-            let keepAliveInterval: TimeInterval = 30
+            let keepAliveInterval: UInt64 = 30_000_000_000 // 30 seconds in nanoseconds
             var elapsedTime: TimeInterval = 0
             let maxTime: TimeInterval = 180 // 3 minutes
 
             while !self.activeStreams.isEmpty && elapsedTime < maxTime {
-                Thread.sleep(forTimeInterval: keepAliveInterval)
-                elapsedTime += keepAliveInterval
+                try? await Task.sleep(nanoseconds: keepAliveInterval)
+                elapsedTime += 30
 
                 // Notify Flutter to keep streams alive
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.channel?.invokeMethod("backgroundKeepAlive", arguments: nil)
                 }
             }
@@ -296,13 +427,8 @@ class BackgroundStreamingHandler: NSObject {
             task.setTaskCompleted(success: true)
             self.bgProcessingTask = nil
         }
-
-        DispatchQueue.global(qos: .background).async(execute: workItem)
     }
 
-    private func notifyTaskExpiring() {
-        channel?.invokeMethod("backgroundTaskExpiring", arguments: nil)
-    }
 
     deinit {
         NotificationCenter.default.removeObserver(self)

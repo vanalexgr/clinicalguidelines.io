@@ -7,12 +7,13 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.Manifest
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -22,9 +23,24 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import kotlinx.coroutines.*
-import org.json.JSONArray
-import org.json.JSONObject
 
+/**
+ * Foreground service for keeping the app alive during streaming operations.
+ *
+ * This service provides reliable background execution on Android by:
+ * 1. Running as a foreground service with a notification (required by Android)
+ * 2. Acquiring a partial wake lock to prevent CPU sleep during active streaming
+ * 3. Supporting both dataSync and microphone foreground service types
+ *
+ * Key behaviors:
+ * - For chat streaming: Runs with dataSync type, acquires wake lock
+ * - For voice calls: Runs with microphone type (if permission granted), acquires wake lock
+ * - For socket keepalive: Runs with dataSync type, NO wake lock (CPU can sleep between pings)
+ *
+ * Android 14+ (UPSIDE_DOWN_CAKE) limitation:
+ * - dataSync foreground services are limited to 6 hours
+ * - We stop at 5 hours to provide a 1-hour buffer and notify the Flutter layer
+ */
 class BackgroundStreamingService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var activeStreamCount = 0
@@ -284,17 +300,23 @@ class BackgroundStreamingService : Service() {
         manager.createNotificationChannel(channel)
     }
     
+    private val wakeLockHandler = Handler(Looper.getMainLooper())
+    private var wakeLockTimeoutRunnable: Runnable? = null
+    
     /**
      * Acquires a wake lock to prevent CPU sleep during active streaming.
      * 
-     * Timeout is set to 6 minutes (360 seconds) to cover the 5-minute keepAlive
-     * interval with a 1-minute buffer. This ensures continuous wake lock coverage
-     * without gaps between refreshes.
+     * Timeout is set to 7 minutes (420 seconds) to cover the 5-minute keepAlive
+     * interval with a 2-minute buffer. This ensures continuous wake lock coverage
+     * even if the keepAlive timer drifts or is delayed by CPU throttling.
      * 
      * Note: Android Play Console may flag wake locks > 1 minute as "excessive",
      * but continuous CPU availability is required for reliable streaming.
      * The alternative (60-second timeout with 5-minute refresh) creates 4-minute
      * gaps where the CPU can sleep, causing streams to stall.
+     * 
+     * Uses setReferenceCounted(false) for deterministic single-holder semantics,
+     * with manual timeout handling via Handler to ensure proper cleanup.
      */
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) return
@@ -304,16 +326,29 @@ class BackgroundStreamingService : Service() {
             PowerManager.PARTIAL_WAKE_LOCK,
             "Conduit::StreamingWakeLock"
         ).apply {
-            // 6-minute timeout covers the 5-minute keepAlive interval + 1-minute buffer
-            // This ensures no gaps in wake lock coverage during active streaming
-            // Note: Use default reference-counted mode with timeout-based acquire
-            // (setReferenceCounted(false) interferes with timeout auto-release)
-            acquire(6 * 60 * 1000L) // 6 minutes - refreshed every 5 minutes by keepAlive()
+            // Disable reference counting for deterministic single-holder behavior
+            // This prevents accumulation if acquireWakeLock is called multiple times
+            setReferenceCounted(false)
+            acquire()
         }
-        println("BackgroundStreamingService: Wake lock acquired (6min timeout)")
+        
+        // Schedule manual timeout release (7 minutes)
+        // This replaces the acquire(timeout) approach which conflicts with setReferenceCounted(false)
+        wakeLockTimeoutRunnable?.let { wakeLockHandler.removeCallbacks(it) }
+        wakeLockTimeoutRunnable = Runnable {
+            println("BackgroundStreamingService: Wake lock timeout reached, releasing")
+            releaseWakeLock()
+        }
+        wakeLockHandler.postDelayed(wakeLockTimeoutRunnable!!, 7 * 60 * 1000L)
+        
+        println("BackgroundStreamingService: Wake lock acquired (7min manual timeout)")
     }
     
     private fun releaseWakeLock() {
+        // Cancel manual timeout handler
+        wakeLockTimeoutRunnable?.let { wakeLockHandler.removeCallbacks(it) }
+        wakeLockTimeoutRunnable = null
+        
         try {
             wakeLock?.let {
                 if (it.isHeld) {
@@ -322,7 +357,7 @@ class BackgroundStreamingService : Service() {
                 }
             }
         } catch (e: Exception) {
-            // Wake lock may already be released due to timeout
+            // Wake lock may already be released
             println("BackgroundStreamingService: Wake lock release exception: ${e.message}")
         }
         wakeLock = null
@@ -349,8 +384,8 @@ class BackgroundStreamingService : Service() {
         // activeStreamCount reflects user-visible streams (excludes socket-keepalive)
         if (activeStreamCount > 0) {
             // Refresh wake lock to maintain CPU availability for actual streaming.
-            // Wake lock has 6-minute timeout, keepAlive is called every 5 minutes,
-            // ensuring continuous coverage with 1-minute overlap buffer.
+            // Wake lock has 7-minute timeout, keepAlive is called every 5 minutes,
+            // ensuring continuous coverage with 2-minute overlap buffer.
             // Note: Foreground services prevent process termination but NOT CPU sleep.
             releaseWakeLock()
             acquireWakeLock()
@@ -420,7 +455,6 @@ class BackgroundStreamingService : Service() {
 class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCallHandler {
     private lateinit var channel: MethodChannel
     private lateinit var context: Context
-    private lateinit var sharedPrefs: SharedPreferences
 
     private val activeStreams = mutableSetOf<String>()
     private val streamsRequiringMic = mutableSetOf<String>()
@@ -431,15 +465,12 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
     
     companion object {
         private const val CHANNEL_NAME = "conduit/background_streaming"
-        private const val PREFS_NAME = "conduit_stream_states"
-        private const val STREAM_STATES_KEY = "active_streams"
     }
 
     fun setup(flutterEngine: FlutterEngine) {
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL_NAME)
         channel.setMethodCallHandler(this)
         context = activity.applicationContext
-        sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         
         createNotificationChannel()
         setupBroadcastReceiver()
@@ -502,11 +533,14 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
             addAction(BackgroundStreamingService.ACTION_MIC_PERMISSION_FALLBACK)
         }
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(broadcastReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(broadcastReceiver, filter)
-        }
+        // Use ContextCompat.registerReceiver for unified handling across API levels
+        // RECEIVER_NOT_EXPORTED ensures security on all versions (internal broadcasts only)
+        ContextCompat.registerReceiver(
+            context,
+            broadcastReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         receiverRegistered = true
     }
 
@@ -539,23 +573,20 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
                 result.success(null)
             }
             
-            "saveStreamStates" -> {
-                val states = call.argument<List<Map<String, Any>>>("states")
-                val reason = call.argument<String>("reason")
-                if (states != null) {
-                    saveStreamStates(states, reason ?: "unknown")
-                    result.success(null)
-                } else {
-                    result.error("INVALID_ARGS", "States required", null)
-                }
-            }
-            
-            "recoverStreamStates" -> {
-                result.success(recoverStreamStates())
-            }
-            
             "checkNotificationPermission" -> {
                 result.success(hasNotificationPermission())
+            }
+            
+            "getActiveStreamCount" -> {
+                // Return count for Flutter-native state reconciliation
+                result.success(activeStreams.size)
+            }
+            
+            "stopAllBackgroundExecution" -> {
+                // Stop all streams (used for reconciliation when orphaned service detected)
+                val allStreams = activeStreams.toList()
+                stopBackgroundExecution(allStreams)
+                result.success(null)
             }
             
             else -> {
@@ -710,72 +741,6 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
 
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
-        }
-    }
-
-    private fun saveStreamStates(states: List<Map<String, Any>>, reason: String) {
-        try {
-            val jsonArray = JSONArray()
-            for (state in states) {
-                val jsonObject = JSONObject()
-                for ((key, value) in state) {
-                    jsonObject.put(key, value)
-                }
-                jsonArray.put(jsonObject)
-            }
-            
-            sharedPrefs.edit()
-                .putString(STREAM_STATES_KEY, jsonArray.toString())
-                .putLong("saved_timestamp", System.currentTimeMillis())
-                .putString("saved_reason", reason)
-                .apply()
-                
-            println("BackgroundStreamingHandler: Saved ${states.size} stream states (reason: $reason)")
-        } catch (e: Exception) {
-            println("BackgroundStreamingHandler: Failed to save stream states: ${e.message}")
-        }
-    }
-
-    private fun recoverStreamStates(): List<Map<String, Any>> {
-        return try {
-            val savedStates = sharedPrefs.getString(STREAM_STATES_KEY, null) ?: return emptyList()
-            val timestamp = sharedPrefs.getLong("saved_timestamp", 0)
-            val reason = sharedPrefs.getString("saved_reason", "unknown")
-            
-            // Check if states are not too old (max 1 hour)
-            val age = System.currentTimeMillis() - timestamp
-            if (age > 3600000) { // 1 hour in milliseconds
-                println("BackgroundStreamingHandler: Stream states too old (${age / 1000}s), discarding")
-                sharedPrefs.edit().remove(STREAM_STATES_KEY).apply()
-                return emptyList()
-            }
-            
-            val jsonArray = JSONArray(savedStates)
-            val result = mutableListOf<Map<String, Any>>()
-            
-            for (i in 0 until jsonArray.length()) {
-                val jsonObject = jsonArray.getJSONObject(i)
-                val map = mutableMapOf<String, Any>()
-                
-                val keys = jsonObject.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val value = jsonObject.get(key)
-                    map[key] = value
-                }
-                
-                result.add(map)
-            }
-            
-            println("BackgroundStreamingHandler: Recovered ${result.size} stream states (reason: $reason, age: ${age / 1000}s)")
-            
-            // Clear saved states after recovery
-            sharedPrefs.edit().remove(STREAM_STATES_KEY).apply()
-            
-            result
-        } catch (e: Exception) {
-            println("BackgroundStreamingHandler: Failed to recover stream states: ${e.message}")
-            emptyList()
         }
     }
 
