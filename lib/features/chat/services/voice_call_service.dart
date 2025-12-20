@@ -343,20 +343,17 @@ class VoiceCallService {
 
       // Set up periodic keep-alive to refresh wake lock (every 5 minutes)
       _keepAliveTimer?.cancel();
-      _keepAliveTimer = Timer.periodic(
-        const Duration(minutes: 5),
-        (_) async {
-          final success = await BackgroundStreamingHandler.instance.keepAlive();
-          if (!success) {
-            // Keep-alive failed but don't stop the call - service may still work
-            developer.log(
-              'Voice call keep-alive failed',
-              name: 'VoiceCallService',
-              level: 900, // WARNING
-            );
-          }
-        },
-      );
+      _keepAliveTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+        final success = await BackgroundStreamingHandler.instance.keepAlive();
+        if (!success) {
+          // Keep-alive failed but don't stop the call - service may still work
+          developer.log(
+            'Voice call keep-alive failed',
+            name: 'VoiceCallService',
+            level: 900, // WARNING
+          );
+        }
+      });
 
       // Set up socket event listener for assistant responses
       _socketSubscription = _socketService.addChatEventHandler(
