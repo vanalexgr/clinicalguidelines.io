@@ -1586,6 +1586,13 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
               // alternative input methods (e.g., Braille keyboards).
               // The hintText "Ask Conduit" provides sufficient context for
               // screen readers to identify this as a message input field.
+              //
+              // IMPORTANT: Always use TextInputAction.newline for multiline
+              // chat input. Using TextInputAction.send causes issues with
+              // Braille keyboards (like Advanced Braille Keyboard) where
+              // the "confirm" action is used to commit characters, not to
+              // send messages. The send-on-enter functionality is handled
+              // by keyboard shortcuts (Enter key) instead.
               return TextField(
                 controller: _controller,
                 focusNode: _focusNode,
@@ -1595,9 +1602,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 maxLines: null,
                 keyboardType: TextInputType.multiline,
                 textCapitalization: TextCapitalization.sentences,
-                textInputAction: sendOnEnter
-                    ? TextInputAction.send
-                    : TextInputAction.newline,
+                // Always use newline action for accessibility compatibility.
+                // Braille keyboards use "confirm" to commit characters, not
+                // to send messages. Send-on-enter is handled via Shortcuts.
+                textInputAction: TextInputAction.newline,
                 autofillHints: const <String>[],
                 showCursor: true,
                 scrollPadding: const EdgeInsets.only(bottom: 80),
@@ -1638,10 +1646,15 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 contextMenuBuilder: (context, editableTextState) {
                   return _buildContextMenu(context, editableTextState);
                 },
+                // Note: With TextInputAction.newline, onSubmitted is typically
+                // not called. We keep this callback but don't auto-send to
+                // maintain compatibility with alternative input methods like
+                // Braille keyboards where "confirm" means "commit character"
+                // not "send message". Users can send via the send button or
+                // keyboard shortcuts (Cmd/Ctrl+Enter, or Enter if enabled).
                 onSubmitted: (_) {
-                  if (sendOnEnter) {
-                    _sendMessage();
-                  }
+                  // Intentionally not auto-sending here to support Braille
+                  // keyboards and other alternative input methods.
                 },
                 onTap: () {
                   if (!widget.enabled) return;
