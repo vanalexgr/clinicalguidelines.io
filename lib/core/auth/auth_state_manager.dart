@@ -184,7 +184,25 @@ class AuthStateManager extends _$AuthStateManager {
 
     try {
       final storage = ref.read(optimizedStorageServiceProvider);
-      final token = await storage.getAuthToken();
+
+      // On cold start, secure storage (iOS Keychain) can be slow or
+      // transiently fail. Retry a few times before giving up to avoid
+      // incorrectly showing the sign-in page.
+      String? token;
+      const maxAttempts = 3;
+      for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+        token = await storage.getAuthToken();
+        if (token != null) break;
+
+        // Only retry if this might be a cold start issue
+        if (attempt < maxAttempts) {
+          DebugLogger.auth(
+            'Token read returned null, retrying ($attempt/$maxAttempts)',
+          );
+          // Exponential backoff: 50ms, 100ms
+          await Future.delayed(Duration(milliseconds: 50 * attempt));
+        }
+      }
 
       if (token != null && token.isNotEmpty) {
         DebugLogger.auth('Found stored token during initialization');
@@ -244,9 +262,10 @@ class AuthStateManager extends _$AuthStateManager {
           _prefetchConversations();
 
           // Background server validation; if it fails, invalidate token gracefully
+          final validToken = token; // Capture non-null token for closure
           Future.microtask(() async {
             try {
-              final ok = await _validateToken(token);
+              final ok = await _validateToken(validToken);
               DebugLogger.auth('Deferred token validation result: $ok');
               if (!ok) {
                 await onTokenInvalidated();
@@ -267,6 +286,23 @@ class AuthStateManager extends _$AuthStateManager {
           );
         }
       } else {
+        // No token found after retries. Check if we have saved credentials
+        // and attempt silent login immediately to avoid showing sign-in page.
+        final hasCreds = await storage.hasCredentials();
+        if (hasCreds) {
+          DebugLogger.auth(
+            'No token but credentials exist - attempting silent login',
+          );
+          // Keep loading state while we attempt silent login
+          // This prevents the router from redirecting to sign-in
+          await _performSilentLogin();
+          // _performSilentLogin() updates state appropriately on both success
+          // and failure (e.g., AuthStatus.error for network issues), so we
+          // return here to preserve that state.
+          return;
+        }
+        // No credentials - set to unauthenticated
+        DebugLogger.auth('No token or credentials found');
         _update(
           (current) => current.copyWith(
             status: AuthStatus.unauthenticated,

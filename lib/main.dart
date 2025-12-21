@@ -71,6 +71,17 @@ void main() {
           synchronizable: false,
         ),
       );
+
+      // Warm up secure storage on cold start. iOS Keychain access can be slow
+      // on first read, which causes race conditions where auth token returns
+      // null even when it exists. This pre-warms the keychain connection.
+      try {
+        await secureStorage
+            .read(key: '_warmup')
+            .timeout(const Duration(milliseconds: 500), onTimeout: () => null);
+      } catch (_) {
+        // Ignore warmup errors - this is best-effort
+      }
       _startupTimeline!.instant('secure_storage_ready');
 
       // Initialize Hive (now optimized with migration state caching)
