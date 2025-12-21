@@ -319,10 +319,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
 
   /// Builds a custom context menu with standard options plus "Paste Image".
   ///
-  /// The standard paste only works for text. This adds a "Paste Image"
-  /// option that uses the pasteboard package to read images from clipboard
-  /// on both iOS and Android. The option only appears when there's actually
-  /// an image in the clipboard.
+  /// Adds a "Paste Image" option when there's an image in the clipboard,
+  /// but only if the system hasn't already provided one (to avoid duplicates
+  /// on platforms like iOS that may include their own paste image option).
   Widget _buildContextMenu(
     BuildContext context,
     EditableTextState editableTextState,
@@ -348,27 +347,41 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         final hasImage = imageData != null && imageData.isNotEmpty;
 
         if (hasImage) {
-          // Find the index of the standard Paste button to insert after it
-          final pasteIndex = buttonItems.indexWhere(
-            (item) => item.type == ContextMenuButtonType.paste,
+          // Check if the system already provides a paste image option
+          // (e.g., iOS may include one automatically). Look for any button
+          // with a label containing "image" (case-insensitive) to avoid
+          // adding a duplicate.
+          final pasteImageLabel =
+              AppLocalizations.of(context)?.pasteImage ?? 'Paste Image';
+          final alreadyHasPasteImage = buttonItems.any(
+            (item) =>
+                item.label != null &&
+                item.label!.toLowerCase().contains('image'),
           );
 
-          // Capture imageData in closure to avoid re-reading clipboard
-          final pasteImageItem = ContextMenuButtonItem(
-            label: AppLocalizations.of(context)?.pasteImage ?? 'Paste Image',
-            onPressed: () {
-              // Close the context menu first
-              ContextMenuController.removeAny();
-              // Use the captured imageData directly
-              _handleClipboardPasteWithData(imageData);
-            },
-          );
+          if (!alreadyHasPasteImage) {
+            // Find the index of the standard Paste button to insert after it
+            final pasteIndex = buttonItems.indexWhere(
+              (item) => item.type == ContextMenuButtonType.paste,
+            );
 
-          // Insert after Paste if found, otherwise add at the end
-          if (pasteIndex >= 0) {
-            buttonItems.insert(pasteIndex + 1, pasteImageItem);
-          } else {
-            buttonItems.add(pasteImageItem);
+            // Capture imageData in closure to avoid re-reading clipboard
+            final pasteImageItem = ContextMenuButtonItem(
+              label: pasteImageLabel,
+              onPressed: () {
+                // Close the context menu first
+                ContextMenuController.removeAny();
+                // Use the captured imageData directly
+                _handleClipboardPasteWithData(imageData);
+              },
+            );
+
+            // Insert after Paste if found, otherwise add at the end
+            if (pasteIndex >= 0) {
+              buttonItems.insert(pasteIndex + 1, pasteImageItem);
+            } else {
+              buttonItems.add(pasteImageItem);
+            }
           }
         }
 
@@ -1621,7 +1634,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                       .toList(),
                   onContentInserted: _handleContentInserted,
                 ),
-                // Custom context menu with "Paste Image" option for iOS
+                // Custom context menu with "Paste Image" option
                 contextMenuBuilder: (context, editableTextState) {
                   return _buildContextMenu(context, editableTextState);
                 },
