@@ -1,16 +1,34 @@
-# Conduit - Open-WebUI Mobile Client
+# Clinical Guidelines - Mobile App
 
 ## Overview
 
-Conduit is an open-source, cross-platform mobile application that serves as a native client for Open-WebUI. It enables users to connect to their self-hosted AI infrastructure, chat with AI models, manage conversations, and interact with their AI on the go. The app is built with Flutter and supports iOS, Android, and web platforms.
+Clinical Guidelines is a customized version of the Conduit Flutter app, rebranded for the Clinical Guidelines organization. It provides evidence-based clinical decision support through a mobile application that connects to the Clinical Guidelines Open-WebUI server.
 
 Key capabilities include:
-- Real-time streaming chat with AI models
+- Real-time streaming chat with AI models for clinical decision support
 - Voice input/output (speech-to-text and text-to-speech)
 - File and image uploads for RAG (Retrieval-Augmented Generation)
 - Markdown rendering with syntax highlighting
 - Multi-language support (EN, DE, ES, FR, IT, KO, NL, RU, ZH)
 - iOS widgets for quick access
+
+## Customizations Applied
+
+### Server Lock
+- App is locked to `https://chat.clinicalguidelines.io`
+- Server selection is disabled
+- Configuration: `lib/core/config/locked_server.dart`
+
+### Branding Changes
+- App name: "Clinical Guidelines" (was "Conduit")
+- All localization files updated with Clinical Guidelines branding
+- Android manifest and iOS Info.plist updated
+- Landing page rebranded at `docs/index.html`
+
+### Profile Page
+- Removed GitHub Sponsors and Buy Me a Coffee links
+- Added single "ClinicalGuidelines.io" website link
+- Configuration: `lib/features/profile/views/profile_page.dart`
 
 ## User Preferences
 
@@ -42,7 +60,7 @@ Preferred communication style: Simple, everyday language.
 - **State**: riverpod_annotation with build_runner for provider generation
 
 ### Platform-Specific Features
-- **iOS**: Native widgets (ConduitWidget) using SwiftUI
+- **iOS**: Native widgets using SwiftUI
 - **Voice**: stts for speech-to-text, flutter_tts for text-to-speech
 - **File Handling**: file_picker, image_picker for attachments
 - **Sharing**: share_plus, share_handler for content sharing
@@ -62,8 +80,8 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Server Requirement
-- Requires an existing **Open-WebUI server** - Conduit does not host AI models
-- All data stays with the user's configured server by default
+- Connects exclusively to **Clinical Guidelines Open-WebUI server** at chat.clinicalguidelines.io
+- SSO authentication required
 
 ### Third-Party Packages (Key Dependencies)
 | Purpose | Package |
@@ -83,6 +101,6 @@ Preferred communication style: Simple, everyday language.
 - Chart.js v4.5.0 (assets/chartjs.min.js) - for chart rendering
 - Mermaid.js (assets/mermaid.min.js) - for diagram rendering
 
-### No External Analytics
+### Privacy
 - The app does not include third-party analytics or advertising SDKs
-- All communication is between the app and the user's configured Open-WebUI server
+- All communication is between the app and the Clinical Guidelines server

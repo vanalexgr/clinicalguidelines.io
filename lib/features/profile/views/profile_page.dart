@@ -34,8 +34,7 @@ import '../../../shared/widgets/model_avatar.dart';
 /// Profile page (You tab) showing user info and main actions
 /// Enhanced with production-grade design tokens for better cohesion
 class ProfilePage extends ConsumerWidget {
-  static const _githubSponsorsUrl = 'https://github.com/sponsors/cogwheel0';
-  static const _buyMeACoffeeUrl = 'https://www.buymeacoffee.com/cogwheel0';
+  static const _websiteUrl = 'https://clinicalguidelines.io';
 
   const ProfilePage({super.key});
 
@@ -130,31 +129,6 @@ class ProfilePage extends ConsumerWidget {
         ) ??
         TextStyle(color: theme.sidebarForeground.withValues(alpha: 0.75));
 
-    final supportTiles = [
-      _buildSupportOption(
-        context,
-        icon: UiUtils.platformIcon(
-          ios: CupertinoIcons.gift,
-          android: Icons.coffee,
-        ),
-        title: AppLocalizations.of(context)!.buyMeACoffeeTitle,
-        subtitle: AppLocalizations.of(context)!.buyMeACoffeeSubtitle,
-        url: _buyMeACoffeeUrl,
-        color: theme.warning,
-      ),
-      _buildSupportOption(
-        context,
-        icon: UiUtils.platformIcon(
-          ios: CupertinoIcons.heart,
-          android: Icons.favorite_border,
-        ),
-        title: AppLocalizations.of(context)!.githubSponsorsTitle,
-        subtitle: AppLocalizations.of(context)!.githubSponsorsSubtitle,
-        url: _githubSponsorsUrl,
-        color: theme.success,
-      ),
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -168,36 +142,28 @@ class ProfilePage extends ConsumerWidget {
           style: textTheme,
         ),
         const SizedBox(height: Spacing.sm),
-        for (var i = 0; i < supportTiles.length; i++) ...[
-          supportTiles[i],
-          if (i != supportTiles.length - 1) const SizedBox(height: Spacing.md),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildSupportOption(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String url,
-    required Color color,
-  }) {
-    final theme = context.conduitTheme;
-    return _ProfileSettingTile(
-      onTap: () => _openExternalLink(context, url),
-      leading: _buildIconBadge(context, icon, color: color),
-      title: title,
-      subtitle: subtitle,
-      trailing: Icon(
-        UiUtils.platformIcon(
-          ios: CupertinoIcons.arrow_up_right,
-          android: Icons.open_in_new,
+        _ProfileSettingTile(
+          onTap: () => _openExternalLink(context, _websiteUrl),
+          leading: _buildIconBadge(
+            context,
+            UiUtils.platformIcon(
+              ios: CupertinoIcons.globe,
+              android: Icons.language,
+            ),
+            color: theme.primary,
+          ),
+          title: AppLocalizations.of(context)!.websiteTitle,
+          subtitle: AppLocalizations.of(context)!.websiteSubtitle,
+          trailing: Icon(
+            UiUtils.platformIcon(
+              ios: CupertinoIcons.arrow_up_right,
+              android: Icons.open_in_new,
+            ),
+            color: theme.iconSecondary,
+            size: IconSize.small,
+          ),
         ),
-        color: theme.iconSecondary,
-        size: IconSize.small,
-      ),
+      ],
     );
   }
 

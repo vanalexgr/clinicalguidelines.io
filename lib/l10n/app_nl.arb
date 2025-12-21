@@ -1,6 +1,6 @@
 {
   "@@locale": "nl",
-  "appTitle": "Conduit",
+  "appTitle": "Clinical Guidelines",
   "retry": "Opnieuw proberen",
   "back": "Terug",
   "you": "Jij",
@@ -15,12 +15,10 @@
     "description": "Ondertitel die beschikbare acties uitlegt wanneer de server niet bereikbaar is"
   },
   "account": "Account",
-  "supportConduit": "Ondersteun Conduit",
-  "supportConduitSubtitle": "Houd Conduit onafhankelijk door doorlopende ontwikkeling te financieren.",
-  "githubSponsorsTitle": "GitHub Sponsors",
-  "githubSponsorsSubtitle": "Word een terugkerende sponsor om roadmap-items te financieren.",
-  "buyMeACoffeeTitle": "Buy Me a Coffee",
-  "buyMeACoffeeSubtitle": "Doe een eenmalige donatie om bedankt te zeggen.",
+  "supportClinical Guidelines": "Ondersteun Clinical Guidelines",
+  "supportClinical GuidelinesSubtitle": "Houd Clinical Guidelines onafhankelijk door doorlopende ontwikkeling te financieren.",
+  "websiteTitle": "ClinicalGuidelines.io",
+  "websiteSubtitle": "Visit our website",
   "signOut": "Uitloggen",
   "endYourSession": "Beëindig je sessie",
   "defaultModel": "Standaardmodel",
@@ -116,7 +114,7 @@
   "voicePromptTapStart": "Tik op Start om te beginnen",
   "voiceActionStop": "Stop",
   "voiceActionStart": "Start",
-  "messageHintText": "Vraag Conduit",
+  "messageHintText": "Vraag Clinical Guidelines",
   "stopGenerating": "Stop met genereren",
   "codeCopiedToClipboard": "Code gekopieerd naar klembord.",
   "send": "Verzenden",
@@ -204,7 +202,7 @@
   "deleteFolderMessage": "Deze map en zijn toewijzingen worden verwijderd.",
   "failedToDeleteFolder": "Kan map niet verwijderen",
   "aboutApp": "Over",
-  "aboutAppSubtitle": "Conduit informatie en links",
+  "aboutAppSubtitle": "Clinical Guidelines informatie en links",
   "web": "Web",
   "imageGen": "Afbeeldingsgeneratie",
   "pinned": "Vastgepind",
@@ -280,7 +278,7 @@
   "themeLight": "Licht",
   "currentlyUsingDarkTheme": "Momenteel donker thema in gebruik",
   "currentlyUsingLightTheme": "Momenteel licht thema in gebruik",
-  "aboutConduit": "Over Conduit",
+  "aboutClinical Guidelines": "Over Clinical Guidelines",
   "versionLabel": "Versie: {version} ({build})",
   "@versionLabel": {
     "placeholders": {
@@ -317,7 +315,7 @@
   "androidAssistantTitle": "Android digital assistant",
   "androidAssistantDescription": "Choose what happens when you trigger the Android digital assistant.",
   "androidAssistantOverlayOption": "Show quick overlay (default)",
-  "androidAssistantNewChatOption": "Open Conduit with a new chat",
+  "androidAssistantNewChatOption": "Open Clinical Guidelines with a new chat",
   "androidAssistantVoiceCallOption": "Start a voice call",
   "sttSettings": "Spraak naar tekst",
   "sttEngineLabel": "Herkenningsengine",
@@ -650,13 +648,13 @@
   "@nextLabel": {
     "description": "Label for navigating to the next item."
   },
-  "themePaletteConduitLabel": "Conduit",
-  "@themePaletteConduitLabel": {
-    "description": "Palette name for the default Conduit theme."
+  "themePaletteClinical GuidelinesLabel": "Clinical Guidelines",
+  "@themePaletteClinical GuidelinesLabel": {
+    "description": "Palette name for the default Clinical Guidelines theme."
   },
-  "themePaletteConduitDescription": "Strak neutraal thema ontworpen voor Conduit.",
-  "@themePaletteConduitDescription": {
-    "description": "Description of the Conduit palette."
+  "themePaletteClinical GuidelinesDescription": "Strak neutraal thema ontworpen voor Clinical Guidelines.",
+  "@themePaletteClinical GuidelinesDescription": {
+    "description": "Description of the Clinical Guidelines palette."
   },
   "themePaletteClaudeLabel": "Claude",
   "@themePaletteClaudeLabel": {

@@ -1,0 +1,188 @@
+Rebranding the Conduit Flutter App to "Clinical Guidelines"
+1. Update App Name and Text References
+
+Application Name: Change all user-facing instances of “Conduit” to “Clinical Guidelines”. For example, in the localization files, update the app title string. In the English ARB file (lib/l10n/app_en.arb), the appTitle is set to "Conduit" – change this to "Clinical Guidelines"
+GitHub
+. Do the same for other locales if applicable. This ensures the app’s name is displayed as Clinical Guidelines in the UI and OS (e.g. app switcher).
+
+About Dialog Text: Update any “About” text that mentions Conduit. In the ARB file, there is a string for the About dialog title "aboutConduit": "About Conduit"
+GitHub
+ – change this to "About Clinical Guidelines". Likewise, change the about section subtitle. Currently, "aboutAppSubtitle": "Conduit information and links"
+GitHub
+, which appears under the About menu item. Revise this to something like "Clinical Guidelines information and links" (or any appropriate text describing your app). This way, the About section will no longer reference Conduit.
+
+Android App Label: Ensure the Android app label is updated. Open the Android manifest (android/app/src/main/AndroidManifest.xml) or the strings resource (if it defines app_name). If you find an entry like android:label="Conduit" or a <string name="app_name">Conduit</string>, replace “Conduit” with "Clinical Guidelines". This will make the installed app’s name show correctly under its icon.
+
+iOS App Name: Similarly, update the iOS app display name. Open ios/Runner/Info.plist and look for the bundle name. You might find a key like CFBundleName or CFBundleDisplayName set to "Conduit". Change its value to "Clinical Guidelines". If the Info.plist doesn’t explicitly set this, you can add a CFBundleDisplayName key. This ensures the app name shown on the home screen is Clinical Guidelines.
+
+Other Text References: Search the project for any remaining plain "Conduit" strings that might be visible in the UI and replace them. For example, if the app bar title or any headings were hard-coded as "Conduit". In the original code, the app title was localized as conduit
+GitHub
+, so after updating localizations it should reflect the new name. Double-check widgets like AppBar titles, drawer headers, etc., to make sure they use the updated name (e.g. an older version showed 'conduit' in the app bar text
+GitHub
+, which should now read "Clinical Guidelines"). Use the new name consistently throughout.
+
+2. Replace Logo and App Icons
+
+Add New Logo Asset: Upload your new logo image into the project (e.g. into an assets/images/ directory). For example, you might add assets/images/app_logo.png (you can choose a name and location, just remember it for the configuration steps below). Include this path in your pubspec.yaml under the flutter/assets: section so that Flutter can use it.
+
+Update the App Icon: You want the app’s launch icon to use your logo instead of Conduit’s icon or the default Flutter icon. The easiest way is to use the Flutter Launcher Icons package:
+
+In pubspec.yaml, add a dev dependency for flutter_launcher_icons (if it’s not already there) and include a configuration. For example:
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.14.0
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_logo.png"    # path to your uploaded logo
+  adaptive_icon_background: "#FFFFFF"        # background color for Android adaptive icon
+  adaptive_icon_foreground: "assets/images/app_logo.png"
+
+
+This tells the tool to use your logo for both Android and iOS app icons.
+
+Run the launcher icon generation command: flutter pub run flutter_launcher_icons. This will automatically create the various icon files in android/app/src/main/res/mipmap-* and update the iOS app icon set with your logo. After running it, you can verify that files like ic_launcher.png in mipmap folders have changed to your logo. (If using Replit for code editing, you might run this step on your local machine when you pull the code to compile.)
+
+Manual alternative: If you prefer not to use the launcher icon package, you can manually replace the icon files:
+– For Android: Provide your logo in all the required resolutions. Replace each ic_launcher.png under android/app/src/main/res/mipmap-mdpi, mipmap-hdpi, mipmap-xhdpi, mipmap-xxhdpi, and mipmap-xxxhdpi with your logo image (properly resized to the expected dimensions for each density). There may also be adaptive icon files (foreground and background); if so, update those as well (e.g. ic_launcher_foreground.png).
+– For iOS: Open Xcode and import your logo images into the app icon asset catalog at ios/Runner/Assets.xcassets/AppIcon.appiconset. Replace the existing images for all the scales (1x, 2x, 3x) with your logo. Ensure the AppIcon configuration is correct (the AppIcon should be assigned to the target).
+
+Splash Screen (Launch Screen): The splash screen that appears on app launch should also be rebranded with your logo:
+
+Android Splash: Flutter’s Android launch screen is defined in android/app/src/main/res/drawable/launch_background.xml. By default, this might just show a solid color or a Flutter logo. You can modify it to display your logo. For example, you can add a <bitmap> item that uses your image:
+
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background color -->
+    <item android:drawable="@color/splash_color"/> 
+    <!-- Center logo image -->
+    <item>
+        <bitmap 
+            android:gravity="center" 
+            android:src="@drawable/app_logo"/>  <!-- your logo drawable -->
+    </item>
+</layer-list>
+
+
+In the above, app_logo.png would be a copy of your logo placed in the android/app/src/main/res/drawable folder (you can name it accordingly). Ensure the splash_color is set to a suitable background (perhaps white or a color that matches your branding). This will center your logo on the splash screen. If your app is targeting Android 12+, also make sure the adaptive icon (set earlier) is applied, since newer Android versions use the launcher icon for the splash by default. Using the snippet above in launch_background.xml covers older Android devices; on Android 12+, the system will use the adaptive icon we generated (which is your logo) for the splash by default, so your logo should appear in either case.
+
+iOS Splash: Open ios/Runner/LaunchScreen.storyboard in Xcode Interface Builder. By default, the storyboard may contain an image or Flutter logo set as an image view. You should replace that with your logo:
+
+Import your logo into the iOS asset catalog (Assets.xcassets). You might add it as a new image set (e.g., AppLogo).
+
+In LaunchScreen.storyboard, find the image view (it might be referencing "LaunchImage" or similar). Set its image to the new logo asset (e.g., AppLogo). You can adjust the content mode to “center” or “aspect fit” so the logo isn’t stretched.
+
+Ensure that the launch screen’s background color and layout look good with your logo. (Often it’s a solid background with the image centered.)
+
+Save the changes. Now the iOS launch screen will show your logo instead of the default image.
+
+If you prefer an automated approach for splash screens, you could use the flutter_native_splash package similarly to how we used flutter_launcher_icons. This package allows specifying an image and background color and then generates the Android and iOS splash for you. However, since the steps above achieve the same result, it’s optional.
+
+3. Remove or Modify Conduit-Specific Menu Items
+
+Now, clean up the menu items that were specific to the original Conduit app (About and support/donation links):
+
+“Support Conduit” Section: In the Conduit app, there is a section in the side menu or profile screen that invites users to support the project. This includes a header “Support Conduit” and links like “Buy Me a Coffee” and “GitHub Sponsors”. You should remove this entire section so it doesn’t appear in your rebranded app.
+
+Code changes: Open the file where these menu items are defined (likely in the profile or settings widget, e.g. lib/features/profile/views/profile_page.dart). Locate the code that builds the Support Conduit section. For example, in the original code it looks like this (showing the header and donation tiles):
+
+Text(
+  AppLocalizations.of(context)!.supportConduit,       // "Support Conduit"
+  style: theme.headingSmall...
+),
+const SizedBox(height: Spacing.xs),
+Text(
+  AppLocalizations.of(context)!.supportConduitSubtitle,  // "Keep Conduit independent by funding ongoing development."
+  style: textTheme,
+),
+...
+// Tiles for Buy Me a Coffee and GitHub Sponsors:
+_buildSupportOption(... title: AppLocalizations.of(context)!.buyMeACoffeeTitle, ... url: _buyMeACoffeeUrl ...),
+_buildSupportOption(... title: AppLocalizations.of(context)!.githubSponsorsTitle, ... url: _githubSponsorsUrl ...),
+
+
+In the English ARB, you can see these related strings: "Support Conduit" and its subtitle
+GitHub
+, plus the titles for Buy Me a Coffee and GitHub Sponsors
+GitHub
+. In the UI code, these are assembled into a column
+GitHub
+GitHub
+. Remove or comment out this whole block of UI. This likely means:
+
+Deleting the widget that draws the “Support Conduit” text and subtitle.
+
+Removing the list tiles or buttons for the Buy Me a Coffee and GitHub Sponsors links.
+
+In practice, you might find a function _buildSupportSection(context) that returns this column. You can simply stop using it (remove the call that includes this section in the list of drawer items), or delete the function entirely. For instance, if the profile page builds a ListView of menu sections and includes _buildSupportSection(context), remove that call so the Support section is omitted from the menu. After doing this, the “Support Conduit” header and the donation links will no longer appear in the app. (You also don’t need the _buyMeACoffeeUrl and _githubSponsorsUrl constants anymore, so you can remove those to clean up, along with their localized strings if you wish.)
+
+About Menu Item: The app likely has an “About” menu item which originally showed info about Conduit. We will repurpose this for Clinical Guidelines:
+
+Rename the menu item: Change the title from "About" to "ClinicalGuidelines.io" (or simply "About Clinical Guidelines" if you prefer a more generic label). Since “About” was coming from the localization (aboutApp key) which is just "About"
+GitHub
+, you can either change that string in each ARB to your website name (note: the site name doesn’t really need translation, so it could be acceptable to hardcode it). An easier approach is to bypass the localization for this one item and just use the text directly in the code. For example, if the about list tile is built via something like:
+
+ListTile(
+  leading: Icon(Icons.info_outline),
+  title: Text(AppLocalizations.of(context)!.aboutApp),       // "About"
+  subtitle: Text(AppLocalizations.of(context)!.aboutAppSubtitle), // "Conduit information and links"
+  onTap: () => _showAboutDialog(context),
+),
+
+
+– you can change it to:
+
+ListTile(
+  leading: Icon(Icons.info_outline),
+  title: Text('ClinicalGuidelines.io'),              // new title
+  subtitle: Text('Official website and info'),       // new subtitle (optional)
+  onTap: () => _launchWebsite(),                     // new action
+),
+
+
+Here, _launchWebsite() would be a function you write to open the URL (see next point). Or you can call launchUrlString directly in onTap. Update the subtitle to something appropriate, or you can even remove the subtitle line entirely if it’s not needed. The key is that the word "Conduit" should be gone from here. (Originally it was "Conduit information and links"
+GitHub
+, which you definitely want to change.) For example, "Official Clinical Guidelines site" or "Visit clinicalguidelines.io" could work as a subtitle.
+
+Change the action to open your site: The original About tapped likely opened a dialog with app version and a link to Conduit’s GitHub. Since you want this to refer to your project, you have two choices:
+
+Simplest: Make the About item directly open the browser to your website. You can use Flutter’s url_launcher. The Conduit app already uses url_launcher (or the newer url_launcher_string) for the support links. You can do something similar: when the About item is tapped, call launchUrlString('https://clinicalguidelines.io', mode: LaunchMode.externalApplication). This will launch the default browser to your site. This approach replaces the in-app dialog with just a redirect to your website, which might be exactly what you need if all info is on the site.
+
+Alternatively, if you want to keep an in-app About dialog (perhaps to show app version), you can modify _showAboutDialog. Change the title to "About Clinical Guidelines"
+GitHub
+. Remove or edit any content that references the original project. For instance, Conduit’s dialog showed the app version and included a link labeled “GitHub Repository” that pointed to the original repo
+GitHub
+GitHub
+. You could change that link to point to your GitHub or simply remove the link and instead display a message like “Visit our website for more information.” However, given that you explicitly want to change it to clinicalguidelines.io, it makes sense to either link directly to that or mention it. You could even change the dialog’s link to say “Official Website” and have it open your site. In the ARB, the string for the link was "GitHub Repository"
+GitHub
+ – you might repurpose this to "Official Website" or "ClinicalGuidelines.io" and update the URL accordingly in code.
+
+Apply to all locales: If you changed any localized strings (like “About”, “GitHub Repository”, etc.) to custom text, ensure you update the values in each language ARB file or at least in the default language. For example, after renaming "About" to your site name in English, you might want to do the same in other language files so that the menu doesn’t show a mix of translations (or just disable those translations for now if not needed).
+
+After these changes, the About menu will effectively point to your project rather than Conduit. On tapping it, users can be directed to your website (or see info about Clinical Guidelines in a dialog). The Conduit references like “About Conduit” and the GitHub link will be gone, replaced by your branding.
+
+Verify the Menu Changes: Build and run the app to confirm:
+
+The drawer or profile screen no longer shows “Support Conduit”, and the “Buy Me a Coffee” / “GitHub Sponsors” items are removed. There should be no donation links related to Conduit.
+
+The About item in the menu should now read “ClinicalGuidelines.io” (or whatever label you chose) instead of “About”. When tapped, it should either open your website or show your updated About dialog. There should be no mention of Conduit or links to the old repo – only your provided info.
+
+4. Final Checks
+
+After making the above changes, do a thorough run-through of the app’s UI:
+
+Splash screen: Should display your new logo (and possibly correct app name below the logo on Android 12+ splash by the system – if that shows incorrectly, double-check the Android label and launcher icon name).
+
+App icon: On both Android and iOS, the app icon should now be your logo. Install the app on a device/emulator to confirm the icon looks correct in the app drawer and home screen.
+
+App bar or Title: If the app’s primary screen or navigation bar used to say "conduit", it should now say "Clinical Guidelines" (this typically comes from the updated localization appTitle or from any widget you changed). For instance, in some versions of the app the top app bar showed conduit in a bold font
+GitHub
+ – ensure yours now shows Clinical Guidelines.
+
+Menus and Links: No Conduit-specific menu items or text should remain. The About section and any links should refer to clinicalguidelines.io or your own resources. All old support references are removed.
+
+Once everything looks good, commit the changes and push to your repo. Then proceed to build the app locally with Flutter. Since you have changed assets and perhaps added packages:
+
+Don’t forget to run flutter pub get to fetch any new dev dependencies (like the icon generator) before building.
+
+If you used the launcher icon or splash packages, run those generators on your machine, then build (flutter run or build an APK/IPA as needed).

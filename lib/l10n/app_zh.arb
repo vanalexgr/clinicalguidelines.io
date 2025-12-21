@@ -1,6 +1,6 @@
 {
   "@@locale": "zh",
-  "appTitle": "Conduit",
+  "appTitle": "Clinical Guidelines",
   "retry": "重试",
   "back": "返回",
   "you": "你",
@@ -15,12 +15,10 @@
     "description": "当无法访问服务器时解释可用操作的副标题"
   },
   "account": "账户",
-  "supportConduit": "支持 Conduit",
-  "supportConduitSubtitle": "通过资助持续开发来保持 Conduit 的独立性。",
-  "githubSponsorsTitle": "GitHub 赞助",
-  "githubSponsorsSubtitle": "成为定期赞助者以资助路线图项目。",
-  "buyMeACoffeeTitle": "Buy Me a Coffee",
-  "buyMeACoffeeSubtitle": "一次性捐赠以表达感谢。",
+  "supportClinical Guidelines": "支持 Clinical Guidelines",
+  "supportClinical GuidelinesSubtitle": "通过资助持续开发来保持 Clinical Guidelines 的独立性。",
+  "websiteTitle": "ClinicalGuidelines.io",
+  "websiteSubtitle": "Visit our website",
   "signOut": "退出登录",
   "endYourSession": "结束您的会话",
   "defaultModel": "默认模型",
@@ -116,7 +114,7 @@
   "voicePromptTapStart": "点击开始以开始",
   "voiceActionStop": "停止",
   "voiceActionStart": "开始",
-  "messageHintText": "问 Conduit",
+  "messageHintText": "问 Clinical Guidelines",
   "stopGenerating": "停止生成",
   "codeCopiedToClipboard": "代码已复制到剪贴板。",
   "send": "发送",
@@ -204,7 +202,7 @@
   "deleteFolderMessage": "此文件夹及其分配引用将被删除。",
   "failedToDeleteFolder": "无法删除文件夹",
   "aboutApp": "关于",
-  "aboutAppSubtitle": "Conduit 信息和链接",
+  "aboutAppSubtitle": "Clinical Guidelines 信息和链接",
   "web": "网页",
   "imageGen": "图像生成",
   "pinned": "已置顶",
@@ -280,7 +278,7 @@
   "themeLight": "浅色",
   "currentlyUsingDarkTheme": "当前使用深色主题",
   "currentlyUsingLightTheme": "当前使用浅色主题",
-  "aboutConduit": "关于 Conduit",
+  "aboutClinical Guidelines": "关于 Clinical Guidelines",
   "versionLabel": "版本：{version}（{build}）",
   "@versionLabel": {
     "placeholders": {
@@ -317,7 +315,7 @@
   "androidAssistantTitle": "Android digital assistant",
   "androidAssistantDescription": "Choose what happens when you trigger the Android digital assistant.",
   "androidAssistantOverlayOption": "Show quick overlay (default)",
-  "androidAssistantNewChatOption": "Open Conduit with a new chat",
+  "androidAssistantNewChatOption": "Open Clinical Guidelines with a new chat",
   "androidAssistantVoiceCallOption": "Start a voice call",
   "sttSettings": "语音转文字",
   "sttEngineLabel": "识别引擎",
@@ -650,13 +648,13 @@
   "@nextLabel": {
     "description": "Label for navigating to the next item."
   },
-  "themePaletteConduitLabel": "Conduit",
-  "@themePaletteConduitLabel": {
-    "description": "Palette name for the default Conduit theme."
+  "themePaletteClinical GuidelinesLabel": "Clinical Guidelines",
+  "@themePaletteClinical GuidelinesLabel": {
+    "description": "Palette name for the default Clinical Guidelines theme."
   },
-  "themePaletteConduitDescription": "为 Conduit 设计的简洁中性色主题。",
-  "@themePaletteConduitDescription": {
-    "description": "Description of the Conduit palette."
+  "themePaletteClinical GuidelinesDescription": "为 Clinical Guidelines 设计的简洁中性色主题。",
+  "@themePaletteClinical GuidelinesDescription": {
+    "description": "Description of the Clinical Guidelines palette."
   },
   "themePaletteClaudeLabel": "Claude",
   "@themePaletteClaudeLabel": {

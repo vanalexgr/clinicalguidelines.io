@@ -1,6 +1,6 @@
 {
   "@@locale": "fr",
-  "appTitle": "Conduit",
+  "appTitle": "Clinical Guidelines",
   "retry": "Réessayer",
   "back": "Retour",
   "you": "Vous",
@@ -15,12 +15,10 @@
     "description": "Sous-titre expliquant les actions possibles quand le serveur est injoignable"
   },
   "account": "Compte",
-  "supportConduit": "Soutenir Conduit",
-  "supportConduitSubtitle": "Financez le développement continu et les nouvelles fonctionnalités.",
-  "githubSponsorsTitle": "GitHub Sponsors",
-  "githubSponsorsSubtitle": "Devenez sponsor récurrent pour soutenir la feuille de route.",
-  "buyMeACoffeeTitle": "Buy Me a Coffee",
-  "buyMeACoffeeSubtitle": "Faites un don ponctuel pour nous encourager.",
+  "supportClinical Guidelines": "Soutenir Clinical Guidelines",
+  "supportClinical GuidelinesSubtitle": "Financez le développement continu et les nouvelles fonctionnalités.",
+  "websiteTitle": "ClinicalGuidelines.io",
+  "websiteSubtitle": "Visit our website",
   "signOut": "Se déconnecter",
   "endYourSession": "Terminer votre session",
   "defaultModel": "Modèle par défaut",
@@ -116,7 +114,7 @@
   "voicePromptTapStart": "Appuyez sur \"Démarrer\" pour commencer",
   "voiceActionStop": "Arrêter",
   "voiceActionStart": "Démarrer",
-  "messageHintText": "Demander à Conduit",
+  "messageHintText": "Demander à Clinical Guidelines",
   "stopGenerating": "Arrêter la génération",
   "codeCopiedToClipboard": "Code copié dans le presse-papiers.",
   "send": "Envoyer",
@@ -204,7 +202,7 @@
   "deleteFolderMessage": "Ce dossier et ses associations seront supprimés.",
   "failedToDeleteFolder": "Échec de la suppression du dossier",
   "aboutApp": "À propos",
-  "aboutAppSubtitle": "Informations et liens Conduit",
+  "aboutAppSubtitle": "Informations et liens Clinical Guidelines",
   "web": "Web",
   "imageGen": "Gén. image",
   "pinned": "Épinglé",
@@ -280,7 +278,7 @@
   "themeLight": "Clair",
   "currentlyUsingDarkTheme": "Thème sombre actuellement utilisé",
   "currentlyUsingLightTheme": "Thème clair actuellement utilisé",
-  "aboutConduit": "À propos de Conduit",
+  "aboutClinical Guidelines": "À propos de Clinical Guidelines",
   "versionLabel": "Version : {version} ({build})",
   "@versionLabel": {
     "placeholders": {
@@ -317,7 +315,7 @@
   "androidAssistantTitle": "Android digital assistant",
   "androidAssistantDescription": "Choose what happens when you trigger the Android digital assistant.",
   "androidAssistantOverlayOption": "Show quick overlay (default)",
-  "androidAssistantNewChatOption": "Open Conduit with a new chat",
+  "androidAssistantNewChatOption": "Open Clinical Guidelines with a new chat",
   "androidAssistantVoiceCallOption": "Start a voice call",
   "sttSettings": "Voix vers texte",
   "sttEngineLabel": "Moteur de reconnaissance",
@@ -650,13 +648,13 @@
   "@nextLabel": {
     "description": "Label for navigating to the next item."
   },
-  "themePaletteConduitLabel": "Conduit",
-  "@themePaletteConduitLabel": {
-    "description": "Palette name for the default Conduit theme."
+  "themePaletteClinical GuidelinesLabel": "Clinical Guidelines",
+  "@themePaletteClinical GuidelinesLabel": {
+    "description": "Palette name for the default Clinical Guidelines theme."
   },
-  "themePaletteConduitDescription": "Thème neutre et épuré conçu pour Conduit.",
-  "@themePaletteConduitDescription": {
-    "description": "Description of the Conduit palette."
+  "themePaletteClinical GuidelinesDescription": "Thème neutre et épuré conçu pour Clinical Guidelines.",
+  "@themePaletteClinical GuidelinesDescription": {
+    "description": "Description of the Clinical Guidelines palette."
   },
   "themePaletteClaudeLabel": "Claude",
   "@themePaletteClaudeLabel": {

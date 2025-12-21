@@ -1,6 +1,6 @@
 {
   "@@locale": "de",
-  "appTitle": "Conduit",
+  "appTitle": "Clinical Guidelines",
   "retry": "Erneut versuchen",
   "back": "Zurück",
   "you": "Du",
@@ -15,12 +15,10 @@
     "description": "Untertitel mit den verfügbaren Aktionen, wenn der Server nicht erreichbar ist"
   },
   "account": "Konto",
-  "supportConduit": "Conduit unterstützen",
-  "supportConduitSubtitle": "Hilf, die Weiterentwicklung und neue Funktionen zu finanzieren.",
-  "githubSponsorsTitle": "GitHub Sponsors",
-  "githubSponsorsSubtitle": "Werde monatliche*r Sponsor*in und unterstütze die Roadmap.",
-  "buyMeACoffeeTitle": "Buy Me a Coffee",
-  "buyMeACoffeeSubtitle": "Bedanke dich mit einer einmaligen Spende.",
+  "supportClinical Guidelines": "Clinical Guidelines unterstützen",
+  "supportClinical GuidelinesSubtitle": "Hilf, die Weiterentwicklung und neue Funktionen zu finanzieren.",
+  "websiteTitle": "ClinicalGuidelines.io",
+  "websiteSubtitle": "Visit our website",
   "signOut": "Abmelden",
   "endYourSession": "Sitzung beenden",
   "defaultModel": "Standardmodell",
@@ -116,7 +114,7 @@
   "voicePromptTapStart": "Tippe auf \"Starten\", um zu beginnen",
   "voiceActionStop": "Stopp",
   "voiceActionStart": "Starten",
-  "messageHintText": "Frag Conduit",
+  "messageHintText": "Frag Clinical Guidelines",
   "stopGenerating": "Generierung stoppen",
   "codeCopiedToClipboard": "Code in die Zwischenablage kopiert.",
   "send": "Senden",
@@ -204,7 +202,7 @@
   "deleteFolderMessage": "Dieser Ordner und seine Zuordnungen werden entfernt.",
   "failedToDeleteFolder": "Ordner konnte nicht gelöscht werden",
   "aboutApp": "Über",
-  "aboutAppSubtitle": "Conduit Informationen und Links",
+  "aboutAppSubtitle": "Clinical Guidelines Informationen und Links",
   "web": "Web",
   "imageGen": "Bild-Gen",
   "pinned": "Angeheftet",
@@ -280,7 +278,7 @@
   "themeLight": "Hell",
   "currentlyUsingDarkTheme": "Aktuell dunkles Thema",
   "currentlyUsingLightTheme": "Aktuell helles Thema",
-  "aboutConduit": "Über Conduit",
+  "aboutClinical Guidelines": "Über Clinical Guidelines",
   "versionLabel": "Version: {version} ({build})",
   "@versionLabel": {
     "placeholders": {
@@ -317,7 +315,7 @@
   "androidAssistantTitle": "Android digital assistant",
   "androidAssistantDescription": "Choose what happens when you trigger the Android digital assistant.",
   "androidAssistantOverlayOption": "Show quick overlay (default)",
-  "androidAssistantNewChatOption": "Open Conduit with a new chat",
+  "androidAssistantNewChatOption": "Open Clinical Guidelines with a new chat",
   "androidAssistantVoiceCallOption": "Start a voice call",
   "sttSettings": "Sprache zu Text",
   "sttEngineLabel": "Erkennungs-Engine",
@@ -650,13 +648,13 @@
   "@nextLabel": {
     "description": "Label for navigating to the next item."
   },
-  "themePaletteConduitLabel": "Conduit",
-  "@themePaletteConduitLabel": {
-    "description": "Palette name for the default Conduit theme."
+  "themePaletteClinical GuidelinesLabel": "Clinical Guidelines",
+  "@themePaletteClinical GuidelinesLabel": {
+    "description": "Palette name for the default Clinical Guidelines theme."
   },
-  "themePaletteConduitDescription": "Schlichtes neutrales Design für Conduit.",
-  "@themePaletteConduitDescription": {
-    "description": "Description of the Conduit palette."
+  "themePaletteClinical GuidelinesDescription": "Schlichtes neutrales Design für Clinical Guidelines.",
+  "@themePaletteClinical GuidelinesDescription": {
+    "description": "Description of the Clinical Guidelines palette."
   },
   "themePaletteClaudeLabel": "Claude",
   "@themePaletteClaudeLabel": {
