@@ -24,6 +24,7 @@ import '../../features/profile/views/app_customization_page.dart';
 import '../../features/profile/views/profile_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../models/server_config.dart';
+import '../config/locked_server.dart';
 
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this.ref) {
@@ -94,7 +95,7 @@ class RouterNotifier extends ChangeNotifier {
     final activeServer = activeServerAsync.asData?.value;
     final hasActiveServer = activeServer != null;
     if (!hasActiveServer) {
-      // No server configured - redirect to server connection
+      // No server configured - redirect to server connection (or authentication if locked)
       // Exception: allow staying on server connection, authentication,
       // proxy auth, and SSO pages during the connection/auth flow.
       // But always redirect away from connection issue page (user logged out)
@@ -105,14 +106,21 @@ class RouterNotifier extends ChangeNotifier {
           location == Routes.login) {
         return null;
       }
-      return Routes.serverConnection;
+      // When server is locked, redirect to authentication instead of server connection
+      return kServerLockEnabled ? Routes.authentication : Routes.serverConnection;
     }
 
     final authState = ref.read(authNavigationStateProvider);
     final connectivityService = ref.read(connectivityServiceProvider);
 
-    // Allow staying on server connection page
+    // Allow staying on server connection page (only when not locked)
     if (location == Routes.serverConnection) {
+      // When server is locked, always redirect away from server connection
+      if (kServerLockEnabled) {
+        return authState == AuthNavigationState.authenticated
+            ? Routes.chat
+            : Routes.authentication;
+      }
       // If authenticated but on server connection page, go to chat
       // Otherwise stay on server connection page (for back navigation)
       return authState == AuthNavigationState.authenticated

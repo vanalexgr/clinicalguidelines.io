@@ -1,0 +1,67 @@
+Goal: Rebrand this application to be a single-server private client locked specifically to https://chat.clinicalguidelines.io. I need to enforce the server lock and remove all UI elements that allow the user to switch, add, or view other servers.
+
+Please perform the following changes to the codebase:
+
+1. Enforce Server Configuration (lib/core/config/locked_server.dart)
+
+Open lib/core/config/locked_server.dart.
+
+Ensure kServerLockEnabled is set to true.
+
+Ensure the lockedServerConfig object is defined exactly as follows:
+
+Dart
+
+final lockedServerConfig = ServerConfig(
+  id: 'clinical-guidelines-locked',
+  name: 'Clinical Guidelines',
+  url: 'https://chat.clinicalguidelines.io',
+  isActive: true,
+);
+2. Bypass Server Connection Screen (lib/features/auth/views/connect_signin_page.dart)
+
+Open lib/features/auth/views/connect_signin_page.dart.
+
+Currently, the build method returns const ServerConnectionPage().
+
+Modify this logic to check kServerLockEnabled (import it from locked_server.dart).
+
+Logic to implement:
+
+If kServerLockEnabled is true: The app should skip the ServerConnectionPage. instead, it should immediately load the lockedServerConfig into the app state (if not already loaded) and display the Sign In / Login form directly.
+
+If kServerLockEnabled is false: Keep the existing behavior (returning ServerConnectionPage).
+
+3. Remove "Servers" from Settings
+
+Search for the Settings feature (likely in lib/features/settings/views/settings_page.dart or similar).
+
+Locate the specific ListTile or widget that navigates to the "Servers" or "Connection" management screen.
+
+Wrap this widget in a conditional check: if (!kServerLockEnabled) { ... }.
+
+This ensures that when the app is locked, the user cannot see or access the Server settings menu.
+
+4. Remove "Switch Server" from Navigation/Drawer
+
+Search for the user profile menu or navigation drawer (likely in lib/shared/widgets/app_drawer.dart or lib/features/navigation/).
+
+Locate any buttons labeled "Switch Server", "Add Account", or any UI displaying a list of available servers.
+
+Apply the same conditional check (if (!kServerLockEnabled)) to hide these elements entirely.
+
+5. Clean Up Onboarding
+
+Check lib/features/navigation/views/splash_launcher_page.dart.
+
+Ensure that the initialization logic there detects kServerLockEnabled. If true, it should route the user directly to the Auth/Chat screen, bypassing any "Welcome" or "Enter Server URL" onboarding slides.
+
+Explanation of Changes
+
+locked_server.dart: This is the existing control switch in the app. Setting kServerLockEnabled = true tells the internal logic to respect the hardcoded config.
+
+
+connect_signin_page.dart: By default, this page loads ServerConnectionPage, which asks the user for a URL. By adding the conditional check here, you force the app to skip the "What is your server?" question and go straight to "Who are you?" (Login).
+
+
+Settings & Drawers: The app likely has a list of servers stored in Hive. Even if you lock the server, the UI might still try to show a "Manage Servers" button unless you explicitly hide it with the conditional checks requested in steps 3 and 4.

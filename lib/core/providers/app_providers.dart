@@ -30,6 +30,7 @@ import '../../shared/theme/tweakcn_themes.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../features/tools/providers/tools_providers.dart';
 import '../models/socket_transport_availability.dart';
+import '../config/locked_server.dart';
 import 'storage_providers.dart';
 
 export 'storage_providers.dart';
@@ -146,12 +147,21 @@ class AppLocale extends _$AppLocale {
 // Server connection providers - optimized with caching
 @Riverpod(keepAlive: true)
 Future<List<ServerConfig>> serverConfigs(Ref ref) async {
+  // When server is locked, return only the locked server config
+  if (kServerLockEnabled) {
+    return [lockedServerConfig];
+  }
   final storage = ref.watch(optimizedStorageServiceProvider);
   return storage.getServerConfigs();
 }
 
 @Riverpod(keepAlive: true)
 Future<ServerConfig?> activeServer(Ref ref) async {
+  // When server is locked, always return the locked server config
+  if (kServerLockEnabled) {
+    return lockedServerConfig;
+  }
+  
   final storage = ref.watch(optimizedStorageServiceProvider);
   final configs = await ref.watch(serverConfigsProvider.future);
   final activeId = await storage.getActiveServerId();
