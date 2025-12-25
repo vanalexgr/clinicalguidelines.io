@@ -74,6 +74,14 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
+            <!-- Deep link for SSO authentication callback -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="clinicalguidelines" android:host="auth"/>
+            </intent-filter>
+
             <!-- Receive shares: text, single/multiple files, images -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

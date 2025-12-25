@@ -1,0 +1,108 @@
+Goal: Refactor the Login UI to be SSO-Only (Auth0). Remove all email/password fields and implement the Native Browser authentication flow.
+
+1. Add Dependencies
+
+Add app_links: ^6.3.0 and url_launcher: ^6.3.0 to pubspec.yaml if not already present.
+
+2. Create the Linker Service (lib/core/services/auth_linker_service.dart)
+
+Create this file to handle the deep link callback:
+
+Dart
+
+import 'dart:async';
+import 'package:app_links/app_links.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class AuthLinkerService {
+  final _appLinks = AppLinks();
+  StreamSubscription? _linkSubscription;
+
+  /// Listen for clinicalguidelines://auth?token=...
+  void listen(Function(String token) onTokenReceived) {
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      if (uri.scheme == 'clinicalguidelines' && uri.host == 'auth') {
+        final token = uri.queryParameters['token'];
+        if (token != null) {
+          onTokenReceived(token);
+          closeInAppWebView(); // Cleanup
+        }
+      }
+    });
+  }
+
+  void dispose() {
+    _linkSubscription?.cancel();
+  }
+
+  /// Open the server's auth endpoint in the system browser
+  Future<void> launchSSO() async {
+    // This endpoint should redirect to Auth0
+    final url = Uri.parse('https://chat.clinicalguidelines.io/auth');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+}
+
+final authLinkerProvider = Provider((ref) => AuthLinkerService());
+3. Configure Native Manifests
+
+Android (AndroidManifest.xml): Add the intent-filter for clinicalguidelines scheme (host=auth).
+
+iOS (Info.plist): Add CFBundleURLTypes for clinicalguidelines.
+
+4. Rewrite the Login View (lib/features/auth/views/authentication_page.dart)
+
+Open lib/features/auth/views/authentication_page.dart.
+
+Remove the TextFormField widgets for Email and Password.
+
+Remove the "Sign In" button that calls the API directly.
+
+Replace the UI body with a simple, centered design containing only this button:
+
+Dart
+
+ElevatedButton.icon(
+  icon: const Icon(Icons.login),
+  label: const Text("Sign in with Clinical Guidelines"),
+  onPressed: () {
+    final linker = ref.read(authLinkerProvider);
+
+    // 1. Listen for the callback
+    linker.listen((token) {
+       // Replace 'authProvider' with the actual provider name for your auth logic
+       ref.read(authProvider.notifier).saveTokenAndLogin(token);
+    });
+
+    // 2. Launch the browser
+    linker.launchSSO();
+  },
+)
+Ensure the page looks clean (e.g., Logo at the top, Button in the middle).
+
+Important Reminder: The Server-Side Bridge
+Just like with the web app, the mobile app needs a way to get the token back from the browser. You must create the mobile-callback.html page on your server if you haven't already.
+
+Create mobile-callback.html on your server.
+
+Paste the script below into it.
+
+Configure your OpenWebUI/Auth0 to redirect to this page after a successful mobile login.
+
+HTML
+
+<script>
+    // 1. Get token from OpenWebUI storage (adjust key if needed)
+    const token = localStorage.getItem('token'); 
+    
+    // 2. Send it back to the Flutter app
+    if (token) {
+        window.location.href = "clinicalguidelines://auth?token=" + token;
+    } else {
+        // Fallback to login if something went wrong
+        window.location.href = "/auth"; 
+    }
+</script>
