@@ -19,6 +19,14 @@ Key capabilities include:
 - Server selection is disabled
 - Configuration: `lib/core/config/locked_server.dart`
 
+### SSO-Only Authentication
+- Email/password login removed
+- Uses native browser flow with deep link callback
+- Deep link scheme: `clinicalguidelines://auth?token=...`
+- AuthLinkerService handles deep link callbacks (cold and warm start)
+- Configuration: `lib/core/services/auth_linker_service.dart`
+- Server requirement: mobile-callback.html page that redirects with token
+
 ### Branding Changes
 - App name: "Clinical Guidelines" (was "Conduit")
 - All localization files updated with Clinical Guidelines branding

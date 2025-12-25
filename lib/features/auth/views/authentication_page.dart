@@ -30,8 +30,10 @@ class AuthenticationPage extends ConsumerStatefulWidget {
   ConsumerState<AuthenticationPage> createState() => _AuthenticationPageState();
 }
 
-class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
+class _AuthenticationPageState extends ConsumerState<AuthenticationPage>
+    with WidgetsBindingObserver {
   bool _isSigningIn = false;
+  bool _launchedBrowser = false;
   String? _loginError;
   bool _serverConfigSaved = false;
   AuthLinkerService? _linkerService;
@@ -39,6 +41,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _setupDeepLinkListener();
   }
 
@@ -49,8 +52,23 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkerService?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _launchedBrowser) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && _isSigningIn && _launchedBrowser) {
+          setState(() {
+            _isSigningIn = false;
+            _launchedBrowser = false;
+          });
+        }
+      });
+    }
   }
 
   Future<void> _handleAuthToken(String token) async {
@@ -58,6 +76,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
     
     setState(() {
       _isSigningIn = true;
+      _launchedBrowser = false;
       _loginError = null;
     });
 
@@ -97,6 +116,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   Future<void> _launchSSO() async {
     setState(() {
       _isSigningIn = true;
+      _launchedBrowser = true;
       _loginError = null;
     });
 
@@ -112,6 +132,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         setState(() {
           _loginError = _formatLoginError(e.toString());
           _isSigningIn = false;
+          _launchedBrowser = false;
         });
       }
     }
