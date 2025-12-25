@@ -210,7 +210,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
     return Column(
       children: [
         Text(
-          l10n.welcomeTo('Clinical Guidelines'),
+          l10n.appTitle,
           textAlign: TextAlign.center,
           style: theme.headingLarge?.copyWith(
             fontWeight: FontWeight.w600,
@@ -219,7 +219,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         ),
         const SizedBox(height: Spacing.md),
         Text(
-          l10n.signInToAccessYourAccount,
+          l10n.signIn,
           textAlign: TextAlign.center,
           style: theme.bodyMedium?.copyWith(
             color: theme.textSecondary,
