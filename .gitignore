@@ -141,3 +141,8 @@ GoogleService-Info.plist
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
+
+# Android signing secrets
+android/key.properties
+*.jks
+*.keystore

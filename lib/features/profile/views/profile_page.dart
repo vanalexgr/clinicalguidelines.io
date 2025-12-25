@@ -150,7 +150,7 @@ class ProfilePage extends ConsumerWidget {
               ios: CupertinoIcons.globe,
               android: Icons.language,
             ),
-            color: theme.primary,
+            color: Theme.of(context).colorScheme.primary,
           ),
           title: AppLocalizations.of(context)!.websiteTitle,
           subtitle: AppLocalizations.of(context)!.websiteSubtitle,
