@@ -5,20 +5,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+// Core & Config
 import '../../../core/models/backend_config.dart';
 import '../../../core/models/server_config.dart';
 import '../../../core/providers/app_providers.dart';
-import '../../../core/services/navigation_service.dart';
+import '../../../core/auth/auth_state_manager.dart';
+import '../../../core/utils/debug_logger.dart';
+import '../../../core/config/locked_server.dart';
 import '../../../core/widgets/error_boundary.dart';
+import '../../../core/services/navigation_service.dart'; // ✅ Added back for Routes
+
+// Shared UI
 import '../../../shared/services/brand_service.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/conduit_components.dart';
-import '../../../core/auth/auth_state_manager.dart';
-import '../../../core/utils/debug_logger.dart';
-import '../../../core/services/auth_linker_service.dart';
-import '../../../core/config/locked_server.dart';
+
+// Localization
 import 'package:conduit/l10n/app_localizations.dart';
+
+// Auth Providers
 import '../providers/unified_auth_providers.dart';
+
+// Login WebView
+import 'package:conduit/features/auth/views/login_webview.dart';
 
 class AuthenticationPage extends ConsumerStatefulWidget {
   final ServerConfig? serverConfig;
@@ -30,109 +39,72 @@ class AuthenticationPage extends ConsumerStatefulWidget {
   ConsumerState<AuthenticationPage> createState() => _AuthenticationPageState();
 }
 
-class _AuthenticationPageState extends ConsumerState<AuthenticationPage>
-    with WidgetsBindingObserver {
+class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
   bool _isSigningIn = false;
-  bool _launchedBrowser = false;
   String? _loginError;
   bool _serverConfigSaved = false;
-  AuthLinkerService? _linkerService;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _setupDeepLinkListener();
-  }
-
-  void _setupDeepLinkListener() {
-    _linkerService = ref.read(authLinkerServiceProvider);
-    _linkerService?.listen(_handleAuthToken);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _linkerService?.dispose();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _launchedBrowser) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted && _isSigningIn && _launchedBrowser) {
-          setState(() {
-            _isSigningIn = false;
-            _launchedBrowser = false;
-          });
-        }
-      });
-    }
-  }
-
-  Future<void> _handleAuthToken(String token) async {
-    if (!mounted) return;
-    
-    setState(() {
-      _isSigningIn = true;
-      _launchedBrowser = false;
-      _loginError = null;
-    });
-
-    try {
-      if (widget.serverConfig != null && !_serverConfigSaved) {
-        await _saveServerConfig(widget.serverConfig!);
-        _serverConfigSaved = true;
-      }
-
-      final actions = ref.read(authActionsProvider);
-      final success = await actions.loginWithApiKey(
-        token,
-        rememberCredentials: true,
-      );
-
-      if (!success && mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        setState(() {
-          _loginError = l10n.genericSignInFailed;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _loginError = _formatLoginError(e.toString());
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSigningIn = false;
-        });
-      }
-    }
-  }
-
+  // ✅ NEW LOGIC: Open WebView inside the app
   Future<void> _launchSSO() async {
     setState(() {
       _isSigningIn = true;
-      _launchedBrowser = true;
       _loginError = null;
     });
 
     try {
+      // 1. Save Server Config (Legacy support)
       if (widget.serverConfig != null && !_serverConfigSaved) {
         await _saveServerConfig(widget.serverConfig!);
         _serverConfigSaved = true;
       }
 
-      await _linkerService?.launchSSO();
+      // 2. Push the WebView Screen and WAIT for the result (Token)
+      if (!mounted) return;
+      final token = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (context) => const LoginWebView()),
+      );
+
+      // 3. Handle the result
+      if (token != null && token.isNotEmpty && mounted) {
+        DebugLogger.auth('Token received from WebView. Attempting login...');
+        
+        final actions = ref.read(authActionsProvider);
+        final success = await actions.loginWithApiKey(
+          token,
+          rememberCredentials: true,
+        );
+
+        if (!success && mounted) {
+          final l10n = AppLocalizations.of(context)!;
+          setState(() {
+            _loginError = l10n.genericSignInFailed;
+            _isSigningIn = false;
+          });
+        }
+        // Note: If success, the listener in build() will handle navigation.
+      } else {
+        // User cancelled login (closed the WebView)
+        if (mounted) {
+          setState(() {
+            _isSigningIn = false;
+          });
+        }
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
           _loginError = _formatLoginError(e.toString());
           _isSigningIn = false;
-          _launchedBrowser = false;
         });
       }
     }
@@ -160,17 +132,20 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage>
 
   @override
   Widget build(BuildContext context) {
+    // Watch for Auth Success to Navigate
     ref.listen<AsyncValue<AuthState>>(authStateManagerProvider, (
       previous,
       next,
     ) {
       final nextState = next.asData?.value;
       final prevState = previous?.asData?.value;
+      
+      // If we just became authenticated, navigate to Chat
       if (mounted &&
           nextState?.isAuthenticated == true &&
           prevState?.isAuthenticated != true) {
         DebugLogger.auth('Authentication successful, navigating to chat');
-        context.go(Routes.chat);
+        context.go(Routes.chat); // ✅ Routes is now defined
       }
     });
 
