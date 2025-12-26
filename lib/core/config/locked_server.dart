@@ -1,5 +1,7 @@
 import '../models/server_config.dart';
 
+const String kLockedServerUrl = 'https://chat.clinicalguidelines.io';
+
 const bool kServerLockEnabled = true;
 
 final lockedServerConfig = ServerConfig(

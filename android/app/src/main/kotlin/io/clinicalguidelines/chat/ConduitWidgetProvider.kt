@@ -1,4 +1,4 @@
-package app.cogwheel.conduit
+package io.clinicalguidelines.chat
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider

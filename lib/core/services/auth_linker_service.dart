@@ -13,6 +13,7 @@ class AuthLinkerService {
   Future<void> listen(Function(String token) onTokenReceived) async {
     _onTokenReceived = onTokenReceived;
     
+    // Check if app was opened via link
     try {
       final initialUri = await _appLinks.getInitialLink();
       if (initialUri != null) {
@@ -20,6 +21,7 @@ class AuthLinkerService {
       }
     } catch (_) {}
 
+    // Listen for new links while running
     _linkSubscription = _appLinks.uriLinkStream.listen(_handleUri);
   }
 
@@ -39,7 +41,9 @@ class AuthLinkerService {
   }
 
   Future<void> launchSSO() async {
-    final url = Uri.parse('$kLockedServerUrl/auth');
+    // 👇 FIX HERE: Point to the bridge file, not the login page directly
+    final url = Uri.parse('$kLockedServerUrl/mobile-auth.html');
+    
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     }

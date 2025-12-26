@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.clinicalguidelines.chat",
+      "sha256_cert_fingerprints": [
+        "C0:9B:9E:DE:4D:25:2C:60:27:1F:29:95:D5:3D:C8:22:BA:F1:D0:A6:8D:14:4A:A7:7F:59:03:28:DE:E1:58:76"
+      ]
+    }
+  }
+]

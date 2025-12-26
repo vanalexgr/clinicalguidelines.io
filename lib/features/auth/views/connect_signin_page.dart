@@ -16,8 +16,8 @@ class ConnectAndSignInPage extends ConsumerWidget {
     // When server is locked, skip server connection and go to authentication immediately
     if (kServerLockEnabled) {
       // Watch backend config but don't block on it - show auth form immediately
-      final backendConfigAsync = ref.watch(backendConfigNotifierProvider);
-      final backendConfig = backendConfigAsync.valueOrNull;
+      final backendConfigAsync = ref.watch(backendConfigProvider);
+	final backendConfig = backendConfigAsync.asData?.value;
       
       return AuthenticationPage(
         serverConfig: lockedServerConfig,

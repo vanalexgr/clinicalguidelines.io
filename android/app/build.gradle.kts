@@ -15,16 +15,18 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "app.cogwheel.conduit"
+    // 👇 CHANGED: Updated to your new ID
+    namespace = "io.clinicalguidelines.chat"
     compileSdk = 36
     ndkVersion = "29.0.14206865"
 
     defaultConfig {
-    applicationId = "app.cogwheel.conduit"
-    minSdk = flutter.minSdkVersion
-    targetSdk = 36
-    versionCode = flutter.versionCode
-    versionName = flutter.versionName
+        // 👇 CHANGED: Updated to your new ID
+        applicationId = "io.clinicalguidelines.chat"
+        minSdk = flutter.minSdkVersion
+        targetSdk = 36
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     compileOptions {
