@@ -1,0 +1,63 @@
+Edit lib/features/chat/views/chat_page.dart to force the default model to "Vascular Expert".
+
+Please make the following changes:
+
+1. Add this constant at the top of the file, just after the imports:
+   const String _kForcedModelId = 'vascular-expert';
+
+2. Replace the entire `_checkAndAutoSelectModel` method in `_ChatPageState` with this specific logic to ensure it falls back to a synthetic model if the API list is slow:
+
+  Future<void> _checkAndAutoSelectModel() async {
+    // 1. Check if correct model is already selected
+    final selectedModel = ref.read(selectedModelProvider);
+    if (selectedModel != null) {
+      if (selectedModel.id == _kForcedModelId || selectedModel.id.startsWith('$_kForcedModelId:')) {
+        return;
+      }
+    }
+
+    try {
+      // 2. Fetch fresh models
+      final modelsAsync = ref.read(modelsProvider);
+      List<Model> models;
+
+      if (modelsAsync.hasValue) {
+        models = modelsAsync.value!;
+      } else {
+        models = await ref.read(modelsProvider.future);
+      }
+
+      // 3. Find OR FORCE the model
+      Model targetModel;
+      try {
+        targetModel = models.firstWhere(
+          (m) {
+            if (m.id == _kForcedModelId) return true;
+            if (m.id.startsWith('$_kForcedModelId:')) return true;
+            if (m.name.toLowerCase() == _kForcedModelId.toLowerCase()) return true;
+            return false;
+          },
+        );
+      } catch (_) {
+        // FALLBACK: Create synthetic model if API list doesn't have it yet
+        targetModel = const Model(
+          id: _kForcedModelId,
+          name: 'Vascular Expert',
+        );
+      }
+        
+      // Select it
+      ref.read(selectedModelProvider.notifier).set(targetModel);
+      
+      // Persist setting
+      try {
+         (ref.read(appSettingsProvider.notifier) as dynamic).setDefaultModel(_kForcedModelId);
+      } catch (_) {}
+      try {
+         await SettingsService.setDefaultModel(_kForcedModelId);
+      } catch (_) {}
+
+    } catch (e) {
+      DebugLogger.error('auto-select-failed', scope: 'chat/model', error: e);
+    }
+  }
