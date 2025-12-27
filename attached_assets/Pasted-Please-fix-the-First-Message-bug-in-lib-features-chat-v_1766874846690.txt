@@ -1,0 +1,58 @@
+Please fix the "First Message" bug in `lib/features/chat/views/chat_page.dart`.
+
+Currently, the `_handleMessageSend` function accepts a `selectedModel` from the UI. If the user types fast, this might still be "DeepSeek" before the default "Vascular Expert" has finished loading.
+
+Modify `_handleMessageSend` to **force** the model to be `_kForcedModelId` ('vascular-expert') if it isn't already.
+
+Replace the `_handleMessageSend` method with this robust version:
+
+  void _handleMessageSend(String text, dynamic selectedModel) async {
+    // --- FORCE FIX START ---
+    // Ensure we NEVER send to DeepSeek (or any other model), even if the UI was stale.
+    // If the model is missing or incorrect, force it to Vascular Expert immediately.
+    if (selectedModel == null || (selectedModel is Model && selectedModel.id != _kForcedModelId)) {
+      selectedModel = const Model(
+        id: _kForcedModelId,
+        name: 'Vascular Expert',
+      );
+      // Update the provider so the UI reflects this change for the next message
+      ref.read(selectedModelProvider.notifier).set(selectedModel);
+    }
+    // --- FORCE FIX END ---
+
+    try {
+      final attachedFiles = ref.read(attachedFilesProvider);
+      final uploadedFileIds = attachedFiles
+          .where(
+            (file) =>
+                file.status == FileUploadStatus.completed &&
+                file.fileId != null,
+          )
+          .map((file) => file.fileId!)
+          .toList();
+
+      final toolIds = ref.read(selectedToolIdsProvider);
+      final activeConv = ref.read(activeConversationProvider);
+      
+      await ref
+          .read(taskQueueProvider.notifier)
+          .enqueueSendText(
+            conversationId: activeConv?.id,
+            text: text,
+            attachments: uploadedFileIds.isNotEmpty ? uploadedFileIds : null,
+            toolIds: toolIds.isNotEmpty ? toolIds : null,
+          );
+
+      ref.read(attachedFilesProvider.notifier).clearAll();
+      _userPausedAutoScroll = false;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final distanceFromBottom = _distanceFromBottom();
+        if (distanceFromBottom <= 300) {
+          _scrollToBottom();
+        }
+      });
+    } catch (e) {
+      // Error handled by queue
+    }
+  }

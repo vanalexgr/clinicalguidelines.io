@@ -307,13 +307,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _handleMessageSend(String text, dynamic selectedModel) async {
-    if (selectedModel == null) {
-      try {
-        await _checkAndAutoSelectModel();
-        selectedModel = ref.read(selectedModelProvider);
-      } catch (_) {}
-      if (selectedModel == null) return;
+    // --- FORCE FIX START ---
+    // Ensure we NEVER send to DeepSeek (or any other model), even if the UI was stale.
+    // If the model is missing or incorrect, force it to Vascular Expert immediately.
+    if (selectedModel == null || (selectedModel is Model && selectedModel.id != _kForcedModelId)) {
+      selectedModel = const Model(
+        id: _kForcedModelId,
+        name: 'Vascular Expert',
+      );
+      // Update the provider so the UI reflects this change for the next message
+      ref.read(selectedModelProvider.notifier).set(selectedModel);
     }
+    // --- FORCE FIX END ---
 
     try {
       final attachedFiles = ref.read(attachedFilesProvider);
