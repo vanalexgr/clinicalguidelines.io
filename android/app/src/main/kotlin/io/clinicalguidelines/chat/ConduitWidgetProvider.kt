@@ -8,14 +8,9 @@ import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 
 /**
- * Home screen widget provider for Conduit.
+ * Home screen widget provider for Clinical Guidelines.
  * 
- * Provides quick actions:
- * - New Chat: Start a fresh conversation
- * - Mic: Start voice input
- * - Camera: Take a photo and attach to chat
- * - Photos: Pick from gallery and attach to chat
- * - Clipboard: Paste clipboard content as prompt
+ * Provides quick access to start a new chat conversation.
  */
 class ConduitWidgetProvider : AppWidgetProvider() {
 
@@ -39,10 +34,6 @@ class ConduitWidgetProvider : AppWidgetProvider() {
 
     companion object {
         private const val ACTION_NEW_CHAT = "new_chat"
-        private const val ACTION_MIC = "mic"
-        private const val ACTION_CAMERA = "camera"
-        private const val ACTION_PHOTOS = "photos"
-        private const val ACTION_CLIPBOARD = "clipboard"
 
         private fun updateAppWidget(
             context: Context,
@@ -68,38 +59,6 @@ class ConduitWidgetProvider : AppWidgetProvider() {
                     context,
                     MainActivity::class.java,
                     Uri.parse("conduit://$ACTION_NEW_CHAT?homeWidget=true")
-                )
-            )
-            views.setOnClickPendingIntent(
-                R.id.btn_mic,
-                HomeWidgetLaunchIntent.getActivity(
-                    context,
-                    MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_MIC?homeWidget=true")
-                )
-            )
-            views.setOnClickPendingIntent(
-                R.id.btn_camera,
-                HomeWidgetLaunchIntent.getActivity(
-                    context,
-                    MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_CAMERA?homeWidget=true")
-                )
-            )
-            views.setOnClickPendingIntent(
-                R.id.btn_photos,
-                HomeWidgetLaunchIntent.getActivity(
-                    context,
-                    MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_PHOTOS?homeWidget=true")
-                )
-            )
-            views.setOnClickPendingIntent(
-                R.id.btn_clipboard,
-                HomeWidgetLaunchIntent.getActivity(
-                    context,
-                    MainActivity::class.java,
-                    Uri.parse("conduit://$ACTION_CLIPBOARD?homeWidget=true")
                 )
             )
 

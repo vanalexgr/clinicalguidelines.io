@@ -53,8 +53,9 @@ struct ConduitWidgetEntryView: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            // Main "Ask Conduit" pill - ChatGPT style
+        VStack {
+            Spacer()
+            // Main "Ask Clinical Guidelines" pill
             Link(destination: URL(string: "conduit://new_chat?homeWidget=true")!) {
                 HStack(spacing: 12) {
                     Image("HubIcon")
@@ -63,7 +64,7 @@ struct ConduitWidgetEntryView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 28, height: 28)
                         .foregroundStyle(contentColor.opacity(0.85))
-                    Text("Ask Conduit")
+                    Text("Ask Clinical Guidelines")
                         .font(.system(size: 18, weight: .medium, design: .rounded))
                         .foregroundStyle(contentColor.opacity(0.85))
                     Spacer()
@@ -77,59 +78,9 @@ struct ConduitWidgetEntryView: View {
                 )
             }
             .buttonStyle(.plain)
-
-            // 4 circular icon buttons - ChatGPT style, fill width
-            HStack(spacing: 8) {
-                CircularIconButton(
-                    symbol: "camera",
-                    url: "conduit://camera?homeWidget=true",
-                    contentColor: contentColor,
-                    buttonBackground: buttonBackground
-                )
-                CircularIconButton(
-                    symbol: "photo.on.rectangle.angled",
-                    url: "conduit://photos?homeWidget=true",
-                    contentColor: contentColor,
-                    buttonBackground: buttonBackground
-                )
-                CircularIconButton(
-                    symbol: "waveform",
-                    url: "conduit://mic?homeWidget=true",
-                    contentColor: contentColor,
-                    buttonBackground: buttonBackground
-                )
-                CircularIconButton(
-                    symbol: "doc.on.clipboard",
-                    url: "conduit://clipboard?homeWidget=true",
-                    contentColor: contentColor,
-                    buttonBackground: buttonBackground
-                )
-            }
+            Spacer()
         }
         .padding(16)
-    }
-}
-
-// MARK: - Circular Icon Button (ChatGPT Style)
-
-struct CircularIconButton: View {
-    let symbol: String
-    let url: String
-    let contentColor: Color
-    let buttonBackground: Color
-
-    var body: some View {
-        Link(destination: URL(string: url)!) {
-            Image(systemName: symbol)
-                .font(.system(size: 24, weight: .medium))
-                .foregroundStyle(contentColor.opacity(0.85))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(buttonBackground)
-                )
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -148,8 +99,8 @@ struct ConduitWidget: Widget {
                     .background(Color("WidgetBackground"))
             }
         }
-        .configurationDisplayName("Conduit")
-        .description("Quick access to chat, camera, photos, and voice.")
+        .configurationDisplayName("Clinical Guidelines")
+        .description("Quick access to clinical guidelines.")
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()
     }
