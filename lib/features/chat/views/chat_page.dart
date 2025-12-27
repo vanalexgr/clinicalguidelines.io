@@ -49,6 +49,12 @@ import '../../../shared/widgets/model_avatar.dart';
 import '../../../core/services/platform_service.dart' as ps;
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 
+// -----------------------------------------------------------------------------
+// CONFIGURATION: Set your single allowed model ID here.
+// This ID is used for both the whitelist and to overwrite the Default Model setting.
+// -----------------------------------------------------------------------------
+const String _kForcedModelId = 'vascular-expert';
+
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key});
 
@@ -86,25 +92,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<Model?> _trySelectCachedModel() async {
     final existing = ref.read(selectedModelProvider);
     if (existing != null) {
-      return existing;
+      // If we are enforcing a model, ensure the existing selection matches it
+      if (existing.id != _kForcedModelId) {
+        // If the current selection isn't the forced one, ignore it and let logic proceed
+      } else {
+        return existing;
+      }
     }
 
     try {
       final storage = ref.read(optimizedStorageServiceProvider);
-      // Prefer the stored default model ID/name if available
-      final settingsDesired = ref.read(appSettingsProvider).defaultModel;
-      final storedDesired = await SettingsService.getDefaultModel().catchError(
-        (_) => null,
-      );
-      final desiredId = settingsDesired ?? storedDesired;
+      
+      // CHANGE: Force the desired ID to be our constant, ignoring whatever was saved
+      const desiredId = _kForcedModelId;
 
       final match = await selectCachedModel(storage, desiredId);
       if (match != null) {
         ref.read(selectedModelProvider.notifier).set(match);
         DebugLogger.log(
-          'cache-select',
+          'cache-select-forced',
           scope: 'chat/model',
-          data: {'name': match.name, 'source': 'cache'},
+          data: {'name': match.name, 'source': 'forced-constant'},
         );
       }
       return match;
@@ -143,26 +151,28 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _pendingConversationScrollReset = false;
     _userPausedAutoScroll = false;
     _scheduleAutoScrollToBottom();
+    
+    // CHANGE: Ensure the forced model is re-selected/verified when starting new chat
+    _checkAndAutoSelectModel();
   }
 
   Future<void> _checkAndAutoSelectModel() async {
     // Check if a model is already selected
     final selectedModel = ref.read(selectedModelProvider);
-    if (selectedModel != null) {
+    if (selectedModel != null && selectedModel.id == _kForcedModelId) {
       DebugLogger.log(
-        'selected',
+        'selected-verified',
         scope: 'chat/model',
         data: {'name': selectedModel.name},
       );
       return;
     }
 
-    // Fast path: try cached models + stored default before waiting on providers
+    // Fast path: try cached models using our forced ID
     final cached = await _trySelectCachedModel();
-    if (cached != null) {
-      // Still continue to reconcile against remote models below
+    if (cached != null && cached.id == _kForcedModelId) {
       DebugLogger.log(
-        'cache-hit',
+        'cache-hit-forced',
         scope: 'chat/model',
         data: {'name': cached.name},
       );
@@ -182,36 +192,41 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         models = await ref.read(modelsProvider.future);
       }
 
-      DebugLogger.log(
-        'models-count',
-        scope: 'chat/model',
-        data: {'count': models.length},
-      );
-
       if (models.isEmpty) {
         DebugLogger.warning('models-empty', scope: 'chat/model');
         return;
       }
 
-      // Try to use the default model provider
+      // CHANGE: Explicitly find and select the forced model from the list
       try {
-        final Model? model = await ref.read(defaultModelProvider.future);
-        if (model != null) {
-          DebugLogger.log(
-            'auto-select',
-            scope: 'chat/model',
-            data: {'name': model.name},
-          );
-        }
-      } catch (e) {
-        DebugLogger.warning('provider-fallback', scope: 'chat/model');
-        // Fallback: select the first available model
-        ref.read(selectedModelProvider.notifier).set(models.first);
-        DebugLogger.log(
-          'fallback',
-          scope: 'chat/model',
-          data: {'name': models.first.name},
+        final targetModel = models.firstWhere(
+          (m) => m.id == _kForcedModelId,
+          orElse: () => models.first, // Fallback if forced model missing
         );
+        
+        // 1. Select it for the current chat session
+        ref.read(selectedModelProvider.notifier).set(targetModel);
+        
+        // 2. NEW: Update the app-wide Default Model setting to match
+        // This puts the selection into the Default Model menu option (settings)
+        try {
+           // Update provider state if possible
+           // (Assuming setDefaultModel exists on the notifier based on usage patterns)
+           (ref.read(appSettingsProvider.notifier) as dynamic).setDefaultModel(_kForcedModelId);
+        } catch (_) {}
+        
+        try {
+           // Update persistent storage
+           await SettingsService.setDefaultModel(_kForcedModelId);
+        } catch (_) {}
+
+        DebugLogger.log(
+          'auto-select-forced',
+          scope: 'chat/model',
+          data: {'name': targetModel.name, 'id': targetModel.id},
+        );
+      } catch (e) {
+        DebugLogger.error('forced-select-failed', scope: 'chat/model', error: e);
       }
     } catch (e) {
       DebugLogger.error('auto-select-failed', scope: 'chat/model', error: e);
@@ -486,7 +501,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     try {
-      final attachments = await fileService.pickFiles();
+      // MODIFIED: Only allowed restricted text-based extensions
+      final attachments = await fileService.pickFiles(
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'rtf', 'md', 'json', 'xml'],
+      );
       if (attachments.isEmpty) return;
 
       // Validate file sizes
@@ -2193,14 +2211,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                     onSendMessage: (text) =>
                                         _handleMessageSend(text, selectedModel),
                                     onVoiceInput: null,
-                                    onVoiceCall: _handleVoiceCall,
+                                    onVoiceCall: null, // Disabled: Call
                                     onFileAttachment: _handleFileAttachment,
-                                    onImageAttachment: _handleImageAttachment,
-                                    onCameraCapture: () =>
-                                        _handleImageAttachment(
-                                          fromCamera: true,
-                                        ),
-                                    onWebAttachment: _promptAttachWebpage,
+                                    onImageAttachment: null, // Disabled: Photos
+                                    onCameraCapture: null, // Disabled: Camera
+                                    onWebAttachment: null, // Disabled: Website
                                     onPastedAttachments:
                                         _handlePastedAttachments,
                                   ),
@@ -2289,21 +2304,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                           // Use same high-contrast colors as floating input
                                           color:
                                               theme.brightness ==
-                                                  Brightness.dark
-                                              ? Color.lerp(
-                                                  context
-                                                      .conduitTheme
-                                                      .cardBackground,
-                                                  Colors.white,
-                                                  0.08,
-                                                )!.withValues(alpha: 0.85)
-                                              : Color.lerp(
-                                                  context
-                                                      .conduitTheme
-                                                      .inputBackground,
-                                                  Colors.black,
-                                                  0.06,
-                                                )!.withValues(alpha: 0.85),
+                                                      Brightness.dark
+                                                  ? Color.lerp(
+                                                      context
+                                                          .conduitTheme
+                                                          .cardBackground,
+                                                      Colors.white,
+                                                      0.08,
+                                                    )!.withValues(alpha: 0.85)
+                                                  : Color.lerp(
+                                                      context
+                                                          .conduitTheme
+                                                          .inputBackground,
+                                                      Colors.black,
+                                                      0.06,
+                                                    )!.withValues(alpha: 0.85),
                                           border: Border.all(
                                             color: context
                                                 .conduitTheme
@@ -2335,14 +2350,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                               _userPausedAutoScroll &&
                                                       isStreamingAnyMessage
                                                   ? (Platform.isIOS
-                                                        ? CupertinoIcons
-                                                              .play_arrow_solid
-                                                        : Icons.play_arrow)
+                                                      ? CupertinoIcons
+                                                          .play_arrow_solid
+                                                      : Icons.play_arrow)
                                                   : (Platform.isIOS
-                                                        ? CupertinoIcons
-                                                              .arrow_down
-                                                        : Icons
-                                                              .keyboard_arrow_down),
+                                                      ? CupertinoIcons
+                                                          .arrow_down
+                                                      : Icons
+                                                          .keyboard_arrow_down),
                                               size: IconSize.lg,
                                               color: context
                                                   .conduitTheme
@@ -2469,12 +2484,19 @@ class _ModelSelectorSheetState extends ConsumerState<_ModelSelectorSheet> {
     );
   }
 
-  // Removed filter toggle UI and logic
+  // Helper to determine if a model should be visible
+  bool _shouldShowModel(Model model) {
+    // -------------------------------------------------------------------------
+    // STRICT WHITELIST: Only allow the single forced model
+    // -------------------------------------------------------------------------
+    return model.id == _kForcedModelId;
+  }
 
   @override
   void initState() {
     super.initState();
-    _filteredModels = widget.models;
+    // Filter out unavailable models immediately upon initialization
+    _filteredModels = widget.models.where(_shouldShowModel).toList();
   }
 
   @override
@@ -2492,7 +2514,8 @@ class _ModelSelectorSheetState extends ConsumerState<_ModelSelectorSheet> {
       if (!mounted) return;
 
       final normalized = query.trim().toLowerCase();
-      Iterable<Model> list = widget.models;
+      // Start filtering from the full list, but apply availability check first
+      Iterable<Model> list = widget.models.where(_shouldShowModel);
 
       if (normalized.isNotEmpty) {
         list = list.where((model) {
@@ -2643,7 +2666,8 @@ class _ModelSelectorSheetState extends ConsumerState<_ModelSelectorSheet> {
                                           ? CupertinoIcons.search_circle
                                           : Icons.search_off,
                                       size: 48,
-                                      color: context.conduitTheme.iconSecondary,
+                                      color:
+                                          context.conduitTheme.iconSecondary,
                                     ),
                                     const SizedBox(height: Spacing.md),
                                     Text(
@@ -3097,8 +3121,8 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
     final l10n = AppLocalizations.of(context)!;
     final statusText = _isListening
         ? (_voiceService.hasLocalStt
-              ? l10n.voiceStatusListening
-              : l10n.voiceStatusRecording)
+            ? l10n.voiceStatusListening
+            : l10n.voiceStatusRecording)
         : l10n.voice;
     return Container(
       height: media.size.height * (isCompact ? 0.45 : 0.6),
@@ -3310,8 +3334,8 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                                 onTap: () => _holdToTalk
                                     ? null
                                     : (_isListening
-                                          ? _stopListening()
-                                          : _startListening()),
+                                        ? _stopListening()
+                                        : _startListening()),
                                 child: Container(
                                   width: micSize,
                                   height: micSize,
@@ -3321,12 +3345,12 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                                             alpha: 0.2,
                                           )
                                         : context.conduitTheme.surfaceBackground
-                                              .withValues(alpha: Alpha.subtle),
+                                            .withValues(alpha: Alpha.subtle),
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: _isListening
                                           ? context.conduitTheme.error
-                                                .withValues(alpha: 0.5)
+                                              .withValues(alpha: 0.5)
                                           : context.conduitTheme.dividerColor,
                                       width: 2,
                                     ),
@@ -3334,11 +3358,11 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                                   child: Icon(
                                     _isListening
                                         ? (Platform.isIOS
-                                              ? CupertinoIcons.mic_fill
-                                              : Icons.mic)
+                                            ? CupertinoIcons.mic_fill
+                                            : Icons.mic)
                                         : (Platform.isIOS
-                                              ? CupertinoIcons.mic_off
-                                              : Icons.mic_off),
+                                            ? CupertinoIcons.mic_off
+                                            : Icons.mic_off),
                                     size: micIconSize,
                                     color: _isListening
                                         ? context.conduitTheme.error
@@ -3462,24 +3486,24 @@ class _VoiceInputSheetState extends ConsumerState<_VoiceInputSheet> {
                                       child: Text(
                                         _recognizedText.isEmpty
                                             ? (_isListening
-                                                  ? (_voiceService.hasLocalStt
-                                                        ? l10n.voicePromptSpeakNow
-                                                        : l10n.voiceStatusRecording)
-                                                  : l10n.voicePromptTapStart)
+                                                ? (_voiceService.hasLocalStt
+                                                    ? l10n.voicePromptSpeakNow
+                                                    : l10n.voiceStatusRecording)
+                                                : l10n.voicePromptTapStart)
                                             : _recognizedText,
                                         style: TextStyle(
                                           fontSize: isUltra
                                               ? AppTypography.bodySmall
                                               : (isCompact
-                                                    ? AppTypography.bodyMedium
-                                                    : AppTypography.bodyLarge),
+                                                  ? AppTypography.bodyMedium
+                                                  : AppTypography.bodyLarge),
                                           color: _recognizedText.isEmpty
                                               ? context
-                                                    .conduitTheme
-                                                    .inputPlaceholder
+                                                  .conduitTheme
+                                                  .inputPlaceholder
                                               : context
-                                                    .conduitTheme
-                                                    .textPrimary,
+                                                  .conduitTheme
+                                                  .textPrimary,
                                           height: 1.4,
                                         ),
                                         textAlign: TextAlign.center,

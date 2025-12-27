@@ -13,10 +13,9 @@ import '../../../core/auth/auth_state_manager.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/config/locked_server.dart';
 import '../../../core/widgets/error_boundary.dart';
-import '../../../core/services/navigation_service.dart'; // ✅ Added back for Routes
+import '../../../core/services/navigation_service.dart';
 
 // Shared UI
-import '../../../shared/services/brand_service.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/conduit_components.dart';
 
@@ -145,7 +144,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
           nextState?.isAuthenticated == true &&
           prevState?.isAuthenticated != true) {
         DebugLogger.auth('Authentication successful, navigating to chat');
-        context.go(Routes.chat); // ✅ Routes is now defined
+        context.go(Routes.chat); 
       }
     });
 
@@ -170,6 +169,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
                   children: [
                     _buildLogo(),
                     const SizedBox(height: Spacing.xxxl),
+                    // 👇 UPDATED WELCOME SECTION
                     _buildWelcomeSection(l10n),
                     const SizedBox(height: Spacing.xl),
                     _buildServerStatus(),
@@ -189,36 +189,64 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
     );
   }
 
+  // 👇 UPDATED LOGO LOGIC
   Widget _buildLogo() {
+    // Check if Dark Mode is active
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Center(
-      child: BrandService.createBrandIcon(
-        size: 80,
-        useGradient: false,
-        addShadow: false,
-        context: context,
+      child: Image.asset(
+        'assets/icons/icon.png',
+        width: 100,
+        height: 100,
+        // 👇 MAGIC TRICK: 
+        // If Dark Mode, we use 'difference' blending with White.
+        // This turns White Background -> Black, and Black Logo -> White.
+        color: isDarkMode ? Colors.white : null,
+        colorBlendMode: isDarkMode ? BlendMode.difference : null,
       ),
     );
   }
 
+  // 👇 UPDATED: Added Subtitle and Hardcoded "Clinical Guidelines"
   Widget _buildWelcomeSection(AppLocalizations l10n) {
     final theme = context.conduitTheme;
     
     return Column(
       children: [
+        // 1. Main Title
         Text(
-          l10n.appTitle,
+          "Clinical Guidelines", // Hardcoded per request
           textAlign: TextAlign.center,
           style: theme.headingLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            height: 1.3,
+            fontWeight: FontWeight.w700,
+            height: 1.2,
+            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: Spacing.md),
+        
+        const SizedBox(height: Spacing.xs),
+        
+        // 2. NEW SUBTITLE
+        Text(
+          "Proof backed evidence, on tap",
+          textAlign: TextAlign.center,
+          style: theme.bodyMedium?.copyWith(
+            color: theme.textSecondary,
+            fontStyle: FontStyle.italic,
+            fontSize: 16,
+          ),
+        ),
+        
+        const SizedBox(height: Spacing.xl),
+
+        // 3. "Sign In / Sign Up" Label
         Text(
           l10n.signIn,
           textAlign: TextAlign.center,
           style: theme.bodyMedium?.copyWith(
-            color: theme.textSecondary,
+            color: theme.textPrimary,
+            fontWeight: FontWeight.w600,
             height: 1.4,
           ),
         ),
@@ -268,6 +296,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
 
   Widget _buildSsoButton(AppLocalizations l10n) {
     return ConduitButton(
+      // 👇 Uses "Continue with Work Account" from ARB
       text: _isSigningIn ? l10n.signingIn : l10n.signInWithSso,
       icon: _isSigningIn
           ? null

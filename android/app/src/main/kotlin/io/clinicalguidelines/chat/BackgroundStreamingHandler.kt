@@ -96,7 +96,7 @@ class BackgroundStreamingService : Service() {
                 val fallbackNotification = NotificationCompat.Builder(this, CHANNEL_ID)
                     .setContentTitle("Conduit")
                     .setSmallIcon(R.mipmap.ic_launcher)
-		    .setNotificationSilent()
+		    .setSilent(true)
                     .setOngoing(true)  // Prevent user from dismissing foreground service notification
                     .build()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

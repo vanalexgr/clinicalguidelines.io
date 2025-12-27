@@ -22,14 +22,13 @@ dependencies:
   dio: ^5.9.0
   http_parser: ^4.0.2
   
-  
   # Storage
   flutter_secure_storage: ^10.0.0
   hive_ce: ^2.14.0
   hive_ce_flutter: ^2.3.2
   shared_preferences: ^2.3.2
   
-  # UI Components - Markdown Rendering
+  # UI Components
   cached_network_image: ^3.3.1
   gpt_markdown: ^1.1.4
   flutter_math_fork: ^0.7.2
@@ -38,8 +37,6 @@ dependencies:
   flutter_inappwebview: ^6.0.0
   socket_io_client: ^3.1.2
   yaml: ^3.1.2
-  
-  
   
   # Modern Animations
   flutter_animate: ^4.5.0
@@ -84,8 +81,6 @@ dependencies:
   pasteboard: ^0.4.0
   super_context_menu: ^0.9.1
   super_drag_and_drop: ^0.9.1
-  
-  # Clipboard functionality is available through flutter/services (part of Flutter SDK)
 
 dev_dependencies:
   flutter_test:
@@ -98,33 +93,33 @@ dev_dependencies:
   riverpod_generator: ^3.0.3
   riverpod_lint: ^3.0.3
   custom_lint: ^0.8.0
+  flutter_launcher_icons: ^0.14.4
 
 dependency_overrides:
 
 flutter:
   uses-material-design: true
   generate: true
-  # Localization
-  # ARB files live in lib/l10n (configured via l10n.yaml)
-  
   assets:
     - assets/icons/
     - assets/mermaid.min.js
     - assets/chartjs.min.js
 
+# 👇 UPDATED SPLASH SCREEN (BLACK)
 flutter_native_splash:
-  # Splash background matches the light theme; `color_dark` handles dark mode.
-  color: "#FFFFFF"
-  color_dark: "#0A0A0A"
-  # Image to display on the splash screen
+  color: "#000000"      # Black background
+  color_dark: "#000000" # Black in dark mode too
   image: assets/icons/icon.png
-
-  
-  # Android specific settings
   android_12:
-    color: "#FFFFFF"
-    color_dark: "#0A0A0A"
-  
-  # Web specific settings
+    color: "#000000"
+    color_dark: "#000000"
   web: false
-    
+
+# 👇 UPDATED APP ICONS (BLACK)
+flutter_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/icons/icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#000000" # Black Background
+  adaptive_icon_foreground: "assets/icons/icon.png"
