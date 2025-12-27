@@ -388,7 +388,7 @@ class ProfilePage extends ConsumerWidget {
   Future<void> _showAboutDialog(BuildContext context) async {
     try {
       final info = await PackageInfo.fromPlatform();
-      const githubUrl = 'https://github.com/cogwheel0/conduit';
+      const supportEmail = 'mailto:contact@clinicalguidelines.io';
 
       if (!context.mounted) return;
       await showDialog<void>(
@@ -414,10 +414,17 @@ class ProfilePage extends ConsumerWidget {
                     color: ctx.sidebarTheme.foreground.withValues(alpha: 0.75),
                   ),
                 ),
+                const SizedBox(height: Spacing.sm),
+                Text(
+                  'Instant, evidence-based vascular recommendations designed for healthcare professionals.',
+                  style: ctx.conduitTheme.bodySmall?.copyWith(
+                    color: ctx.sidebarTheme.foreground.withValues(alpha: 0.6),
+                  ),
+                ),
                 const SizedBox(height: Spacing.md),
                 InkWell(
                   onTap: () => launchUrlString(
-                    githubUrl,
+                    supportEmail,
                     mode: LaunchMode.externalApplication,
                   ),
                   child: Row(
@@ -425,15 +432,15 @@ class ProfilePage extends ConsumerWidget {
                     children: [
                       Icon(
                         UiUtils.platformIcon(
-                          ios: CupertinoIcons.link,
-                          android: Icons.link,
+                          ios: CupertinoIcons.mail,
+                          android: Icons.mail_outline,
                         ),
                         size: IconSize.small,
                         color: ctx.conduitTheme.buttonPrimary,
                       ),
                       const SizedBox(width: Spacing.xs),
                       Text(
-                        AppLocalizations.of(ctx)!.githubRepository,
+                        'Contact Support',
                         style: ctx.conduitTheme.bodyMedium?.copyWith(
                           color: ctx.conduitTheme.buttonPrimary,
                           fontWeight: FontWeight.w600,

@@ -229,7 +229,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
         
         // 2. NEW SUBTITLE
         Text(
-          "Proof backed evidence, on tap",
+          "Proof-backed evidence, on tap",
           textAlign: TextAlign.center,
           style: theme.bodyMedium?.copyWith(
             color: theme.textSecondary,
@@ -242,7 +242,7 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
 
         // 3. "Sign In / Sign Up" Label
         Text(
-          l10n.signIn,
+          "Sign-in / Sign-up",
           textAlign: TextAlign.center,
           style: theme.bodyMedium?.copyWith(
             color: theme.textPrimary,

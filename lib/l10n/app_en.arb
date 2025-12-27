@@ -1847,7 +1847,7 @@
   "@ssoDescription": {
     "description": "Description text explaining SSO authentication."
   },
-  "signInWithSso": "Sign in with SSO",
+  "signInWithSso": "Sign in with Work Account",
   "@signInWithSso": {
     "description": "Button text for SSO sign-in."
   },

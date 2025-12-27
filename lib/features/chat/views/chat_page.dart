@@ -95,14 +95,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> _checkAndAutoSelectModel() async {
     // 1. Check if correct model is already selected
     final selectedModel = ref.read(selectedModelProvider);
-    if (selectedModel != null) {
-      if (selectedModel.id == _kForcedModelId || selectedModel.id.startsWith('$_kForcedModelId:')) {
-        return;
-      }
+    if (selectedModel != null && (selectedModel.id == _kForcedModelId || selectedModel.id.startsWith('$_kForcedModelId:'))) {
+      return;
     }
 
+    // 2. OPTIMISTIC UPDATE: Force synthetic model IMMEDIATELY to prevent DeepSeek default
+    const syntheticModel = Model(
+      id: _kForcedModelId,
+      name: 'Vascular Expert',
+    );
+    ref.read(selectedModelProvider.notifier).set(syntheticModel);
+
     try {
-      // 2. Fetch fresh models
+      // 3. Fetch fresh models from API
       final modelsAsync = ref.read(modelsProvider);
       List<Model> models;
 
@@ -112,29 +117,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         models = await ref.read(modelsProvider.future);
       }
 
-      // 3. Find OR FORCE the model
-      Model targetModel;
-      try {
-        targetModel = models.firstWhere(
-          (m) {
-            if (m.id == _kForcedModelId) return true;
-            if (m.id.startsWith('$_kForcedModelId:')) return true;
-            if (m.name.toLowerCase() == _kForcedModelId.toLowerCase()) return true;
-            return false;
-          },
-        );
-      } catch (_) {
-        // FALLBACK: Create synthetic model if API list doesn't have it yet
-        targetModel = const Model(
-          id: _kForcedModelId,
-          name: 'Vascular Expert',
-        );
-      }
+      // 4. Find the REAL model object
+      final targetModel = models.firstWhere(
+        (m) {
+          if (m.id == _kForcedModelId) return true;
+          if (m.id.startsWith('$_kForcedModelId:')) return true;
+          if (m.name.toLowerCase() == _kForcedModelId.toLowerCase()) return true;
+          return false;
+        },
+        orElse: () => syntheticModel,
+      );
         
-      // Select it
+      // 5. Update with real model data
       ref.read(selectedModelProvider.notifier).set(targetModel);
       
-      // Persist setting
+      // 6. Persist
       try {
          (ref.read(appSettingsProvider.notifier) as dynamic).setDefaultModel(_kForcedModelId);
       } catch (_) {}
