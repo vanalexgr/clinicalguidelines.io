@@ -290,6 +290,7 @@ class ProfilePage extends ConsumerWidget {
 
   Widget _buildAccountSection(BuildContext context, WidgetRef ref) {
     final items = [
+      // Default Model tile removed from here
       _buildAccountOption(
         context,
         icon: UiUtils.platformIcon(
