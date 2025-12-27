@@ -12,18 +12,13 @@ import '../../../shared/widgets/improved_loading_states.dart';
 
 import '../../../shared/utils/ui_utils.dart';
 import '../../../shared/widgets/themed_dialogs.dart';
-import '../../../shared/widgets/sheet_handle.dart';
 import '../../../shared/widgets/conduit_components.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/navigation_service.dart';
 import '../../auth/providers/unified_auth_providers.dart';
-import '../../../core/services/settings_service.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/models/user.dart' as models;
 import 'dart:async';
-import 'dart:io';
-import '../../chat/views/chat_page_helpers.dart';
-import '../../../shared/widgets/modal_safe_area.dart';
 import '../../../core/utils/user_display_name.dart';
 import '../../../core/utils/user_avatar_utils.dart';
 import '../../../shared/widgets/user_avatar.dart';
@@ -290,7 +285,7 @@ class ProfilePage extends ConsumerWidget {
 
   Widget _buildAccountSection(BuildContext context, WidgetRef ref) {
     final items = [
-      // Default Model tile removed from here
+      // Default Model tile REMOVED from here
       _buildAccountOption(
         context,
         icon: UiUtils.platformIcon(
@@ -377,8 +372,6 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  // Theme and language controls moved to AppCustomizationPage.
-
   Widget _buildAboutTile(BuildContext context) {
     return _buildAccountOption(
       context,
@@ -395,8 +388,6 @@ class ProfilePage extends ConsumerWidget {
   Future<void> _showAboutDialog(BuildContext context) async {
     try {
       final info = await PackageInfo.fromPlatform();
-      // Update dialog with dynamic version each time
-      // GitHub repo URL source of truth
       const githubUrl = 'https://github.com/cogwheel0/conduit';
 
       if (!context.mounted) return;
