@@ -1271,7 +1271,7 @@
   "@appCustomization": {
     "description": "Title of the customization settings page."
   },
-  "appCustomizationSubtitle": "Theme, language, voice, and quickpills",
+  "appCustomizationSubtitle": "Appearance and display settings",
   "@appCustomizationSubtitle": {
     "description": "Subtitle shown under App Customization tile and page header."
   },
@@ -1847,7 +1847,7 @@
   "@ssoDescription": {
     "description": "Description text explaining SSO authentication."
   },
-  "signInWithSso": "Sign in with Work Account",
+  "signInWithSso": "Sign in with Email or Social",
   "@signInWithSso": {
     "description": "Button text for SSO sign-in."
   },

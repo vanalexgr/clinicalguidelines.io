@@ -388,7 +388,7 @@ class ProfilePage extends ConsumerWidget {
   Future<void> _showAboutDialog(BuildContext context) async {
     try {
       final info = await PackageInfo.fromPlatform();
-      const supportEmail = 'mailto:contact@clinicalguidelines.io';
+      const supportEmail = 'mailto:support@clinicalguidelines.io';
 
       if (!context.mounted) return;
       await showDialog<void>(
@@ -416,7 +416,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
                 const SizedBox(height: Spacing.sm),
                 Text(
-                  'Instant, evidence-based vascular recommendations designed for healthcare professionals.',
+                  'Instant, evidence-based recommendations designed for healthcare professionals.',
                   style: ctx.conduitTheme.bodySmall?.copyWith(
                     color: ctx.sidebarTheme.foreground.withValues(alpha: 0.6),
                   ),
