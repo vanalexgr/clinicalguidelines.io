@@ -38,28 +38,28 @@ class _OnboardingSheetState extends ConsumerState<OnboardingSheet> {
   ) {
     return [
       _OnboardingPage(
-        title: l10n.onboardStartTitle(greetingName),
-        subtitle: l10n.onboardStartSubtitle,
-        icon: CupertinoIcons.chat_bubble_2,
-        bullets: [l10n.onboardStartBullet1, l10n.onboardStartBullet2],
+        title: 'No Hallucinations, Just Guidelines',
+        subtitle: 'An AI companion that performs as a medical device. Answers are grounded strictly in approved clinical practice guidelines, not general internet data.',
+        icon: Icons.verified_user,
+        bullets: [],
       ),
       _OnboardingPage(
-        title: l10n.onboardAttachTitle,
-        subtitle: l10n.onboardAttachSubtitle,
-        icon: CupertinoIcons.doc_on_doc,
-        bullets: [l10n.onboardAttachBullet1, l10n.onboardAttachBullet2],
+        title: 'Time-Critical Decisions',
+        subtitle: 'Stop scrolling through massive PDFs. Retrieve synthesized information with clear Levels of Evidence (LoE) instantly at the bedside.',
+        icon: Icons.timer_outlined,
+        bullets: [],
       ),
       _OnboardingPage(
-        title: l10n.onboardSpeakTitle,
-        subtitle: l10n.onboardSpeakSubtitle,
-        icon: CupertinoIcons.mic_fill,
-        bullets: [l10n.onboardSpeakBullet1, l10n.onboardSpeakBullet2],
+        title: 'Structured Clinical Answers',
+        subtitle: 'Get a consistent format: General Recommendation \u2192 Patient-Specific Context \u2192 Next Steps \u2192 Cited Guideline Reference.',
+        icon: Icons.segment,
+        bullets: [],
       ),
       _OnboardingPage(
-        title: l10n.onboardQuickTitle,
-        subtitle: l10n.onboardQuickSubtitle,
-        icon: CupertinoIcons.line_horizontal_3,
-        bullets: [l10n.onboardQuickBullet1, l10n.onboardQuickBullet2],
+        title: 'For Clinicians, By Clinicians',
+        subtitle: 'Founded by vascular surgeons to transform daily practice. Your data is private, secure, and never used to train public models.',
+        icon: Icons.security,
+        bullets: [],
       ),
     ];
   }
