@@ -15,7 +15,6 @@ import 'navigation_service.dart';
 part 'quick_actions_service.g.dart';
 
 const _quickActionNewChat = 'conduit_new_chat';
-const _quickActionVoiceCall = 'conduit_voice_call';
 
 @Riverpod(keepAlive: true)
 class QuickActionsCoordinator extends _$QuickActionsCoordinator {
@@ -37,14 +36,10 @@ class QuickActionsCoordinator extends _$QuickActionsCoordinator {
   }
 
   Future<void> _setShortcuts() async {
-    final titles = _resolveTitles();
+    final title = _resolveNewChatTitle();
     try {
       await _quickActions.setShortcutItems([
-        ShortcutItem(type: _quickActionNewChat, localizedTitle: titles.newChat),
-        ShortcutItem(
-          type: _quickActionVoiceCall,
-          localizedTitle: titles.voiceCall,
-        ),
+        ShortcutItem(type: _quickActionNewChat, localizedTitle: title),
       ]);
     } catch (error, stackTrace) {
       DebugLogger.error(
@@ -56,13 +51,10 @@ class QuickActionsCoordinator extends _$QuickActionsCoordinator {
     }
   }
 
-  _QuickActionTitles _resolveTitles() {
+  String _resolveNewChatTitle() {
     final context = NavigationService.context;
     final l10n = context != null ? AppLocalizations.of(context) : null;
-    return _QuickActionTitles(
-      newChat: l10n?.newChat ?? 'New Chat',
-      voiceCall: l10n?.voiceCallTitle ?? 'Voice Call',
-    );
+    return l10n?.newChat ?? 'New Chat';
   }
 
   void _handleAction(String type) {
@@ -80,29 +72,8 @@ class QuickActionsCoordinator extends _$QuickActionsCoordinator {
             .read(appIntentCoordinatorProvider.notifier)
             .openChatFromExternal(focusComposer: true, resetChat: true);
         break;
-      case _quickActionVoiceCall:
-        try {
-          await ref
-              .read(appIntentCoordinatorProvider.notifier)
-              .startVoiceCallFromExternal();
-        } catch (error, stackTrace) {
-          DebugLogger.error(
-            'quick-actions-voice',
-            scope: 'platform',
-            error: error,
-            stackTrace: stackTrace,
-          );
-        }
-        break;
       default:
         DebugLogger.info('Unknown quick action: $type');
     }
   }
-}
-
-class _QuickActionTitles {
-  const _QuickActionTitles({required this.newChat, required this.voiceCall});
-
-  final String newChat;
-  final String voiceCall;
 }
