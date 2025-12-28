@@ -38,49 +38,25 @@ struct ConduitProvider: TimelineProvider {
 struct ConduitWidgetEntryView: View {
     var entry: ConduitProvider.Entry
     @Environment(\.widgetFamily) var family
-    @Environment(\.colorScheme) var colorScheme
-
-    /// Adaptive text/icon color based on color scheme
-    private var contentColor: Color {
-        colorScheme == .dark ? .white : .black
-    }
-
-    /// Adaptive button background based on color scheme
-    private var buttonBackground: Color {
-        colorScheme == .dark
-            ? .white.opacity(0.15)
-            : .black.opacity(0.08)
-    }
 
     var body: some View {
-        VStack {
-            Spacer()
-            // Main "Ask Clinical Guidelines" pill
-            Link(destination: URL(string: "conduit://new_chat?homeWidget=true")!) {
-                HStack(spacing: 12) {
-                    Image("HubIcon")
-                        .renderingMode(.template)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 28, height: 28)
-                        .foregroundStyle(contentColor.opacity(0.85))
-                    Text("Ask Clinical Guidelines")
-                        .font(.system(size: 18, weight: .medium, design: .rounded))
-                        .foregroundStyle(contentColor.opacity(0.85))
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(
-                    Capsule()
-                        .fill(buttonBackground)
-                )
+        Link(destination: URL(string: "conduit://new_chat?homeWidget=true")!) {
+            HStack(spacing: 12) {
+                Image("AppIcon")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                Text("Ask Clinical Guidelines")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.white)
+                Spacer()
             }
-            .buttonStyle(.plain)
-            Spacer()
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
         }
-        .padding(16)
+        .buttonStyle(.plain)
     }
 }
 
@@ -93,10 +69,10 @@ struct ConduitWidget: Widget {
         StaticConfiguration(kind: kind, provider: ConduitProvider()) { entry in
             if #available(iOS 17.0, *) {
                 ConduitWidgetEntryView(entry: entry)
-                    .containerBackground(Color("WidgetBackground"), for: .widget)
+                    .containerBackground(Color.black, for: .widget)
             } else {
                 ConduitWidgetEntryView(entry: entry)
-                    .background(Color("WidgetBackground"))
+                    .background(Color.black)
             }
         }
         .configurationDisplayName("Clinical Guidelines")
