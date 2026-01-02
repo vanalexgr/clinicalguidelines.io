@@ -1,51 +1,41 @@
-# Conduit Privacy Policy
+# Privacy Policy
+**Last updated:** January 3, 2026
 
-Effective date: 2025-08-09
+**Clinical Guidelines** is a free application built by **Evangelos Alexiou**. This SERVICE is provided at no cost and is intended for use as is.
 
-Conduit is an open‑source mobile client for Open‑WebUI. This app acts as a client to a server you choose and configure. This policy describes how the app itself handles data on your device. Your configured server may collect, process, and store data under its own policies; please review your server's privacy terms separately.
+## Information Collection and Use
+For a better experience while using our Service, we may require you to provide us with certain personally identifiable information. The information that we request will be retained on your device and is not collected by us in any way.
 
-## Information We Collect
-- Device-stored data: minimal settings and preferences (e.g., theme, UI options) saved locally on your device.
-- Authentication tokens: stored securely on your device using platform secure storage when you sign in to your chosen server.
-- User-provided content: messages, files, and voice input you choose to send are transmitted directly from your device to your configured server. The app does not operate its own backend.
-- Diagnostic information: transient error logs in memory for troubleshooting within a session. The app does not include third‑party analytics.
+The app does use third-party services that may collect information used to identify you.
+Link to privacy policy of third-party service providers used by the app:
+* [Google Play Services](https://www.google.com/policies/privacy/)
+* [Apple Sign In](https://support.apple.com/en-us/HT210318)
+* [Google Sign-In](https://policies.google.com/privacy)
+* [Microsoft Entra ID](https://www.microsoft.com/en-us/privacy/privacystatement)
+* [Yahoo! Developer Network](https://legal.yahoo.com/us/en/yahoo/privacy/index.html)
+* [LinkedIn](https://www.linkedin.com/legal/privacy-policy)
 
-## How We Use Information
-- Operate core features such as chat, file uploads, and voice input.
-- Remember your preferences and sign‑in state on this device.
-- Improve reliability (e.g., displaying error information to you).
+## Log Data
+We want to inform you that whenever you use my Service, in a case of an error in the app we collect data and information (through third-party products) on your phone called Log Data. This Log Data may include information such as your device Internet Protocol ("IP") address, device name, operating system version, the configuration of the app when utilizing my Service, the time and date of your use of the Service, and other statistics.
 
-## Data Storage and Transfer
-- Local storage: preferences and credentials are stored on your device. Access tokens are stored using secure storage where available.
-- Network transfer: when you interact with the app, your data is sent to the server you configured. The app does not send your data to any developer‑controlled servers.
+## Cookies
+This Service does not use these "cookies" explicitly. However, the app may use third-party code and libraries that use "cookies" to collect information and improve their services. You have the option to either accept or refuse these cookies and know when a cookie is being sent to your device.
 
-## Permissions
-Depending on how you use Conduit, the app may request:
-- Microphone: to capture voice input when you opt in.
-- Photos/Files: to let you pick and upload attachments.
-- Network access: to connect to your configured server.
-
-## Third‑Party Services
-The app does not include third‑party analytics or advertising SDKs. Your configured server or extensions you use may rely on third‑party services subject to their own terms.
+## Service Providers
+We may employ third-party companies and individuals due to the following reasons:
+* To facilitate our Service;
+* To provide the Service on our behalf;
+* To perform Service-related services; or
+* To assist us in analyzing how our Service is used.
 
 ## Security
-We use platform‑provided secure storage for sensitive credentials where supported. No security can be guaranteed; protect access to your device and server credentials.
+We value your trust in providing us your Personal Information, thus we are striving to use commercially acceptable means of protecting it. But remember that no method of transmission over the internet, or method of electronic storage is 100% secure and reliable, and we cannot guarantee its absolute security.
 
-## Data Retention
-- On device: preferences and cached media may persist until you clear app data or uninstall. You can revoke sign‑in by logging out.
-- On server: retention is determined by the server you use; consult that server’s policy.
+## Children's Privacy
+These Services do not address anyone under the age of 13. We do not knowingly collect personally identifiable information from children under 13.
 
-## Your Choices
-- You can change servers, log out, or clear app data in your device settings.
-- You can choose not to grant optional permissions; some features may not work without them.
+## Changes to This Privacy Policy
+We may update our Privacy Policy from time to time. Thus, you are advised to review this page periodically for any changes. We will notify you of any changes by posting the new Privacy Policy on this page.
 
-## Children’s Privacy
-Conduit is not directed to children under 13 (or the minimum age required in your jurisdiction). Do not use the app if you do not meet the applicable age requirements.
-
-## Changes to This Policy
-We may update this policy to reflect improvements or legal requirements. Material changes will be reflected in the app bundle and version notes.
-
-## Contact
-For questions or requests about this policy, please contact the app maintainer(s) through the project repository.
-
-
+## Contact Us
+If you have any questions or suggestions about my Privacy Policy, do not hesitate to contact us.
