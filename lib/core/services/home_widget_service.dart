@@ -233,24 +233,12 @@ class HomeWidgetCoordinator extends _$HomeWidgetCoordinator {
   }
 
   Future<void> _handleMic() async {
-    DebugLogger.log('Widget: Starting voice call', scope: 'widget');
+    // Voice features removed - fall back to opening chat with focus
+    DebugLogger.log('Widget: Mic action - opening chat', scope: 'widget');
     await _waitForNavigation();
-    try {
-      await ref
-          .read(appIntentCoordinatorProvider.notifier)
-          .startVoiceCallFromExternal();
-    } catch (error, stackTrace) {
-      DebugLogger.error(
-        'home-widget-mic',
-        scope: 'widget',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      // Fall back to opening chat with focus
-      await ref
-          .read(appIntentCoordinatorProvider.notifier)
-          .openChatFromExternal(focusComposer: true, resetChat: true);
-    }
+    await ref
+        .read(appIntentCoordinatorProvider.notifier)
+        .openChatFromExternal(focusComposer: true, resetChat: true);
   }
 
   Future<void> _handleCamera() async {

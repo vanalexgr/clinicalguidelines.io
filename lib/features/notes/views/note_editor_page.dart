@@ -947,22 +947,8 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     final l10n = AppLocalizations.of(context)!;
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        // Dictation button
-        _buildFloatingButton(
-          context,
-          icon: _isRecording
-              ? (Platform.isIOS
-                    ? CupertinoIcons.stop_fill
-                    : Icons.stop_rounded)
-              : (Platform.isIOS ? CupertinoIcons.mic_fill : Icons.mic_rounded),
-          color: _isRecording ? theme.error : null,
-          isLoading: false,
-          tooltip: _isRecording ? l10n.stopRecording : l10n.startDictation,
-          onPressed: _toggleDictation,
-        ),
-
         // AI button
         _buildFloatingButton(
           context,
