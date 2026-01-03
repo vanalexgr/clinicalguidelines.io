@@ -11,8 +11,6 @@ import '../../../core/utils/reasoning_parser.dart';
 import '../../../core/utils/message_segments.dart';
 import '../../../core/utils/tool_calls_parser.dart';
 import '../../../core/models/chat_message.dart';
-import '../../../core/utils/markdown_to_text.dart';
-import '../providers/text_to_speech_provider.dart';
 import 'enhanced_image_attachment.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 import 'enhanced_attachment.dart';
@@ -25,7 +23,6 @@ import '../providers/chat_providers.dart' show sendMessageWithContainer;
 import '../../../core/utils/debug_logger.dart';
 import 'sources/openwebui_sources.dart';
 import '../providers/assistant_response_builder_provider.dart';
-import '../../../core/services/worker_manager.dart';
 import 'streaming_status_widget.dart';
 
 // Pre-compiled regex patterns for image processing (performance optimization)
@@ -73,12 +70,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   Widget? _cachedAvatar;
   bool _allowTypingIndicator = false;
   Timer? _typingGateTimer;
-  String _ttsPlainText = '';
-  Timer? _ttsPlainTextDebounce;
-  Map<String, dynamic>? _pendingTtsPlainTextPayload;
-  String? _pendingTtsPlainTextSource;
-  String? _lastAppliedTtsPlainTextSource;
-  int _ttsPlainTextRequestId = 0;
   // Active version index (-1 means current/live content)
   int _activeVersionIndex = -1;
   // press state handled by shared ChatActionButton
@@ -217,10 +208,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     setState(() {
       _segments = segments;
     });
-    _scheduleTtsPlainTextBuild(
-      List<String>.from(textSegments, growable: false),
-      raw,
-    );
     _updateTypingIndicatorGate();
   }
 
@@ -260,123 +247,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       return '';
     }
   }
-
-  String _buildTtsPlainTextFallback(List<String> segments, String fallback) {
-    if (segments.isEmpty) {
-      return MarkdownToText.convert(fallback);
-    }
-
-    final buffer = StringBuffer();
-    for (final segment in segments) {
-      final sanitized = MarkdownToText.convert(segment);
-      if (sanitized.isEmpty) {
-        continue;
-      }
-      if (buffer.isNotEmpty) {
-        buffer.writeln();
-        buffer.writeln();
-      }
-      buffer.write(sanitized);
-    }
-
-    final result = buffer.toString().trim();
-    if (result.isEmpty) {
-      return MarkdownToText.convert(fallback);
-    }
-    return result;
-  }
-
-  void _scheduleTtsPlainTextBuild(List<String> segments, String raw) {
-    final hasContent =
-        segments.any((segment) => segment.trim().isNotEmpty) ||
-        raw.trim().isNotEmpty;
-    if (!hasContent) {
-      _pendingTtsPlainTextPayload = null;
-      _pendingTtsPlainTextSource = null;
-      _lastAppliedTtsPlainTextSource = '';
-      if (_ttsPlainText.isNotEmpty && mounted) {
-        setState(() {
-          _ttsPlainText = '';
-        });
-      }
-      return;
-    }
-
-    if (_pendingTtsPlainTextPayload == null &&
-        raw == _lastAppliedTtsPlainTextSource) {
-      return;
-    }
-    if (raw == _pendingTtsPlainTextSource &&
-        _pendingTtsPlainTextPayload != null) {
-      return;
-    }
-
-    final pendingSegments = List<String>.from(segments, growable: false);
-    _pendingTtsPlainTextPayload = {
-      'segments': pendingSegments,
-      'fallback': raw,
-    };
-    _pendingTtsPlainTextSource = raw;
-
-    final delay = widget.isStreaming
-        ? const Duration(milliseconds: 250)
-        : Duration.zero;
-
-    _ttsPlainTextDebounce?.cancel();
-    if (delay == Duration.zero) {
-      _runPendingTtsPlainTextBuild();
-    } else {
-      _ttsPlainTextDebounce = Timer(delay, _runPendingTtsPlainTextBuild);
-    }
-  }
-
-  void _runPendingTtsPlainTextBuild() {
-    _ttsPlainTextDebounce?.cancel();
-    _ttsPlainTextDebounce = null;
-
-    final payload = _pendingTtsPlainTextPayload;
-    final source = _pendingTtsPlainTextSource;
-    if (payload == null || source == null) {
-      return;
-    }
-
-    _pendingTtsPlainTextPayload = null;
-    _pendingTtsPlainTextSource = null;
-    final requestId = ++_ttsPlainTextRequestId;
-    unawaited(_executeTtsPlainTextBuild(payload, source, requestId));
-  }
-
-  Future<void> _executeTtsPlainTextBuild(
-    Map<String, dynamic> payload,
-    String raw,
-    int requestId,
-  ) async {
-    final segments = (payload['segments'] as List).cast<String>();
-    String speechText;
-    try {
-      final worker = ref.read(workerManagerProvider);
-      speechText = await worker.schedule<Map<String, dynamic>, String>(
-        _buildTtsPlainTextWorker,
-        payload,
-        debugLabel: 'tts_plain_text',
-      );
-    } catch (_) {
-      speechText = _buildTtsPlainTextFallback(segments, raw);
-    }
-
-    if (!mounted || requestId != _ttsPlainTextRequestId) {
-      return;
-    }
-
-    _lastAppliedTtsPlainTextSource = raw;
-    if (_ttsPlainText != speechText) {
-      setState(() {
-        _ttsPlainText = speechText;
-      });
-    }
-  }
-
-  // No streaming-specific markdown fixes needed here; handled by Markdown widget
 
   // Tool call tile - minimal design inspired by OpenWebUI
   Widget _buildToolCallTile(ToolCallEntry tc) {
@@ -615,69 +485,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
 
     if (children.isEmpty) return const SizedBox.shrink();
-    // Append TTS karaoke bar if this is the active message
-    final ttsState = ref.watch(textToSpeechControllerProvider);
-    final isActive =
-        ttsState.activeMessageId == _messageId &&
-        (ttsState.status == TtsPlaybackStatus.speaking ||
-            ttsState.status == TtsPlaybackStatus.paused ||
-            ttsState.status == TtsPlaybackStatus.loading);
-    if (isActive && ttsState.activeSentenceIndex >= 0) {
-      children.add(const SizedBox(height: Spacing.sm));
-      children.add(_buildKaraokeBar(ttsState));
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: children,
-    );
-  }
-
-  Widget _buildKaraokeBar(TextToSpeechState ttsState) {
-    final theme = context.conduitTheme;
-    final idx = ttsState.activeSentenceIndex;
-    if (idx < 0 || idx >= ttsState.sentences.length) {
-      return const SizedBox.shrink();
-    }
-    final sentence = ttsState.sentences[idx];
-    final ws = ttsState.wordStartInSentence;
-    final we = ttsState.wordEndInSentence;
-
-    final baseStyle = TextStyle(
-      color: theme.textPrimary,
-      height: 1.2,
-      fontSize: 14,
-    );
-    final highlightStyle = baseStyle.copyWith(
-      backgroundColor: theme.buttonPrimary.withValues(alpha: 0.25),
-      color: theme.textPrimary,
-      fontWeight: FontWeight.w600,
-    );
-
-    InlineSpan buildSpans() {
-      if (ws == null ||
-          we == null ||
-          ws < 0 ||
-          we <= ws ||
-          ws >= sentence.length) {
-        return TextSpan(text: sentence, style: baseStyle);
-      }
-      final safeEnd = we.clamp(0, sentence.length);
-      final before = sentence.substring(0, ws);
-      final word = sentence.substring(ws, safeEnd);
-      final after = sentence.substring(safeEnd);
-      return TextSpan(
-        children: [
-          if (before.isNotEmpty) TextSpan(text: before, style: baseStyle),
-          TextSpan(text: word, style: highlightStyle),
-          if (after.isNotEmpty) TextSpan(text: after, style: baseStyle),
-        ],
-      );
-    }
-
-    return ConduitCard(
-      padding: const EdgeInsets.all(Spacing.sm),
-      child: RichText(text: buildSpans()),
     );
   }
 
@@ -772,9 +583,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
   @override
   void dispose() {
     _typingGateTimer?.cancel();
-    _ttsPlainTextDebounce?.cancel();
-    _pendingTtsPlainTextPayload = null;
-    _pendingTtsPlainTextSource = null;
     _fadeController.dispose();
     _slideController.dispose();
     super.dispose();
@@ -1311,9 +1119,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
   Widget _buildActionButtons() {
     final l10n = AppLocalizations.of(context)!;
-    final ttsState = ref.watch(textToSpeechControllerProvider);
-    final messageId = _messageId;
-    final hasSpeechText = _ttsPlainText.trim().isNotEmpty;
     // Check for error using the error field (preferred) or legacy content detection
     // Also check the active version's error if viewing a version
     final activeError = _getActiveError();
@@ -1324,50 +1129,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         widget.message.content.contains('timeout') ||
         widget.message.content.contains('retry options');
 
-    final isActiveMessage = ttsState.activeMessageId == messageId;
-    final isSpeaking =
-        isActiveMessage && ttsState.status == TtsPlaybackStatus.speaking;
-    final isPaused =
-        isActiveMessage && ttsState.status == TtsPlaybackStatus.paused;
-    final isBusy =
-        isActiveMessage &&
-        (ttsState.status == TtsPlaybackStatus.loading ||
-            ttsState.status == TtsPlaybackStatus.initializing);
-    final bool disableDueToStreaming = widget.isStreaming && !isActiveMessage;
-    final bool ttsAvailable = !ttsState.initialized || ttsState.available;
-    final bool showStopState =
-        isActiveMessage && (isSpeaking || isPaused || isBusy);
-    final bool shouldShowTtsButton = hasSpeechText && messageId.isNotEmpty;
-    final bool canStartTts =
-        shouldShowTtsButton && !disableDueToStreaming && ttsAvailable;
-
-    VoidCallback? ttsOnTap;
-    if (showStopState || canStartTts) {
-      ttsOnTap = () {
-        if (messageId.isEmpty) {
-          return;
-        }
-        ref
-            .read(textToSpeechControllerProvider.notifier)
-            .toggleForMessage(messageId: messageId, text: _ttsPlainText);
-      };
-    }
-
-    final IconData listenIcon = Platform.isIOS
-        ? CupertinoIcons.speaker_2_fill
-        : Icons.volume_up;
-    final IconData stopIcon = Platform.isIOS
-        ? CupertinoIcons.stop_fill
-        : Icons.stop;
-    final IconData ttsIcon = showStopState ? stopIcon : listenIcon;
-    final String ttsLabel = showStopState ? l10n.ttsStop : l10n.ttsListen;
-
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        if (shouldShowTtsButton)
-          _buildActionButton(icon: ttsIcon, label: ttsLabel, onTap: ttsOnTap),
         _buildActionButton(
           icon: Platform.isIOS
               ? CupertinoIcons.doc_on_clipboard
@@ -1855,34 +1620,6 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       ),
     );
   }
-}
-
-String _buildTtsPlainTextWorker(Map<String, dynamic> payload) {
-  final rawSegments = payload['segments'];
-  final fallback = payload['fallback'] as String? ?? '';
-  final segments = rawSegments is List ? rawSegments.cast<dynamic>() : const [];
-
-  if (segments.isEmpty) {
-    return MarkdownToText.convert(fallback);
-  }
-
-  final buffer = StringBuffer();
-  for (final segment in segments) {
-    if (segment is! String || segment.isEmpty) continue;
-    final sanitized = MarkdownToText.convert(segment);
-    if (sanitized.isEmpty) continue;
-    if (buffer.isNotEmpty) {
-      buffer.writeln();
-      buffer.writeln();
-    }
-    buffer.write(sanitized);
-  }
-
-  final result = buffer.toString().trim();
-  if (result.isEmpty) {
-    return MarkdownToText.convert(fallback);
-  }
-  return result;
 }
 
 class CodeExecutionListView extends StatelessWidget {

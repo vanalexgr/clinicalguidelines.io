@@ -23,7 +23,6 @@ import '../../../core/models/prompt.dart';
 import '../../../core/models/toggle_filter.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/services/settings_service.dart';
-import '../../chat/services/voice_input_service.dart';
 import '../../../core/models/knowledge_base.dart';
 
 import '../../../shared/utils/platform_utils.dart';
@@ -68,8 +67,6 @@ class _PromptCommandMatch {
 class ModernChatInput extends ConsumerStatefulWidget {
   final Function(String) onSendMessage;
   final bool enabled;
-  final Function()? onVoiceInput;
-  final Function()? onVoiceCall;
   final Function()? onFileAttachment;
   final Function()? onImageAttachment;
   final Function()? onCameraCapture;
@@ -82,8 +79,6 @@ class ModernChatInput extends ConsumerStatefulWidget {
     super.key,
     required this.onSendMessage,
     this.enabled = true,
-    this.onVoiceInput,
-    this.onVoiceCall,
     this.onFileAttachment,
     this.onImageAttachment,
     this.onCameraCapture,
@@ -104,13 +99,8 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _pendingFocus = false;
-  bool _isRecording = false;
   bool _hasText = false; // track locally without rebuilding on each keystroke
   bool _isMultiline = false; // track multiline for dynamic border radius
-  StreamSubscription<String>? _voiceStreamSubscription;
-  late VoiceInputService _voiceService;
-  StreamSubscription<String>? _textSub;
-  String _baseTextAtStart = '';
   bool _isDeactivated = false;
   int _lastHandledFocusTick = 0;
   bool _showPromptOverlay = false;
@@ -125,7 +115,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   @override
   void initState() {
     super.initState();
-    _voiceService = ref.read(voiceInputServiceProvider);
 
     // Apply any prefilled text on first frame (focus handled via inputFocusTrigger)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -167,9 +156,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     _controller.dispose();
     _focusNode.dispose();
     _pendingFocus = false;
-    _voiceStreamSubscription?.cancel();
-    _textSub?.cancel();
-    _voiceService.stopListening();
     super.dispose();
   }
 
@@ -1076,11 +1062,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     );
     final bool showWebPill = selectedQuickPills.contains('web');
     final bool showImagePillPref = selectedQuickPills.contains('image');
-    final voiceAvailableAsync = ref.watch(voiceInputAvailableProvider);
-    final bool voiceAvailable = voiceAvailableAsync.maybeWhen(
-      data: (v) => v,
-      orElse: () => false,
-    );
     final selectedToolIds = ref.watch(selectedToolIdsProvider);
     final selectedFilterIds = ref.watch(selectedFilterIdsProvider);
 
@@ -1139,7 +1120,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             icon: icon,
             label: label,
             isActive: webSearchEnabled,
-            onTap: widget.enabled && !_isRecording ? handleTap : null,
+            onTap: widget.enabled ? handleTap : null,
           ),
         );
       } else if (id == 'image' && showImagePillPref && imageGenAvailable) {
@@ -1157,7 +1138,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             icon: icon,
             label: label,
             isActive: imageGenEnabled,
-            onTap: widget.enabled && !_isRecording ? handleTap : null,
+            onTap: widget.enabled ? handleTap : null,
           ),
         );
       } else if (id.startsWith('filter:')) {
@@ -1186,7 +1167,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
               icon: icon,
               label: label,
               isActive: isSelected,
-              onTap: widget.enabled && !_isRecording ? handleTap : null,
+              onTap: widget.enabled ? handleTap : null,
               iconUrl: filter.icon,
             ),
           );
@@ -1222,7 +1203,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
               icon: icon,
               label: label,
               isActive: isSelected,
-              onTap: widget.enabled && !_isRecording ? handleTap : null,
+              onTap: widget.enabled ? handleTap : null,
             ),
           );
         }
@@ -1340,15 +1321,13 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (!_hasText && voiceAvailable && !isGenerating) ...[
-                    _buildMicButton(voiceAvailable),
+                  if (!_hasText && !isGenerating) ...[
                     const SizedBox(width: Spacing.sm),
                   ],
                   _buildPrimaryButton(
                     _hasText,
                     isGenerating,
                     stopGeneration,
-                    voiceAvailable,
                   ),
                 ],
               ),
@@ -1383,8 +1362,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                   isActive: isActive,
                 ),
               ),
-              if (!_hasText && voiceAvailable && !isGenerating)
-                _buildInlineMicIcon(voiceAvailable),
             ],
           ),
         ),
@@ -1415,7 +1392,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
               _hasText,
               isGenerating,
               stopGeneration,
-              voiceAvailable,
             ),
           ],
         ),
@@ -1459,7 +1435,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     );
   }
 
-  // (Removed legacy _buildVoiceButton; mic functionality moved to primary button)
 
   List<Widget> _withHorizontalSpacing(List<Widget> children, double gap) {
     if (children.length <= 1) {
@@ -1575,9 +1550,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 factor,
               )!;
 
-              final FontWeight recordingWeight = _isRecording
-                  ? FontWeight.w500
-                  : FontWeight.w400;
+              const FontWeight fontWeight = FontWeight.w400;
               final TextStyle baseChatStyle = AppTypography.chatMessageStyle;
 
               // Rely on TextField's built-in accessibility via hintText.
@@ -1613,17 +1586,15 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 cursorColor: animatedTextColor,
                 style: baseChatStyle.copyWith(
                   color: animatedTextColor,
-                  fontStyle: _isRecording ? FontStyle.italic : FontStyle.normal,
-                  fontWeight: recordingWeight,
+                  fontStyle: FontStyle.normal,
+                  fontWeight: fontWeight,
                 ),
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.messageHintText,
                   hintStyle: baseChatStyle.copyWith(
                     color: animatedPlaceholder,
-                    fontWeight: recordingWeight,
-                    fontStyle: _isRecording
-                        ? FontStyle.italic
-                        : FontStyle.normal,
+                    fontWeight: fontWeight,
+                    fontStyle: FontStyle.normal,
                   ),
                   filled: false,
                   border: InputBorder.none,
@@ -1675,7 +1646,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     required bool toolsActive,
     required bool filtersActive,
   }) {
-    final bool enabled = widget.enabled && !_isRecording;
+    final bool enabled = widget.enabled;
 
     IconData icon;
     Color? activeColor;
@@ -1753,78 +1724,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     );
   }
 
-  Widget _buildMicButton(bool voiceAvailable) {
-    final bool enabledMic = widget.enabled && voiceAvailable;
-    return Tooltip(
-      message: AppLocalizations.of(context)!.voiceInput,
-      child: Opacity(
-        opacity: enabledMic ? Alpha.primary : Alpha.disabled,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppBorderRadius.circular),
-            onTap: enabledMic
-                ? () {
-                    HapticFeedback.selectionClick();
-                    _toggleVoice();
-                  }
-                : null,
-            child: SizedBox(
-              width: TouchTarget.minimum,
-              height: TouchTarget.minimum,
-              child: Icon(
-                Platform.isIOS ? CupertinoIcons.mic : Icons.mic,
-                size: IconSize.large,
-                color: _isRecording
-                    ? context.conduitTheme.buttonPrimary
-                    : (enabledMic
-                          ? context.conduitTheme.textPrimary.withValues(
-                              alpha: Alpha.strong,
-                            )
-                          : context.conduitTheme.textPrimary.withValues(
-                              alpha: Alpha.disabled,
-                            )),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInlineMicIcon(bool voiceAvailable) {
-    final bool enabledMic = widget.enabled && voiceAvailable;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppBorderRadius.circular),
-        onTap: enabledMic
-            ? () {
-                HapticFeedback.selectionClick();
-                _toggleVoice();
-              }
-            : null,
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.xs),
-          child: Icon(
-            Platform.isIOS ? CupertinoIcons.mic : Icons.mic,
-            size: IconSize.medium,
-            color: _isRecording
-                ? context.conduitTheme.buttonPrimary
-                : context.conduitTheme.textSecondary.withValues(
-                    alpha: enabledMic ? Alpha.strong : Alpha.disabled,
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildPrimaryButton(
     bool hasText,
     bool isGenerating,
     void Function() stopGeneration,
-    bool voiceAvailable,
   ) {
     // Compact 44px touch target, circular radius, md icon size
     const double buttonSize = TouchTarget.minimum; // 44.0
@@ -1889,7 +1792,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       );
     }
 
-    // If there's text, render SEND variant; otherwise render VOICE CALL variant
+    // If there's text, render SEND variant
     if (hasText) {
       return Tooltip(
         message: enabled
@@ -1967,72 +1870,28 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       );
     }
 
-    // VOICE CALL variant when no text is present
-    final bool enabledVoiceCall = widget.enabled && widget.onVoiceCall != null;
+    // Default: show send button when no text (disabled state)
     return Tooltip(
-      message: 'Voice Call',
+      message: AppLocalizations.of(context)!.send,
       child: Opacity(
-        opacity: enabledVoiceCall ? Alpha.primary : Alpha.disabled,
-        child: IgnorePointer(
-          ignoring: !enabledVoiceCall,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(radius),
-              onTap: enabledVoiceCall
-                  ? () {
-                      PlatformUtils.lightHaptic();
-                      widget.onVoiceCall!();
-                    }
-                  : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                curve: Curves.easeOutCubic,
-                width: buttonSize,
-                height: buttonSize,
-                decoration: BoxDecoration(
-                  color: enabledVoiceCall
-                      ? context.conduitTheme.buttonPrimary
-                      : context.conduitTheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(radius),
-                  border: Border.all(
-                    color: enabledVoiceCall
-                        ? context.conduitTheme.buttonPrimary.withValues(
-                            alpha: 0.8,
-                          )
-                        : context.conduitTheme.cardBorder.withValues(
-                            alpha: 0.45,
-                          ),
-                    width: BorderWidth.thin,
-                  ),
-                  boxShadow: enabledVoiceCall
-                      ? <BoxShadow>[
-                          BoxShadow(
-                            color: context.conduitTheme.cardShadow.withValues(
-                              alpha:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? 0.36
-                                  : 0.18,
-                            ),
-                            blurRadius: 18,
-                            spreadRadius: -6,
-                            offset: const Offset(0, 8),
-                          ),
-                        ]
-                      : const [],
-                ),
-                child: Center(
-                  child: Icon(
-                    Platform.isIOS ? CupertinoIcons.waveform : Icons.graphic_eq,
-                    size: IconSize.large,
-                    color: enabledVoiceCall
-                        ? context.conduitTheme.buttonPrimaryText
-                        : context.conduitTheme.textPrimary.withValues(
-                            alpha: Alpha.disabled,
-                          ),
-                  ),
-                ),
+        opacity: Alpha.disabled,
+        child: Container(
+          width: buttonSize,
+          height: buttonSize,
+          decoration: BoxDecoration(
+            color: context.conduitTheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(
+              color: context.conduitTheme.cardBorder.withValues(alpha: 0.45),
+              width: BorderWidth.thin,
+            ),
+          ),
+          child: Center(
+            child: Icon(
+              Platform.isIOS ? CupertinoIcons.arrow_up : Icons.arrow_upward,
+              size: IconSize.large,
+              color: context.conduitTheme.textPrimary.withValues(
+                alpha: Alpha.disabled,
               ),
             ),
           ),
@@ -3093,85 +2952,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // --- Inline Voice Input ---
-  Future<void> _toggleVoice() async {
-    if (_isRecording) {
-      await _stopVoice();
-    } else {
-      await _startVoice();
-    }
-  }
-
-  Future<void> _startVoice() async {
-    if (!widget.enabled) return;
-    try {
-      final ok = await _voiceService.initialize();
-      if (!mounted) return;
-      if (!ok) {
-        _showVoiceUnavailable(
-          AppLocalizations.of(context)?.errorMessage ??
-              'Voice input unavailable',
-        );
-        return;
-      }
-      // Centralized permission + start
-      final stream = await _voiceService.beginListening();
-      if (!mounted) return;
-      setState(() {
-        _isRecording = true;
-        _baseTextAtStart = _controller.text;
-      });
-      _textSub?.cancel();
-      _textSub = stream.listen(
-        (text) async {
-          final updated = _baseTextAtStart.isEmpty
-              ? text
-              : '${_baseTextAtStart.trimRight()} $text';
-          _controller.value = TextEditingValue(
-            text: updated,
-            selection: TextSelection.collapsed(offset: updated.length),
-          );
-        },
-        onDone: () {
-          if (!mounted) return;
-          setState(() => _isRecording = false);
-        },
-        onError: (_) {
-          if (!mounted) return;
-          setState(() => _isRecording = false);
-        },
-      );
-      _ensureFocusedIfEnabled();
-    } catch (_) {
-      _showVoiceUnavailable(
-        AppLocalizations.of(context)?.errorMessage ??
-            'Failed to start voice input',
-      );
-      if (!mounted) return;
-      setState(() => _isRecording = false);
-    }
-  }
-
-  Future<void> _stopVoice() async {
-    await _voiceService.stopListening();
-    if (!mounted) return;
-    setState(() => _isRecording = false);
-    HapticFeedback.selectionClick();
-  }
-
-  // When on-device STT is unavailable we rely on server transcription.
-
-  void _showVoiceUnavailable(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
       ),
     );
   }

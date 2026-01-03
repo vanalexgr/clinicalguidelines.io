@@ -2026,15 +2026,10 @@ Future<void> _sendMessageInternal(
       filename = "demo_file.txt";
     }
 
-    // Check if this is voice input
-    // In reviewer mode, we don't have actual voice input state
-    final isVoiceInput = false;
-
     // Generate appropriate canned response
     final responseText = ReviewerModeService.generateResponse(
       userMessage: message,
       filename: filename,
-      isVoiceInput: isVoiceInput,
     );
 
     // Simulate token-by-token streaming

@@ -19,7 +19,6 @@ import '../../../shared/widgets/conduit_components.dart';
 import '../../../shared/widgets/improved_loading_states.dart';
 import '../../../shared/widgets/middle_ellipsis_text.dart';
 import '../../../shared/widgets/themed_dialogs.dart';
-import '../../chat/services/voice_input_service.dart';
 import '../providers/notes_providers.dart';
 
 /// Page for editing a note with OpenWebUI-style layout.
@@ -45,13 +44,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   bool _hasChanges = false;
   bool _isGeneratingTitle = false;
   bool _isEnhancing = false;
-  bool _isRecording = false;
   Note? _note;
-
-  // Voice input
-  VoiceInputService? _voiceService;
-  StreamSubscription<String>? _voiceSub;
-  String _voiceBaseText = '';
 
   int get _wordCount {
     final text = _contentController.text.trim();
@@ -78,8 +71,6 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   @override
   void dispose() {
     _saveDebounce?.cancel();
-    _voiceSub?.cancel();
-    _voiceService?.stopListening();
     _titleController.dispose();
     _contentController.dispose();
     _titleFocusNode.removeListener(_onTitleFocusChanged);
@@ -379,74 +370,6 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       if (mounted) {
         setState(() => _isEnhancing = false);
       }
-    }
-  }
-
-  // Voice dictation
-  Future<void> _toggleDictation() async {
-    if (_isRecording) {
-      await _stopDictation();
-    } else {
-      await _startDictation();
-    }
-  }
-
-  Future<void> _startDictation() async {
-    _voiceService ??= VoiceInputService(api: ref.read(apiServiceProvider));
-
-    try {
-      final ok = await _voiceService!.initialize();
-      if (!mounted) return;
-      if (!ok) {
-        _showError(AppLocalizations.of(context)!.voiceInputUnavailable);
-        return;
-      }
-
-      final stream = await _voiceService!.beginListening();
-      if (!mounted) return;
-
-      setState(() {
-        _isRecording = true;
-        _voiceBaseText = _contentController.text;
-      });
-
-      HapticFeedback.lightImpact();
-
-      _voiceSub?.cancel();
-      _voiceSub = stream.listen(
-        (text) {
-          if (!mounted) return;
-          final updated = _voiceBaseText.isEmpty
-              ? text
-              : '${_voiceBaseText.trimRight()} $text';
-          _contentController.value = TextEditingValue(
-            text: updated,
-            selection: TextSelection.collapsed(offset: updated.length),
-          );
-        },
-        onDone: () {
-          if (!mounted) return;
-          setState(() => _isRecording = false);
-        },
-        onError: (_) {
-          if (!mounted) return;
-          setState(() => _isRecording = false);
-        },
-      );
-    } catch (e) {
-      _showError(AppLocalizations.of(context)!.failedToStartDictation);
-      if (mounted) {
-        setState(() => _isRecording = false);
-      }
-    }
-  }
-
-  Future<void> _stopDictation() async {
-    await _voiceService?.stopListening();
-    _voiceSub?.cancel();
-    if (mounted) {
-      setState(() => _isRecording = false);
-      HapticFeedback.selectionClick();
     }
   }
 

@@ -15,14 +15,12 @@ import 'navigation_service.dart';
 import '../../features/chat/providers/chat_providers.dart';
 import '../../features/chat/providers/context_attachments_provider.dart';
 import '../../features/auth/providers/unified_auth_providers.dart';
-import '../../features/chat/views/voice_call_page.dart';
 import '../../features/chat/services/file_attachment_service.dart';
 import '../../shared/services/tasks/task_queue.dart';
 
 part 'app_intents_service.g.dart';
 
 const _askIntentId = 'app.cogwheel.conduit.ask_chat';
-const _voiceCallIntentId = 'app.cogwheel.conduit.start_voice_call';
 const _sendTextIntentId = 'app.cogwheel.conduit.send_text';
 const _sendUrlIntentId = 'app.cogwheel.conduit.send_url';
 const _sendImageIntentId = 'app.cogwheel.conduit.send_image';
@@ -58,8 +56,6 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
       switch (call.method) {
         case _askIntentId:
           return await _handleAskIntent(parameters);
-        case _voiceCallIntentId:
-          return await _handleVoiceCallIntent(parameters);
         case _sendTextIntentId:
           return await _handleSendTextIntent(parameters);
         case _sendUrlIntentId:
@@ -100,48 +96,6 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
         stackTrace: stackTrace,
       );
       return {'success': false, 'error': 'Unable to open chat: $error'};
-    }
-  }
-
-  Future<Map<String, dynamic>> _handleVoiceCallIntent(
-    Map<String, dynamic> parameters,
-  ) async {
-    DebugLogger.log('Starting voice call from Siri/Shortcuts', scope: 'siri');
-
-    if (!ref.mounted) {
-      DebugLogger.log('Ref not mounted for voice call', scope: 'siri');
-      return {'success': false, 'error': 'App not ready'};
-    }
-
-    // Check authentication state
-    final navState = ref.read(authNavigationStateProvider);
-    if (navState != AuthNavigationState.authenticated) {
-      DebugLogger.log('Not authenticated for voice call', scope: 'siri');
-      return {
-        'success': false,
-        'error': 'Please sign in to start a voice call',
-      };
-    }
-
-    // Check if a model is selected
-    final model = ref.read(selectedModelProvider);
-    if (model == null) {
-      DebugLogger.log('No model selected for voice call', scope: 'siri');
-      return {'success': false, 'error': 'Please select a model first'};
-    }
-
-    try {
-      await _startVoiceCall();
-      DebugLogger.log('Voice call launched from Siri/Shortcuts', scope: 'siri');
-      return {'success': true, 'value': 'Starting Conduit voice call'};
-    } catch (error, stackTrace) {
-      DebugLogger.error(
-        'app-intents-voice',
-        scope: 'siri',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return {'success': false, 'error': 'Unable to start voice call: $error'};
     }
   }
 
@@ -309,8 +263,6 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
     );
   }
 
-  Future<void> startVoiceCallFromExternal() => _startVoiceCall();
-
   Future<void> _prepareChatWithOptions({
     String? prompt,
     bool focusComposer = false,
@@ -333,58 +285,6 @@ class AppIntentCoordinator extends _$AppIntentCoordinator {
       final tick = ref.read(inputFocusTriggerProvider);
       ref.read(inputFocusTriggerProvider.notifier).set(tick + 1);
     }
-  }
-
-  Future<void> _startVoiceCall() async {
-    if (!ref.mounted) return;
-
-    // Validate authentication state
-    final navState = ref.read(authNavigationStateProvider);
-    if (navState != AuthNavigationState.authenticated) {
-      throw StateError('Sign in to start a voice call.');
-    }
-
-    // Validate model selection
-    final model = ref.read(selectedModelProvider);
-    if (model == null) {
-      throw StateError('Choose a model before starting a voice call.');
-    }
-
-    // Pre-warm socket connection before navigating to voice call.
-    // This reduces the chance of "websocket not connected" errors when
-    // opening voice call right after app start or from Siri/Shortcuts.
-    final socketService = ref.read(socketServiceProvider);
-    if (socketService != null && !socketService.isConnected) {
-      // Start connection attempt in parallel, don't wait for full connection
-      // The VoiceCallService.startCall() will wait with extended timeout
-      unawaited(socketService.connect());
-    }
-
-    // Navigate to chat first if not already there
-    final isOnChatRoute = NavigationService.currentRoute == Routes.chat;
-    if (!isOnChatRoute) {
-      await NavigationService.navigateToChat();
-    }
-
-    // Wait a tick for navigation to settle so navigator/context are present.
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-
-    final context = NavigationService.navigatorKey.currentContext;
-    if (context == null || !context.mounted) {
-      throw StateError('Navigation context not available.');
-    }
-
-    // Dismiss keyboard before navigating
-    FocusScope.of(context).unfocus();
-
-    // Navigate to voice call page with new conversation flag
-    if (!context.mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const VoiceCallPage(startNewConversation: true),
-        fullscreenDialog: true,
-      ),
-    );
   }
 
   Future<File> _materializeTempFile(

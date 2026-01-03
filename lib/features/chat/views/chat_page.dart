@@ -27,9 +27,7 @@ import '../widgets/assistant_message_widget.dart' as assistant;
 import '../widgets/streaming_title_text.dart';
 import '../widgets/file_attachment_widget.dart';
 import '../widgets/context_attachment_widget.dart';
-import '../services/voice_input_service.dart';
 import '../services/file_attachment_service.dart';
-import 'voice_call_page.dart';
 import '../../../shared/services/tasks/task_queue.dart';
 import 'package:conduit/features/tools/providers/tools_providers.dart'; // FIXED: Absolute import
 import '../../../core/models/chat_message.dart';
@@ -473,16 +471,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     
     _checkAndAutoSelectModel();
     _enableDefaultTools();
-  }
-
-  void _handleVoiceCall() {
-    FocusScope.of(context).unfocus();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const VoiceCallPage(),
-        fullscreenDialog: true,
-      ),
-    );
   }
 
   void _onScroll() {
@@ -1123,7 +1111,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                     const ContextAttachmentWidget(),
                                     ModernChatInput(
                                       onSendMessage: (text) => _handleMessageSend(text, selectedModel),
-                                      onVoiceInput: null,
                                       onFileAttachment: _handleFileAttachment,
                                       onPastedAttachments: _handlePastedAttachments,
                                     ),
