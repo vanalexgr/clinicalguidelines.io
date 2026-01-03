@@ -6,7 +6,6 @@ Clinical Guidelines is a customized version of the Conduit Flutter app, rebrande
 
 Key capabilities include:
 - Real-time streaming chat with AI models for clinical decision support
-- Voice input/output (speech-to-text and text-to-speech)
 - File and image uploads for RAG (Retrieval-Augmented Generation)
 - Markdown rendering with syntax highlighting
 - Multi-language support (EN, DE, ES, FR, IT, KO, NL, RU, ZH)
@@ -37,6 +36,16 @@ Key capabilities include:
 - Removed GitHub Sponsors and Buy Me a Coffee links
 - Added single "ClinicalGuidelines.io" website link
 - Configuration: `lib/features/profile/views/profile_page.dart`
+
+### Voice/Audio Removal
+- All voice input (speech-to-text) functionality removed
+- All text-to-speech (TTS) functionality removed
+- Voice call features removed
+- Microphone buttons removed from chat input
+- Voice settings sections removed from app customization
+- Android microphone permission removed
+- iOS speech recognition permission removed
+- stts and flutter_tts dependencies removed from pubspec.yaml
 
 ## User Preferences
 
@@ -69,7 +78,6 @@ Preferred communication style: Simple, everyday language.
 
 ### Platform-Specific Features
 - **iOS**: Native widgets using SwiftUI
-- **Voice**: stts for speech-to-text, flutter_tts for text-to-speech
 - **File Handling**: file_picker, image_picker for attachments
 - **Sharing**: share_plus, share_handler for content sharing
 
@@ -100,7 +108,6 @@ Preferred communication style: Simple, everyday language.
 | Routing | go_router |
 | Local DB | hive_ce, hive_ce_flutter |
 | Secure Storage | flutter_secure_storage |
-| Speech | stts, flutter_tts |
 | Files | file_picker, image_picker |
 | Markdown | flutter_markdown_plus |
 | Networking | connectivity_plus |
