@@ -96,7 +96,7 @@ class BackgroundStreamingService : Service() {
                 val fallbackNotification = NotificationCompat.Builder(this, CHANNEL_ID)
                     .setContentTitle("Conduit")
                     .setSmallIcon(R.mipmap.ic_launcher)
-		    .setSilent(true)
+                    .setSilent(true)
                     .setOngoing(true)  // Prevent user from dismissing foreground service notification
                     .build()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -547,29 +547,17 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
     override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
             "startBackgroundExecution" -> {
-                val streamIds = call.argument<List<String>>("streamIds")
-                val requiresMic = call.argument<Boolean>("requiresMicrophone") ?: false
-                if (streamIds != null) {
-                    startBackgroundExecution(streamIds, requiresMic)
-                    result.success(null)
-                } else {
-                    result.error("INVALID_ARGS", "Stream IDs required", null)
-                }
+                // Foreground service disabled - just return success
+                result.success(null)
             }
             
             "stopBackgroundExecution" -> {
-                val streamIds = call.argument<List<String>>("streamIds")
-                if (streamIds != null) {
-                    stopBackgroundExecution(streamIds)
-                    result.success(null)
-                } else {
-                    result.error("INVALID_ARGS", "Stream IDs required", null)
-                }
+                // Foreground service disabled - just return success
+                result.success(null)
             }
             
             "keepAlive" -> {
-                val streamCount = call.argument<Int>("streamCount")
-                keepAlive(streamCount)
+                // Foreground service disabled - just return success
                 result.success(null)
             }
             
@@ -583,9 +571,7 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : MethodCal
             }
             
             "stopAllBackgroundExecution" -> {
-                // Stop all streams (used for reconciliation when orphaned service detected)
-                val allStreams = activeStreams.toList()
-                stopBackgroundExecution(allStreams)
+                // Foreground service disabled - just return success
                 result.success(null)
             }
             

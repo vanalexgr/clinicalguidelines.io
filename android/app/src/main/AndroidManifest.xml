@@ -92,11 +92,6 @@
             </intent-filter>
         </activity>
        
-        <service
-            android:name=".BackgroundStreamingService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"/>
        
         <receiver
             android:name=".ConduitWidgetProvider"
