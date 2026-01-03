@@ -86,19 +86,14 @@ class MainActivity : FlutterActivity() {
 
         val screenContext = intent.getStringExtra("screen_context")
         val screenshotPath = intent.getStringExtra("screenshot_path")
-        val startVoiceCall = intent.getBooleanExtra("start_voice_call", false)
         val startNewChat = intent.getBooleanExtra("start_new_chat", false)
 
         android.util.Log.d("MainActivity", "screenContext: $screenContext")
         android.util.Log.d("MainActivity", "screenshotPath: $screenshotPath")
-        android.util.Log.d("MainActivity", "startVoiceCall: $startVoiceCall")
         android.util.Log.d("MainActivity", "startNewChat: $startNewChat")
         android.util.Log.d("MainActivity", "methodChannel: $methodChannel")
 
-        if (startVoiceCall) {
-            android.util.Log.d("MainActivity", "Invoking startVoiceCall")
-            methodChannel?.invokeMethod("startVoiceCall", null)
-        } else if (startNewChat) {
+        if (startNewChat) {
             android.util.Log.d("MainActivity", "Invoking startNewChat")
             methodChannel?.invokeMethod("startNewChat", null)
         } else if (screenContext != null) {

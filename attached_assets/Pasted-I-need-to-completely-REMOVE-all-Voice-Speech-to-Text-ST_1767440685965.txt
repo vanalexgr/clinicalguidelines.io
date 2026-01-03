@@ -1,0 +1,97 @@
+I need to completely REMOVE all Voice, Speech-to-Text (STT), Text-to-Speech (TTS), and Call-related functionality from the app. The app must be converted to a strictly "Text & Uploads Only" interface.
+
+This is critical to resolve Google Play policy rejections regarding Foreground Services and Microphone usage.
+
+Please execute the following "Search and Destroy" plan in strict order.
+
+---
+
+### PHASE 1: Remove Dependencies
+1.  Open `pubspec.yaml`.
+2.  **Remove** the following dependencies if they exist:
+    * `flutter_tts`
+    * `speech_to_text`
+    * `record`
+    * `flutter_sound`
+    * `audio_session`
+    * `permission_handler` (ONLY if used solely for microphone; keep if used for photos/files)
+3.  **Save** the file.
+
+---
+
+### PHASE 2: Android Native Cleanup (Fixing Google Play Rejection)
+1.  **Edit `android/app/src/main/AndroidManifest.xml`**:
+    * **REMOVE** these permissions:
+        * `android.permission.RECORD_AUDIO`
+        * `android.permission.FOREGROUND_SERVICE_MICROPHONE`
+        * `android.permission.FOREGROUND_SERVICE_PHONE_CALL`
+        * `android.permission.FOREGROUND_SERVICE_DATA_SYNC`
+        * `android.permission.MODIFY_AUDIO_SETTINGS`
+        * `android.permission.MANAGE_OWN_CALLS`
+        * `android.permission.READ_PHONE_STATE`
+    * **REMOVE** the `<service>` tag that declares `ConduitVoiceInteractionSessionService`.
+
+2.  **Delete Kotlin Files**:
+    * Navigate to `android/app/src/main/kotlin/io/clinicalguidelines/chat/` (or your package path).
+    * **DELETE**: `ConduitVoiceInteractionSession.kt`
+    * **DELETE**: `ConduitVoiceInteractionSessionService.kt`
+
+3.  **Clean `MainActivity.kt`**:
+    * Open `MainActivity.kt`.
+    * Remove any code referencing the deleted classes above.
+    * Remove any `MethodChannel` logic that handles "startBackgroundExecution" or microphone recording.
+
+---
+
+### PHASE 3: iOS Native Cleanup
+1.  **Edit `ios/Runner/Info.plist`**:
+    * **Remove** the keys and string values for:
+        * `NSMicrophoneUsageDescription`
+        * `NSSpeechRecognitionUsageDescription`
+2.  **Edit `ios/Podfile`**:
+    * **Remove** any lines in `post_install` that set `PERMISSION_MICROPHONE=1` or `PERMISSION_SPEECH_RECOGNIZER=1`.
+
+---
+
+### PHASE 4: Dart Logic Cleanup (Prevents Crashes)
+1.  **Stub Background Handler**:
+    * Open `lib/core/services/background_streaming_handler.dart`.
+    * Locate `startBackgroundExecution`.
+    * **Delete the body** of the function. Make it an empty `async` function that simply returns.
+    * *Reason:* We must stop the app from trying to call the native service we just deleted.
+
+2.  **Delete Service Files**:
+    * Search `lib/` and **DELETE** these files:
+        * `tts_service.dart`
+        * `stt_service.dart`
+        * `audio_recorder_service.dart`
+        * `voice_settings.dart` (or any settings sub-page dedicated to voice)
+
+---
+
+### PHASE 5: UI Cleanup (Removing Menus & Buttons)
+1.  **Clean Chat Interface**:
+    * Find the Chat Input widget (likely `lib/features/chat/presentation/widgets/chat_input.dart`).
+    * **Remove** the Microphone `IconButton` (looks for `Icons.mic` or `Icons.mic_none`).
+    * Ensure only the TextField and File Upload button remain.
+
+2.  **Clean Settings Menu**:
+    * Open the main settings file (likely `lib/features/settings/presentation/settings_screen.dart`).
+    * **Remove** any `ListTile`, `SwitchListTile`, or `SettingsTile` related to:
+        * "Voice"
+        * "Speech to Text"
+        * "Text to Speech"
+        * "Haptic Feedback"
+    * **Remove** any logic that navigates to the deleted `voice_settings.dart`.
+
+3.  **Fix Broken Imports**:
+    * Since we deleted files and dependencies, the compiler will show errors.
+    * Scan the project for imports of the deleted files/packages.
+    * **Remove** those import lines and the code blocks that depended on them.
+
+---
+
+### PHASE 6: Final Verification
+1.  Run `flutter clean`.
+2.  Run `flutter pub get`.
+3.  Check for analysis errors.

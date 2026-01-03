@@ -42,11 +42,6 @@ dependencies:
   flutter_animate: ^4.5.0
   
   # Platform Features
-  vad: ^0.0.7+1
-  speech_to_text: ^7.3.0
-  record: ^6.1.2
-  flutter_tts: ^4.2.3
-  audioplayers: ^6.5.1
   image_picker: ^1.2.0
   file_picker: ^10.3.7
   path_provider: ^2.1.4
@@ -72,7 +67,6 @@ dependencies:
   connectivity_plus: ^7.0.0
   flutter_cache_manager: ^3.4.1
   http: ^1.5.0
-  flutter_callkit_incoming: ^3.0.0
   quick_actions: 1.1.0
   flutter_svg: ^2.2.3
   html_unescape: ^2.0.0
