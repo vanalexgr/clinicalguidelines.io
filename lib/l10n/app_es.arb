@@ -203,6 +203,7 @@
   "failedToDeleteFolder": "No se pudo eliminar la carpeta",
   "aboutApp": "Acerca de",
   "aboutAppSubtitle": "Información y enlaces de Clinical Guidelines",
+  "aboutConduit": "Acerca de Clinical Guidelines",
   "web": "Web",
   "imageGen": "Generación de imágenes",
   "pinned": "Anclado",

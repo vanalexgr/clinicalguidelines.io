@@ -203,6 +203,7 @@
   "failedToDeleteFolder": "无法删除文件夹",
   "aboutApp": "关于",
   "aboutAppSubtitle": "Clinical Guidelines 信息和链接",
+  "aboutConduit": "关于 Clinical Guidelines",
   "web": "网页",
   "imageGen": "图像生成",
   "pinned": "已置顶",

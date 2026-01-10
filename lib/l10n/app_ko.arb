@@ -313,6 +313,7 @@
   "failedToDeleteFolder": "폴더 삭제 실패",
   "aboutApp": "정보",
   "aboutAppSubtitle": "Clinical Guidelines 정보 및 링크",
+  "aboutConduit": "Clinical Guidelines 정보",
   "web": "웹",
   "imageGen": "이미지 생성",
   "pinned": "고정됨",
