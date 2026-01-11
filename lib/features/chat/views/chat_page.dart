@@ -54,7 +54,7 @@ import 'package:flutter/gestures.dart' show DragStartBehavior;
 // -----------------------------------------------------------------------------
 // CONFIGURATION: Set your single allowed model ID here.
 // -----------------------------------------------------------------------------
-const String _kForcedModelId = 'vascular_expert';
+const String _kForcedModelId = 'DeepSeek-R1-0528';
 
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key});
