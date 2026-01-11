@@ -97,10 +97,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return;
     }
 
-    // 2. OPTIMISTIC UPDATE: Force synthetic model IMMEDIATELY to prevent DeepSeek default
+    // 2. OPTIMISTIC UPDATE: Force synthetic model IMMEDIATELY to prevent other model default
     const syntheticModel = Model(
       id: _kForcedModelId,
-      name: 'Vascular Expert',
+      name: 'DeepSeek-R1-0528',
     );
     ref.read(selectedModelProvider.notifier).set(syntheticModel);
 
@@ -306,12 +306,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   void _handleMessageSend(String text, dynamic selectedModel) async {
     // --- FORCE FIX START ---
-    // Ensure we NEVER send to DeepSeek (or any other model), even if the UI was stale.
-    // If the model is missing or incorrect, force it to Vascular Expert immediately.
+    // Ensure we always send to the forced model, even if the UI was stale.
+    // If the model is missing or incorrect, force it to DeepSeek-R1-0528 immediately.
     if (selectedModel == null || (selectedModel is Model && selectedModel.id != _kForcedModelId)) {
       selectedModel = const Model(
         id: _kForcedModelId,
-        name: 'Vascular Expert',
+        name: 'DeepSeek-R1-0528',
       );
       // Update the provider so the UI reflects this change for the next message
       ref.read(selectedModelProvider.notifier).set(selectedModel);

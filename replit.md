@@ -32,6 +32,11 @@ Key capabilities include:
 - Android manifest and iOS Info.plist updated
 - Landing page rebranded at `docs/index.html`
 
+### Default Model
+- App forces the model to `DeepSeek-R1-0528`
+- Users cannot change the model selection
+- Configuration: `lib/features/chat/views/chat_page.dart` (`_kForcedModelId` constant)
+
 ### Profile Page
 - Removed GitHub Sponsors and Buy Me a Coffee links
 - Added single "ClinicalGuidelines.io" website link
@@ -89,6 +94,7 @@ Preferred communication style: Simple, everyday language.
 - **WebView**: webview_flutter for embedded web content
 
 ### Build & Deployment
+- **Current Version**: 1.0.0 (build 93)
 - **Android**: Fastlane for Google Play deployment
 - **iOS**: Fastlane for App Store deployment
 - **Localization**: Flutter's intl package with ARB files in lib/l10n/
