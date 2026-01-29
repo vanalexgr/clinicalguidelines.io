@@ -54,7 +54,7 @@ import 'package:flutter/gestures.dart' show DragStartBehavior;
 // -----------------------------------------------------------------------------
 // CONFIGURATION: Set your single allowed model ID here.
 // -----------------------------------------------------------------------------
-const String _kForcedModelId = 'DeepSeek-R1-0528';
+const String _kForcedModelId = 'DeepSeek-V3.2';
 
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key});
@@ -100,7 +100,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // 2. OPTIMISTIC UPDATE: Force synthetic model IMMEDIATELY to prevent other model default
     const syntheticModel = Model(
       id: _kForcedModelId,
-      name: 'DeepSeek-R1-0528',
+      name: 'DeepSeek-V3.2',
     );
     ref.read(selectedModelProvider.notifier).set(syntheticModel);
 
@@ -311,7 +311,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (selectedModel == null || (selectedModel is Model && selectedModel.id != _kForcedModelId)) {
       selectedModel = const Model(
         id: _kForcedModelId,
-        name: 'DeepSeek-R1-0528',
+        name: 'DeepSeek-V3.2',
       );
       // Update the provider so the UI reflects this change for the next message
       ref.read(selectedModelProvider.notifier).set(selectedModel);
