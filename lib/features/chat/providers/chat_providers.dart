@@ -2114,10 +2114,11 @@ Future<void> _sendMessageInternal(
       ref.read(webSearchAvailableProvider);
   final imageGenerationEnabled = ref.read(imageGenerationEnabledProvider);
 
-  // Prepare tools list - pass tool IDs directly
+  // Prepare tools list - fallback to selected tools if not specified
+  final List<String> currentSelectedTools = ref.read(selectedToolIdsProvider);
   final List<String>? toolIdsForApi = (toolIds != null && toolIds.isNotEmpty)
       ? toolIds
-      : null;
+      : (currentSelectedTools.isNotEmpty ? currentSelectedTools : null);
 
   // Get selected toggle filter IDs
   final selectedFilterIds = ref.read(selectedFilterIdsProvider);
