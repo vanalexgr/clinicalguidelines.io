@@ -185,6 +185,120 @@ class CitationBadge extends StatelessWidget {
       ),
     );
   }
+
+  void _showSourceDetails(BuildContext context, ChatSourceReference source) {
+    final theme = context.conduitTheme;
+    final title =
+        source.title ??
+        ((source.id != null && !source.id!.startsWith('http'))
+            ? source.id
+            : 'Source Details');
+    final snippet = source.snippet ?? '';
+    final url = SourceHelper.getSourceUrl(source);
+    final metadata = source.metadata;
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(title ?? 'Source'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (snippet.isNotEmpty) ...[
+                    Text(
+                      'Content:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: AppTypography.labelMedium,
+                        color: theme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.xs),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(Spacing.sm),
+                      decoration: BoxDecoration(
+                        color: theme.surfaceContainer,
+                        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+                      ),
+                      child: Text(
+                        snippet,
+                        style: TextStyle(
+                          fontFamily: AppTypography.monospaceFontFamily,
+                          fontSize: AppTypography.bodySmall,
+                          color: theme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.md),
+                  ],
+                  if (metadata != null && metadata.isNotEmpty) ...[
+                    Text(
+                      'Metadata:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: AppTypography.labelMedium,
+                        color: theme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.xs),
+                    ...metadata.entries.map((e) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${e.key}: ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: AppTypography.bodySmall,
+                                color: theme.textSecondary,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                e.value.toString(),
+                                style: TextStyle(
+                                  fontSize: AppTypography.bodySmall,
+                                  color: theme.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: Spacing.md),
+                  ],
+                  if (url != null) ...[
+                    const SizedBox(height: Spacing.xs),
+                    InkWell(
+                      onTap: () => SourceHelper.launchSourceUrl(url),
+                      child: Text(
+                        url,
+                        style: TextStyle(
+                          color: theme.buttonPrimary,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+    );
+  }
 }
 
 /// A grouped citation badge for multiple sources like [1,2,3].
@@ -290,77 +404,72 @@ class CitationBadgeGroup extends StatelessWidget {
             .whereType<PopupMenuItem<int>>()
             .toList();
       },
-              ],
-            ),
-          );
-        },
-        onSelected: (index) {
-          if (onSourceTap != null) {
-            onSourceTap!(index);
-          } else if (index >= 0 && index < sources.length) {
-            final source = sources[index];
-            final url = SourceHelper.getSourceUrl(source);
-            if (url != null) {
-              SourceHelper.launchSourceUrl(url);
-            } else {
-              _showSourceDetails(context, source);
-            }
+      onSelected: (index) {
+        if (onSourceTap != null) {
+          onSourceTap!(index);
+        } else if (index >= 0 && index < sources.length) {
+          final source = sources[index];
+          final url = SourceHelper.getSourceUrl(source);
+          if (url != null) {
+            SourceHelper.launchSourceUrl(url);
+          } else {
+            _showSourceDetails(context, source);
           }
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.sm,
-            vertical: Spacing.xxs,
-          ),
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          decoration: BoxDecoration(
-            color: theme.surfaceContainer.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(AppBorderRadius.chip),
-            border: Border.all(
-              color: theme.cardBorder.withValues(alpha: 0.5),
-              width: BorderWidth.thin,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.link_rounded,
-                size: 10,
-                color: theme.textSecondary.withValues(alpha: 0.7),
-              ),
-              const SizedBox(width: Spacing.xxs),
-              Text(
-                displayTitle,
-                style: TextStyle(
-                  fontSize: AppTypography.labelSmall,
-                  fontWeight: FontWeight.w500,
-                  color: theme.textSecondary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(width: Spacing.xxs),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: theme.buttonPrimary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
-                ),
-                child: Text(
-                  '+$additionalCount',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: theme.buttonPrimary,
-                  ),
-                ),
-              ),
-            ],
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.sm,
+          vertical: Spacing.xxs,
+        ),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(
+          color: theme.surfaceContainer.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(AppBorderRadius.chip),
+          border: Border.all(
+            color: theme.cardBorder.withValues(alpha: 0.5),
+            width: BorderWidth.thin,
           ),
         ),
-      );
-    }
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.link_rounded,
+              size: 10,
+              color: theme.textSecondary.withValues(alpha: 0.7),
+            ),
+            const SizedBox(width: Spacing.xxs),
+            Text(
+              displayTitle,
+              style: TextStyle(
+                fontSize: AppTypography.labelSmall,
+                fontWeight: FontWeight.w500,
+                color: theme.textSecondary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(width: Spacing.xxs),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: theme.buttonPrimary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppBorderRadius.small),
+              ),
+              child: Text(
+                '+$additionalCount',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: theme.buttonPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showSourceDetails(BuildContext context, ChatSourceReference source) {
@@ -476,3 +585,4 @@ class CitationBadgeGroup extends StatelessWidget {
           ),
     );
   }
+}
