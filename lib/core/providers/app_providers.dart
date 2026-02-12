@@ -161,7 +161,7 @@ Future<ServerConfig?> activeServer(Ref ref) async {
   if (kServerLockEnabled) {
     return lockedServerConfig;
   }
-  
+
   final storage = ref.watch(optimizedStorageServiceProvider);
   final configs = await ref.watch(serverConfigsProvider.future);
   final activeId = await storage.getActiveServerId();
@@ -702,11 +702,13 @@ class Models extends _$Models {
     try {
       final cached = await storage.getLocalModels();
       if (cached.isNotEmpty) {
+        final filtered = await _filterToOpenWebUiDefault(cached);
         DebugLogger.log(
           'cache-restored',
           scope: 'models/cache',
-          data: {'count': cached.length},
+          data: {'count': cached.length, 'filtered': filtered.length},
         );
+        _persistModelsAsync(filtered);
         Future.microtask(() async {
           try {
             await refresh();
@@ -719,7 +721,7 @@ class Models extends _$Models {
             );
           }
         });
-        return cached;
+        return filtered;
       }
     } catch (error, stackTrace) {
       DebugLogger.error(
@@ -794,13 +796,14 @@ class Models extends _$Models {
     try {
       DebugLogger.log('fetch-start', scope: 'models');
       final models = await api.getModels();
+      final filtered = await _filterToOpenWebUiDefault(models);
       DebugLogger.log(
         'fetch-ok',
         scope: 'models',
-        data: {'count': models.length},
+        data: {'count': models.length, 'filtered': filtered.length},
       );
-      _persistModelsAsync(models);
-      return models;
+      _persistModelsAsync(filtered);
+      return filtered;
     } catch (e, stackTrace) {
       DebugLogger.error(
         'fetch-failed',
@@ -817,6 +820,96 @@ class Models extends _$Models {
 
       return const [];
     }
+  }
+
+  Future<List<Model>> _filterToOpenWebUiDefault(List<Model> models) async {
+    if (models.isEmpty) return models;
+
+    final desiredId = await _resolveOpenWebUiDefaultId();
+    final selected = _matchModelByIdOrName(models, desiredId) ?? models.first;
+
+    _persistDefaultModel(selected);
+    _ensureSelectedModel(selected);
+
+    return <Model>[selected];
+  }
+
+  Future<String?> _resolveOpenWebUiDefaultId() async {
+    String? desiredId;
+    final api = ref.read(apiServiceProvider);
+    if (api != null) {
+      try {
+        desiredId = await api.getDefaultModel();
+      } catch (_) {}
+    }
+
+    if (desiredId == null || desiredId.trim().isEmpty) {
+      try {
+        desiredId = await SettingsService.getDefaultModel();
+      } catch (_) {}
+    }
+
+    if (desiredId == null || desiredId.trim().isEmpty) {
+      desiredId = await _readCachedDefaultId();
+    }
+
+    return desiredId?.trim();
+  }
+
+  Future<String?> _readCachedDefaultId() async {
+    try {
+      final cached = await ref
+          .read(optimizedStorageServiceProvider)
+          .getLocalDefaultModel();
+      if (cached == null) return null;
+      if (cached.id.trim().isNotEmpty) return cached.id.trim();
+      if (cached.name.trim().isNotEmpty) return cached.name.trim();
+    } catch (_) {}
+    return null;
+  }
+
+  Model? _matchModelByIdOrName(List<Model> models, String? desiredId) {
+    if (desiredId == null || desiredId.trim().isEmpty) return null;
+    final trimmed = desiredId.trim();
+    for (final model in models) {
+      if (model.id == trimmed) return model;
+      if (model.name.trim() == trimmed) return model;
+    }
+    return null;
+  }
+
+  void _persistDefaultModel(Model model) {
+    final storage = ref.read(optimizedStorageServiceProvider);
+    unawaited(
+      storage.saveLocalDefaultModel(model).onError((error, stackTrace) {
+        DebugLogger.error(
+          'Failed to save default model to cache',
+          scope: 'models/default',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }),
+    );
+
+    final modelId = model.id.trim();
+    if (modelId.isEmpty) return;
+    unawaited(
+      SettingsService.setDefaultModel(modelId).onError((error, stackTrace) {
+        DebugLogger.error(
+          'Failed to save default model to settings',
+          scope: 'models/default',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }),
+    );
+  }
+
+  void _ensureSelectedModel(Model model) {
+    final currentSelected = ref.read(selectedModelProvider);
+    if (currentSelected?.id == model.id) return;
+    ref.read(isManualModelSelectionProvider.notifier).set(false);
+    ref.read(selectedModelProvider.notifier).set(model);
   }
 
   void _persistModelsAsync(List<Model> models) {

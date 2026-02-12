@@ -44,17 +44,11 @@ import '../../../shared/widgets/measure_size.dart';
 import '../../../shared/widgets/conduit_components.dart';
 import '../../../shared/widgets/middle_ellipsis_text.dart';
 import '../../../shared/widgets/modal_safe_area.dart';
-import '../../../core/services/settings_service.dart';
 import '../../../shared/utils/conversation_context_menu.dart';
 import '../../../shared/widgets/model_avatar.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../../core/services/platform_service.dart' as ps;
 import 'package:flutter/gestures.dart' show DragStartBehavior;
-
-// -----------------------------------------------------------------------------
-// CONFIGURATION: Set your single allowed model ID here.
-// -----------------------------------------------------------------------------
-const String _kForcedModelId = 'DeepSeek-V3.2';
 
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key});
@@ -70,15 +64,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final Set<String> _selectedMessageIds = <String>{};
   Timer? _scrollDebounceTimer;
   bool _isDeactivated = false;
-  double _inputHeight = 0; 
-  bool _lastKeyboardVisible = false; 
-  bool _didStartupFocus = false; 
+  double _inputHeight = 0;
+  bool _lastKeyboardVisible = false;
+  bool _didStartupFocus = false;
   String? _lastConversationId;
   bool _shouldAutoScrollToBottom = true;
   bool _autoScrollCallbackScheduled = false;
   bool _pendingConversationScrollReset = false;
-  bool _suppressKeepPinnedOnce = false; 
-  bool _userPausedAutoScroll = false; 
+  bool _suppressKeepPinnedOnce = false;
+  bool _userPausedAutoScroll = false;
   String? _cachedGreetingName;
   bool _greetingReady = false;
 
@@ -90,53 +84,25 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return fileSize <= (maxSizeMB * 1024 * 1024);
   }
 
-  Future<void> _checkAndAutoSelectModel() async {
-    // 1. Check if correct model is already selected
-    final selectedModel = ref.read(selectedModelProvider);
-    if (selectedModel != null && (selectedModel.id == _kForcedModelId || selectedModel.id.startsWith('$_kForcedModelId:'))) {
-      return;
+  Future<Model?> _resolveAllowedModel() async {
+    final modelsAsync = ref.read(modelsProvider);
+    if (modelsAsync.hasValue) {
+      final models = modelsAsync.value ?? const <Model>[];
+      if (models.isNotEmpty) return models.first;
     }
+    final models = await ref.read(modelsProvider.future);
+    if (models.isNotEmpty) return models.first;
+    return null;
+  }
 
-    // 2. OPTIMISTIC UPDATE: Force synthetic model IMMEDIATELY to prevent other model default
-    const syntheticModel = Model(
-      id: _kForcedModelId,
-      name: 'DeepSeek-V3.2',
-    );
-    ref.read(selectedModelProvider.notifier).set(syntheticModel);
-
+  Future<void> _checkAndAutoSelectModel() async {
     try {
-      // 3. Fetch fresh models from API
-      final modelsAsync = ref.read(modelsProvider);
-      List<Model> models;
+      final allowedModel = await _resolveAllowedModel();
+      if (!mounted || allowedModel == null) return;
 
-      if (modelsAsync.hasValue) {
-        models = modelsAsync.value!;
-      } else {
-        models = await ref.read(modelsProvider.future);
-      }
-
-      // 4. Find the REAL model object
-      final targetModel = models.firstWhere(
-        (m) {
-          if (m.id == _kForcedModelId) return true;
-          if (m.id.startsWith('$_kForcedModelId:')) return true;
-          if (m.name.toLowerCase() == _kForcedModelId.toLowerCase()) return true;
-          return false;
-        },
-        orElse: () => syntheticModel,
-      );
-        
-      // 5. Update with real model data
-      ref.read(selectedModelProvider.notifier).set(targetModel);
-      
-      // 6. Persist
-      try {
-         (ref.read(appSettingsProvider.notifier) as dynamic).setDefaultModel(_kForcedModelId);
-      } catch (_) {}
-      try {
-         await SettingsService.setDefaultModel(_kForcedModelId);
-      } catch (_) {}
-
+      final selectedModel = ref.read(selectedModelProvider);
+      if (selectedModel?.id == allowedModel.id) return;
+      ref.read(selectedModelProvider.notifier).set(allowedModel);
     } catch (e) {
       DebugLogger.error('auto-select-failed', scope: 'chat/model', error: e);
     }
@@ -164,7 +130,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     try {
       final storage = ref.read(optimizedStorageServiceProvider);
       final seen = await storage.getOnboardingSeen();
-      
+
       if (!seen && mounted) {
         await Future.delayed(const Duration(milliseconds: 500));
         if (!mounted) return;
@@ -172,7 +138,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         await storage.setOnboardingSeen(true);
       }
     } catch (e) {
-      DebugLogger.error('onboarding-status-failed', scope: 'chat/onboarding', error: e);
+      DebugLogger.error(
+        'onboarding-status-failed',
+        scope: 'chat/onboarding',
+        error: e,
+      );
     }
   }
 
@@ -252,7 +222,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       ref.read(androidAssistantProvider);
-      
+
       // 1. Auto-select model
       await _checkAndAutoSelectModel();
       if (!mounted) return;
@@ -305,18 +275,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _handleMessageSend(String text, dynamic selectedModel) async {
-    // --- FORCE FIX START ---
-    // Ensure we always send to the forced model, even if the UI was stale.
-    // If the model is missing or incorrect, force it to DeepSeek-R1-0528 immediately.
-    if (selectedModel == null || (selectedModel is Model && selectedModel.id != _kForcedModelId)) {
-      selectedModel = const Model(
-        id: _kForcedModelId,
-        name: 'DeepSeek-V3.2',
-      );
-      // Update the provider so the UI reflects this change for the next message
-      ref.read(selectedModelProvider.notifier).set(selectedModel);
+    // Ensure we always send to the OpenWebUI default model.
+    try {
+      final allowedModel = await _resolveAllowedModel();
+      if (allowedModel == null) {
+        DebugLogger.warning('no-model', scope: 'chat/model');
+        return;
+      }
+      if (selectedModel is! Model || selectedModel.id != allowedModel.id) {
+        ref.read(selectedModelProvider.notifier).set(allowedModel);
+      }
+    } catch (e) {
+      DebugLogger.error('model-resolve-failed', scope: 'chat/model', error: e);
+      return;
     }
-    // --- FORCE FIX END ---
 
     try {
       final attachedFiles = ref.read(attachedFilesProvider);
@@ -331,7 +303,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
       final toolIds = ref.read(selectedToolIdsProvider);
       final activeConv = ref.read(activeConversationProvider);
-      
+
       await ref
           .read(taskQueueProvider.notifier)
           .enqueueSendText(
@@ -368,7 +340,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     try {
       // RESTRICTED TO TEXT DOCUMENTS
       final attachments = await fileService.pickFiles(
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'rtf', 'md', 'json', 'xml'],
+        allowedExtensions: [
+          'pdf',
+          'doc',
+          'docx',
+          'txt',
+          'rtf',
+          'md',
+          'json',
+          'xml',
+        ],
       );
       if (attachments.isEmpty) return;
 
@@ -423,7 +404,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ref.read(attachedFilesProvider.notifier).addFiles([attachment]);
 
       final activeConv = ref.read(activeConversationProvider);
-      await ref.read(taskQueueProvider.notifier).enqueueUploadMedia(
+      await ref
+          .read(taskQueueProvider.notifier)
+          .enqueueUploadMedia(
             conversationId: activeConv?.id,
             filePath: attachment.file.path,
             fileName: attachment.displayName,
@@ -434,14 +417,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
-  Future<void> _handlePastedAttachments(List<LocalAttachment> attachments) async {
+  Future<void> _handlePastedAttachments(
+    List<LocalAttachment> attachments,
+  ) async {
     if (attachments.isEmpty) return;
     ref.read(attachedFilesProvider.notifier).addFiles(attachments);
     final activeConv = ref.read(activeConversationProvider);
     for (final attachment in attachments) {
       try {
         final fileSize = await attachment.file.length();
-        await ref.read(taskQueueProvider.notifier).enqueueUploadMedia(
+        await ref
+            .read(taskQueueProvider.notifier)
+            .enqueueUploadMedia(
               conversationId: activeConv?.id,
               filePath: attachment.file.path,
               fileName: attachment.displayName,
@@ -468,7 +455,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     ref.read(chatMessagesProvider.notifier).clearMessages();
     ref.read(activeConversationProvider.notifier).clear();
     if (mounted) setState(() => _showScrollToBottom = false);
-    
+
     _checkAndAutoSelectModel();
     _enableDefaultTools();
   }
@@ -484,7 +471,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       const double showThreshold = 300.0;
       const double hideThreshold = 150.0;
       final bool nearBottom = distanceFromBottom <= hideThreshold;
-      final bool hasScrollableContent = maxScroll.isFinite && maxScroll > showThreshold;
+      final bool hasScrollableContent =
+          maxScroll.isFinite && maxScroll > showThreshold;
       final bool showButton = _showScrollToBottom
           ? !nearBottom && hasScrollableContent
           : distanceFromBottom > showThreshold && hasScrollableContent;
@@ -577,12 +565,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return messages.where((m) => _selectedMessageIds.contains(m.id)).toList();
   }
 
-  Widget _buildAppBarPill({required BuildContext context, required Widget child, bool isCircular = false}) {
+  Widget _buildAppBarPill({
+    required BuildContext context,
+    required Widget child,
+    bool isCircular = false,
+  }) {
     return FloatingAppBarPill(isCircular: isCircular, child: child);
   }
 
   Widget _buildMessagesList(ThemeData theme) {
-    final messages = ref.watch(chatMessagesProvider.select((messages) => messages));
+    final messages = ref.watch(
+      chatMessagesProvider.select((messages) => messages),
+    );
     final isLoadingConversation = ref.watch(isLoadingConversationProvider);
 
     return AnimatedSwitcher(
@@ -590,7 +584,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       layoutBuilder: (currentChild, previousChildren) {
         return Stack(
           alignment: Alignment.topCenter,
-          children: <Widget>[...previousChildren, if (currentChild != null) currentChild],
+          children: <Widget>[
+            ...previousChildren,
+            if (currentChild != null) currentChild,
+          ],
         );
       },
       child: isLoadingConversation && messages.isEmpty
@@ -600,7 +597,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Widget _buildLoadingMessagesList() {
-    final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
+    final topPadding =
+        MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
     final bottomPadding = Spacing.lg + _inputHeight;
     return CustomScrollView(
       key: const ValueKey('loading_messages'),
@@ -608,20 +606,38 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
-          padding: EdgeInsets.fromLTRB(Spacing.lg, topPadding, Spacing.lg, bottomPadding),
+          padding: EdgeInsets.fromLTRB(
+            Spacing.lg,
+            topPadding,
+            Spacing.lg,
+            bottomPadding,
+          ),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               final isUser = index.isOdd;
               return Align(
-                alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                alignment: isUser
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
                 child: Container(
                   margin: const EdgeInsets.only(bottom: Spacing.md),
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.82,
+                  ),
                   padding: const EdgeInsets.all(Spacing.md),
                   decoration: BoxDecoration(
-                    color: isUser ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.15) : context.conduitTheme.cardBackground,
-                    borderRadius: BorderRadius.circular(AppBorderRadius.messageBubble),
-                    border: Border.all(color: context.conduitTheme.cardBorder, width: BorderWidth.regular),
+                    color: isUser
+                        ? context.conduitTheme.buttonPrimary.withValues(
+                            alpha: 0.15,
+                          )
+                        : context.conduitTheme.cardBackground,
+                    borderRadius: BorderRadius.circular(
+                      AppBorderRadius.messageBubble,
+                    ),
+                    border: Border.all(
+                      color: context.conduitTheme.cardBorder,
+                      width: BorderWidth.regular,
+                    ),
                     boxShadow: ConduitShadows.messageBubble(context),
                   ),
                   child: Column(
@@ -630,13 +646,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       Container(
                         height: 14,
                         width: index % 3 == 0 ? 140 : 220,
-                        decoration: BoxDecoration(color: context.conduitTheme.shimmerBase, borderRadius: BorderRadius.circular(AppBorderRadius.xs)),
+                        decoration: BoxDecoration(
+                          color: context.conduitTheme.shimmerBase,
+                          borderRadius: BorderRadius.circular(
+                            AppBorderRadius.xs,
+                          ),
+                        ),
                       ).animate().shimmer(duration: AnimationDuration.slow),
                       const SizedBox(height: Spacing.xs),
                       Container(
                         height: 14,
                         width: double.infinity,
-                        decoration: BoxDecoration(color: context.conduitTheme.shimmerBase, borderRadius: BorderRadius.circular(AppBorderRadius.xs)),
+                        decoration: BoxDecoration(
+                          color: context.conduitTheme.shimmerBase,
+                          borderRadius: BorderRadius.circular(
+                            AppBorderRadius.xs,
+                          ),
+                        ),
                       ).animate().shimmer(duration: AnimationDuration.slow),
                     ],
                   ),
@@ -682,13 +708,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       });
     }
 
-    final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
+    final topPadding =
+        MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
     final bottomPadding = Spacing.lg + _inputHeight;
     final isStreaming = messages.any((msg) => msg.isStreaming);
 
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
-        if (notification is ScrollStartNotification && notification.dragDetails != null) {
+        if (notification is ScrollStartNotification &&
+            notification.dragDetails != null) {
           if (isStreaming && !_userPausedAutoScroll) {
             setState(() => _userPausedAutoScroll = true);
           }
@@ -707,7 +735,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         cacheExtent: 600,
         slivers: [
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(Spacing.lg, topPadding, Spacing.lg, bottomPadding),
+            padding: EdgeInsets.fromLTRB(
+              Spacing.lg,
+              topPadding,
+              Spacing.lg,
+              bottomPadding,
+            ),
             sliver: OptimizedSliverList<ChatMessage>(
               items: messages,
               itemBuilder: (context, message, index) {
@@ -735,19 +768,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   }
                 }
 
-                final modelIconUrl = resolveModelIconUrlForModel(apiService, matchedModel);
-                
+                final modelIconUrl = resolveModelIconUrlForModel(
+                  apiService,
+                  matchedModel,
+                );
+
                 // Bubble logic
                 var hasUserBubbleBelow = false;
                 var hasAssistantBubbleBelow = false;
                 if (index + 1 < messages.length) {
-                   final nextRole = messages[index + 1].role;
-                   if (nextRole == 'user') hasUserBubbleBelow = true;
-                   if (nextRole == 'assistant') hasAssistantBubbleBelow = true;
+                  final nextRole = messages[index + 1].role;
+                  if (nextRole == 'user') hasUserBubbleBelow = true;
+                  if (nextRole == 'assistant') hasAssistantBubbleBelow = true;
                 }
 
-                final showFollowUps = !isUser && !hasUserBubbleBelow && !hasAssistantBubbleBelow;
-                
+                final showFollowUps =
+                    !isUser && !hasUserBubbleBelow && !hasAssistantBubbleBelow;
+
                 Widget messageWidget;
                 if (isUser) {
                   messageWidget = UserMessageBubble(
@@ -804,13 +841,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void _copyMessage(String content) {
     String cleanedContent = content;
     cleanedContent = cleanedContent.replaceAll(
-      RegExp(r'<details\s+type="reasoning"[^>]*>[\s\S]*?<\/details>', multiLine: true, dotAll: true), '',
+      RegExp(
+        r'<details\s+type="reasoning"[^>]*>[\s\S]*?<\/details>',
+        multiLine: true,
+        dotAll: true,
+      ),
+      '',
     );
     cleanedContent = cleanedContent.replaceAll(
-      RegExp(r'<think>[\s\S]*?<\/think>', multiLine: true, dotAll: true), '',
+      RegExp(r'<think>[\s\S]*?<\/think>', multiLine: true, dotAll: true),
+      '',
     );
     cleanedContent = cleanedContent.replaceAll(
-      RegExp(r'<reasoning>[\s\S]*?<\/reasoning>', multiLine: true, dotAll: true), '',
+      RegExp(
+        r'<reasoning>[\s\S]*?<\/reasoning>',
+        multiLine: true,
+        dotAll: true,
+      ),
+      '',
     );
     Clipboard.setData(ClipboardData(text: cleanedContent.trim()));
   }
@@ -824,20 +872,28 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (messageIndex <= 0 || messages[messageIndex - 1].role != 'user') return;
 
     try {
-      if (message.role == 'assistant' && (message.files?.any((f) => f['type'] == 'image') == true) && messageIndex == messages.length - 1) {
+      if (message.role == 'assistant' &&
+          (message.files?.any((f) => f['type'] == 'image') == true) &&
+          messageIndex == messages.length - 1) {
         final regenerateImages = ref.read(regenerateLastMessageProvider);
         await regenerateImages();
         return;
       }
 
-      ref.read(chatMessagesProvider.notifier).updateLastMessageWithFunction((m) {
+      ref.read(chatMessagesProvider.notifier).updateLastMessageWithFunction((
+        m,
+      ) {
         final meta = Map<String, dynamic>.from(m.metadata ?? const {});
         meta['archivedVariant'] = true;
         return m.copyWith(metadata: meta, isStreaming: false);
       });
 
       final userMessage = messages[messageIndex - 1];
-      await regenerateMessage(ref, userMessage.content, userMessage.attachmentIds);
+      await regenerateMessage(
+        ref,
+        userMessage.content,
+        userMessage.attachmentIds,
+      );
     } catch (e) {
       DebugLogger.log('Regenerate failed: $e', scope: 'chat/page');
     }
@@ -847,8 +903,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final l10n = AppLocalizations.of(context)!;
     final authUser = ref.watch(currentUserProvider2);
     final asyncUser = ref.watch(currentUserProvider);
-    final user = asyncUser.maybeWhen(data: (value) => value ?? authUser, orElse: () => authUser);
-    
+    final user = asyncUser.maybeWhen(
+      data: (value) => value ?? authUser,
+      orElse: () => authUser,
+    );
+
     String? greetingName;
     if (user != null) {
       final derived = deriveUserDisplayName(user, fallback: '').trim();
@@ -858,19 +917,28 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
     }
     greetingName ??= _cachedGreetingName;
-    
+
     final hasGreeting = greetingName != null && greetingName.isNotEmpty;
     if (hasGreeting && !_greetingReady) {
-      WidgetsBinding.instance.addPostFrameCallback((_) { if(mounted) setState(() => _greetingReady = true); });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _greetingReady = true);
+      });
     }
 
-    final greetingText = (hasGreeting && greetingName != null) ? l10n.onboardStartTitle(greetingName) : null;
+    final greetingText = (hasGreeting && greetingName != null)
+        ? l10n.onboardStartTitle(greetingName)
+        : null;
     final pendingFolderId = ref.watch(pendingFolderIdProvider);
-    final folders = ref.watch(foldersProvider).maybeWhen(data: (list) => list, orElse: () => <Folder>[]);
-    final pendingFolder = pendingFolderId != null ? folders.where((f) => f.id == pendingFolderId).firstOrNull : null;
+    final folders = ref
+        .watch(foldersProvider)
+        .maybeWhen(data: (list) => list, orElse: () => <Folder>[]);
+    final pendingFolder = pendingFolderId != null
+        ? folders.where((f) => f.id == pendingFolderId).firstOrNull
+        : null;
 
-    final topPadding = MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
-    
+    final topPadding =
+        MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.md;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return MediaQuery.removeViewInsets(
@@ -880,7 +948,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             width: double.infinity,
             height: constraints.maxHeight,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(Spacing.lg, topPadding, Spacing.lg, _inputHeight),
+              padding: EdgeInsets.fromLTRB(
+                Spacing.lg,
+                topPadding,
+                Spacing.lg,
+                _inputHeight,
+              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -888,33 +961,44 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(l10n.newChat, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+                        Text(
+                          l10n.newChat,
+                          style: theme.textTheme.headlineSmall,
+                          textAlign: TextAlign.center,
+                        ),
                         const SizedBox(height: Spacing.sm),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.folder, size: 14, color: context.conduitTheme.textSecondary),
+                            Icon(
+                              Icons.folder,
+                              size: 14,
+                              color: context.conduitTheme.textSecondary,
+                            ),
                             const SizedBox(width: Spacing.xs),
-                            Text(pendingFolder.name, style: AppTypography.small),
+                            Text(
+                              pendingFolder.name,
+                              style: AppTypography.small,
+                            ),
                           ],
                         ),
                       ],
-                    )
+                    ),
                   ] else ...[
-                     SizedBox(
-                       height: 60,
-                       child: AnimatedOpacity(
-                         opacity: _greetingReady ? 1 : 0,
-                         duration: const Duration(milliseconds: 260),
-                         child: Center(
-                           child: Text(
-                             _greetingReady ? (greetingText ?? '') : '',
-                             style: theme.textTheme.headlineSmall,
-                             textAlign: TextAlign.center,
-                           ),
-                         ),
-                       ),
-                     )
+                    SizedBox(
+                      height: 60,
+                      child: AnimatedOpacity(
+                        opacity: _greetingReady ? 1 : 0,
+                        duration: const Duration(milliseconds: 260),
+                        child: Center(
+                          child: Text(
+                            _greetingReady ? (greetingText ?? '') : '',
+                            style: theme.textTheme.headlineSmall,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -931,25 +1015,37 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final l10n = AppLocalizations.of(context)!;
     final selectedModel = ref.watch(selectedModelProvider);
     final isReviewerMode = ref.watch(reviewerModeProvider);
-    final conversationTitle = ref.watch(activeConversationProvider.select((conv) => conv?.title));
-    final displayConversationTitle = conversationTitle?.trim().isNotEmpty == true ? conversationTitle!.trim() : null;
+    final conversationTitle = ref.watch(
+      activeConversationProvider.select((conv) => conv?.title),
+    );
+    final displayConversationTitle =
+        conversationTitle?.trim().isNotEmpty == true
+        ? conversationTitle!.trim()
+        : null;
     final isLoadingConversation = ref.watch(isLoadingConversationProvider);
     final apiService = ref.watch(apiServiceProvider);
     final authUser = ref.watch(currentUserProvider2);
-    final user = ref.watch(currentUserProvider).maybeWhen(data: (u) => u ?? authUser, orElse: () => authUser);
+    final user = ref
+        .watch(currentUserProvider)
+        .maybeWhen(data: (u) => u ?? authUser, orElse: () => authUser);
 
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final canScroll = _scrollController.hasClients && _scrollController.position.maxScrollExtent > 0;
-    
+    final canScroll =
+        _scrollController.hasClients &&
+        _scrollController.position.maxScrollExtent > 0;
+
     if (keyboardVisible && !_lastKeyboardVisible) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _distanceFromBottom() <= 300) _scrollToBottom(smooth: true);
+        if (mounted && _distanceFromBottom() <= 300)
+          _scrollToBottom(smooth: true);
       });
     }
     _lastKeyboardVisible = keyboardVisible;
 
     if (isReviewerMode && selectedModel == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndAutoSelectModel());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _checkAndAutoSelectModel(),
+      );
     }
 
     if (!_didStartupFocus) {
@@ -969,24 +1065,34 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             return;
           }
           if (mounted) {
-             final shouldExit = await ThemedDialogs.confirm(context, title: l10n.appTitle, message: l10n.endYourSession, confirmText: l10n.confirm, isDestructive: true);
-             if (shouldExit && mounted) {
-                if (Platform.isAndroid) SystemNavigator.pop();
-             }
+            final shouldExit = await ThemedDialogs.confirm(
+              context,
+              title: l10n.appTitle,
+              message: l10n.endYourSession,
+              confirmText: l10n.confirm,
+              isDestructive: true,
+            );
+            if (shouldExit && mounted) {
+              if (Platform.isAndroid) SystemNavigator.pop();
+            }
           }
         },
         child: Builder(
           builder: (outerCtx) {
             final size = MediaQuery.of(outerCtx).size;
             final isTablet = size.shortestSide >= 600;
-            
+
             return ResponsiveDrawerLayout(
               maxFraction: isTablet ? 0.42 : 0.84,
               edgeFraction: isTablet ? 0.36 : 0.50,
               settleFraction: 0.06,
-              scrimColor: Platform.isIOS ? context.colorTokens.scrimMedium : context.colorTokens.scrimStrong,
+              scrimColor: Platform.isIOS
+                  ? context.colorTokens.scrimMedium
+                  : context.colorTokens.scrimStrong,
               tabletDrawerWidth: 320.0,
-              onOpenStart: () => ref.read(composerAutofocusEnabledProvider.notifier).set(false),
+              onOpenStart: () => ref
+                  .read(composerAutofocusEnabledProvider.notifier)
+                  .set(false),
               drawer: Container(
                 color: context.sidebarTheme.background,
                 child: const SafeArea(child: ChatsDrawer()),
@@ -1005,58 +1111,118 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       centerTitle: true,
                       leadingWidth: 44 + Spacing.inputPadding,
                       leading: _isSelectionMode
-                        ? Center(child: GestureDetector(
-                            onTap: _clearSelection,
-                            child: _buildAppBarPill(context: context, isCircular: true, child: Icon(Icons.close, color: context.conduitTheme.textPrimary)),
-                          ))
-                        : Center(child: GestureDetector(
-                            onTap: () {
-                               // Use innerContext to find the drawer layout
-                               ResponsiveDrawerLayout.of(innerContext)?.toggle();
-                            },
-                            child: _buildAppBarPill(context: outerCtx, isCircular: true, child: Icon(Icons.menu, color: context.conduitTheme.textPrimary)),
-                          )),
+                          ? Center(
+                              child: GestureDetector(
+                                onTap: _clearSelection,
+                                child: _buildAppBarPill(
+                                  context: context,
+                                  isCircular: true,
+                                  child: Icon(
+                                    Icons.close,
+                                    color: context.conduitTheme.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Center(
+                              child: GestureDetector(
+                                onTap: () {
+                                  // Use innerContext to find the drawer layout
+                                  ResponsiveDrawerLayout.of(
+                                    innerContext,
+                                  )?.toggle();
+                                },
+                                child: _buildAppBarPill(
+                                  context: outerCtx,
+                                  isCircular: true,
+                                  child: Icon(
+                                    Icons.menu,
+                                    color: context.conduitTheme.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
                       title: _isSelectionMode
-                        ? _buildAppBarPill(context: context, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), child: Text('${_selectedMessageIds.length} selected')))
-                        : LayoutBuilder(builder: (ctx, constraints) {
-                            Widget? titlePill;
-                            if (isLoadingConversation) {
-                               titlePill = _buildAppBarPill(context: context, child: const SizedBox(width: 100, height: 18)); 
-                            } else if (displayConversationTitle != null) {
-                               titlePill = ConduitContextMenu(
-                                 actions: buildConversationActions(context: context, ref: ref, conversation: ref.read(activeConversationProvider)),
-                                 child: _buildAppBarPill(context: context, child: Padding(
-                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                   child: StreamingTitleText(
-                                     title: displayConversationTitle,
-                                     style: AppTypography.headlineSmallStyle.copyWith(
-                                       color: context.conduitTheme.textPrimary,
-                                       fontWeight: FontWeight.w600,
-                                       fontSize: 16,
-                                       height: 1.3,
-                                     ),
-                                   ),
-                                 )),
-                               );
-                            }
-                            
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (titlePill != null) titlePill,
-                              ],
-                            );
-                        }),
+                          ? _buildAppBarPill(
+                              context: context,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                child: Text(
+                                  '${_selectedMessageIds.length} selected',
+                                ),
+                              ),
+                            )
+                          : LayoutBuilder(
+                              builder: (ctx, constraints) {
+                                Widget? titlePill;
+                                if (isLoadingConversation) {
+                                  titlePill = _buildAppBarPill(
+                                    context: context,
+                                    child: const SizedBox(
+                                      width: 100,
+                                      height: 18,
+                                    ),
+                                  );
+                                } else if (displayConversationTitle != null) {
+                                  titlePill = ConduitContextMenu(
+                                    actions: buildConversationActions(
+                                      context: context,
+                                      ref: ref,
+                                      conversation: ref.read(
+                                        activeConversationProvider,
+                                      ),
+                                    ),
+                                    child: _buildAppBarPill(
+                                      context: context,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 4,
+                                        ),
+                                        child: StreamingTitleText(
+                                          title: displayConversationTitle,
+                                          style: AppTypography
+                                              .headlineSmallStyle
+                                              .copyWith(
+                                                color: context
+                                                    .conduitTheme
+                                                    .textPrimary,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16,
+                                                height: 1.3,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [if (titlePill != null) titlePill],
+                                );
+                              },
+                            ),
                       actions: [
                         if (!_isSelectionMode)
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: GestureDetector(
                               onTap: _handleNewChat,
-                              child: _buildAppBarPill(context: context, isCircular: true, child: Icon(Icons.add_comment, color: context.conduitTheme.textPrimary)),
+                              child: _buildAppBarPill(
+                                context: context,
+                                isCircular: true,
+                                child: Icon(
+                                  Icons.add_comment,
+                                  color: context.conduitTheme.textPrimary,
+                                ),
+                              ),
                             ),
                           ),
-                        
+
                         if (!_isSelectionMode)
                           Padding(
                             padding: const EdgeInsets.only(right: 16),
@@ -1067,41 +1233,82 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                 isCircular: true,
                                 child: UserAvatar(
                                   size: 28,
-                                  imageUrl: resolveUserAvatarUrlForUser(apiService, user),
-                                  fallbackText: deriveUserDisplayName(user).characters.firstOrNull?.toUpperCase() ?? 'U',
+                                  imageUrl: resolveUserAvatarUrlForUser(
+                                    apiService,
+                                    user,
+                                  ),
+                                  fallbackText:
+                                      deriveUserDisplayName(
+                                        user,
+                                      ).characters.firstOrNull?.toUpperCase() ??
+                                      'U',
                                 ),
                               ),
                             ),
                           ),
 
                         if (_isSelectionMode)
-                          Padding(padding: const EdgeInsets.only(right: 16), child: GestureDetector(onTap: _deleteSelectedMessages, child: _buildAppBarPill(context: context, isCircular: true, child: Icon(Icons.delete, color: context.conduitTheme.error)))),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: GestureDetector(
+                              onTap: _deleteSelectedMessages,
+                              child: _buildAppBarPill(
+                                context: context,
+                                isCircular: true,
+                                child: Icon(
+                                  Icons.delete,
+                                  color: context.conduitTheme.error,
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                     body: GestureDetector(
-                      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+                      onTap: () =>
+                          FocusManager.instance.primaryFocus?.unfocus(),
                       child: Stack(
                         children: [
                           Positioned.fill(
                             child: ConduitRefreshIndicator(
-                              edgeOffset: MediaQuery.of(context).padding.top + kToolbarHeight,
+                              edgeOffset:
+                                  MediaQuery.of(context).padding.top +
+                                  kToolbarHeight,
                               onRefresh: () async {
-                                 await Future.delayed(const Duration(milliseconds: 500));
+                                await Future.delayed(
+                                  const Duration(milliseconds: 500),
+                                );
                               },
-                              child: RepaintBoundary(child: _buildMessagesList(theme)),
+                              child: RepaintBoundary(
+                                child: _buildMessagesList(theme),
+                              ),
                             ),
                           ),
                           Positioned(
-                            left: 0, right: 0, bottom: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
                             child: MeasureSize(
-                              onChange: (size) { if(mounted) setState(() => _inputHeight = size.height); },
+                              onChange: (size) {
+                                if (mounted)
+                                  setState(() => _inputHeight = size.height);
+                              },
                               child: Container(
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
                                     stops: const [0.0, 0.4, 1.0],
-                                    colors: [theme.scaffoldBackgroundColor.withValues(alpha: 0), theme.scaffoldBackgroundColor.withValues(alpha: 0.85), theme.scaffoldBackgroundColor],
-                                  )
+                                    colors: [
+                                      theme.scaffoldBackgroundColor.withValues(
+                                        alpha: 0,
+                                      ),
+                                      theme.scaffoldBackgroundColor.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                      theme.scaffoldBackgroundColor,
+                                    ],
+                                  ),
                                 ),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
@@ -1110,9 +1317,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                     const FileAttachmentWidget(),
                                     const ContextAttachmentWidget(),
                                     ModernChatInput(
-                                      onSendMessage: (text) => _handleMessageSend(text, selectedModel),
+                                      onSendMessage: (text) =>
+                                          _handleMessageSend(
+                                            text,
+                                            selectedModel,
+                                          ),
                                       onFileAttachment: _handleFileAttachment,
-                                      onPastedAttachments: _handlePastedAttachments,
+                                      onPastedAttachments:
+                                          _handlePastedAttachments,
                                     ),
                                   ],
                                 ),
@@ -1120,38 +1332,67 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             ),
                           ),
                           Positioned(
-                            top: 0, left: 0, right: 0,
+                            top: 0,
+                            left: 0,
+                            right: 0,
                             child: IgnorePointer(
                               child: Container(
-                                height: MediaQuery.of(context).padding.top + kToolbarHeight + Spacing.xl,
+                                height:
+                                    MediaQuery.of(context).padding.top +
+                                    kToolbarHeight +
+                                    Spacing.xl,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                                    colors: [theme.scaffoldBackgroundColor, theme.scaffoldBackgroundColor.withValues(alpha: 0)],
-                                  )
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      theme.scaffoldBackgroundColor,
+                                      theme.scaffoldBackgroundColor.withValues(
+                                        alpha: 0,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                           Positioned(
                             bottom: _inputHeight > 0 ? _inputHeight : 80,
-                            left: 0, right: 0,
+                            left: 0,
+                            right: 0,
                             child: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
-                              child: (_showScrollToBottom && !keyboardVisible && canScroll)
-                                ? Center(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                        child: Container(
-                                          decoration: BoxDecoration(color: theme.cardColor.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(20)),
-                                          child: IconButton(onPressed: _scrollToBottom, icon: const Icon(Icons.arrow_downward)),
+                              child:
+                                  (_showScrollToBottom &&
+                                      !keyboardVisible &&
+                                      canScroll)
+                                  ? Center(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: BackdropFilter(
+                                          filter: ImageFilter.blur(
+                                            sigmaX: 10,
+                                            sigmaY: 10,
+                                          ),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: theme.cardColor.withValues(
+                                                alpha: 0.8,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: IconButton(
+                                              onPressed: _scrollToBottom,
+                                              icon: const Icon(
+                                                Icons.arrow_downward,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
+                                    )
+                                  : const SizedBox.shrink(),
                             ),
                           ),
                         ],
@@ -1167,7 +1408,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
-  void _showModelDropdown(BuildContext context, WidgetRef ref, List<Model> models) {}
+  void _showModelDropdown(
+    BuildContext context,
+    WidgetRef ref,
+    List<Model> models,
+  ) {}
 
   void _deleteSelectedMessages() {
     final selected = _getSelectedMessages();
@@ -1182,7 +1427,12 @@ class _SelectableMessageWrapper extends StatelessWidget {
   final VoidCallback? onLongPress;
   final Widget child;
 
-  const _SelectableMessageWrapper({required this.isSelected, required this.onTap, this.onLongPress, required this.child});
+  const _SelectableMessageWrapper({
+    required this.isSelected,
+    required this.onTap,
+    this.onLongPress,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1192,8 +1442,12 @@ class _SelectableMessageWrapper extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.1) : null,
-          border: isSelected ? Border.all(color: context.conduitTheme.buttonPrimary) : null,
+          color: isSelected
+              ? context.conduitTheme.buttonPrimary.withValues(alpha: 0.1)
+              : null,
+          border: isSelected
+              ? Border.all(color: context.conduitTheme.buttonPrimary)
+              : null,
           borderRadius: BorderRadius.circular(12),
         ),
         child: child,
