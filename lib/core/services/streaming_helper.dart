@@ -220,6 +220,9 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
 }) {
   // Track if streaming has been finished to avoid duplicate cleanup
   bool hasFinished = false;
+  Timer? missingContentTimer;
+  int missingContentAttempts = 0;
+  const int missingContentMaxAttempts = 3;
 
   // Start background execution to keep app alive during streaming (iOS/Android)
   // Uses the assistantMessageId as a unique stream identifier
@@ -242,6 +245,8 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
     if (hasFinished) return;
     hasFinished = true;
     api.clearStreamCancelToken(assistantMessageId);
+    missingContentTimer?.cancel();
+    missingContentTimer = null;
 
     // Stop background execution when streaming completes
     if (Platform.isIOS || Platform.isAndroid) {
@@ -393,6 +398,55 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
     return false;
   }
 
+  Duration _missingContentDelay(int attempt) {
+    final baseSeconds = (modelUsesReasoning || toolsEnabled) ? 12 : 6;
+    final scaled = baseSeconds * (attempt + 1);
+    final capped = scaled > 30 ? 30 : scaled;
+    return Duration(seconds: capped);
+  }
+
+  Future<void> _runMissingContentCheck(String reason) async {
+    if (hasFinished) return;
+    final msgs = getMessages();
+    if (msgs.isEmpty || msgs.last.role != 'assistant') return;
+    if (msgs.last.content.trim().isNotEmpty) return;
+
+    missingContentAttempts += 1;
+    final result = await pollServerForMessage(maxAttempts: 1);
+    if (hasFinished) return;
+
+    if (result != null) {
+      final applied = applyServerContent(
+        result.content,
+        result.followUps,
+        finishIfDone: true,
+        isDone: result.isDone,
+        source: 'Missing content check ($reason)',
+      );
+      if (applied) {
+        syncImages();
+      }
+      if (!hasFinished && !result.isDone) {
+        _scheduleMissingContentCheck('retry');
+      }
+      return;
+    }
+
+    _scheduleMissingContentCheck('retry');
+  }
+
+  void _scheduleMissingContentCheck(String reason) {
+    if (hasFinished) return;
+    if (missingContentAttempts >= missingContentMaxAttempts) return;
+    if (missingContentTimer != null) return;
+
+    final delay = _missingContentDelay(missingContentAttempts);
+    missingContentTimer = Timer(delay, () {
+      missingContentTimer = null;
+      unawaited(_runMissingContentCheck(reason));
+    });
+  }
+
   if (hasSocketSignals) {
     // Handle socket reconnection - update session IDs and check for missed events
     if (socketService != null) {
@@ -463,6 +517,8 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
     pendingImageSignature = null;
     lastProcessedImageSignature = null;
     imageCollectionRequestId = 0;
+    missingContentTimer?.cancel();
+    missingContentTimer = null;
   }
 
   bool isSearching = false;
@@ -813,6 +869,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                 }
               }
             }
+            _scheduleMissingContentCheck('sources');
           }
           if (payload.containsKey('tool_calls')) {
             final tc = payload['tool_calls'];
