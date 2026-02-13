@@ -51,10 +51,7 @@ import '../../../shared/widgets/user_avatar.dart';
 import '../../../core/services/platform_service.dart' as ps;
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 
-// -----------------------------------------------------------------------------
-// CONFIGURATION: Set your single allowed model ID here.
-// -----------------------------------------------------------------------------
-const String _kForcedModelId = 'DeepSeek-V3.2';
+
 
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key});
@@ -90,57 +87,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return fileSize <= (maxSizeMB * 1024 * 1024);
   }
 
-  Future<void> _checkAndAutoSelectModel() async {
-    // 1. Check if correct model is already selected
-    final selectedModel = ref.read(selectedModelProvider);
-    if (selectedModel != null && (selectedModel.id == _kForcedModelId || selectedModel.id.startsWith('$_kForcedModelId:'))) {
-      return;
-    }
 
-    // 2. OPTIMISTIC UPDATE: Force synthetic model IMMEDIATELY to prevent other model default
-    const syntheticModel = Model(
-      id: _kForcedModelId,
-      name: 'DeepSeek-V3.2',
-    );
-    ref.read(selectedModelProvider.notifier).set(syntheticModel);
-
-    try {
-      // 3. Fetch fresh models from API
-      final modelsAsync = ref.read(modelsProvider);
-      List<Model> models;
-
-      if (modelsAsync.hasValue) {
-        models = modelsAsync.value!;
-      } else {
-        models = await ref.read(modelsProvider.future);
-      }
-
-      // 4. Find the REAL model object
-      final targetModel = models.firstWhere(
-        (m) {
-          if (m.id == _kForcedModelId) return true;
-          if (m.id.startsWith('$_kForcedModelId:')) return true;
-          if (m.name.toLowerCase() == _kForcedModelId.toLowerCase()) return true;
-          return false;
-        },
-        orElse: () => syntheticModel,
-      );
-        
-      // 5. Update with real model data
-      ref.read(selectedModelProvider.notifier).set(targetModel);
-      
-      // 6. Persist
-      try {
-         (ref.read(appSettingsProvider.notifier) as dynamic).setDefaultModel(_kForcedModelId);
-      } catch (_) {}
-      try {
-         await SettingsService.setDefaultModel(_kForcedModelId);
-      } catch (_) {}
-
-    } catch (e) {
-      DebugLogger.error('auto-select-failed', scope: 'chat/model', error: e);
-    }
-  }
 
   /// NEW: Automatically enables all available tools for the session
   /// Uses toolsListProvider which handles fetching/caching internally
@@ -253,8 +200,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (!mounted) return;
       ref.read(androidAssistantProvider);
       
-      // 1. Auto-select model
-      await _checkAndAutoSelectModel();
       if (!mounted) return;
 
       // 2. Auto-enable all tools
@@ -305,18 +250,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _handleMessageSend(String text, dynamic selectedModel) async {
-    // --- FORCE FIX START ---
-    // Ensure we always send to the forced model, even if the UI was stale.
-    // If the model is missing or incorrect, force it to DeepSeek-R1-0528 immediately.
-    if (selectedModel == null || (selectedModel is Model && selectedModel.id != _kForcedModelId)) {
-      selectedModel = const Model(
-        id: _kForcedModelId,
-        name: 'DeepSeek-V3.2',
-      );
-      // Update the provider so the UI reflects this change for the next message
-      ref.read(selectedModelProvider.notifier).set(selectedModel);
-    }
-    // --- FORCE FIX END ---
+
 
     try {
       final attachedFiles = ref.read(attachedFilesProvider);
@@ -469,7 +403,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     ref.read(activeConversationProvider.notifier).clear();
     if (mounted) setState(() => _showScrollToBottom = false);
     
-    _checkAndAutoSelectModel();
+
     _enableDefaultTools();
   }
 
@@ -723,7 +657,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   if (modelsAsync.hasValue) {
                     try {
                       final match = modelsAsync.value!.firstWhere(
-                        (m) => m.id == rawModel || m.name == rawModel,
+                        (m) => m.id.toLowerCase() == rawModel!.toLowerCase() || m.name.toLowerCase() == rawModel.toLowerCase(),
                       );
                       matchedModel = match;
                       displayModelName = _formatModelDisplayName(match.name);
@@ -948,9 +882,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     _lastKeyboardVisible = keyboardVisible;
 
-    if (isReviewerMode && selectedModel == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndAutoSelectModel());
-    }
+
 
     if (!_didStartupFocus) {
       _didStartupFocus = true;

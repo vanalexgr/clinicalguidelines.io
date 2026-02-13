@@ -398,14 +398,17 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
     return false;
   }
 
-  Duration _missingContentDelay(int attempt) {
+  Duration missingContentDelay(int attempt) {
     final baseSeconds = (modelUsesReasoning || toolsEnabled) ? 12 : 6;
     final scaled = baseSeconds * (attempt + 1);
     final capped = scaled > 30 ? 30 : scaled;
     return Duration(seconds: capped);
   }
 
-  Future<void> _runMissingContentCheck(String reason) async {
+  late final Future<void> Function(String) runMissingContentCheck;
+  late final void Function(String) scheduleMissingContentCheck;
+
+  runMissingContentCheck = (String reason) async {
     if (hasFinished) return;
     final msgs = getMessages();
     if (msgs.isEmpty || msgs.last.role != 'assistant') return;
@@ -427,25 +430,25 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
         syncImages();
       }
       if (!hasFinished && !result.isDone) {
-        _scheduleMissingContentCheck('retry');
+        scheduleMissingContentCheck('retry');
       }
       return;
     }
 
-    _scheduleMissingContentCheck('retry');
-  }
+    scheduleMissingContentCheck('retry');
+  };
 
-  void _scheduleMissingContentCheck(String reason) {
+  scheduleMissingContentCheck = (String reason) {
     if (hasFinished) return;
     if (missingContentAttempts >= missingContentMaxAttempts) return;
     if (missingContentTimer != null) return;
 
-    final delay = _missingContentDelay(missingContentAttempts);
+    final delay = missingContentDelay(missingContentAttempts);
     missingContentTimer = Timer(delay, () {
       missingContentTimer = null;
-      unawaited(_runMissingContentCheck(reason));
+      unawaited(runMissingContentCheck(reason));
     });
-  }
+  };
 
   if (hasSocketSignals) {
     // Handle socket reconnection - update session IDs and check for missed events
@@ -869,7 +872,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
                 }
               }
             }
-            _scheduleMissingContentCheck('sources');
+            scheduleMissingContentCheck('sources');
           }
           if (payload.containsKey('tool_calls')) {
             final tc = payload['tool_calls'];
@@ -1597,7 +1600,7 @@ ActiveSocketStream attachUnifiedChunkedStreaming({
   return ActiveSocketStream(
     controller: controller,
     socketSubscriptions: socketSubscriptions,
-    disposeWatchdog: () {},
+    disposeWatchdog: disposeSocketSubscriptions,
   );
 }
 

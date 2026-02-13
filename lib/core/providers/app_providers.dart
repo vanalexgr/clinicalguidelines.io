@@ -799,8 +799,49 @@ class Models extends _$Models {
         scope: 'models',
         data: {'count': models.length},
       );
-      _persistModelsAsync(models);
-      return models;
+
+      // --- RESTRICT TO DEFAULT MODEL ONLY ---
+      List<Model> filteredModels = <Model>[];
+      
+      // 1. Try to find user's preferred default model ID
+      String? targetModelId;
+      try {
+        // Check server settings FIRST to ensure we are in sync
+        targetModelId = await api.getDefaultModel();
+
+        if (targetModelId != null && targetModelId.isNotEmpty) {
+           // Update local settings to match server
+           await SettingsService.setDefaultModel(targetModelId);
+           DebugLogger.log('synced-default-model', scope: 'models', data: {'id': targetModelId});
+        } else {
+           // Fallback to local settings if server didn't return one
+           targetModelId = await SettingsService.getDefaultModel();
+        }
+      } catch (e) {
+        // Ignore errors falling back to default behavior
+      }
+
+      // 2. Filter the list
+      if (targetModelId != null && targetModelId.isNotEmpty) {
+        // Find exact match
+        final match = models.where((m) => m.id.toLowerCase() == targetModelId!.toLowerCase()).firstOrNull;
+        if (match != null) {
+          filteredModels = [match];
+          DebugLogger.log('restricted-to-default', scope: 'models', data: {'id': targetModelId});
+        }
+      }
+
+      // 3. Fallback: If no default found or default invalid, restrict to the first available model
+      if (filteredModels.isEmpty && models.isNotEmpty) {
+         filteredModels = [models.first];
+         DebugLogger.log('restricted-to-first-available', scope: 'models', data: {'id': models.first.id});
+      }
+      
+      // If we filtered down to something, use it. Otherwise (empty list), return empty.
+      final result = filteredModels.isNotEmpty ? filteredModels : <Model>[];
+
+      _persistModelsAsync(result);
+      return result;
     } catch (e, stackTrace) {
       DebugLogger.error(
         'fetch-failed',
