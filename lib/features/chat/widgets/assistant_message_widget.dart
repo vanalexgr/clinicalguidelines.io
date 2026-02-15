@@ -29,6 +29,9 @@ import 'streaming_status_widget.dart';
 final _base64ImagePattern = RegExp(r'data:image/[^;]+;base64,[A-Za-z0-9+/]+=*');
 // Handle both URL formats: /api/v1/files/{id} and /api/v1/files/{id}/content
 final _fileIdPattern = RegExp(r'/api/v1/files/([^/]+)(?:/content)?$');
+final _linkedImagePattern = RegExp(
+  r'\[!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)\]\(([^)\s]+)(?:\s+"[^"]*")?\)',
+);
 
 class AssistantMessageWidget extends ConsumerStatefulWidget {
   final dynamic message;
@@ -607,6 +610,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     final activeFiles = showingVersion
         ? widget.message.versions[_activeVersionIndex].files
         : widget.message.files;
+    final renderFiguresInMarkdown = _activeContentHasFiguresSection();
     final hasSources = widget.message.sources.isNotEmpty;
 
     return Container(
@@ -632,7 +636,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
                   children: [
                     // Display attachments - prioritize files array over attachmentIds to avoid duplication
                     if (activeFiles != null && activeFiles.isNotEmpty) ...[
-                      _buildFilesFromArray(),
+                      renderFiguresInMarkdown
+                          ? _buildNonImageFilesFromArray(activeFiles)
+                          : _buildFilesFromArray(),
                       const SizedBox(height: Spacing.md),
                     ] else if (widget.message.attachmentIds != null &&
                         widget.message.attachmentIds!.isNotEmpty) ...[
@@ -744,8 +750,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     final msg = widget.message as ChatMessage;
 
     // If viewing a version, return the version's error
-    if (_activeVersionIndex >= 0 &&
-        _activeVersionIndex < msg.versions.length) {
+    if (_activeVersionIndex >= 0 && _activeVersionIndex < msg.versions.length) {
       return msg.versions[_activeVersionIndex].error;
     }
 
@@ -775,18 +780,12 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline,
-            size: 20,
-            color: errorColor,
-          ),
+          Icon(Icons.info_outline, size: 20, color: errorColor),
           const SizedBox(width: Spacing.sm),
           Expanded(
             child: Text(
               displayText,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: errorColor,
-              ),
+              style: theme.textTheme.bodyMedium?.copyWith(color: errorColor),
             ),
           ),
         ],
@@ -806,6 +805,10 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
     // Process images in the remaining text
     final processedContent = _processContentForImages(content);
+    final linkedImageTargets = _extractLinkedImageTargets(processedContent);
+    final linkedImageFullTargets = linkedImageTargets.values.toSet();
+    final suppressMarkdownImages =
+        _hasActiveImageFiles() && !_activeContentHasFiguresSection();
 
     Widget buildDefault(BuildContext context) => StreamingMarkdownWidget(
       content: processedContent,
@@ -813,10 +816,21 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       onTapLink: (url, _) => _launchUri(url),
       sources: widget.message.sources,
       imageBuilderOverride: (uri, title, alt) {
+        if (suppressMarkdownImages) {
+          return const SizedBox.shrink();
+        }
         // Route markdown images through the enhanced image widget so they
         // get caching, auth headers, fullscreen viewer, and sharing.
+        final imageUrl = _normalizeMarkdownUrl(uri.toString());
+        if (linkedImageFullTargets.contains(imageUrl)) {
+          // Hide duplicate standalone full-size images when a linked-thumbnail
+          // representation already exists in the same markdown block.
+          return const SizedBox.shrink();
+        }
+        final fullscreenUrl = linkedImageTargets[imageUrl];
         return EnhancedImageAttachment(
-          attachmentId: uri.toString(),
+          attachmentId: imageUrl,
+          fullscreenImageUrl: fullscreenUrl,
           isMarkdownFormat: true,
           constraints: const BoxConstraints(maxWidth: 500, maxHeight: 400),
           disableAnimation: widget.isStreaming,
@@ -860,6 +874,61 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
 
     return content;
+  }
+
+  bool _hasActiveImageFiles() {
+    final filesArray = _activeVersionIndex >= 0
+        ? widget.message.versions[_activeVersionIndex].files
+        : widget.message.files;
+    if (filesArray == null || filesArray.isEmpty) {
+      return false;
+    }
+    return filesArray.any((file) => file is Map && file['type'] == 'image');
+  }
+
+  bool _activeContentHasFiguresSection() {
+    final activeContent = _activeVersionIndex >= 0
+        ? widget.message.versions[_activeVersionIndex].content
+        : widget.message.content;
+    final normalized = activeContent.toUpperCase();
+    return normalized.contains('FIGURES / TABLES');
+  }
+
+  Widget _buildNonImageFilesFromArray(List<dynamic> allFiles) {
+    final nonImageFiles = allFiles
+        .where((file) => file is Map && file['type'] != 'image')
+        .toList();
+    if (nonImageFiles.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return _buildNonImageFiles(nonImageFiles);
+  }
+
+  Map<String, String> _extractLinkedImageTargets(String content) {
+    final targets = <String, String>{};
+    for (final match in _linkedImagePattern.allMatches(content)) {
+      final thumbUrl = match.group(1);
+      final fullUrl = match.group(2);
+      if (thumbUrl == null || fullUrl == null) {
+        continue;
+      }
+      final normalizedThumb = _normalizeMarkdownUrl(thumbUrl);
+      final normalizedFull = _normalizeMarkdownUrl(fullUrl);
+      if (!normalizedThumb.startsWith('http') ||
+          !normalizedFull.startsWith('http')) {
+        continue;
+      }
+      targets[normalizedThumb] = normalizedFull;
+    }
+    return targets;
+  }
+
+  String _normalizeMarkdownUrl(String value) {
+    var normalized = value.trim();
+    if (normalized.startsWith('<') && normalized.endsWith('>')) {
+      normalized = normalized.substring(1, normalized.length - 1);
+    }
+    return normalized.replaceAll('&amp;', '&');
   }
 
   Widget _buildAttachmentItems() {
@@ -1123,7 +1192,8 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     // Also check the active version's error if viewing a version
     final activeError = _getActiveError();
     final hasErrorField = activeError != null;
-    final isErrorMessage = hasErrorField ||
+    final isErrorMessage =
+        hasErrorField ||
         widget.message.content.contains('⚠️') ||
         widget.message.content.contains('Error') ||
         widget.message.content.contains('timeout') ||
@@ -1310,8 +1380,12 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       stats.add(
         _UsageStatRow(
           label: l10n.usageTokenGeneration,
-          value: l10n.usageTokensPerSecond(predictedPerSecond.toStringAsFixed(1)),
-          detail: predictedN != null ? l10n.usageTokenCount(predictedN.toInt()) : null,
+          value: l10n.usageTokensPerSecond(
+            predictedPerSecond.toStringAsFixed(1),
+          ),
+          detail: predictedN != null
+              ? l10n.usageTokenCount(predictedN.toInt())
+              : null,
           theme: theme,
         ),
       );
@@ -1358,7 +1432,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         _UsageStatRow(
           label: l10n.usagePromptEval,
           value: l10n.usageTokensPerSecond(promptPerSecond.toStringAsFixed(1)),
-          detail: promptN != null ? l10n.usageTokenCount(promptN.toInt()) : null,
+          detail: promptN != null
+              ? l10n.usageTokenCount(promptN.toInt())
+              : null,
           theme: theme,
         ),
       );

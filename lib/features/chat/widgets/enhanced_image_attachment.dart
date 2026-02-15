@@ -12,7 +12,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
-import '../../auth/providers/unified_auth_providers.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/network/self_signed_image_cache_manager.dart';
 import '../../../core/network/image_header_utils.dart';
@@ -88,8 +87,33 @@ Map<String, String>? _mergeHeaders(
   return {...?defaults, ...?overrides};
 }
 
+bool _hasExplicitPort(Uri uri) {
+  if (uri.hasPort) {
+    return true;
+  }
+  return uri.scheme == 'http' || uri.scheme == 'https';
+}
+
+bool _isSameOrigin(String imageUrl, String baseUrl) {
+  final imageUri = Uri.tryParse(imageUrl);
+  final baseUri = Uri.tryParse(baseUrl);
+  if (imageUri == null || baseUri == null) {
+    return false;
+  }
+  if (!imageUri.hasAuthority) {
+    return true;
+  }
+  if (imageUri.host.toLowerCase() != baseUri.host.toLowerCase()) {
+    return false;
+  }
+  final imagePort = _hasExplicitPort(imageUri) ? imageUri.port : null;
+  final basePort = _hasExplicitPort(baseUri) ? baseUri.port : null;
+  return imagePort == basePort;
+}
+
 class EnhancedImageAttachment extends ConsumerStatefulWidget {
   final String attachmentId;
+  final String? fullscreenImageUrl;
   final bool isMarkdownFormat;
   final VoidCallback? onTap;
   final BoxConstraints? constraints;
@@ -100,6 +124,7 @@ class EnhancedImageAttachment extends ConsumerStatefulWidget {
   const EnhancedImageAttachment({
     super.key,
     required this.attachmentId,
+    this.fullscreenImageUrl,
     this.isMarkdownFormat = false,
     this.onTap,
     this.constraints,
@@ -182,16 +207,31 @@ class _EnhancedImageAttachmentState
 
     _globalLoadingStates[widget.attachmentId] = true;
 
-    final attachmentId = widget.attachmentId;
+    // Check configuration to enforce HTTPS
+    final api = ref.read(apiServiceProvider);
+    String attachmentId = widget.attachmentId;
+
+    // Auto-upgrade HTTP to HTTPS if the server is secure
+    // This prevents mixed content errors in the app
+    if (api != null &&
+        api.baseUrl.startsWith('https://') &&
+        attachmentId.startsWith('http://')) {
+      attachmentId = attachmentId.replaceFirst('http://', 'https://');
+      DebugLogger.log(
+        'Upgraded insecure image URL to HTTPS: $attachmentId',
+        scope: 'image/security',
+      );
+    }
 
     if (attachmentId.startsWith('data:') || attachmentId.startsWith('http')) {
       // Detect SVG from data URL or HTTP URL
       final isSvgContent =
           _isSvgDataUrl(attachmentId) || _isSvgUrl(attachmentId);
-      _globalImageCache[attachmentId] = attachmentId;
-      _globalLoadingStates[attachmentId] = false;
-      _globalSvgStates[attachmentId] = isSvgContent;
-      final cachedBytes = _globalImageBytesCache[attachmentId];
+      _globalImageCache[widget.attachmentId] =
+          attachmentId; // Cache by original ID
+      _globalLoadingStates[widget.attachmentId] = false;
+      _globalSvgStates[widget.attachmentId] = isSvgContent;
+      final cachedBytes = _globalImageBytesCache[widget.attachmentId];
       if (mounted) {
         setState(() {
           _cachedImageData = attachmentId;
@@ -230,7 +270,6 @@ class _EnhancedImageAttachmentState
       }
     }
 
-    final api = ref.read(apiServiceProvider);
     if (api == null) {
       final error = l10n.apiUnavailable;
       _cacheError(error);
@@ -497,9 +536,7 @@ class _EnhancedImageAttachmentState
   }
 
   Widget _buildNetworkImage() {
-    // Get authentication headers if available
-    final defaultHeaders = buildImageHeadersFromWidgetRef(ref);
-    final headers = _mergeHeaders(defaultHeaders, widget.httpHeaders);
+    final headers = _buildNetworkHeaders(_cachedImageData!);
 
     final cacheManager = ref.watch(selfSignedImageCacheManagerProvider);
     final imageWidget = CachedNetworkImage(
@@ -531,9 +568,7 @@ class _EnhancedImageAttachmentState
   }
 
   Widget _buildNetworkSvg() {
-    // Get authentication headers if available
-    final defaultHeaders = buildImageHeadersFromWidgetRef(ref);
-    final headers = _mergeHeaders(defaultHeaders, widget.httpHeaders);
+    final headers = _buildNetworkHeaders(_cachedImageData!);
 
     final svgWidget = SvgPicture.network(
       _cachedImageData!,
@@ -657,17 +692,32 @@ class _EnhancedImageAttachmentState
   }
 
   void _showFullScreenImage(BuildContext context) {
+    final fullscreenImageData = widget.fullscreenImageUrl ?? _cachedImageData!;
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (context) => FullScreenImageViewer(
-          imageData: _cachedImageData!,
+          imageData: fullscreenImageData,
           tag: _heroTag,
           isSvg: _isSvg,
           customHeaders: widget.httpHeaders,
         ),
       ),
     );
+  }
+
+  Map<String, String>? _buildNetworkHeaders(String imageUrl) {
+    final explicitHeaders = widget.httpHeaders;
+    final api = ref.watch(apiServiceProvider);
+    final shouldAttachDefaultHeaders =
+        api != null && _isSameOrigin(imageUrl, api.baseUrl);
+
+    if (!shouldAttachDefaultHeaders) {
+      return explicitHeaders;
+    }
+
+    final defaultHeaders = buildImageHeadersFromWidgetRef(ref);
+    return _mergeHeaders(defaultHeaders, explicitHeaders);
   }
 }
 
@@ -690,9 +740,11 @@ class FullScreenImageViewer extends ConsumerWidget {
     Widget imageWidget;
 
     if (imageData.startsWith('http')) {
-      // Get authentication headers if available
-      final defaultHeaders = buildImageHeadersFromWidgetRef(ref);
-      final headers = _mergeHeaders(defaultHeaders, customHeaders);
+      final headers = _buildFullscreenNetworkHeaders(
+        ref,
+        imageData,
+        customHeaders,
+      );
 
       if (isSvg || _isSvgUrl(imageData)) {
         imageWidget = SvgPicture.network(
@@ -827,19 +879,11 @@ class FullScreenImageViewer extends ConsumerWidget {
 
       if (imageData.startsWith('http')) {
         final api = ref.read(apiServiceProvider);
-        final authToken = ref.read(authTokenProvider3);
-        final headers = <String, String>{};
-
-        if (authToken != null && authToken.isNotEmpty) {
-          headers['Authorization'] = 'Bearer $authToken';
-        } else if (api?.serverConfig.apiKey != null &&
-            api!.serverConfig.apiKey!.isNotEmpty) {
-          headers['Authorization'] = 'Bearer ${api.serverConfig.apiKey}';
-        }
-        if (api != null && api.serverConfig.customHeaders.isNotEmpty) {
-          headers.addAll(api.serverConfig.customHeaders);
-        }
-        final mergedHeaders = _mergeHeaders(headers, customHeaders);
+        final mergedHeaders = _buildFullscreenNetworkHeaders(
+          ref,
+          imageData,
+          customHeaders,
+        );
 
         final client = api?.dio ?? dio.Dio();
         final response = await client.get<List<int>>(
@@ -904,4 +948,21 @@ class FullScreenImageViewer extends ConsumerWidget {
       );
     }
   }
+}
+
+Map<String, String>? _buildFullscreenNetworkHeaders(
+  WidgetRef ref,
+  String imageUrl, [
+  Map<String, String>? customHeaders,
+]) {
+  final api = ref.watch(apiServiceProvider);
+  final shouldAttachDefaultHeaders =
+      api != null && _isSameOrigin(imageUrl, api.baseUrl);
+
+  if (!shouldAttachDefaultHeaders) {
+    return customHeaders;
+  }
+
+  final defaultHeaders = buildImageHeadersFromWidgetRef(ref);
+  return _mergeHeaders(defaultHeaders, customHeaders);
 }
