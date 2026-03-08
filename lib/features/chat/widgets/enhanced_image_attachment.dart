@@ -169,6 +169,7 @@ class _EnhancedImageAttachmentState
   String? _errorMessage;
   bool _isDecoding = false;
   bool _isSvg = false;
+  bool _triedThumbnailFallback = false;
   late final String _heroTag;
   // Removed unused animation and state flags
 
@@ -581,6 +582,28 @@ class _EnhancedImageAttachmentState
         ),
       ),
       errorWidget: (context, url, error) {
+        final current = _cachedImageData;
+        if (current != null &&
+            !_triedThumbnailFallback &&
+            current.contains('/thumbnails/')) {
+          final fallbackUrl = current.replaceFirst('/thumbnails/', '/');
+          _triedThumbnailFallback = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            setState(() {
+              _cachedImageData = fallbackUrl;
+              _errorMessage = null;
+              _isLoading = false;
+            });
+          });
+          return Container(
+            constraints: widget.constraints,
+            decoration: BoxDecoration(
+              color: context.conduitTheme.shimmerBase,
+              borderRadius: BorderRadius.circular(AppBorderRadius.md),
+            ),
+          );
+        }
         _errorMessage = error.toString();
         return _buildErrorState();
       },
