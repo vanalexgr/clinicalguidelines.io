@@ -32,6 +32,16 @@ final _fileIdPattern = RegExp(r'/api/v1/files/([^/]+)(?:/content)?$');
 final _linkedImagePattern = RegExp(
   r'\[!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)\]\(([^)\s]+)(?:\s+"[^"]*")?\)',
 );
+final _plainImagePattern = RegExp(
+  r'!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)',
+);
+final _fullSizeMarkdownLinkPattern = RegExp(
+  r'^\s*\[Full-size\]\(([^)\s]+)(?:\s+"[^"]*")?\)\s*$',
+);
+final _fullSizeTextPattern = RegExp(
+  r'^\s*Full-size:\s*(https?://\S+)\s*$',
+  caseSensitive: false,
+);
 
 class AssistantMessageWidget extends ConsumerStatefulWidget {
   final dynamic message;
@@ -906,6 +916,8 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
 
   Map<String, String> _extractLinkedImageTargets(String content) {
     final targets = <String, String>{};
+    final plainImageOrder = <String>[];
+
     for (final match in _linkedImagePattern.allMatches(content)) {
       final thumbUrl = match.group(1);
       final fullUrl = match.group(2);
@@ -920,6 +932,51 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       }
       targets[normalizedThumb] = normalizedFull;
     }
+
+    // Fallback mapping for outputs that use:
+    //   ![thumb](thumb_url)
+    //   [Full-size](full_url)  or  Full-size: full_url
+    // We pair each full-size line with the most recent unmatched plain image.
+    final lines = content.split('\n');
+    var pendingThumbIndex = 0;
+    for (final rawLine in lines) {
+      final line = rawLine.trim();
+      if (line.isEmpty) {
+        continue;
+      }
+
+      final imgMatch = _plainImagePattern.firstMatch(line);
+      if (imgMatch != null) {
+        final thumb = _normalizeMarkdownUrl(imgMatch.group(1) ?? '');
+        if (thumb.startsWith('http')) {
+          plainImageOrder.add(thumb);
+        }
+        continue;
+      }
+
+      String? full;
+      final mdFull = _fullSizeMarkdownLinkPattern.firstMatch(line);
+      if (mdFull != null) {
+        full = _normalizeMarkdownUrl(mdFull.group(1) ?? '');
+      } else {
+        final txtFull = _fullSizeTextPattern.firstMatch(line);
+        if (txtFull != null) {
+          full = _normalizeMarkdownUrl(txtFull.group(1) ?? '');
+        }
+      }
+
+      if (full == null || !full.startsWith('http')) {
+        continue;
+      }
+
+      while (pendingThumbIndex < plainImageOrder.length) {
+        final thumb = plainImageOrder[pendingThumbIndex++];
+        // Do not overwrite explicit linked-thumbnail mappings.
+        targets.putIfAbsent(thumb, () => full!);
+        break;
+      }
+    }
+
     return targets;
   }
 
