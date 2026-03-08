@@ -820,11 +820,18 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     );
     final linkedImageTargets = _extractLinkedImageTargets(processedContent);
     final linkedImageFullTargets = linkedImageTargets.values.toSet();
+    final figureImageUrls = _extractFigureImageUrls(processedContent);
+    final useFigureGallery =
+        _activeContentHasFiguresSection() && figureImageUrls.length > 1;
+    final markdownContent = useFigureGallery
+        ? _stripFigureImageLines(processedContent)
+        : processedContent;
     final suppressMarkdownImages =
-        _hasActiveImageFiles() && !_activeContentHasFiguresSection();
+        (_hasActiveImageFiles() && !_activeContentHasFiguresSection()) ||
+        useFigureGallery;
 
     Widget buildDefault(BuildContext context) => StreamingMarkdownWidget(
-      content: processedContent,
+      content: markdownContent,
       isStreaming: widget.isStreaming,
       onTapLink: (url, _) => _launchUri(url),
       sources: widget.message.sources,
@@ -851,18 +858,39 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       },
     );
 
+    Widget output = buildDefault(context);
+
+    if (useFigureGallery) {
+      output = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          output,
+          const SizedBox(height: Spacing.sm),
+          ...figureImageUrls.map((url) {
+            return EnhancedImageAttachment(
+              attachmentId: url,
+              fullscreenImageUrl: linkedImageTargets[url],
+              isMarkdownFormat: true,
+              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 400),
+              disableAnimation: widget.isStreaming,
+            );
+          }),
+        ],
+      );
+    }
+
     final responseBuilder = ref.watch(assistantResponseBuilderProvider);
     if (responseBuilder != null) {
       final contextData = AssistantResponseContext(
         message: widget.message,
-        markdown: processedContent,
+        markdown: markdownContent,
         isStreaming: widget.isStreaming,
-        buildDefault: buildDefault,
+        buildDefault: (_) => output,
       );
       return responseBuilder(context, contextData);
     }
 
-    return buildDefault(context);
+    return output;
   }
 
   String _processContentForImages(String content) {
@@ -901,6 +929,53 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       }
       return '![${alt.isEmpty ? "Image" : alt}]($thumbUrl)';
     });
+  }
+
+  List<String> _extractFigureImageUrls(String content) {
+    final urls = <String>[];
+    final seen = <String>{};
+    for (final match in _plainImagePattern.allMatches(content)) {
+      final raw = match.group(1);
+      if (raw == null || raw.isEmpty) {
+        continue;
+      }
+      final normalized = _normalizeMarkdownUrl(raw);
+      if (!normalized.startsWith('http')) {
+        continue;
+      }
+      if (seen.add(normalized)) {
+        urls.add(normalized);
+      }
+    }
+    return urls;
+  }
+
+  String _stripFigureImageLines(String content) {
+    final lines = content.split('\n');
+    final kept = <String>[];
+
+    for (final rawLine in lines) {
+      final line = rawLine.trim();
+      if (line.isEmpty) {
+        kept.add(rawLine);
+        continue;
+      }
+      if (_linkedImagePattern.hasMatch(line)) {
+        continue;
+      }
+      if (_plainImagePattern.hasMatch(line)) {
+        continue;
+      }
+      if (_fullSizeMarkdownLinkPattern.hasMatch(line)) {
+        continue;
+      }
+      if (_fullSizeTextPattern.hasMatch(line)) {
+        continue;
+      }
+      kept.add(rawLine);
+    }
+
+    return kept.join('\n');
   }
 
   bool _hasActiveImageFiles() {
