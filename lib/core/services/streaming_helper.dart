@@ -27,7 +27,7 @@ final _base64ImagePattern = RegExp(
   r'data:image/[^;\s]+;base64,[A-Za-z0-9+/]+=*',
 );
 final _urlImagePattern = RegExp(
-  r'https?://[^\s<>\"]+\.(jpg|jpeg|png|gif|webp)',
+  r'https?://[^\s<>\")\]]+?\.(jpg|jpeg|png|gif|webp)(?:\?[^\s<>\")\]]*)?',
   caseSensitive: false,
 );
 final _jsonImagePattern = RegExp(
@@ -40,7 +40,7 @@ final _partialResultsPattern = RegExp(
   caseSensitive: false,
 );
 final _imageFilePattern = RegExp(
-  r'https?://[^\s]+\.(jpg|jpeg|png|gif|webp)$',
+  r'^https?://[^\s<>\")\]]+?\.(jpg|jpeg|png|gif|webp)(?:\?[^\s<>\")\]]*)?$',
   caseSensitive: false,
 );
 

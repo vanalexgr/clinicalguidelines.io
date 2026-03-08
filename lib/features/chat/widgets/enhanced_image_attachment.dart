@@ -96,6 +96,17 @@ bool _hasExplicitPort(Uri uri) {
 
 String _normalizeNetworkUrl(String url) {
   var normalized = url.trim();
+  // Handle accidentally concatenated markdown link payloads:
+  // https://...thumb.png)](https://...full.png
+  final splitIdx = normalized.indexOf(')](');
+  if (splitIdx > 0) {
+    normalized = normalized.substring(0, splitIdx);
+  }
+  while (normalized.endsWith(')') ||
+      normalized.endsWith(']') ||
+      normalized.endsWith('>')) {
+    normalized = normalized.substring(0, normalized.length - 1).trimRight();
+  }
   if (normalized.startsWith('https//')) {
     return 'https://${normalized.substring('https//'.length)}';
   }
