@@ -32,9 +32,10 @@ final _fileIdPattern = RegExp(r'/api/v1/files/([^/]+)(?:/content)?$');
 final _linkedImagePattern = RegExp(
   r'\[!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)\]\(([^)\s]+)(?:\s+"[^"]*")?\)',
 );
-final _plainImagePattern = RegExp(
-  r'!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)',
+final _linkedImageWithAltPattern = RegExp(
+  r'\[!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)\]\(([^)\s]+)(?:\s+"[^"]*")?\)',
 );
+final _plainImagePattern = RegExp(r'!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)');
 final _fullSizeMarkdownLinkPattern = RegExp(
   r'^\s*\[Full-size\]\(([^)\s]+)(?:\s+"[^"]*")?\)\s*$',
 );
@@ -814,7 +815,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     // The markdown widget will receive only the text segments.
 
     // Process images in the remaining text
-    final processedContent = _processContentForImages(content);
+    final processedContent = _normalizeLinkedThumbnailsForRenderer(
+      _processContentForImages(content),
+    );
     final linkedImageTargets = _extractLinkedImageTargets(processedContent);
     final linkedImageFullTargets = linkedImageTargets.values.toSet();
     final suppressMarkdownImages =
@@ -884,6 +887,20 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     }
 
     return content;
+  }
+
+  String _normalizeLinkedThumbnailsForRenderer(String content) {
+    // Some markdown renderers fail to display nested image links:
+    // [![thumb](thumb_url)](full_url)
+    // Convert them to plain images while preserving Full-size links that follow.
+    return content.replaceAllMapped(_linkedImageWithAltPattern, (match) {
+      final alt = (match.group(1) ?? '').trim();
+      final thumbUrl = (match.group(2) ?? '').trim();
+      if (thumbUrl.isEmpty) {
+        return match.group(0) ?? '';
+      }
+      return '![${alt.isEmpty ? "Image" : alt}]($thumbUrl)';
+    });
   }
 
   bool _hasActiveImageFiles() {
