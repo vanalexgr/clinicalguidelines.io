@@ -43,6 +43,10 @@ final _fullSizeTextPattern = RegExp(
   r'^\s*Full-size:\s*(https?://\S+)\s*$',
   caseSensitive: false,
 );
+final _imagePathPattern = RegExp(
+  r'\.(jpg|jpeg|png|gif|webp|svg)$',
+  caseSensitive: false,
+);
 
 class AssistantMessageWidget extends ConsumerStatefulWidget {
   final dynamic message;
@@ -822,7 +826,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     final linkedImageFullTargets = linkedImageTargets.values.toSet();
     final figureImageUrls = _extractFigureImageUrls(processedContent);
     final useFigureGallery =
-        _activeContentHasFiguresSection() && figureImageUrls.length > 1;
+        !widget.isStreaming &&
+        _activeContentHasFiguresSection() &&
+        figureImageUrls.length > 1;
     final markdownContent = useFigureGallery
         ? _stripFigureImageLines(processedContent)
         : processedContent;
@@ -940,7 +946,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         continue;
       }
       final normalized = _normalizeMarkdownUrl(raw);
-      if (!normalized.startsWith('http')) {
+      if (!_isRenderableImageUrl(normalized)) {
         continue;
       }
       if (seen.add(normalized)) {
@@ -1018,8 +1024,8 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       }
       final normalizedThumb = _normalizeMarkdownUrl(thumbUrl);
       final normalizedFull = _normalizeMarkdownUrl(fullUrl);
-      if (!normalizedThumb.startsWith('http') ||
-          !normalizedFull.startsWith('http')) {
+      if (!_isRenderableImageUrl(normalizedThumb) ||
+          !_isRenderableImageUrl(normalizedFull)) {
         continue;
       }
       targets[normalizedThumb] = normalizedFull;
@@ -1040,7 +1046,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
       final imgMatch = _plainImagePattern.firstMatch(line);
       if (imgMatch != null) {
         final thumb = _normalizeMarkdownUrl(imgMatch.group(1) ?? '');
-        if (thumb.startsWith('http')) {
+        if (_isRenderableImageUrl(thumb)) {
           plainImageOrder.add(thumb);
         }
         continue;
@@ -1057,7 +1063,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         }
       }
 
-      if (full == null || !full.startsWith('http')) {
+      if (full == null || !_isRenderableImageUrl(full)) {
         continue;
       }
 
@@ -1084,7 +1090,24 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     } else if (normalized.startsWith('http//')) {
       normalized = 'http://${normalized.substring('http//'.length)}';
     }
+    while (normalized.endsWith(',') ||
+        normalized.endsWith(';') ||
+        normalized.endsWith(':') ||
+        normalized.endsWith('.')) {
+      normalized = normalized.substring(0, normalized.length - 1).trimRight();
+    }
     return normalized;
+  }
+
+  bool _isRenderableImageUrl(String url) {
+    if (!(url.startsWith('http://') || url.startsWith('https://'))) {
+      return false;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host.isEmpty) {
+      return false;
+    }
+    return _imagePathPattern.hasMatch(uri.path);
   }
 
   Widget _buildAttachmentItems() {
