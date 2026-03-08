@@ -1077,7 +1077,14 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     if (normalized.startsWith('<') && normalized.endsWith('>')) {
       normalized = normalized.substring(1, normalized.length - 1);
     }
-    return normalized.replaceAll('&amp;', '&');
+    normalized = normalized.replaceAll('&amp;', '&');
+    // Defensive fix for malformed schemes occasionally produced by model output.
+    if (normalized.startsWith('https//')) {
+      normalized = 'https://${normalized.substring('https//'.length)}';
+    } else if (normalized.startsWith('http//')) {
+      normalized = 'http://${normalized.substring('http//'.length)}';
+    }
+    return normalized;
   }
 
   Widget _buildAttachmentItems() {

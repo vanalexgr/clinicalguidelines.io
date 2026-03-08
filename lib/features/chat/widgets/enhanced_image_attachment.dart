@@ -94,6 +94,17 @@ bool _hasExplicitPort(Uri uri) {
   return uri.scheme == 'http' || uri.scheme == 'https';
 }
 
+String _normalizeNetworkUrl(String url) {
+  var normalized = url.trim();
+  if (normalized.startsWith('https//')) {
+    return 'https://${normalized.substring('https//'.length)}';
+  }
+  if (normalized.startsWith('http//')) {
+    return 'http://${normalized.substring('http//'.length)}';
+  }
+  return normalized;
+}
+
 bool _isSameOrigin(String imageUrl, String baseUrl) {
   final imageUri = Uri.tryParse(imageUrl);
   final baseUri = Uri.tryParse(baseUrl);
@@ -209,7 +220,7 @@ class _EnhancedImageAttachmentState
 
     // Check configuration to enforce HTTPS
     final api = ref.read(apiServiceProvider);
-    String attachmentId = widget.attachmentId;
+    String attachmentId = _normalizeNetworkUrl(widget.attachmentId);
 
     // Auto-upgrade HTTP to HTTPS if the server is secure
     // This prevents mixed content errors in the app
