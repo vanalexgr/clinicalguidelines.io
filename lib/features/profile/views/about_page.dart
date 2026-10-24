@@ -6,12 +6,8 @@ import 'package:conduit_core/models/server_about_info.dart';
 
 import 'package:conduit_core/providers/app_providers.dart';
 
-import '../../../features/release_notes/data/release_notes_repository.dart';
-import '../../../features/release_notes/release_notes_presenter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/theme/theme_extensions.dart';
-import '../../../shared/utils/external_link_launcher.dart';
-import '../../../shared/utils/ui_utils.dart';
 import '../../../shared/widgets/conduit_components.dart';
 import '../widgets/settings_page_scaffold.dart';
 import '../../../shared/widgets/utility_components.dart';
@@ -20,7 +16,6 @@ import '../../../shared/services/app_package_info.dart';
 class AboutPage extends ConsumerStatefulWidget {
   const AboutPage({super.key});
 
-  static const _githubUrl = 'https://github.com/vanalexgr/clinicalguidelines.io';
 
   @override
   ConsumerState<AboutPage> createState() => _AboutPageState();
@@ -119,31 +114,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
         UtilityValueRow(label: l10n.appVersion, value: versionLabel),
         UtilityRow(
           leading: Icon(
-            Icons.new_releases_rounded,
-            size: IconSize.medium,
-            color: theme.buttonPrimary,
-          ),
-          title: l10n.releaseNotesTitle,
-          showChevron: true,
-          onTap: () => _openReleaseNotes(context, info),
-        ),
-        UtilityRow(
-          leading: Icon(
-            Icons.code_rounded,
-            size: IconSize.medium,
-            color: theme.buttonPrimary,
-          ),
-          title: l10n.githubRepository,
-          subtitle: 'github.com/vanalexgr/clinicalguidelines.io',
-          trailing: Icon(
-            Icons.open_in_new_rounded,
-            size: IconSize.small,
-            color: theme.iconSecondary,
-          ),
-          onTap: () => _openGithub(context),
-        ),
-        UtilityRow(
-          leading: Icon(
             Icons.description_outlined,
             size: IconSize.medium,
             color: theme.buttonPrimary,
@@ -172,38 +142,9 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     );
   }
 
-  Future<void> _openGithub(BuildContext context) async {
-    final launched = await launchExternalLink(
-      AboutPage._githubUrl,
-      scope: 'about/github',
-    );
-    if (!launched && context.mounted) {
-      UiUtils.showMessage(context, AppLocalizations.of(context)!.errorMessage);
-    }
-  }
 
   void _showLicenses(BuildContext context) {
     showLicensePage(context: context, applicationName: 'Conduit');
   }
 
-  Future<void> _openReleaseNotes(BuildContext context, PackageInfo info) async {
-    final l10n = AppLocalizations.of(context)!;
-    final allNotes = await const ReleaseNotesRepository().load(
-      Localizations.localeOf(context),
-    );
-    if (!context.mounted) return;
-    final notes = latestBundledReleaseNotesForVersion(
-      currentVersion: info.version,
-      notes: allNotes,
-    );
-    if (notes.isEmpty) {
-      UiUtils.showMessage(context, l10n.errorMessage);
-      return;
-    }
-    await showReleaseNotesSheet(
-      context: context,
-      currentVersion: info.version,
-      notes: notes,
-    );
-  }
 }

@@ -1600,7 +1600,7 @@
   "@themePalette": {
     "description": "Title for selecting the app color palette."
   },
-  "themePaletteConduitLabel": "Conduit",
+  "themePaletteConduitLabel": "Clinical Guidelines",
   "@themePaletteConduitLabel": {
     "description": "Palette name for the default Clinical Guidelines theme."
   },
@@ -3665,7 +3665,7 @@
   "@memoryTypeContext": {"description": "Option marking a memory as durable context for future chats."},
   "memoryPathLabel": "Path (optional)",
   "@memoryPathLabel": {"description": "Label of the optional slash-separated path field in the Advanced memory editor."},
-  "memoryPathHint": "e.g. projects/conduit",
+  "memoryPathHint": "e.g. projects/guidelines",
   "@memoryPathHint": {"description": "Hint text for the optional memory path field."},
   "addMemory": "Add memory",
   "@addMemory": {

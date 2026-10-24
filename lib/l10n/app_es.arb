@@ -752,7 +752,7 @@
   "@nextLabel": {
     "description": "Label for navigating to the next item."
   },
-  "themePaletteConduitLabel": "Conduit",
+  "themePaletteConduitLabel": "Clinical Guidelines",
   "@themePaletteConduitLabel": {
     "description": "Palette name for the default Clinical Guidelines theme."
   },
@@ -1370,7 +1370,7 @@
   "memoryTypeUser": "Usuario",
   "memoryTypeContext": "Contexto",
   "memoryPathLabel": "Ruta (opcional)",
-  "memoryPathHint": "p. ej., projects/conduit",
+  "memoryPathHint": "p. ej., projects/guidelines",
   "addMemory": "Añadir memoria",
   "editMemory": "Editar memoria",
   "deleteMemory": "Eliminar memoria",

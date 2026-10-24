@@ -1578,9 +1578,12 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
           data: materialTheme,
           child: Builder(
             builder: (context) => LegacyDesignCompatibility(
-              child: ReleaseNotesCoordinator(
-                child: _KeyboardDismissOnScroll(child: safeChild),
-              ),
+              // No "What's new" popup: its notes and links belong to Conduit.
+              child: kServerLockEnabled
+                  ? _KeyboardDismissOnScroll(child: safeChild)
+                  : ReleaseNotesCoordinator(
+                      child: _KeyboardDismissOnScroll(child: safeChild),
+                    ),
             ),
           ),
         );

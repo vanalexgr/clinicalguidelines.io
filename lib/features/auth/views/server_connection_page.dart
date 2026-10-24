@@ -500,6 +500,12 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
       unawaited(_carryOn(handoff));
     } else {
       _prefillFromState();
+      if (kServerLockEnabled) {
+        // Start straight away with the locked server: no form to fill in.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_connectToServer());
+        });
+      }
     }
   }
 
@@ -1826,11 +1832,15 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
             ? l10n.accountsAddAddress
             : l10n.accountsEditAddress,
         onTitleLongPress: _editingRoutes ? null : _toggleReviewerMode,
-        backNavigation: UtilityBackNavigation(
-          label: l10n.back,
-          buttonKey: const ValueKey<String>('server-connection-back-button'),
-          onPressed: _goBack,
-        ),
+        backNavigation: kServerLockEnabled && !widget.addingAccount
+            ? null
+            : UtilityBackNavigation(
+                label: l10n.back,
+                buttonKey: const ValueKey<String>(
+                  'server-connection-back-button',
+                ),
+                onPressed: _goBack,
+              ),
         bottomAction: _buildConnectButton(),
         body: Form(
           key: _formKey,

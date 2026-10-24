@@ -758,7 +758,7 @@
   "@nextLabel": {
     "description": "Label for navigating to the next item."
   },
-  "themePaletteConduitLabel": "Conduit",
+  "themePaletteConduitLabel": "Clinical Guidelines",
   "@themePaletteConduitLabel": {
     "description": "Palette name for the default Clinical Guidelines theme."
   },
@@ -1384,7 +1384,7 @@
   "memoryTypeUser": "Пользователь",
   "memoryTypeContext": "Контекст",
   "memoryPathLabel": "Путь (необязательно)",
-  "memoryPathHint": "например, projects/conduit",
+  "memoryPathHint": "например, projects/guidelines",
   "addMemory": "Добавить воспоминание",
   "editMemory": "Редактировать воспоминание",
   "deleteMemory": "Удалить воспоминание",

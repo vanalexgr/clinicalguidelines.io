@@ -1364,7 +1364,7 @@
   "@themePalette": {
     "description": "Title for selecting the app color palette."
   },
-  "themePaletteConduitLabel": "Conduit",
+  "themePaletteConduitLabel": "Clinical Guidelines",
   "@themePaletteConduitLabel": {
     "description": "Palette name for the default Clinical Guidelines theme."
   },
@@ -3052,7 +3052,7 @@
   "memoryTypeUser": "ユーザー",
   "memoryTypeContext": "コンテキスト",
   "memoryPathLabel": "パス（任意）",
-  "memoryPathHint": "例: projects/conduit",
+  "memoryPathHint": "例: projects/guidelines",
   "addMemory": "メモリを追加",
   "editMemory": "メモリを編集",
   "deleteMemory": "メモリを削除",

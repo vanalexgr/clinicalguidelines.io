@@ -1,3 +1,4 @@
+import 'package:conduit/core/config/locked_server.dart';
 import 'package:flutter/foundation.dart' show Uint8List, immutable;
 import 'package:intl/intl.dart';
 
@@ -73,21 +74,6 @@ List<NativeSheetItemConfig> buildNativeAboutItems(
       sfSymbol: 'number',
       kind: NativeSheetItemKind.info,
     ),
-  // Release notes and the licenses open Flutter pages, so they close the
-  // sheet like the other rows that leave it, and say so with a chevron.
-  NativeSheetItemConfig(
-    id: NativeSheetRoutes.releaseNotesManual,
-    title: l10n.releaseNotesTitle,
-    sfSymbol: 'sparkles',
-    showsDisclosure: true,
-    dismissOnSelect: true,
-  ),
-  NativeSheetItemConfig(
-    id: 'github',
-    title: l10n.githubRepository,
-    sfSymbol: 'chevron.left.forwardslash.chevron.right',
-    url: 'https://github.com/cogwheel0/conduit',
-  ),
   NativeSheetItemConfig(
     id: NativeSheetRoutes.openSourceLicenses,
     title: l10n.openSourceLicenses,
@@ -314,10 +300,6 @@ List<NativeSheetSectionConfig> buildNativeProfileRootSections(
             ),
         ],
       ),
-    NativeSheetSectionConfig(
-      title: l10n.supportConduit,
-      items: buildNativeSupportItems(l10n),
-    ),
   ];
 }
 
@@ -395,91 +377,93 @@ NativeSheetDetailConfig buildNativeAccountsDetail(
               for (final entry in group) _nativeAccountItem(entry, l10n),
             ],
           ),
-      NativeSheetSectionConfig(
-        items: [
-          NativeSheetItemConfig(
-            id: 'accounts-hermes',
-            title: l10n.hermesAgentSettingsTitle,
-            sfSymbol: 'sparkles',
-            iconAsset: 'assets/icons/hermes_agent.png',
-            iconSize: 26,
-            dismissOnSelect: true,
-            actionId: NativeSheetRoutes.hermes,
-            actionValue: true,
-          ),
-          for (final connection in hermesConnections)
-            _nativeSwitchItem(
-              id: '$nativeHermesUseActionId:${connection.id}',
-              title: connection.name,
-              subtitle: hermesConnectionSummary(connection),
-              sfSymbol: connection.mode == HermesBackendMode.desktopGateway
-                  ? 'desktopcomputer'
-                  : 'cloud',
-              inUse: connection.id == hermesInUseId,
-              actionId: nativeHermesUseActionId,
-              actionValue: connection.id,
-            ),
-          if (hermesConnections.isEmpty)
-            _nativeAddItem(
-              'accounts-hermes-add',
-              title: l10n.hermesAddConnection,
-              kind: 'hermes',
-            ),
-        ],
-      ),
-      NativeSheetSectionConfig(
-        items: [
-          _nativeRootPageItem(
-            NativeSheetRoutes.directConnections,
-            title: l10n.directConnectionsTitle,
-            sfSymbol: 'link.circle',
-          ),
-          if (appleOnDevice)
+      if (!kServerLockEnabled)
+        NativeSheetSectionConfig(
+          items: [
             NativeSheetItemConfig(
-              id: 'accounts-apple-on-device',
-              title: l10n.backendChooserAppleOnDeviceTitle,
-              sfSymbol: 'iphone',
+              id: 'accounts-hermes',
+              title: l10n.hermesAgentSettingsTitle,
+              sfSymbol: 'sparkles',
+              iconAsset: 'assets/icons/hermes_agent.png',
+              iconSize: 26,
               dismissOnSelect: true,
-              actionId: NativeSheetRoutes.directConnections,
+              actionId: NativeSheetRoutes.hermes,
               actionValue: true,
             ),
-          if (applePcc)
-            NativeSheetItemConfig(
-              id: 'accounts-apple-pcc',
-              title: l10n.backendChooserApplePccTitle,
-              sfSymbol: 'lock.shield',
-              dismissOnSelect: true,
-              actionId: NativeSheetRoutes.directConnections,
-              actionValue: true,
+            for (final connection in hermesConnections)
+              _nativeSwitchItem(
+                id: '$nativeHermesUseActionId:${connection.id}',
+                title: connection.name,
+                subtitle: hermesConnectionSummary(connection),
+                sfSymbol: connection.mode == HermesBackendMode.desktopGateway
+                    ? 'desktopcomputer'
+                    : 'cloud',
+                inUse: connection.id == hermesInUseId,
+                actionId: nativeHermesUseActionId,
+                actionValue: connection.id,
+              ),
+            if (hermesConnections.isEmpty)
+              _nativeAddItem(
+                'accounts-hermes-add',
+                title: l10n.hermesAddConnection,
+                kind: 'hermes',
+              ),
+          ],
+        ),
+      if (!kServerLockEnabled)
+        NativeSheetSectionConfig(
+          items: [
+            _nativeRootPageItem(
+              NativeSheetRoutes.directConnections,
+              title: l10n.directConnectionsTitle,
+              sfSymbol: 'link.circle',
             ),
-          for (final profile in saved)
-            NativeSheetItemConfig(
-              id: '$nativeDirectEditActionId:${profile.id}',
-              title: profile.name,
-              subtitle: [
-                directProviderName(profile, l10n),
-                if (!profile.enabled) l10n.disabledLabel,
-              ].join(' · '),
-              sfSymbol: profile.adapterKey == kOllamaAdapterKey
-                  ? 'desktopcomputer'
-                  : 'cloud',
-              dismissOnSelect: true,
-              actionId: nativeDirectEditActionId,
-              actionValue: profile.id,
-            ),
-          // Not offered while the saved ones are unread: the Direct page
-          // says why, and adds from there.
-          if (directProfiles != null &&
-              saved.isEmpty &&
-              !appleOnDevice &&
-              !applePcc)
-            _nativeAddItem(
-              'accounts-direct-add',
-              title: l10n.addDirectConnection,
-              kind: 'direct',
-            ),
-        ],
-      ),
+            if (appleOnDevice)
+              NativeSheetItemConfig(
+                id: 'accounts-apple-on-device',
+                title: l10n.backendChooserAppleOnDeviceTitle,
+                sfSymbol: 'iphone',
+                dismissOnSelect: true,
+                actionId: NativeSheetRoutes.directConnections,
+                actionValue: true,
+              ),
+            if (applePcc)
+              NativeSheetItemConfig(
+                id: 'accounts-apple-pcc',
+                title: l10n.backendChooserApplePccTitle,
+                sfSymbol: 'lock.shield',
+                dismissOnSelect: true,
+                actionId: NativeSheetRoutes.directConnections,
+                actionValue: true,
+              ),
+            for (final profile in saved)
+              NativeSheetItemConfig(
+                id: '$nativeDirectEditActionId:${profile.id}',
+                title: profile.name,
+                subtitle: [
+                  directProviderName(profile, l10n),
+                  if (!profile.enabled) l10n.disabledLabel,
+                ].join(' · '),
+                sfSymbol: profile.adapterKey == kOllamaAdapterKey
+                    ? 'desktopcomputer'
+                    : 'cloud',
+                dismissOnSelect: true,
+                actionId: nativeDirectEditActionId,
+                actionValue: profile.id,
+              ),
+            // Not offered while the saved ones are unread: the Direct page
+            // says why, and adds from there.
+            if (directProfiles != null &&
+                saved.isEmpty &&
+                !appleOnDevice &&
+                !applePcc)
+              _nativeAddItem(
+                'accounts-direct-add',
+                title: l10n.addDirectConnection,
+                kind: 'direct',
+              ),
+          ],
+        ),
       // With one account, Settings' Sign out already signs out of it.
       if ((accounts?.length ?? 0) > 1)
         NativeSheetSectionConfig(
@@ -607,20 +591,8 @@ const nativeHermesUseActionId = 'account-hermes-use';
 const nativeDirectEditActionId = 'account-direct-edit';
 
 /// The donation rows at the bottom of the native Settings root.
-List<NativeSheetItemConfig> buildNativeSupportItems(AppLocalizations l10n) => [
-  NativeSheetItemConfig(
-    id: 'buy-me-a-coffee',
-    title: l10n.buyMeACoffeeTitle,
-    sfSymbol: 'gift',
-    url: 'https://www.buymeacoffee.com/cogwheel0',
-  ),
-  NativeSheetItemConfig(
-    id: 'github-sponsors',
-    title: l10n.githubSponsorsTitle,
-    sfSymbol: 'heart',
-    url: 'https://github.com/sponsors/cogwheel0',
-  ),
-];
+List<NativeSheetItemConfig> buildNativeSupportItems(AppLocalizations l10n) =>
+    const [];
 
 /// A root row that closes the sheet and opens a Flutter page; it sends its
 /// own id as the control id.

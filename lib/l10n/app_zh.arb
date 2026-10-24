@@ -752,7 +752,7 @@
   "@nextLabel": {
     "description": "Label for navigating to the next item."
   },
-  "themePaletteConduitLabel": "Conduit",
+  "themePaletteConduitLabel": "Clinical Guidelines",
   "@themePaletteConduitLabel": {
     "description": "Palette name for the default Clinical Guidelines theme."
   },
@@ -1370,7 +1370,7 @@
   "memoryTypeUser": "用户",
   "memoryTypeContext": "上下文",
   "memoryPathLabel": "路径（可选）",
-  "memoryPathHint": "例如：projects/conduit",
+  "memoryPathHint": "例如：projects/guidelines",
   "addMemory": "添加记忆",
   "editMemory": "编辑记忆",
   "deleteMemory": "删除记忆",

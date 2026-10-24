@@ -1597,7 +1597,7 @@
   "@themePalette": {
     "description": "Title for selecting the app color palette."
   },
-  "themePaletteConduitLabel": "Conduit",
+  "themePaletteConduitLabel": "Clinical Guidelines",
   "@themePaletteConduitLabel": {
     "description": "Palette name for the default Clinical Guidelines theme."
   },
@@ -3449,7 +3449,7 @@
   "memoryTypeUser": "Użytkownik",
   "memoryTypeContext": "Kontekst",
   "memoryPathLabel": "Ścieżka (opcjonalnie)",
-  "memoryPathHint": "np. projects/conduit",
+  "memoryPathHint": "np. projects/guidelines",
   "addMemory": "Dodaj wspomnienie",
   "@addMemory": {
     "description": "Button label for creating a memory."

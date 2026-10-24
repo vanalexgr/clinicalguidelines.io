@@ -3742,7 +3742,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       ),
                     ),
                   ),
-                  const ReleaseNotesBanner(),
+                  if (!kServerLockEnabled) const ReleaseNotesBanner(),
                   if (isTemporary) ...[
                     const SizedBox(height: Spacing.md),
                     temporaryChatNotice,

@@ -1,4 +1,5 @@
 import 'package:conduit_core/auth/auth_state_manager.dart';
+import 'package:conduit_core/config/locked_server.dart';
 import 'package:conduit_core/features/auth/providers/unified_auth_providers.dart';
 import 'package:conduit_core/features/direct_connections/providers/direct_connection_providers.dart';
 import 'package:conduit_core/features/hermes/models/hermes_config.dart';
@@ -95,6 +96,18 @@ String incompleteHermesDestination({
 /// The router's redirect policy, kept here so it is tested without
 /// go_router or Flutter.
 String? resolveRouteRedirect(String location, ProviderRead read) {
+  // Clinical Guidelines is Open WebUI only: the backend chooser, Hermes and
+  // direct connections are never offered. Go to the locked server instead.
+  if (kServerLockEnabled &&
+      (location == Routes.backendChooser ||
+          isHermesSettingsLocation(location) ||
+          location == Routes.hermesJobs ||
+          isDirectConnectionsLocation(location))) {
+    final hasServer = read(activeServerProvider).asData?.value != null;
+    final signedIn =
+        read(authNavigationStateProvider) == AuthNavigationState.authenticated;
+    return hasServer && signedIn ? Routes.chat : Routes.serverConnection;
+  }
   final reviewerMode = read(reviewerModeProvider);
   if (reviewerMode) {
     // Stay on whatever route if already in chat; otherwise go to chat.
@@ -290,7 +303,7 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
         location == Routes.login) {
       return null;
     }
-    return Routes.backendChooser;
+    return kServerLockEnabled ? Routes.serverConnection : Routes.backendChooser;
   }
 
   // Allow staying on server connection page
