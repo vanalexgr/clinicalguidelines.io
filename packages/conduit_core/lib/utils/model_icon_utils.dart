@@ -129,6 +129,13 @@ String? resolveModelIconUrl(ApiService? api, String? rawUrl) {
   }
 
   if (value.startsWith('http://') || value.startsWith('https://')) {
+    // Upgrade http to https when the server is https, so images do not fail
+    // as mixed content.
+    if (api != null &&
+        api.baseUrl.startsWith('https://') &&
+        value.startsWith('http://')) {
+      return value.replaceFirst('http://', 'https://');
+    }
     return value;
   }
 
@@ -196,7 +203,7 @@ String? resolveModelIconUrlForModel(ApiService? api, Model? model) {
     if (trimmed.startsWith('data:image') ||
         trimmed.startsWith('http://') ||
         trimmed.startsWith('https://')) {
-      return trimmed;
+      return resolveModelIconUrl(api, trimmed) ?? trimmed;
     }
   }
 

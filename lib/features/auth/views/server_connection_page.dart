@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show File, HandshakeException, HttpException, SocketException;
 
+import 'package:conduit/core/config/locked_server.dart';
 import 'package:conduit/shared/widgets/platform_ui/platform_ui.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
@@ -478,6 +479,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
   @override
   void initState() {
     super.initState();
+    if (kServerLockEnabled) _urlController.text = kLockedServerUrl;
     _urlController.addListener(_resetTransientAttempt);
     if (_editingRoutes) {
       _prefillFromRoute();
@@ -860,6 +862,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
 
     DebugLogger.log('Connect button pressed', scope: 'auth/connection');
 
+    if (kServerLockEnabled) _urlController.text = kLockedServerUrl;
     final urlValue = _urlController.text.trim();
     DebugLogger.log(
       'Server address provided: ${urlValue.isNotEmpty}',
@@ -2009,6 +2012,7 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
             label: l10n.serverUrl,
             hint: l10n.serverUrlHint,
             controller: _urlController,
+            enabled: !kServerLockEnabled,
             validator: (value) {
               final v = value ?? _urlController.text;
               return InputValidationService.combine([
@@ -2034,8 +2038,8 @@ class _ServerConnectionPageState extends ConsumerState<ServerConnectionPage> {
 
         const SizedBox(height: Spacing.lg),
 
-        // Advanced settings
-        _buildAdvancedSettings(),
+        // Advanced settings (hidden when the server is locked)
+        if (!kServerLockEnabled) _buildAdvancedSettings(),
       ],
     );
   }

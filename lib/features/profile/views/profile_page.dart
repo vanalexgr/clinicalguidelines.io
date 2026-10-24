@@ -1,3 +1,4 @@
+import 'package:conduit/core/config/locked_server.dart';
 import 'package:conduit/shared/widgets/platform_ui/platform_ui.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -47,8 +48,7 @@ import '../widgets/account_actions.dart';
 /// Profile page (You tab) showing user info and main actions
 /// Enhanced with production-grade design tokens for better cohesion
 class ProfilePage extends ConsumerWidget {
-  static const _githubSponsorsUrl = 'https://github.com/sponsors/cogwheel0';
-  static const _buyMeACoffeeUrl = 'https://www.buymeacoffee.com/cogwheel0';
+  static const _websiteUrl = 'https://clinicalguidelines.io';
 
   const ProfilePage({super.key});
 
@@ -194,36 +194,23 @@ class ProfilePage extends ConsumerWidget {
 
   Widget _buildDonationSection(BuildContext context) {
     final theme = context.conduitTheme;
-    final l10n = AppLocalizations.of(context)!;
     final donationOptions = [
       _buildSupportOption(
         context,
         icon: UiUtils.platformIcon(
-          ios: CupertinoIcons.gift,
-          android: Icons.coffee,
+          ios: CupertinoIcons.globe,
+          android: Icons.language,
         ),
-        title: l10n.buyMeACoffeeTitle,
-        subtitle: l10n.buyMeACoffeeSubtitle,
-        url: _buyMeACoffeeUrl,
-        color: theme.warning,
-      ),
-      _buildSupportOption(
-        context,
-        icon: UiUtils.platformIcon(
-          ios: CupertinoIcons.heart,
-          android: Icons.favorite_border,
-        ),
-        title: l10n.githubSponsorsTitle,
-        subtitle: l10n.githubSponsorsSubtitle,
-        url: _githubSponsorsUrl,
+        title: 'ClinicalGuidelines.io',
+        subtitle: 'Visit our website',
+        url: _websiteUrl,
         color: theme.success,
       ),
     ];
 
     return InsetGroupedList(
       key: const Key('settings-donations'),
-      title: l10n.supportConduit,
-      description: l10n.supportConduitSubtitle,
+      title: 'ClinicalGuidelines.io',
       children: donationOptions,
     );
   }
@@ -422,15 +409,16 @@ class ProfilePage extends ConsumerWidget {
         title: l10n.chatSettings,
         onTap: () => context.pushNamed(RouteNames.chatSettings),
       ),
-      _buildAccountOption(
-        context,
-        icon: UiUtils.platformIcon(
-          ios: CupertinoIcons.waveform,
-          android: Icons.graphic_eq,
+      if (!kServerLockEnabled)
+        _buildAccountOption(
+          context,
+          icon: UiUtils.platformIcon(
+            ios: CupertinoIcons.waveform,
+            android: Icons.graphic_eq,
+          ),
+          title: l10n.audioSettingsTitle,
+          onTap: () => context.pushNamed(RouteNames.audioSettings),
         ),
-        title: l10n.audioSettingsTitle,
-        onTap: () => context.pushNamed(RouteNames.audioSettings),
-      ),
       // Without an account, Direct's default model is set there.
       if (!hasOpenWebUiAccount && directPrimary) personalizationItem,
     ];

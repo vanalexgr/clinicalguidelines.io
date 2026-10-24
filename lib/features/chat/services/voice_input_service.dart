@@ -8,9 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:conduit_core/conduit_core.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:vad/vad.dart' show VadHandler;
+import 'vad_unavailable.dart';
 
 import 'package:conduit_core/features/chat/voice_mode/voice_mode_ports.dart';
 import 'package:conduit_core/features/chat/server_speech/server_speech.dart';
@@ -110,8 +109,7 @@ class VoiceInputService implements VoiceModeInput {
       const Stream<VoiceTranscriptEvent>.empty();
   Timer? _autoStopTimer;
   StreamSubscription<List<double>>? _vadSpeechEndSub;
-  StreamSubscription<({double isSpeech, double notSpeech, List<double> frame})>?
-  _vadFrameSub;
+  StreamSubscription<VadFrame>? _vadFrameSub;
   StreamSubscription<String>? _vadErrorSub;
   StreamSubscription<NativeSttEvent>? _nativeSttSub;
   Timer? _nativeDictationSettleTimer;
@@ -447,15 +445,8 @@ class VoiceInputService implements VoiceModeInput {
 
   Future<bool> _ensureMicrophonePermission() async {
     try {
-      final status = await Permission.microphone.status;
-      if (status.isGranted) {
-        return true;
-      }
-      // On a fresh install iOS reports the "not determined" state as denied.
-      // Actively request so the system permission dialog is surfaced instead
-      // of silently failing the voice flow. A permanently denied permission
-      // simply returns its current status without re-prompting.
-      return await requestMicrophonePermission();
+      // No microphone permission is declared, so it is never granted.
+      return false;
     } catch (_) {
       return false;
     }
@@ -465,8 +456,7 @@ class VoiceInputService implements VoiceModeInput {
   /// Returns true if permission is granted, false otherwise.
   Future<bool> requestMicrophonePermission() async {
     try {
-      final status = await Permission.microphone.request();
-      return status.isGranted;
+      return false;
     } catch (_) {
       return false;
     }

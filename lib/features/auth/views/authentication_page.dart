@@ -1,3 +1,4 @@
+import 'package:conduit/core/config/locked_server.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/foundation.dart' show mapEquals, visibleForTesting;
 import 'package:material_ui/material_ui.dart';
@@ -146,7 +147,8 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
 
   /// Whether the server has OAuth/SSO providers configured.
   bool get _hasSsoEnabled =>
-      isWebViewSupported && (_backendConfig?.hasSsoEnabled ?? true);
+      kServerLockEnabled ||
+      (isWebViewSupported && (_backendConfig?.hasSsoEnabled ?? true));
 
   /// Whether LDAP authentication is enabled on the server.
   bool get _hasLdapEnabled => _backendConfig?.enableLdap == true;
@@ -160,6 +162,8 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
 
   /// Available sign-in methods for this server.
   List<AuthMode> get _availableAuthModes {
+    // Clinical Guidelines signs in through SSO only.
+    if (kServerLockEnabled) return const [AuthMode.sso];
     final modes = <AuthMode>[];
     if (_hasLoginFormEnabled) modes.add(AuthMode.credentials);
     if (_hasSsoEnabled) modes.add(AuthMode.sso);
@@ -232,6 +236,10 @@ class _AuthenticationPageState extends ConsumerState<AuthenticationPage> {
 
   /// Set the default auth mode based on what the server supports.
   void _setDefaultAuthMode() {
+    if (kServerLockEnabled) {
+      _authMode = AuthMode.sso;
+      return;
+    }
     // Priority: SSO > Credentials > LDAP > Token
     if (_hasSsoEnabled && _oauthProviders.enabledProviders.length == 1) {
       // If only one SSO provider, that's probably the intended method

@@ -9,6 +9,7 @@ import 'package:conduit_core/services/settings_service.dart';
 
 import '../../theme/theme_extensions.dart';
 import '../../utils/external_link_launcher.dart';
+import '../dialogs/source_details_dialog.dart';
 import 'package:conduit_core/utils/source_reference_helper.dart';
 
 TextStyle _badgeLabelTextStyle(BuildContext context, Color color) {
@@ -92,6 +93,8 @@ class CitationBadge extends ConsumerWidget {
             onTap!();
           } else if (url != null) {
             launchExternalLink(url, scope: 'markdown/citation');
+          } else {
+            showSourceDetailsDialog(context, source);
           }
         },
         child: Container(
@@ -217,6 +220,8 @@ class CitationBadgeGroup extends ConsumerWidget {
             final url = SourceReferenceHelper.getSourceUrl(sources[index]);
             if (url != null) {
               launchExternalLink(url, scope: 'markdown/citation');
+            } else {
+              showSourceDetailsDialog(context, sources[index]);
             }
           }
         },

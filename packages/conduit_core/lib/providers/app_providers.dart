@@ -54,6 +54,7 @@ import 'package:conduit_core/models/tool.dart';
 import 'package:conduit_core/models/user_settings.dart';
 import 'package:conduit_core/models/knowledge_base.dart';
 
+import 'package:conduit_core/config/locked_server.dart';
 import 'package:conduit_core/services/settings_service.dart';
 import 'package:conduit_core/services/optimized_storage_service.dart';
 import 'package:conduit_core/services/secure_credential_storage.dart';

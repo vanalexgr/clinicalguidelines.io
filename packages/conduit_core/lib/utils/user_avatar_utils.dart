@@ -53,6 +53,13 @@ String? resolveUserProfileImageUrl(ApiService? api, String? rawUrl) {
   }
 
   if (value.startsWith('http://') || value.startsWith('https://')) {
+    // Upgrade http to https when the server is https, so images do not fail
+    // as mixed content.
+    if (api != null &&
+        api.baseUrl.startsWith('https://') &&
+        value.startsWith('http://')) {
+      return value.replaceFirst('http://', 'https://');
+    }
     return value;
   }
 

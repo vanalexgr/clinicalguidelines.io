@@ -1,3 +1,4 @@
+import 'package:conduit/core/config/locked_server.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:conduit/shared/widgets/platform_ui/platform_ui.dart';
 import 'package:conduit/l10n/app_localizations.dart';
@@ -3935,7 +3936,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         chatComposerTextInsertionTargetId,
                     attachedOverlay: attachedOverlay,
                     onVoiceInput: null,
-                    onVoiceCall: _handleVoiceCall,
+                    onVoiceCall: kServerLockEnabled ? null : _handleVoiceCall,
                     onFileAttachment: _handleFileAttachment,
                     onServerFileAttachment: _handleServerFileAttachment,
                     onImageAttachment: _handleImageAttachment,

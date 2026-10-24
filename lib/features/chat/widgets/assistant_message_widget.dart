@@ -1,3 +1,4 @@
+import 'package:conduit/core/config/locked_server.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 
@@ -2338,6 +2339,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         isActiveMessage && (isSpeaking || isPaused || isBusy);
     final bool showPreparingTtsState = _isPreparingTtsPlainText;
     final bool shouldShowTtsButton =
+        !kServerLockEnabled &&
         (showStopState ||
             showPreparingTtsState ||
             _displayedContent.trim().isNotEmpty) &&

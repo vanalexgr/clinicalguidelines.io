@@ -1,6 +1,6 @@
 {
   "@@locale": "pl",
-  "appTitle": "Conduit",
+  "appTitle": "Clinical Guidelines",
   "@appTitle": {
     "description": "Application name displayed in the app and OS UI."
   },
@@ -126,11 +126,11 @@
   "@account": {
     "description": "Section header for account-related options."
   },
-  "supportConduit": "Wesprzyj Conduit",
+  "supportConduit": "Wesprzyj Clinical Guidelines",
   "@supportConduit": {
     "description": "Section header inviting the user to financially support the project."
   },
-  "supportConduitSubtitle": "Zachowaj niezależność Conduit, finansując dalszy rozwój.",
+  "supportConduitSubtitle": "Zachowaj niezależność Clinical Guidelines, finansując dalszy rozwój.",
   "@supportConduitSubtitle": {
     "description": "Subtitle explaining why donations are helpful."
   },
@@ -167,7 +167,7 @@
   "@releaseNotesLearnMore": {
     "description": "Prompt shown beneath the release announcement banner title."
   },
-  "releaseNotesReviewButton": "Oceń Conduit",
+  "releaseNotesReviewButton": "Oceń Clinical Guidelines",
   "@releaseNotesReviewButton": {
     "description": "Button opening the app store review/listing page."
   },
@@ -851,7 +851,7 @@
   "@voiceCallErrorHelp": {
     "description": "Guidance shown when the voice call encounters an error."
   },
-  "messageHintText": "Zapytaj Conduit",
+  "messageHintText": "Zapytaj Clinical Guidelines",
   "@messageHintText": {
     "description": "Short placeholder text in the message input."
   },
@@ -963,7 +963,7 @@
   "@chatQueuedPendingTitle": {
     "description": "Title shown when a queued assistant response is waiting for sync/backoff."
   },
-  "chatQueuedPendingMessage": "Conduit rozpocznie tę odpowiedź, gdy tylko wykona synchronizację.",
+  "chatQueuedPendingMessage": "Clinical Guidelines rozpocznie tę odpowiedź, gdy tylko wykona synchronizację.",
   "@chatQueuedPendingMessage": {
     "description": "Body text shown for a queued assistant response that is waiting to be sent."
   },
@@ -1287,7 +1287,7 @@
   "@aboutApp": {
     "description": "Settings tile title to view app information."
   },
-  "aboutAppSubtitle": "Informacje i linki o Conduit",
+  "aboutAppSubtitle": "Informacje i linki o Clinical Guidelines",
   "@aboutAppSubtitle": {
     "description": "Subtitle/description for the About section."
   },
@@ -1469,7 +1469,7 @@
   "@customHeaders": {
     "description": "Section title for adding custom HTTP headers."
   },
-  "customHeadersDescription": "Conduit wysyła te nagłówki z żądaniami do tego serwera i przechowuje je bezpiecznie na tym urządzeniu.",
+  "customHeadersDescription": "Clinical Guidelines wysyła te nagłówki z żądaniami do tego serwera i przechowuje je bezpiecznie na tym urządzeniu.",
   "@customHeadersDescription": {
     "description": "Helper text explaining use-cases for custom headers."
   },
@@ -1599,11 +1599,11 @@
   },
   "themePaletteConduitLabel": "Conduit",
   "@themePaletteConduitLabel": {
-    "description": "Palette name for the default Conduit theme."
+    "description": "Palette name for the default Clinical Guidelines theme."
   },
-  "themePaletteConduitDescription": "Czysty, neutralny motyw zaprojektowany dla Conduit.",
+  "themePaletteConduitDescription": "Czysty, neutralny motyw zaprojektowany dla Clinical Guidelines.",
   "@themePaletteConduitDescription": {
-    "description": "Description of the Conduit palette."
+    "description": "Description of the Clinical Guidelines palette."
   },
   "themePaletteClaudeLabel": "Claude",
   "@themePaletteClaudeLabel": {
@@ -1649,7 +1649,7 @@
   "@currentlyUsingLightTheme": {
     "description": "Status text indicating light theme is active."
   },
-  "aboutConduit": "O aplikacji Conduit",
+  "aboutConduit": "O aplikacji Clinical Guidelines",
   "@aboutConduit": {
     "description": "Dialog title for app information."
   },
@@ -1769,7 +1769,7 @@
   "@androidAssistantOverlayOption": {
     "description": "Option label for keeping the current assistant overlay."
   },
-  "androidAssistantNewChatOption": "Otwórz Conduit z nowym czatem",
+  "androidAssistantNewChatOption": "Otwórz Clinical Guidelines z nowym czatem",
   "@androidAssistantNewChatOption": {
     "description": "Option label for opening the app to a fresh chat from the assistant trigger."
   },
@@ -3673,7 +3673,7 @@
   "@inactiveStatus": {
     "description": "Label for an inactive account status."
   },
-  "appInformation": "Aplikacja Conduit",
+  "appInformation": "Aplikacja Clinical Guidelines",
   "@appInformation": {
     "description": "Heading for local app information."
   },
@@ -4389,7 +4389,7 @@
   "@notificationSystemSettingsTitle": {
     "description": "Row that opens the OS notification settings for this app."
   },
-  "notificationSystemSettingsDescription": "Zmień uprawnienia, dźwięk i opcje banerów dla Conduit.",
+  "notificationSystemSettingsDescription": "Zmień uprawnienia, dźwięk i opcje banerów dla Clinical Guidelines.",
   "@notificationSystemSettingsDescription": {
     "description": "Subtitle for the row that opens the OS notification settings."
   },
@@ -5903,13 +5903,13 @@
   "@deviceDirectConnectionSourceLabel": {
     "description": "Source label identifying a direct connection stored only on this device."
   },
-  "openWebUiDirectConnectionUnsupportedAuth": "To połączenie używa metody uwierzytelniania, której Conduit nie może bezpiecznie użyć.",
+  "openWebUiDirectConnectionUnsupportedAuth": "To połączenie używa metody uwierzytelniania, której Clinical Guidelines nie może bezpiecznie użyć.",
   "@openWebUiDirectConnectionUnsupportedAuth": {
     "description": "Warning shown when an Open WebUI direct connection uses unsupported authentication."
   },
   "directConnectionUnavailableLabel": "Niedostępne",
   "@directConnectionUnavailableLabel": {
-    "description": "Status label for a direct connection that Conduit cannot currently use."
+    "description": "Status label for a direct connection that Clinical Guidelines cannot currently use."
   },
   "openWebUiDirectConnectionEditorDescription": "Zmiany są zapisywane na Twoim koncie Open WebUI.",
   "@openWebUiDirectConnectionEditorDescription": {
@@ -6177,7 +6177,7 @@
   "@directOpenRouterUrlInvalid": {
     "description": "Validation error shown when an OpenRouter direct connection does not use an approved API root."
   },
-  "directOpenRouterBaseUrlDescription": "Używa Twojego klucza API OpenRouter, uwierzytelnionego katalogu modeli i narzędzi zarządzanych przez Conduit.",
+  "directOpenRouterBaseUrlDescription": "Używa Twojego klucza API OpenRouter, uwierzytelnionego katalogu modeli i narzędzi zarządzanych przez Clinical Guidelines.",
   "@directOpenRouterBaseUrlDescription": {
     "description": "Help text shown below the OpenRouter direct connection base URL."
   },
@@ -6374,11 +6374,11 @@
   "@directContextCompactionTitle": {
     "description": "Section title for fallback context windows used by Direct models."
   },
-  "directContextCompactionDescription": "Te modele nie podają rozmiaru okna kontekstu. Conduit używa wybranego limitu do kompaktowania starszych wiadomości, zanim żądanie stanie się zbyt duże.",
+  "directContextCompactionDescription": "Te modele nie podają rozmiaru okna kontekstu. Clinical Guidelines używa wybranego limitu do kompaktowania starszych wiadomości, zanim żądanie stanie się zbyt duże.",
   "@directContextCompactionDescription": {
     "description": "Footer explaining per-model Direct context window fallbacks."
   },
-  "directContextCompactionPickerDescription": "Wybierz okno kontekstu używane przez Conduit do automatycznego kompaktowania.",
+  "directContextCompactionPickerDescription": "Wybierz okno kontekstu używane przez Clinical Guidelines do automatycznego kompaktowania.",
   "@directContextCompactionPickerDescription": {
     "description": "Description in the Direct context window fallback picker."
   },
@@ -6703,13 +6703,13 @@
   "@ollamaThinkingMaximum": {
     "description": "Maximum Ollama thinking level."
   },
-  "releaseNotesSupportPromptHeading": "Podoba Ci się Conduit?",
+  "releaseNotesSupportPromptHeading": "Podoba Ci się Clinical Guidelines?",
   "@releaseNotesSupportPromptHeading": {
     "description": "Heading above the combined review and donation actions in release notes."
   },
-  "releaseNotesSupportPromptMessage": "Krótka opinia pomaga większej liczbie osób znaleźć Conduit. Niewielki datek pomaga mi w dalszym rozwoju. Każde z tych działań wiele znaczy.",
+  "releaseNotesSupportPromptMessage": "Krótka opinia pomaga większej liczbie osób znaleźć Clinical Guidelines. Niewielki datek pomaga mi w dalszym rozwoju. Każde z tych działań wiele znaczy.",
   "@releaseNotesSupportPromptMessage": {
-    "description": "Combined message explaining how a review or donation supports Conduit."
+    "description": "Combined message explaining how a review or donation supports Clinical Guidelines."
   },
   "directConnectProvider": "Połącz dostawcę",
   "@directConnectProvider": {
@@ -6947,7 +6947,7 @@
   "@voiceCallExpand": {
     "description": "Accessibility label for the button that opens the minimized voice call pill back into the full panel."
   },
-  "askConduitAction": "Zapytaj Conduit",
+  "askConduitAction": "Zapytaj Clinical Guidelines",
   "@askConduitAction": {
     "description": "Long-press menu action that puts the selected answer text into the chat composer to ask about it."
   },
@@ -7041,7 +7041,7 @@
   "chatForkFailed": "Nie udało się rozgałęzić tego czatu. Spróbuj ponownie.",
   "codeInterpreter": "Interpreter kodu",
   "codeInterpreterDescription": "Uruchamiaj kod na serwerze, aby analizować dane i tworzyć pliki.",
-  "codeInterpreterBrowserEngine": "Ten serwer uruchamia kod w przeglądarce, czego Conduit nie potrafi.",
+  "codeInterpreterBrowserEngine": "Ten serwer uruchamia kod w przeglądarce, czego Clinical Guidelines nie potrafi.",
   "codeInterpreterUnavailable": "Niedostępny dla tego serwera, konta lub modelu.",
   "folderProjectSettings": "Ustawienia projektu",
   "folderProjectSettingsDescription": "Wartości domyślne dla nowych czatów w tym folderze. Serwer stosuje jego wiedzę i prompt systemowy do każdego czatu w nim.",
@@ -7154,7 +7154,7 @@
   "queueDraftAction": "Dodaj do kolejki",
   "queuedDraftsTitle": "Wiadomości w kolejce",
   "queuedDraftsCount": "{count, plural, one{{count} wiadomość w kolejce} few{{count} wiadomości w kolejce} many{{count} wiadomości w kolejce} other{{count} wiadomości w kolejce}}",
-  "queuedDraftsSessionNote": "Wiadomości w kolejce są przechowywane tylko, dopóki Conduit jest otwarty. Gdy odpowiedź się zakończy, zostaną wysłane razem jako jedna wiadomość.",
+  "queuedDraftsSessionNote": "Wiadomości w kolejce są przechowywane tylko, dopóki Clinical Guidelines jest otwarty. Gdy odpowiedź się zakończy, zostaną wysłane razem jako jedna wiadomość.",
   "queuedDraftSendNow": "Zatrzymaj i wyślij",
   "queuedDraftUploading": "Czekam na zakończenie przesyłania pliku",
   "queuedDraftFileFailed": "Nie udało się przesłać pliku. Spróbuj ponownie lub usuń go.",
@@ -7851,7 +7851,7 @@
   "accountsAddressChangeAnyway": "Zmień mimo to",
   "accountsSignOutAnyway": "Wyloguj się mimo to",
   "accountsServerAddresses": "Adresy",
-  "accountsServerAddressesHelp": "Conduit łączy się przez pierwszy adres, który odpowie, zaczynając od góry. Przeciągnij, aby zmienić kolejność.",
+  "accountsServerAddressesHelp": "Clinical Guidelines łączy się przez pierwszy adres, który odpowie, zaczynając od góry. Przeciągnij, aby zmienić kolejność.",
   "accountsAddAddress": "Dodaj adres",
   "accountsEditAddress": "Edytuj adres",
   "accountsSaveAddress": "Zapisz adres",
@@ -7861,9 +7861,9 @@
   "accountsAddressDifferentServer": "Ten adres prowadzi do innego serwera lub do innego konta na nim.",
   "accountsAddressNeedsSignIn": "Najpierw zaloguj się na konto na tym serwerze, aby można było sprawdzić adres.",
   "accountsRemoveAddress": "Usuń adres",
-  "accountsRemoveAddressMessage": "Conduit przestanie próbować tego adresu. Twoje konta będą nadal zalogowane.",
+  "accountsRemoveAddressMessage": "Clinical Guidelines przestanie próbować tego adresu. Twoje konta będą nadal zalogowane.",
   "accountsAddressConfirmTitle": "Sprawdzić ten adres?",
-  "accountsAddressConfirmMessage": "Aby upewnić się, że {host} to ten serwer, Conduit wyśle tam sesję konta zapisanego na tym urządzeniu. Kontynuuj tylko wtedy, gdy ufasz temu adresowi.",
+  "accountsAddressConfirmMessage": "Aby upewnić się, że {host} to ten serwer, Clinical Guidelines wyśle tam sesję konta zapisanego na tym urządzeniu. Kontynuuj tylko wtedy, gdy ufasz temu adresowi.",
   "@accountsAddressConfirmMessage": {
     "placeholders": {
       "host": {
@@ -7883,7 +7883,7 @@
   "voiceProviderModelsHint": "Użyj nazw modeli podanych przez dostawcę. Kierunek pozostawiony pusty korzysta z tego urządzenia.",
   "voiceProviderRealtimeModel": "Model na żywo",
   "voiceProviderRealtimeInstructions": "Instrukcje",
-  "voiceProviderRealtimeInstructionsHint": "Pozostaw puste, aby użyć instrukcji Conduit.",
+  "voiceProviderRealtimeInstructionsHint": "Pozostaw puste, aby użyć instrukcji Clinical Guidelines.",
   "voiceProviderRealtimeFooter": "Rozmowy w czatach Direct i Apple prowadzi ten głos, a powyższy model transkrypcji pozwala mu śledzić Twoją wypowiedź.",
   "voiceCallModeTitle": "Rozmowy",
   "voiceCallModeRealtime": "Na żywo",

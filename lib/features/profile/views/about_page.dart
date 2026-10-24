@@ -20,7 +20,7 @@ import '../../../shared/services/app_package_info.dart';
 class AboutPage extends ConsumerStatefulWidget {
   const AboutPage({super.key});
 
-  static const _githubUrl = 'https://github.com/cogwheel0/conduit';
+  static const _githubUrl = 'https://github.com/vanalexgr/clinicalguidelines.io';
 
   @override
   ConsumerState<AboutPage> createState() => _AboutPageState();
@@ -134,7 +134,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
             color: theme.buttonPrimary,
           ),
           title: l10n.githubRepository,
-          subtitle: 'github.com/cogwheel0/conduit',
+          subtitle: 'github.com/vanalexgr/clinicalguidelines.io',
           trailing: Icon(
             Icons.open_in_new_rounded,
             size: IconSize.small,

@@ -85,11 +85,7 @@ dependencies:
   stupid_simple_sheet: ^0.9.1+1
   
   # Platform Features
-  # Keep exact until VAD declares Record 7 support; see dependency_overrides.
-  vad: 0.0.8
-  record: ^7.1.1
   audio_session: ^0.2.2
-  permission_handler: ^13.0.2
   image_picker: ^1.2.3
   file_picker: ^13.0.0
   receive_sharing_intent: ^1.9.0
@@ -118,7 +114,6 @@ dependencies:
   connectivity_plus: ^7.3.0
   flutter_cache_manager: ^3.4.1
   http: ^1.5.0
-  flutter_callkit_incoming: ^3.1.6
   quick_actions: ^1.1.0
   html_unescape: ^2.0.0
   home_widget: ^0.9.3
@@ -138,7 +133,6 @@ dependencies:
   fleather: ^1.27.0
   # Document model + markdown/HTML codecs backing the Fleather note editor.
   parchment: ^1.27.0
-  flutter_webrtc: ^1.6.2+hotfix.4
 
 # Required while mermaid_flutter declares mermaid_core from the hosted source:
 # Pub cannot combine that source with Conduit's unpublished path package, even
@@ -147,10 +141,6 @@ dependencies:
 dependency_overrides:
   mermaid_core:
     path: third_party/mermaid/packages/mermaid_core
-  # VAD 0.0.8 still declares record ^6.1.2. Conduit supplies its own Record 7
-  # PCM stream instead of using VAD's internal recorder. Remove this override
-  # once VAD publishes Record 7 support (upstream issue #22).
-  record: 7.1.1
   # objective_c 9.6.1's build hook references Architecture.arm64e, which no
   # published code_assets release defines, so native-assets compilation fails
   # on macOS for every flutter test/run. Drop once a code_assets with arm64e
@@ -172,8 +162,6 @@ dev_dependencies:
   checks: ^0.3.1
   drift_dev: ^2.34.0
   fake_async: ^1.3.3
-  # Used only in tests to mock the microphone permission platform channel.
-  permission_handler_platform_interface: ^4.3.0
   plugin_platform_interface: ^2.1.8
 
 flutter:
@@ -192,7 +180,6 @@ flutter:
     - assets/chartjs.min.js
     - assets/flutter_tex.js
     - assets/flutter_tex.css
-    - assets/vad/
 
 flutter_native_splash:
   # Splash background matches the light theme; `color_dark` handles dark mode.

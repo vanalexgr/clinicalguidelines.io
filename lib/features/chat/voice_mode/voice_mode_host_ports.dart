@@ -1,8 +1,6 @@
 import 'dart:io' show Platform;
 
 import 'package:conduit_core/features/chat/voice_mode/voice_mode_ports.dart';
-import 'package:conduit_core/utils/debug_logger.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/services/background_streaming_handler.dart';
 
@@ -42,8 +40,7 @@ class ChatVoiceModeBackgroundCoordinator implements VoiceBackgroundPort {
   }
 }
 
-/// `dart:io`'s platform, and permission_handler for the Android 12+
-/// `BLUETOOTH_CONNECT` prompt a call needs to route audio to headsets.
+/// `dart:io`'s platform.
 class FlutterVoiceModePlatform implements VoiceModePlatformPort {
   const FlutterVoiceModePlatform();
 
@@ -55,18 +52,6 @@ class FlutterVoiceModePlatform implements VoiceModePlatformPort {
 
   @override
   Future<void> requestCallRoutingPermission() async {
-    final status = await Permission.bluetoothConnect.status;
-    if (status.isGranted) {
-      return;
-    }
-
-    final requested = await Permission.bluetoothConnect.request();
-    if (!requested.isGranted) {
-      DebugLogger.warning(
-        'bluetooth-connect-denied',
-        scope: 'chat/voice_mode',
-        data: {'status': requested.name},
-      );
-    }
+    // No Bluetooth or microphone permission is declared.
   }
 }

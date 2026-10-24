@@ -625,8 +625,11 @@ class Models extends _$Models {
       DebugLogger.log('fetch-start', scope: 'models');
       final models = await api.getModels();
       if (!openWebUiCacheOwnershipIsCurrent(ref, ownership)) return null;
-      final visibleModels = sanitizeRemoteHermesModels(
-        sanitizeRemoteDirectModels(_visibleModels(models)),
+      final visibleModels = await _restrictToServerDefault(
+        api,
+        sanitizeRemoteHermesModels(
+          sanitizeRemoteDirectModels(_visibleModels(models)),
+        ),
       );
       DebugLogger.log(
         'fetch-ok',
@@ -657,6 +660,31 @@ class Models extends _$Models {
       // successful result and can silently switch an OpenWebUI conversation.
       rethrow;
     }
+  }
+
+  /// Clinical Guidelines exposes only the server's default model (the
+  /// workspace model set in Open WebUI), falling back to the first model.
+  Future<List<Model>> _restrictToServerDefault(
+    ApiService api,
+    List<Model> models,
+  ) async {
+    if (!kServerLockEnabled || models.length <= 1) return models;
+    String? targetId;
+    try {
+      targetId = await api.getDefaultModel();
+    } catch (_) {
+      // Fall through to the locally saved default.
+    }
+    if (targetId == null || targetId.isEmpty) {
+      targetId = await SettingsService.getDefaultModel().catchError(
+        (_) => null,
+      );
+    }
+    final wanted = targetId?.toLowerCase();
+    final match = wanted == null || wanted.isEmpty
+        ? null
+        : models.where((m) => m.id.toLowerCase() == wanted).firstOrNull;
+    return [match ?? models.first];
   }
 
   List<Model> _visibleModels(List<Model> models) {

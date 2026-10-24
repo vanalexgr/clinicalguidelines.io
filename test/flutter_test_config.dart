@@ -5,7 +5,7 @@ import 'package:conduit_core/utils/debug_logger.dart';
 import 'package:conduit/platform/flutter_flush_scheduler.dart';
 import 'package:conduit/platform/flutter_post_frame_scheduler.dart';
 import 'package:conduit/platform/just_audio_playback.dart';
-import 'package:conduit/platform/record_audio_capture.dart';
+import 'package:conduit/platform/no_audio_capture.dart';
 import 'package:conduit/platform/flutter_key_value_store.dart';
 import 'package:conduit/platform/flutter_log_sink.dart';
 import 'package:conduit/platform/geolocator_location_port.dart';
@@ -42,7 +42,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   // record-backed client, and the core's default reports no microphone
   // at all, which would take every voice test down a 'cannot listen'
   // path it was never meant to exercise.
-  AudioCapturePort.hostFactory = RecordAudioCapture.new;
+  AudioCapturePort.hostFactory = NoAudioCapture.new;
   // Location and wakelock reached their plugins directly before they became
   // ports; installing the app's adapters keeps tests on those paths.
   LocationPort.hostDefault = const GeolocatorLocationPort();

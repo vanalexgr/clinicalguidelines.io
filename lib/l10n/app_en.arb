@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "Conduit",
+  "appTitle": "Clinical Guidelines",
   "@appTitle": {
     "description": "Application name displayed in the app and OS UI."
   },
@@ -126,11 +126,11 @@
   "@account": {
     "description": "Section header for account-related options."
   },
-  "supportConduit": "Support Conduit",
+  "supportConduit": "Support Clinical Guidelines",
   "@supportConduit": {
     "description": "Section header inviting the user to financially support the project."
   },
-  "supportConduitSubtitle": "Keep Conduit independent by funding ongoing development.",
+  "supportConduitSubtitle": "Keep Clinical Guidelines independent by funding ongoing development.",
   "@supportConduitSubtitle": {
     "description": "Subtitle explaining why donations are helpful."
   },
@@ -167,7 +167,7 @@
   "@releaseNotesLearnMore": {
     "description": "Prompt shown beneath the release announcement banner title."
   },
-  "releaseNotesReviewButton": "Review Conduit",
+  "releaseNotesReviewButton": "Review Clinical Guidelines",
   "@releaseNotesReviewButton": {
     "description": "Button opening the app store review/listing page."
   },
@@ -851,7 +851,7 @@
   "@voiceCallErrorHelp": {
     "description": "Guidance shown when the voice call encounters an error."
   },
-  "messageHintText": "Ask Conduit",
+  "messageHintText": "Ask Clinical Guidelines",
   "@messageHintText": {
     "description": "Short placeholder text in the message input."
   },
@@ -963,7 +963,7 @@
   "@chatQueuedPendingTitle": {
     "description": "Title shown when a queued assistant response is waiting for sync/backoff."
   },
-  "chatQueuedPendingMessage": "Conduit will start this response as soon as sync runs.",
+  "chatQueuedPendingMessage": "Clinical Guidelines will start this response as soon as sync runs.",
   "@chatQueuedPendingMessage": {
     "description": "Body text shown for a queued assistant response that is waiting to be sent."
   },
@@ -1469,7 +1469,7 @@
   "@customHeaders": {
     "description": "Section title for adding custom HTTP headers."
   },
-  "customHeadersDescription": "Conduit sends these headers with requests to this server and stores them securely on this device.",
+  "customHeadersDescription": "Clinical Guidelines sends these headers with requests to this server and stores them securely on this device.",
   "@customHeadersDescription": {
     "description": "Helper text explaining use-cases for custom headers."
   },
@@ -1602,11 +1602,11 @@
   },
   "themePaletteConduitLabel": "Conduit",
   "@themePaletteConduitLabel": {
-    "description": "Palette name for the default Conduit theme."
+    "description": "Palette name for the default Clinical Guidelines theme."
   },
-  "themePaletteConduitDescription": "Clean neutral theme designed for Conduit.",
+  "themePaletteConduitDescription": "Clean neutral theme designed for Clinical Guidelines.",
   "@themePaletteConduitDescription": {
-    "description": "Description of the Conduit palette."
+    "description": "Description of the Clinical Guidelines palette."
   },
   "themePaletteClaudeLabel": "Claude",
   "@themePaletteClaudeLabel": {
@@ -1652,7 +1652,7 @@
   "@currentlyUsingLightTheme": {
     "description": "Status text indicating light theme is active."
   },
-  "aboutConduit": "About Conduit",
+  "aboutConduit": "About Clinical Guidelines",
   "@aboutConduit": {
     "description": "Dialog title for app information."
   },
@@ -1772,7 +1772,7 @@
   "@androidAssistantOverlayOption": {
     "description": "Option label for keeping the current assistant overlay."
   },
-  "androidAssistantNewChatOption": "Open Conduit with a new chat",
+  "androidAssistantNewChatOption": "Open Clinical Guidelines with a new chat",
   "@androidAssistantNewChatOption": {
     "description": "Option label for opening the app to a fresh chat from the assistant trigger."
   },
@@ -1934,9 +1934,9 @@
   },
   "voiceProviderRealtimeInstructions": "Instructions",
   "@voiceProviderRealtimeInstructions": {
-    "description": "Label of the optional field that replaces Conduit's instructions for the realtime voice."
+    "description": "Label of the optional field that replaces Clinical Guidelines's instructions for the realtime voice."
   },
-  "voiceProviderRealtimeInstructionsHint": "Leave empty to use Conduit's own.",
+  "voiceProviderRealtimeInstructionsHint": "Leave empty to use Clinical Guidelines's own.",
   "@voiceProviderRealtimeInstructionsHint": {
     "description": "Placeholder of the realtime instructions field."
   },
@@ -2018,7 +2018,7 @@
   "@ttsSelectVoice": {
     "description": "Title for voice picker bottom sheet."
   },
-  "ttsPreviewText": "Conduit can read responses aloud using this voice.",
+  "ttsPreviewText": "Clinical Guidelines can read responses aloud using this voice.",
   "@ttsPreviewText": {
     "description": "Sample text spoken during voice preview."
   },
@@ -2570,7 +2570,7 @@
   },
   "proxyAuthSignInAgain": "Sign in through proxy again",
   "@proxyAuthSignInAgain": {
-    "description": "Button on the connection issue page that reopens the reverse-proxy sign-in without signing out of Conduit."
+    "description": "Button on the connection issue page that reopens the reverse-proxy sign-in without signing out of Clinical Guidelines."
   },
   "proxyAuthFailed": "Proxy authentication failed",
   "@proxyAuthFailed": {
@@ -3890,7 +3890,7 @@
   "@inactiveStatus": {
     "description": "Label for an inactive account status."
   },
-  "appInformation": "Conduit app",
+  "appInformation": "Clinical Guidelines app",
   "@appInformation": {
     "description": "Heading for local app information."
   },
@@ -4546,7 +4546,7 @@
   "@notificationSystemTitle": {
     "description": "Toggle title for OS-level notifications shown when the app is backgrounded."
   },
-  "notificationSystemDescription": "Show an alert when Conduit is in the background.",
+  "notificationSystemDescription": "Show an alert when Clinical Guidelines is in the background.",
   "@notificationSystemDescription": {
     "description": "Toggle description for system notifications."
   },
@@ -4606,7 +4606,7 @@
   "@notificationSystemSettingsTitle": {
     "description": "Row that opens the OS notification settings for this app."
   },
-  "notificationSystemSettingsDescription": "Change permission, sound, and banner options for Conduit.",
+  "notificationSystemSettingsDescription": "Change permission, sound, and banner options for Clinical Guidelines.",
   "@notificationSystemSettingsDescription": {
     "description": "Subtitle for the row that opens the OS notification settings."
   },
@@ -5473,13 +5473,13 @@
   "@deviceDirectConnectionSourceLabel": {
     "description": "Source label identifying a direct connection stored only on this device."
   },
-  "openWebUiDirectConnectionUnsupportedAuth": "This connection uses an authentication method Conduit cannot safely use.",
+  "openWebUiDirectConnectionUnsupportedAuth": "This connection uses an authentication method Clinical Guidelines cannot safely use.",
   "@openWebUiDirectConnectionUnsupportedAuth": {
     "description": "Warning shown when an Open WebUI direct connection uses unsupported authentication."
   },
   "directConnectionUnavailableLabel": "Unavailable",
   "@directConnectionUnavailableLabel": {
-    "description": "Status label for a direct connection that Conduit cannot currently use."
+    "description": "Status label for a direct connection that Clinical Guidelines cannot currently use."
   },
   "openWebUiDirectConnectionEditorDescription": "Changes are saved to your Open WebUI account.",
   "@openWebUiDirectConnectionEditorDescription": {
@@ -5948,11 +5948,11 @@
   "@directContextCompactionTitle": {
     "description": "Section title for fallback context windows used by Direct models."
   },
-  "directContextCompactionDescription": "These models do not report a context window. Conduit uses the selected limit to compact older messages before requests get too large.",
+  "directContextCompactionDescription": "These models do not report a context window. Clinical Guidelines uses the selected limit to compact older messages before requests get too large.",
   "@directContextCompactionDescription": {
     "description": "Footer explaining per-model Direct context window fallbacks."
   },
-  "directContextCompactionPickerDescription": "Choose the context window Conduit should use for automatic compaction.",
+  "directContextCompactionPickerDescription": "Choose the context window Clinical Guidelines should use for automatic compaction.",
   "@directContextCompactionPickerDescription": {
     "description": "Description in the Direct context window fallback picker."
   },
@@ -6082,7 +6082,7 @@
   "@hermesMemoryKeyTitle": {
     "description": "Label for the optional Hermes memory key."
   },
-  "hermesMemoryKeyDescription": "Keeps long-term memory separate for this device. Conduit creates a key if you leave this blank.",
+  "hermesMemoryKeyDescription": "Keeps long-term memory separate for this device. Clinical Guidelines creates a key if you leave this blank.",
   "@hermesMemoryKeyDescription": {
     "description": "Help text explaining how the optional Hermes memory key scopes long-term memory."
   },
@@ -6431,13 +6431,13 @@
   "@ollamaThinkingMaximum": {
     "description": "Maximum Ollama thinking level."
   },
-  "releaseNotesSupportPromptHeading": "Enjoying Conduit?",
-  "releaseNotesSupportPromptMessage": "A short review helps more people find Conduit. A small tip helps me keep building it. Either one means a lot.",
+  "releaseNotesSupportPromptHeading": "Enjoying Clinical Guidelines?",
+  "releaseNotesSupportPromptMessage": "A short review helps more people find Clinical Guidelines. A small tip helps me keep building it. Either one means a lot.",
   "@releaseNotesSupportPromptHeading": {
     "description": "Heading above the combined review and donation actions in release notes."
   },
   "@releaseNotesSupportPromptMessage": {
-    "description": "Combined message explaining how a review or donation supports Conduit."
+    "description": "Combined message explaining how a review or donation supports Clinical Guidelines."
   },
   "directConnectProvider": "Connect provider",
   "@directConnectProvider": {"description":"Primary onboarding action that tests and saves a direct provider."},
@@ -6909,7 +6909,7 @@
   "@voiceCallExpand": {
     "description": "Accessibility label for the button that opens the minimized voice call pill back into the full panel."
   },
-  "askConduitAction": "Ask Conduit",
+  "askConduitAction": "Ask Clinical Guidelines",
   "@askConduitAction": {"description":"Long-press menu action that puts the selected answer text into the chat composer to ask about it."},
   "voiceCallStartTimeout": "Starting the voice call took too long. Try again.",
   "@voiceCallStartTimeout": {"description": "Error shown when starting a voice call takes too long."},
@@ -7088,7 +7088,7 @@
   "@codeInterpreter": {"description": "Label for the composer action that lets the server run code to answer the next messages."},
   "codeInterpreterDescription": "Run code on the server to analyze data and make files.",
   "@codeInterpreterDescription": {"description": "Subtitle for the Code interpreter composer action explaining that code runs on the server."},
-  "codeInterpreterBrowserEngine": "This server runs code in the browser, which Conduit can't do.",
+  "codeInterpreterBrowserEngine": "This server runs code in the browser, which Clinical Guidelines can't do.",
   "@codeInterpreterBrowserEngine": {"description": "Shown on the disabled Code interpreter composer action when the server asks the client to run code in a browser, which the app cannot do."},
   "codeInterpreterUnavailable": "Not available for this server, account, or model.",
   "@codeInterpreterUnavailable": {
@@ -7369,7 +7369,7 @@
       }
     }
   },
-  "queuedDraftsSessionNote": "Queued messages stay only while Conduit is open. When the response finishes they're sent together as one message.",
+  "queuedDraftsSessionNote": "Queued messages stay only while Clinical Guidelines is open. When the response finishes they're sent together as one message.",
   "@queuedDraftsSessionNote": {
     "description": "Explains how long queued messages are kept and how they are sent. Shown in the queue sheet and once after the first message is queued."
   },
@@ -8752,7 +8752,7 @@
   "@accountsServerAddresses": {
     "description": "Row under a saved Open WebUI server, and title of the page, listing the addresses (URLs) the server can be reached at, such as a LAN address, a Tailscale name and a public domain."
   },
-  "accountsServerAddressesHelp": "Conduit connects through the first address that answers, from the top. Drag to change the order.",
+  "accountsServerAddressesHelp": "Clinical Guidelines connects through the first address that answers, from the top. Drag to change the order.",
   "@accountsServerAddressesHelp": {
     "description": "Explanation under the list of addresses of one Open WebUI server."
   },
@@ -8792,7 +8792,7 @@
   "@accountsRemoveAddress": {
     "description": "Destructive action that removes one address of an Open WebUI server."
   },
-  "accountsRemoveAddressMessage": "Conduit stops trying this address. Your accounts stay signed in.",
+  "accountsRemoveAddressMessage": "Clinical Guidelines stops trying this address. Your accounts stay signed in.",
   "@accountsRemoveAddressMessage": {
     "description": "Body of the confirmation before removing one address of an Open WebUI server."
   },
@@ -8800,7 +8800,7 @@
   "@accountsAddressConfirmTitle": {
     "description": "Title of the confirmation shown before a new address of a saved Open WebUI server, on a host none of its addresses uses, is checked by sending it a saved account's session."
   },
-  "accountsAddressConfirmMessage": "To make sure {host} is this server, Conduit sends it the session of an account saved here. Continue only if you trust this address.",
+  "accountsAddressConfirmMessage": "To make sure {host} is this server, Clinical Guidelines sends it the session of an account saved here. Continue only if you trust this address.",
   "@accountsAddressConfirmMessage": {
     "description": "Body of the confirmation shown before a saved account's session is sent to a new address to check that it reaches the same Open WebUI server. {host} is the new address's host name, with its port when it has one.",
     "placeholders": {

@@ -101,4 +101,3 @@ import UserNotifications
   }
 }
 
-extension AppDelegate: NativeSttCallKitAppDelegate {}

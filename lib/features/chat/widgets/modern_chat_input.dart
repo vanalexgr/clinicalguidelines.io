@@ -1,3 +1,4 @@
+import 'package:conduit/core/config/locked_server.dart';
 import 'package:conduit/shared/widgets/platform_ui/platform_ui.dart';
 import 'package:flutter/foundation.dart'
     show ValueNotifier, kIsWeb, visibleForTesting;
@@ -3309,11 +3310,12 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     }
     final bool showWebPill = selectedQuickPills.contains('web');
     final bool showImagePillPref = selectedQuickPills.contains('image');
-    final voiceAvailableAsync = ref.watch(voiceInputAvailableProvider);
-    final bool voiceAvailable = voiceAvailableAsync.maybeWhen(
-      data: (v) => v,
-      orElse: () => false,
-    );
+    // No voice features: do not even probe the platform for speech support.
+    final bool voiceAvailable =
+        !kServerLockEnabled &&
+        ref
+            .watch(voiceInputAvailableProvider)
+            .maybeWhen(data: (v) => v, orElse: () => false);
     final selectedToolIds = ref.watch(selectedToolIdsProvider);
     final selectedFilterIds = ref.watch(selectedFilterIdsProvider);
 

@@ -1,3 +1,5 @@
+import 'core/config/locked_server.dart';
+
 import 'dart:async';
 import 'dart:developer' as developer;
 
@@ -24,7 +26,6 @@ import 'platform/flutter_app_lifecycle.dart';
 import 'platform/flutter_clipboard_port.dart';
 import 'platform/flutter_connectivity_port.dart';
 import 'platform/realtime_pcm_audio.dart';
-import 'platform/webrtc_realtime_media.dart';
 import 'platform/url_launcher_open_external_url_port.dart';
 import 'platform/flutter_cookie_jar.dart';
 import 'platform/flutter_flush_scheduler.dart';
@@ -37,7 +38,7 @@ import 'package:conduit_core/services/share_staging_cleanup.dart'
 
 import 'platform/ios_share_staging.dart';
 import 'platform/just_audio_playback.dart';
-import 'platform/record_audio_capture.dart';
+import 'platform/no_audio_capture.dart';
 import 'platform/flutter_secure_key_value_store.dart';
 import 'platform/flutter_key_value_store.dart';
 import 'platform/flutter_log_sink.dart';
@@ -108,9 +109,7 @@ import 'core/utils/current_localizations.dart';
 import 'package:conduit_core/features/chat/services/request_completion_runner.dart';
 
 import 'features/chat/providers/text_to_speech_provider.dart';
-import 'core/services/callkit_service.dart';
 import 'features/chat/services/voice_input_service.dart';
-import 'features/chat/voice_mode/chat_voice_audio_session_coordinator.dart';
 import 'features/chat/voice_mode/chat_voice_mode_controller.dart';
 
 import 'package:conduit_core/features/chat/providers/chat_providers.dart'
@@ -164,9 +163,11 @@ import 'package:conduit_core/features/hermes/providers/hermes_providers.dart';
 
 import 'features/hermes/services/hermes_dashboard_rest_bridge.dart';
 import 'features/hermes/widgets/hermes_connection_switcher.dart';
+
 import 'package:conduit_core/providers/openwebui_accounts_controller.dart';
 import 'package:conduit_core/providers/openwebui_route_resolver.dart'
     show openWebUiRouteResolverProvider;
+
 import 'core/services/background_streaming_handler.dart';
 import 'features/profile/widgets/account_actions.dart';
 import 'features/profile/widgets/account_sheet.dart'
@@ -233,6 +234,7 @@ void _registerBundledLicenses() {
 /// Whether this device runs realtime voice calls' audio: the native engine
 /// and WebRTC exist on iOS and Android.
 bool get _hasRealtimeAudio =>
+    !kServerLockEnabled &&
     !kIsWeb &&
     (defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.android);
@@ -252,7 +254,7 @@ void main() {
   ShareStagingPort.hostDefault = IosShareStaging(
     stagingDirectoryName: shareStagingDirectoryName,
   );
-  AudioCapturePort.hostFactory = RecordAudioCapture.new;
+  AudioCapturePort.hostFactory = NoAudioCapture.new;
   // The preference store is a host capability too; installed
   // before bootstrap awaits its first synchronous read.
   PreferencesStore.installLoader(FlutterKeyValueStore.load);
@@ -506,12 +508,6 @@ void main() {
           voiceModeSpeechProvider.overrideWith(
             (ref) => ref.watch(textToSpeechServiceProvider),
           ),
-          voiceCallKitProvider.overrideWith(
-            (ref) => ref.watch(callKitServiceProvider),
-          ),
-          voiceAudioSessionProvider.overrideWith(
-            (ref) => ref.watch(chatVoiceAudioSessionCoordinatorProvider),
-          ),
           chatVoiceModeBackgroundCoordinatorProvider.overrideWithValue(
             ChatVoiceModeBackgroundCoordinator(),
           ),
@@ -521,10 +517,6 @@ void main() {
           // A realtime voice needs the native echo-cancelled audio engine.
           realtimePcmAudioFactoryProvider.overrideWithValue(
             () => _hasRealtimeAudio ? MethodChannelRealtimePcmAudio() : null,
-          ),
-          // Hermes's GPT-Live calls run over WebRTC.
-          realtimeWebRtcMediaFactoryProvider.overrideWithValue(
-            () => _hasRealtimeAudio ? WebRtcRealtimeMedia() : null,
           ),
         ],
       );
@@ -616,7 +608,10 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
 
   /// The native Settings rows for accounts and connections. Returns whether
   /// [actionId] was one of them.
-  Future<bool> _handleNativeAccountAction(String actionId, Object? value) async {
+  Future<bool> _handleNativeAccountAction(
+    String actionId,
+    Object? value,
+  ) async {
     final context = NavigationService.context;
     switch (actionId) {
       case nativeAccountSwitchActionId:
@@ -860,7 +855,10 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
       if (event.id == NativeSheetRoutes.openSourceLicenses) {
         final context = NavigationService.context;
         if (context == null || !context.mounted) return;
-        showLicensePage(context: context, applicationName: 'Conduit');
+        showLicensePage(
+          context: context,
+          applicationName: 'Clinical Guidelines',
+        );
         return;
       }
 
