@@ -22,6 +22,14 @@ import androidx.lifecycle.LifecycleOwner
 import io.flutter.embedding.engine.FlutterEngine
 import kotlinx.coroutines.*
 
+/**
+ * Clinical Guidelines does not run an Android foreground service: it would
+ * need a Play Console foreground-service declaration. Replies that are still
+ * streaming when the app is backgrounded are recovered from the server when the
+ * user returns, so the service is never started.
+ */
+private const val BACKGROUND_SERVICE_ENABLED = false
+
 private data class StreamingLease(
     val id: String,
     val kind: String,
@@ -769,6 +777,7 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : Backgroun
     }
 
     private fun startForegroundService(): Boolean {
+        if (!BACKGROUND_SERVICE_ENABLED) return true
         try {
             val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
             putLeases(serviceIntent)
@@ -792,6 +801,7 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : Backgroun
     }
 
     private fun stopForegroundService() {
+        if (!BACKGROUND_SERVICE_ENABLED) return
         try {
             val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
             serviceIntent.action = BackgroundStreamingService.ACTION_STOP
@@ -803,6 +813,7 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : Backgroun
     }
 
     private fun updateForegroundServiceLeases() {
+        if (!BACKGROUND_SERVICE_ENABLED) return
         try {
             val serviceIntent = Intent(context, BackgroundStreamingService::class.java)
             serviceIntent.action = "KEEP_ALIVE"
@@ -883,6 +894,7 @@ class BackgroundStreamingHandler(private val activity: MainActivity) : Backgroun
     }
 
     private fun keepAlive() {
+        if (!BACKGROUND_SERVICE_ENABLED) return
         if (activeLeases.isEmpty()) {
             stopForegroundService()
             return
