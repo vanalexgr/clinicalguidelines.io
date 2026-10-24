@@ -38,7 +38,7 @@ class WidgetActions {
 }
 
 /// App group identifier for iOS widget data sharing.
-const String _releaseAppGroupId = 'group.app.clinicalguidelines';
+const String _releaseAppGroupId = 'group.clinicalguidelines';
 const String _debugAppGroupId = 'group.app.clinicalguidelines.debug';
 
 String get _appGroupId => kReleaseMode ? _releaseAppGroupId : _debugAppGroupId;
